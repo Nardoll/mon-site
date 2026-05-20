@@ -15,7 +15,7 @@ export const STATUTS_ORDRE = ["pas_commence","achete","en_cours","termine"];
 export const STATUTS_LIVRE = {
   en_proposition: { label: "En proposition", css: "proposition" },
   elu:            { label: "Élu",             css: "elu" },
-  refuse:         { label: "Refusé",          css: "refuse" }
+  refuse:         { label: "Éliminé",          css: "refuse" }
 };
 
 export function formatMois(mois, annee) {

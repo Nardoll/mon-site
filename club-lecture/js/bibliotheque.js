@@ -167,60 +167,97 @@ async function openFiche(id) {
   document.getElementById("fiche-content").innerHTML = `<div class="loading">Chargement…</div>`;
   document.getElementById("fiche-overlay").classList.remove("hidden");
 
-  const [statuts, votesDuLivre] = await Promise.all([
-    getStatutsForLivre(id),
-    Promise.resolve(votes.filter(v => (v.resultats || []).some(r => r.livre_id === id)))
-  ]);
+  const statuts = livre.statut === "elu" ? await getStatutsForLivre(id) : [];
+  const votesDuLivre = votes
+    .filter(v => (v.resultats || []).some(r => r.livre_id === id))
+    .sort((a, b) => a.annee !== b.annee ? a.annee - b.annee : a.mois - b.mois);
 
   const st = STATUTS_LIVRE[livre.statut] ?? STATUTS_LIVRE.en_proposition;
 
-  // Build vote history
-  let voteHTML = "";
-  if (votesDuLivre.length) {
-    voteHTML = votesDuLivre.map(v => {
-      const r = v.resultats.find(x => x.livre_id === id);
-      if (!r) return "";
-      const notes = Object.entries(r.notes || {});
-      const max = 10;
-      const isElu = v.livre_elu === id;
-      const pct = r.moyenne ? Math.round(r.moyenne / max * 100) : 0;
-      return `
-        <div style="margin-bottom:1.25rem">
-          <div style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem">
-            Vote de ${v.mois}/${v.annee} ${isElu ? '<span class="badge badge-elu">Élu</span>' : ''}
-          </div>
-          <div class="chart">
-            ${notes.map(([mid, note]) => {
-              const nom = membres.find(m => m.id === mid)?.nom ?? mid;
-              const p = Math.round(Number(note) / max * 100);
-              return `<div class="chart-row">
-                <div class="chart-label">${nom}</div>
-                <div class="chart-bar-wrap">
-                  <div class="chart-bar ${isElu ? 'best' : ''}" style="width:${p}%">${note}/10</div>
-                </div>
-              </div>`;
-            }).join("")}
-            <div class="chart-row">
-              <div class="chart-label" style="font-weight:700;color:var(--text)">Moyenne</div>
-              <div class="chart-bar-wrap">
-                <div class="chart-bar ${isElu ? 'best' : ''}" style="width:${pct}%;background:${isElu ? 'var(--green)' : 'var(--purple)'}">
-                  ${r.moyenne !== null ? Number(r.moyenne).toFixed(1) + '/10' : '—'}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>`;
+  // Detect scale from vote data
+  const allNotes = votesDuLivre.flatMap(v =>
+    (v.resultats || []).filter(r => r.livre_id === id).flatMap(r => Object.values(r.notes || {}))
+  ).map(Number).filter(n => !isNaN(n));
+  const scale = allNotes.length && Math.max(...allNotes) <= 5 ? 5 : 10;
+
+  // ── Avancements membres (élu seulement) ───
+  let avancementsHTML = "";
+  if (livre.statut === "elu") {
+    const rows = membres.map(m => {
+      const s = statuts.find(x => x.membre_id === m.id);
+      const label = s
+        ? s.statut === "termine" ? "✅ Terminé"
+        : s.statut === "en_cours" ? `📖 En cours (${s.page_actuelle ?? "?"}p)`
+        : s.statut === "achete"   ? "🛒 Acheté"
+        : "—"
+        : "—";
+      return `<tr><td>${m.nom}</td><td>${label}</td></tr>`;
     }).join("");
-  } else {
-    voteHTML = `<div class="text-muted" style="font-size:.85rem">Pas encore de vote pour ce livre.</div>`;
+    avancementsHTML = `
+      <div class="divider"></div>
+      <div class="card-title mb-2">Avancements membres</div>
+      <div class="table-wrap mb-3">
+        <table><thead><tr><th>Membre</th><th>Statut</th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>`;
   }
 
-  // Statuts de lecture
-  const statutRows = membres.map(m => {
-    const s = statuts.find(x => x.membre_id === m.id);
-    const label = s ? (s.statut === "termine" ? "✅ Terminé" : s.statut === "en_cours" ? `📖 En cours (${s.page_actuelle ?? '?'}p)` : s.statut === "achete" ? "🛒 Acheté" : "—") : "—";
-    return `<tr><td>${m.nom}</td><td>${label}</td></tr>`;
-  }).join("");
+  // ── Chronologie ───────────────────────────
+  const tlItems = [];
+
+  // 1. Proposition
+  tlItems.push({
+    dot: "default",
+    label: `Proposé le ${formatDate(livre.date_proposition)}`,
+    detail: `par ${nomMembre(livre.propose_par)}`
+  });
+
+  // 2. Votes
+  for (const v of votesDuLivre) {
+    const r = (v.resultats || []).find(x => x.livre_id === id);
+    if (!r) continue;
+    const moy = r.moyenne !== null && r.moyenne !== undefined ? Number(r.moyenne).toFixed(2) : "—";
+    const isElu = v.livre_elu === id;
+    const isElim = !isElu && r.moyenne !== null && r.moyenne <= 2.5;
+    tlItems.push({
+      dot: isElu ? "elu" : isElim ? "refuse" : "default",
+      label: `Vote de ${formatMois(v.mois, v.annee)}`,
+      detail: `Note moyenne : ${moy} / ${scale}`
+    });
+  }
+
+  // 3. Résultat final
+  if (livre.statut === "elu") {
+    const voteElu = votesDuLivre.find(v => v.livre_elu === id);
+    tlItems.push({
+      dot: "elu",
+      label: `Élu${voteElu ? ` en ${formatMois(voteElu.mois, voteElu.annee)}` : ""}`,
+      detail: null,
+      final: true
+    });
+  } else if (livre.statut === "refuse") {
+    const voteElim = votesDuLivre.findLast(v =>
+      (v.resultats || []).some(r => r.livre_id === id && r.moyenne !== null && r.moyenne <= 2.5)
+    );
+    tlItems.push({
+      dot: "refuse",
+      label: `Éliminé${voteElim ? ` en ${formatMois(voteElim.mois, voteElim.annee)}` : ""}`,
+      detail: null,
+      final: true
+    });
+  }
+
+  const tlHTML = `
+    <div class="ft-timeline">
+      ${tlItems.map(item => `
+        <div class="ft-item">
+          <div class="ft-dot ft-dot-${item.dot}"></div>
+          <div class="ft-body">
+            <div class="ft-label ${item.final ? "ft-label-final ft-final-" + item.dot : ""}">${item.label}</div>
+            ${item.detail ? `<div class="ft-detail">${item.detail}</div>` : ""}
+          </div>
+        </div>`).join("")}
+    </div>`;
 
   document.getElementById("fiche-content").innerHTML = `
     <dl class="book-detail-meta">
@@ -230,17 +267,10 @@ async function openFiche(id) {
       <dt>Date</dt><dd>${formatDate(livre.date_proposition)}</dd>
       <dt>Statut</dt><dd><span class="badge badge-${st.css}">${st.label}</span></dd>
     </dl>
-
+    ${avancementsHTML}
     <div class="divider"></div>
-    <div class="card-title">Avancements membres</div>
-    <div class="table-wrap mb-3">
-      <table><thead><tr><th>Membre</th><th>Statut</th></tr></thead>
-      <tbody>${statutRows}</tbody></table>
-    </div>
-
-    <div class="divider"></div>
-    <div class="card-title">Historique des votes</div>
-    ${voteHTML}
+    <div class="card-title mb-2">Historique</div>
+    ${tlHTML}
   `;
 }
 

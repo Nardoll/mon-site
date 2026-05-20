@@ -275,6 +275,22 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 .vtable tfoot td.elim-avg { color: #666; }
 .stars { font-size: .72rem; letter-spacing: -.05em; display: block; }
 
+/* ── Fiche timeline ──────────────────────── */
+.ft-timeline { position: relative; padding-left: 1.5rem; }
+.ft-timeline::before { content: ''; position: absolute; left: .28rem; top: .6rem; bottom: .6rem; width: 2px; background: var(--border); }
+.ft-item { position: relative; display: flex; gap: .75rem; margin-bottom: 1.1rem; }
+.ft-item:last-child { margin-bottom: 0; }
+.ft-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: .28rem; position: absolute; left: -1.5rem; border: 2px solid var(--bg); }
+.ft-dot-default { background: var(--muted); }
+.ft-dot-elu     { background: var(--green); }
+.ft-dot-refuse  { background: var(--red); }
+.ft-body { flex: 1; }
+.ft-label { font-size: .88rem; font-weight: 600; }
+.ft-detail { font-size: .8rem; color: var(--muted); margin-top: .15rem; }
+.ft-label-final { font-size: .92rem; }
+.ft-final-elu    { color: var(--green); }
+.ft-final-refuse { color: var(--red); }
+
 /* ── Responsive ──────────────────────────── */
 @media (max-width: 768px) {
   .sidebar { width: 100%; height: auto; position: relative; flex-direction: row; flex-wrap: wrap; padding: .75rem 1rem; gap: .25rem; }

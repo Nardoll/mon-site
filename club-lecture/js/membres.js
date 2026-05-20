@@ -116,7 +116,7 @@ async function openProfil(id) {
     ? `<ul style="list-style:none">${proposes.map(l => `
         <li style="padding:.4rem 0;border-bottom:1px solid var(--border);font-size:.88rem">
           <strong>${l.titre}</strong>${l.auteur ? ` — ${l.auteur}` : ""}
-          <span class="badge badge-${l.statut === 'elu' ? 'elu' : l.statut === 'refuse' ? 'refuse' : 'proposition'}" style="float:right">${l.statut === 'elu' ? 'Élu' : l.statut === 'refuse' ? 'Refusé' : 'En proposition'}</span>
+          <span class="badge badge-${l.statut === 'elu' ? 'elu' : l.statut === 'refuse' ? 'refuse' : 'proposition'}" style="float:right">${l.statut === 'elu' ? 'Élu' : l.statut === 'refuse' ? 'Éliminé' : 'En proposition'}</span>
         </li>`).join("")}</ul>`
     : `<div class="text-muted" style="font-size:.85rem">Aucune proposition.</div>`;
 
