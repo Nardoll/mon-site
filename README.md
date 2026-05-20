@@ -79,9 +79,9 @@ Mon Site/
 ### Pages et fonctionnalités
 
 #### Accueil (`index.html` + `accueil.js`)
-1. **Frise chronologique horizontale** (scrollable, glissable à la souris) — affiche tous les événements du club dans l'ordre chronologique : arrivées de membres (👤 gris), propositions de livres (📚 orange), votes sans élu (🗳️ violet), votes avec livre élu (🏆 vert). Les événements alternent au-dessus/en dessous d'une ligne d'axe avec flèche.
+1. **Frise chronologique horizontale** (scrollable, glissable à la souris) — affiche tous les événements du club dans l'ordre chronologique : arrivées de membres (👤 gris), propositions de livres (📚 orange), votes sans élu (🗳️ violet), votes avec livre élu (🏆 vert). Les événements alternent au-dessus/en dessous d'une ligne d'axe avec flèche. S'ouvre positionnée sur les événements les plus récents (droite). **Chaque événement est cliquable** : navigue vers la page correspondante avec `?open=ID` pour auto-ouvrir l'élément concerné. Le drag (glisser) annule le clic.
 2. **Livre du mois** — carte unique montrant : titre, auteur, note au vote, depuis combien de temps proposé et par qui, puis la liste des membres avec leur statut de lecture (cliquable sans login → modal pour mettre à jour).
-3. **Chronologie des livres élus** — timeline verticale de tous les livres élus, du plus récent au plus ancien, avec note.
+3. **Chronologie des livres élus** — timeline verticale de tous les livres élus, du plus récent au plus ancien, avec note. **Chaque carte est cliquable** → ouvre la fiche du livre dans la bibliothèque (`bibliotheque.html?open=LIVRE_ID`).
 
 #### Bibliothèque (`bibliotheque.html` + `bibliotheque.js`)
 - Tableau filtrable (texte libre sur titre/auteur) et triable par colonne (clic sur en-tête)
@@ -92,6 +92,7 @@ Mon Site/
   - Section "Avancements membres" **uniquement si le livre est élu**
   - Chronologie : date de proposition → chaque vote avec note moyenne → résultat final (Élu / Éliminé)
 - Statuts des livres : `en_proposition` / `elu` / `refuse` (affiché "**Éliminé**" — ne pas utiliser "Refusé")
+- **Auto-ouverture** : si l'URL contient `?open=LIVRE_ID`, la fiche du livre s'ouvre automatiquement au chargement
 
 #### Votes (`votes.html` + `votes.js`)
 - Liste des votes : une ligne par vote (mois + livre élu) → clic pour ouvrir détail
@@ -105,6 +106,7 @@ Mon Site/
   - Grille de saisie des notes (sur 5)
   - À l'enregistrement : livre avec la plus haute moyenne → `elu`, livres avec moyenne ≤ 2.5 → `refuse` (= "Éliminé")
   - En cas d'égalité pour la 1ère place → aucun livre élu automatiquement
+- **Auto-ouverture** : si l'URL contient `?open=VOTE_ID`, le détail du vote s'ouvre automatiquement au chargement
 
 #### Membres (`membres.html` + `membres.js`)
 - Grille de cartes membres avec initiales, nom, date d'arrivée
@@ -112,6 +114,7 @@ Mon Site/
 - Clic sur un membre → **profil** (modal) :
   - Résumé : initiales, nom, date d'arrivée, nb propositions, nb votes
   - Livres proposés avec statut
+- **Auto-ouverture** : si l'URL contient `?open=MEMBRE_ID`, le profil s'ouvre automatiquement au chargement
   - Statuts de lecture personnels
   - Historique des notes données dans les votes (graphe par session de vote)
 
