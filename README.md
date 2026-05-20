@@ -126,11 +126,13 @@ Mon Site/
 
 ### Design
 
-- **Thème sombre** (`#0f0f0f` fond, `#1a1a1a` cartes)
-- **Couleur d'accent** : orange `#e8a44a`
+- **Thème sombre** (défaut) : `#0f0f0f` fond, `#1a1a1a` cartes, orange `#e8a44a` accent
+- **Thème clair** ("été fleuri") : lavande `#f5f0fe` fond, cartes blanches, violet foncé `#1e1540` texte, ambre `#c87800` accent, vert émeraude, violet, rose
+- **Bascule de thème** : bouton en bas de la sidebar (`☀️ / 🌙`), persisté via `localStorage` clé `"cl_theme"` (`"light"` ou `"dark"`). Le thème est appliqué par `nav.js` avant tout rendu (attribut `data-theme="light"` sur `<html>`).
+- Toutes les couleurs passent par des **variables CSS** dans `style.css` (`:root` + `[data-theme="light"]`). Les couleurs inline en JS utilisent `var(--nom)` pour être automatiquement mises à jour au changement de thème sans re-render.
 - Sidebar fixe à gauche (240px), responsive mobile
 - Polices système (`Segoe UI`, `system-ui`)
-- Composants CSS définis dans `style.css` : `.card`, `.btn`, `.badge`, `.overlay`/`.modal`, `.st-badge` (statuts lecture), `.vtable` (tableau votes), `.vchart` (graphe vertical), `.frise-wrap` (frise chronologique), `.ft-timeline` (chronologie fiche livre), `.tl-*` (timeline accueil)
+- Composants CSS définis dans `style.css` : `.card`, `.btn`, `.badge`, `.overlay`/`.modal`, `.st-badge` (statuts lecture), `.vtable` (tableau votes), `.vchart` (graphe vertical), `.frise-wrap` (frise chronologique), `.ft-timeline` (chronologie fiche livre), `.tl-*` (timeline accueil), `.progress-circle` (cercle de progression en donut, `conic-gradient`), `.sidebar-bottom` + `.theme-toggle` (bouton de bascule thème)
 
 ---
 
