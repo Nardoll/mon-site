@@ -14,8 +14,8 @@ function snap(querySnapshot) {
 // ── Membres ────────────────────────────────────────────────────────
 
 export async function getMembres() {
-  const s = await getDocs(query(collection(db, "membres"), orderBy("nom")));
-  return snap(s);
+  const s = await getDocs(collection(db, "membres"));
+  return snap(s).sort((a, b) => (a.nom ?? "").localeCompare(b.nom ?? "", "fr"));
 }
 
 export async function getMembreById(id) {
@@ -34,8 +34,8 @@ export async function addMembre({ nom, date_arrivee }) {
 // ── Livres ─────────────────────────────────────────────────────────
 
 export async function getLivres() {
-  const s = await getDocs(query(collection(db, "livres"), orderBy("date_proposition", "desc")));
-  return snap(s);
+  const s = await getDocs(collection(db, "livres"));
+  return snap(s).sort((a, b) => (b.date_proposition?.seconds ?? 0) - (a.date_proposition?.seconds ?? 0));
 }
 
 export async function getLivreById(id) {
@@ -64,8 +64,8 @@ export async function updateLivre(id, data) {
 // ── Votes ──────────────────────────────────────────────────────────
 
 export async function getVotes() {
-  const s = await getDocs(query(collection(db, "votes"), orderBy("annee", "desc"), orderBy("mois", "desc")));
-  return snap(s);
+  const s = await getDocs(collection(db, "votes"));
+  return snap(s).sort((a, b) => b.annee !== a.annee ? b.annee - a.annee : b.mois - a.mois);
 }
 
 export async function getVoteById(id) {
