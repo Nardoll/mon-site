@@ -1,6 +1,6 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getLivres, getMembres, addLivre, getVotes, getStatutsForLivre } from "./db.js";
+import { getLivres, getMembres, addLivre, getVotes, getStatutsForLivre, updateLivreInfos } from "./db.js";
 import { formatDate, formatMois, STATUTS_LIVRE, showToast } from "./utils.js";
 
 await requireAuth();
@@ -9,6 +9,7 @@ initNav("bibliotheque");
 let livres = [], membres = [], votes = [];
 let sortCol = "date_proposition", sortDir = "desc";
 let filters = { search: "", statut: "", propose: "" };
+let currentFicheId = null;
 
 async function init() {
   [livres, membres, votes] = await Promise.all([getLivres(), getMembres(), getVotes()]);
@@ -162,6 +163,7 @@ document.getElementById("propose-save").addEventListener("click", async () => {
 // ── Fiche livre ────────────────────────────────────────────────────
 
 async function openFiche(id) {
+  currentFicheId = id;
   const livre = livres.find(l => l.id === id);
   if (!livre) return;
 
@@ -278,5 +280,80 @@ async function openFiche(id) {
 
 document.getElementById("fiche-close").addEventListener("click", () => document.getElementById("fiche-overlay").classList.add("hidden"));
 document.getElementById("fiche-overlay").addEventListener("click", e => { if (e.target === e.currentTarget) document.getElementById("fiche-overlay").classList.add("hidden"); });
+
+// ── Modifier fiche livre ───────────────────────────────────────────
+
+function showFicheEditForm(livre) {
+  const membresOptions = membres.map(m =>
+    `<option value="${m.id}">${m.nom}</option>`
+  ).join("");
+
+  document.getElementById("fiche-titre").textContent = "Modifier le livre";
+  document.getElementById("fiche-content").innerHTML = `
+    <div class="form-group">
+      <label>Titre <span style="color:var(--red)">*</span></label>
+      <input type="text" id="edit-l-titre">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Auteur</label>
+        <input type="text" id="edit-l-auteur">
+      </div>
+      <div class="form-group">
+        <label>Année</label>
+        <input type="number" id="edit-l-annee" min="1000" max="2099">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Proposé par</label>
+      <select id="edit-l-membre">${membresOptions}</select>
+    </div>
+    <div class="form-group">
+      <label>Date de proposition</label>
+      <input type="date" id="edit-l-date">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="edit-l-cancel">Annuler</button>
+      <button class="btn btn-primary" id="edit-l-save">Enregistrer</button>
+    </div>
+  `;
+
+  document.getElementById("edit-l-titre").value = livre.titre || "";
+  document.getElementById("edit-l-auteur").value = livre.auteur || "";
+  document.getElementById("edit-l-annee").value = livre.annee || "";
+  document.getElementById("edit-l-membre").value = livre.propose_par || "";
+  if (livre.date_proposition) {
+    const d = new Date(livre.date_proposition.seconds * 1000);
+    document.getElementById("edit-l-date").value = d.toISOString().split("T")[0];
+  }
+
+  document.getElementById("edit-l-cancel").addEventListener("click", () => openFiche(currentFicheId));
+  document.getElementById("edit-l-save").addEventListener("click", async () => {
+    const titre = document.getElementById("edit-l-titre").value.trim();
+    if (!titre) { showToast("Le titre est obligatoire.", "error"); return; }
+    const dateVal = document.getElementById("edit-l-date").value;
+    if (!dateVal) { showToast("La date est obligatoire.", "error"); return; }
+    try {
+      await updateLivreInfos(currentFicheId, {
+        titre,
+        auteur: document.getElementById("edit-l-auteur").value.trim(),
+        annee: document.getElementById("edit-l-annee").value,
+        propose_par: document.getElementById("edit-l-membre").value,
+        date_proposition: dateVal,
+      });
+      showToast("Livre modifié !", "success");
+      livres = await getLivres();
+      renderTable();
+      openFiche(currentFicheId);
+    } catch (e) {
+      showToast("Erreur : " + e.message, "error");
+    }
+  });
+}
+
+document.getElementById("fiche-edit").addEventListener("click", () => {
+  const livre = livres.find(l => l.id === currentFicheId);
+  if (livre) showFicheEditForm(livre);
+});
 
 init().catch(console.error);

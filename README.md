@@ -80,7 +80,11 @@ Mon Site/
 
 #### Accueil (`index.html` + `accueil.js`)
 1. **Frise chronologique horizontale** (scrollable, glissable à la souris) — affiche tous les événements du club dans l'ordre chronologique : arrivées de membres (👤 gris), propositions de livres (📚 orange), votes sans élu (🗳️ violet), votes avec livre élu (🏆 vert). Les événements alternent au-dessus/en dessous d'une ligne d'axe avec flèche. S'ouvre positionnée sur les événements les plus récents (droite). **Chaque événement est cliquable** : navigue vers la page correspondante avec `?open=ID` pour auto-ouvrir l'élément concerné. Le drag (glisser) annule le clic.
-2. **Livre du mois** — carte unique montrant : titre, auteur, note au vote, depuis combien de temps proposé et par qui, puis la liste des membres avec leur statut de lecture (cliquable sans login → modal pour mettre à jour).
+2. **Livre du mois** — carte unique montrant : titre, auteur, note au vote, depuis combien de temps proposé et par qui, puis la liste des membres avec leur statut de lecture.
+   - **Titre cliquable** → ouvre la fiche du livre dans la bibliothèque (`bibliotheque.html?open=LIVRE_ID`)
+   - **Noms des membres cliquables** → navigue vers leur profil (`membres.html?open=MEMBRE_ID`)
+   - **Badges de statut cliquables** → modal pour mettre à jour son statut de lecture
+   - **Configuration du suivi** (bouton "⚙️ Configurer le suivi") → modal pour définir l'unité (`pages`, `chapitres`, `parties`, etc.) et le total (ex: 300). Stocké sur le document livre dans Firestore, partagé entre tous les membres. La modale de statut adapte ses labels et pré-remplit le total automatiquement. La barre de progression affiche l'unité (ex: `50/300 pages`).
 3. **Chronologie des livres élus** — timeline verticale de tous les livres élus, du plus récent au plus ancien, avec note. **Chaque carte est cliquable** → ouvre la fiche du livre dans la bibliothèque (`bibliotheque.html?open=LIVRE_ID`).
 
 #### Bibliothèque (`bibliotheque.html` + `bibliotheque.js`)
@@ -89,6 +93,7 @@ Mon Site/
 - Bouton "Proposer un livre" → modal (titre obligatoire, auteur/année optionnels, membre, date)
 - Clic sur un livre → **fiche détaillée** :
   - Métadonnées en haut (auteur, année, proposé par, date, statut)
+  - Bouton "✏️ Modifier" dans le header → formulaire inline pour corriger titre, auteur, année, proposé par, date (ne touche pas au statut ni aux votes)
   - Section "Avancements membres" **uniquement si le livre est élu**
   - Chronologie : date de proposition → chaque vote avec note moyenne → résultat final (Élu / Éliminé)
 - Statuts des livres : `en_proposition` / `elu` / `refuse` (affiché "**Éliminé**" — ne pas utiliser "Refusé")
@@ -113,10 +118,11 @@ Mon Site/
 - Bouton "Ajouter un membre" → modal (nom + date)
 - Clic sur un membre → **profil** (modal) :
   - Résumé : initiales, nom, date d'arrivée, nb propositions, nb votes
+  - Bouton "✏️ Modifier" dans le header → formulaire inline pour corriger nom et date d'arrivée
   - Livres proposés avec statut
-- **Auto-ouverture** : si l'URL contient `?open=MEMBRE_ID`, le profil s'ouvre automatiquement au chargement
   - Statuts de lecture personnels
   - Historique des notes données dans les votes (graphe par session de vote)
+- **Auto-ouverture** : si l'URL contient `?open=MEMBRE_ID`, le profil s'ouvre automatiquement au chargement
 
 ### Design
 
@@ -152,8 +158,11 @@ Mon Site/
 | `propose_par` | string | ID du document membre |
 | `date_proposition` | Timestamp | |
 | `statut` | string | `en_proposition` · `elu` · `refuse` |
+| `progression_unite` | string \| null | Unité de suivi pour le livre du mois (ex: `pages`, `chapitres`) |
+| `progression_total` | number \| null | Total de l'unité (ex: `300` pour 300 pages) |
 
-> **Attention :** dans l'UI, `refuse` s'affiche toujours "Éliminé" (jamais "Refusé").
+> **Attention :** dans l'UI, `refuse` s'affiche toujours "Éliminé" (jamais "Refusé").  
+> `progression_unite` et `progression_total` ne sont pertinents que pour le livre actuellement élu (livre du mois). Ils sont configurés depuis l'accueil.
 
 #### `votes`
 | Champ | Type | Description |
@@ -221,3 +230,5 @@ Mon Site/
 - **Notes sur 5** — la saisie des votes se fait sur une échelle 0–5. La détection de l'échelle (5 ou 10) est automatique dans les graphes.
 - **Frise vs Chronologie** — la frise (accueil, en haut) est horizontale et montre TOUS les événements. La chronologie (accueil, en bas) montre uniquement les livres élus, verticalement.
 - **Avancements membres dans la fiche livre** — s'affiche UNIQUEMENT si le livre a le statut `elu`.
+- **Modification des fiches** — le bouton "✏️ Modifier" dans les modales bibliothèque et membres permet de corriger les informations de base. Il remplace le contenu de la modale par un formulaire inline ; "Annuler" revient à la fiche sans sauvegarder. Les votes ne sont pas modifiables depuis ces fiches (intégrité des données).
+- **Suivi de progression normalisé** — `progression_unite` et `progression_total` sont stockés sur le document livre (Firestore). Tous les membres voient la même unité et le même total dans la modale de mise à jour du statut.

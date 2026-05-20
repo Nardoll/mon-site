@@ -1,6 +1,6 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getMembres, getLivres, getVotes, getStatutsForLivre, upsertStatutLecture, getLivreById } from "./db.js";
+import { getMembres, getLivres, getVotes, getStatutsForLivre, upsertStatutLecture, getLivreById, updateLivre } from "./db.js";
 import { formatMois, formatDate, STATUTS_LECTURE, initiales, showToast } from "./utils.js";
 
 await requireAuth();
@@ -8,6 +8,7 @@ initNav("accueil");
 
 let allVotes = [], allMembres = [], allLivres = [];
 let currentLivreId = null, currentVote = null, editMembreId = null;
+let currentLivre = null, statutByMembre = {};
 
 async function init() {
   [allVotes, allMembres, allLivres] = await Promise.all([getVotes(), getMembres(), getLivres()]);
@@ -133,7 +134,6 @@ function renderFrise() {
     if (wrap) wrap.scrollLeft = wrap.scrollWidth;
   });
 
-  // Click handlers (naviguer vers la page)
   section.querySelectorAll(".frise-ev-col").forEach(el => {
     el.addEventListener("click", () => {
       const { type, id } = el.dataset;
@@ -152,7 +152,6 @@ function initFriseDrag() {
   wrap.addEventListener("mouseleave", () => { isDown = false; wrap.style.cursor = "grab"; });
   wrap.addEventListener("mouseup", () => { isDown = false; wrap.style.cursor = "grab"; });
   wrap.addEventListener("mousemove", e => { if (!isDown) return; moved = true; e.preventDefault(); wrap.scrollLeft = scrollLeft - (e.pageX - wrap.offsetLeft - startX); });
-  // Bloquer le click si c'était un drag
   wrap.addEventListener("click", e => { if (moved) { e.stopPropagation(); moved = false; } }, true);
   wrap.style.cursor = "grab";
 }
@@ -178,7 +177,8 @@ async function renderCurrentBook() {
   currentLivreId = latest.livre_elu;
 
   const [livre, statuts] = await Promise.all([getLivreById(currentLivreId), getStatutsForLivre(currentLivreId)]);
-  const statutByMembre = {};
+  currentLivre = livre;
+  statutByMembre = {};
   statuts.forEach(s => { statutByMembre[s.membre_id] = s; });
 
   const r = (latest.resultats || []).find(x => x.livre_id === currentLivreId);
@@ -187,12 +187,18 @@ async function renderCurrentBook() {
   const proposeur = nomMembre(livre?.propose_par);
   const since = livre?.date_proposition ? timeSince(livre.date_proposition) : null;
 
+  const unite = livre?.progression_unite || "";
+  const progressionTotal = livre?.progression_total || null;
+  const progressionLabel = unite
+    ? `Suivi en ${unite}${progressionTotal ? ` · ${progressionTotal} max` : ""}`
+    : "Aucun suivi configuré";
+
   section.innerHTML = `
     <div class="section-title">Lecture du mois — ${formatMois(latest.mois, latest.annee)}</div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.75rem;margin-bottom:1rem">
         <div>
-          <div style="font-size:1.2rem;font-weight:700">${livre?.titre ?? "—"}</div>
+          <div class="titre-livre-link" style="font-size:1.2rem;font-weight:700;cursor:pointer" title="Voir la fiche">${livre?.titre ?? "—"}</div>
           <div style="font-size:.8rem;color:var(--muted);margin-top:.3rem">
             ${livre?.auteur ? livre.auteur + " · " : ""}${since ? `Proposé ${since} par ${proposeur}` : ""}
           </div>
@@ -200,15 +206,25 @@ async function renderCurrentBook() {
         ${moy !== null ? `<div style="text-align:right"><span style="font-size:1.5rem;font-weight:800;color:var(--accent)">${Number(moy).toFixed(1)}</span><span style="font-size:.85rem;color:var(--muted)"> / ${scale}</span></div>` : ""}
       </div>
       <div style="height:1px;background:var(--border);margin-bottom:1rem"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+        <span style="font-size:.78rem;color:var(--muted)" id="progression-label">${progressionLabel}</span>
+        <button class="btn btn-ghost btn-sm" id="btn-progression-config">⚙️ Configurer le suivi</button>
+      </div>
       <ul class="status-list" id="status-list"></ul>
     </div>`;
 
-  renderStatusList(statutByMembre);
+  section.querySelector(".titre-livre-link").addEventListener("click", () => {
+    window.location.href = `bibliotheque.html?open=${currentLivreId}`;
+  });
+  document.getElementById("btn-progression-config").addEventListener("click", openProgressionModal);
+
+  renderStatusList();
 }
 
-function renderStatusList(statutByMembre) {
+function renderStatusList() {
   const list = document.getElementById("status-list");
   if (!list) return;
+  const unite = currentLivre?.progression_unite || "";
   list.innerHTML = allMembres.map(m => {
     const s = statutByMembre[m.id];
     const statut = s?.statut ?? "pas_commence";
@@ -218,12 +234,12 @@ function renderStatusList(statutByMembre) {
       const pct = Math.min(100, Math.round(s.page_actuelle / s.pages_totales * 100));
       progress = `<div class="progress-wrap" style="margin-top:.2rem">
         <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
-        <span class="progress-text">${s.page_actuelle}/${s.pages_totales}</span>
+        <span class="progress-text">${s.page_actuelle}/${s.pages_totales}${unite ? ` ${unite}` : ""}</span>
       </div>`;
     }
     return `
       <li class="status-row">
-        <span style="font-size:.88rem">${m.nom}</span>
+        <span class="membre-link" data-id="${m.id}" style="font-size:.88rem;cursor:pointer">${m.nom}</span>
         <div>
           <span class="st-badge st-${info.css}" data-membre="${m.id}" data-statut="${statut}">${info.label}</span>
           ${progress}
@@ -231,6 +247,9 @@ function renderStatusList(statutByMembre) {
       </li>`;
   }).join("");
 
+  list.querySelectorAll(".membre-link").forEach(el => {
+    el.addEventListener("click", () => { window.location.href = `membres.html?open=${el.dataset.id}`; });
+  });
   list.querySelectorAll(".st-badge").forEach(b => b.addEventListener("click", () => openStatutModal(b.dataset.membre, b.dataset.statut)));
 }
 
@@ -273,14 +292,19 @@ function openStatutModal(membreId, currentStatut) {
   const m = allMembres.find(x => x.id === membreId);
   document.getElementById("statut-modal-title").textContent = `Statut — ${m?.nom ?? ""}`;
   document.getElementById("statut-select").value = currentStatut;
-  const s = document.getElementById("statut-overlay");
-  const stored = document.querySelector(`.st-badge[data-membre="${membreId}"]`)?.closest(".status-row");
-  const statuts = document.querySelectorAll(`[data-membre="${membreId}"]`);
-  // Pre-fill pages if existing
-  const existing = null; // will be re-fetched on save
-  document.getElementById("page-actuelle").value = "";
-  document.getElementById("pages-totales").value = "";
-  s.classList.remove("hidden");
+
+  const unite = currentLivre?.progression_unite || "pages";
+  const uniteLabel = unite.charAt(0).toUpperCase() + unite.slice(1);
+  const labelActuel = document.getElementById("label-page-actuelle");
+  const labelTotal = document.getElementById("label-pages-totales");
+  if (labelActuel) labelActuel.textContent = `${uniteLabel} actuel(le)`;
+  if (labelTotal) labelTotal.textContent = `Total (${unite})`;
+
+  const existing = statutByMembre[membreId];
+  document.getElementById("page-actuelle").value = existing?.page_actuelle ?? "";
+  document.getElementById("pages-totales").value = existing?.pages_totales ?? (currentLivre?.progression_total || "");
+
+  document.getElementById("statut-overlay").classList.remove("hidden");
 }
 
 ["statut-modal-close","statut-modal-cancel"].forEach(id => {
@@ -305,10 +329,50 @@ document.getElementById("statut-modal-save").addEventListener("click", async () 
     document.getElementById("statut-overlay").classList.add("hidden");
     editMembreId = null;
     const statuts = await getStatutsForLivre(currentLivreId);
-    const statutByMembre = {};
+    statutByMembre = {};
     statuts.forEach(s => { statutByMembre[s.membre_id] = s; });
-    renderStatusList(statutByMembre);
+    renderStatusList();
   } catch (e) { showToast("Erreur : " + e.message, "error"); }
+});
+
+// ── Modal configuration du suivi ──────────────────────────────────
+
+function openProgressionModal() {
+  document.getElementById("progression-unite").value = currentLivre?.progression_unite || "";
+  document.getElementById("progression-total-input").value = currentLivre?.progression_total || "";
+  document.getElementById("progression-overlay").classList.remove("hidden");
+}
+
+["progression-close","progression-cancel"].forEach(id => {
+  document.getElementById(id).addEventListener("click", () => {
+    document.getElementById("progression-overlay").classList.add("hidden");
+  });
+});
+
+document.getElementById("progression-overlay").addEventListener("click", e => {
+  if (e.target === e.currentTarget) document.getElementById("progression-overlay").classList.add("hidden");
+});
+
+document.getElementById("progression-save").addEventListener("click", async () => {
+  const unite = document.getElementById("progression-unite").value.trim();
+  const total = document.getElementById("progression-total-input").value;
+  try {
+    await updateLivre(currentLivreId, {
+      progression_unite: unite || null,
+      progression_total: total ? Number(total) : null,
+    });
+    showToast("Suivi configuré !", "success");
+    document.getElementById("progression-overlay").classList.add("hidden");
+    currentLivre = { ...currentLivre, progression_unite: unite || null, progression_total: total ? Number(total) : null };
+    const label = document.getElementById("progression-label");
+    if (label) {
+      const u = currentLivre.progression_unite || "";
+      const t = currentLivre.progression_total || null;
+      label.textContent = u ? `Suivi en ${u}${t ? ` · ${t} max` : ""}` : "Aucun suivi configuré";
+    }
+  } catch (e) {
+    showToast("Erreur : " + e.message, "error");
+  }
 });
 
 init().catch(console.error);

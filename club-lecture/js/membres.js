@@ -1,12 +1,13 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getMembres, addMembre, getLivres, getVotes, getNotesForMembre, getStatutsForMembre } from "./db.js";
+import { getMembres, addMembre, getLivres, getVotes, getNotesForMembre, getStatutsForMembre, updateMembreInfos } from "./db.js";
 import { formatDate, formatMois, initiales, STATUTS_LECTURE, showToast } from "./utils.js";
 
 await requireAuth();
 initNav("membres");
 
 let membres = [], livres = [], votes = [];
+let currentProfilId = null;
 
 async function init() {
   [membres, livres, votes] = await Promise.all([getMembres(), getLivres(), getVotes()]);
@@ -71,6 +72,7 @@ document.getElementById("membre-save").addEventListener("click", async () => {
 // ── Profil ─────────────────────────────────────────────────────────
 
 async function openProfil(id) {
+  currentProfilId = id;
   const membre = membres.find(m => m.id === id);
   if (!membre) return;
 
@@ -164,6 +166,55 @@ async function openProfil(id) {
 
 document.getElementById("profil-overlay").addEventListener("click", e => {
   if (e.target === e.currentTarget) document.getElementById("profil-overlay").classList.add("hidden");
+});
+
+// ── Modifier profil membre ─────────────────────────────────────────
+
+function showProfilEditForm(membre) {
+  const dateStr = membre.date_arrivee
+    ? new Date(membre.date_arrivee.seconds * 1000).toISOString().split("T")[0]
+    : new Date().toISOString().split("T")[0];
+
+  document.getElementById("profil-title").textContent = "Modifier le membre";
+  document.getElementById("profil-content").innerHTML = `
+    <div class="form-group">
+      <label>Nom <span style="color:var(--red)">*</span></label>
+      <input type="text" id="edit-m-nom">
+    </div>
+    <div class="form-group">
+      <label>Date d'arrivée</label>
+      <input type="date" id="edit-m-date">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="edit-m-cancel">Annuler</button>
+      <button class="btn btn-primary" id="edit-m-save">Enregistrer</button>
+    </div>
+  `;
+
+  document.getElementById("edit-m-nom").value = membre.nom || "";
+  document.getElementById("edit-m-date").value = dateStr;
+
+  document.getElementById("edit-m-cancel").addEventListener("click", () => openProfil(currentProfilId));
+  document.getElementById("edit-m-save").addEventListener("click", async () => {
+    const nom = document.getElementById("edit-m-nom").value.trim();
+    if (!nom) { showToast("Le nom est obligatoire.", "error"); return; }
+    const dateVal = document.getElementById("edit-m-date").value;
+    if (!dateVal) { showToast("La date est obligatoire.", "error"); return; }
+    try {
+      await updateMembreInfos(currentProfilId, { nom, date_arrivee: dateVal });
+      showToast("Membre modifié !", "success");
+      membres = await getMembres();
+      renderGrid();
+      openProfil(currentProfilId);
+    } catch (e) {
+      showToast("Erreur : " + e.message, "error");
+    }
+  });
+}
+
+document.getElementById("profil-edit").addEventListener("click", () => {
+  const membre = membres.find(m => m.id === currentProfilId);
+  if (membre) showProfilEditForm(membre);
 });
 
 init().catch(console.error);

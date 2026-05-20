@@ -61,6 +61,23 @@ export async function updateLivre(id, data) {
   return updateDoc(doc(db, "livres", id), data);
 }
 
+export async function updateLivreInfos(id, { titre, auteur, annee, propose_par, date_proposition }) {
+  return updateDoc(doc(db, "livres", id), {
+    titre,
+    auteur: auteur || "",
+    annee: annee ? Number(annee) : null,
+    propose_par: propose_par || "",
+    date_proposition: Timestamp.fromDate(new Date(date_proposition)),
+  });
+}
+
+export async function updateMembreInfos(id, { nom, date_arrivee }) {
+  return updateDoc(doc(db, "membres", id), {
+    nom,
+    date_arrivee: Timestamp.fromDate(new Date(date_arrivee)),
+  });
+}
+
 // ── Votes ──────────────────────────────────────────────────────────
 
 export async function getVotes() {

@@ -47,17 +47,45 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Page actuelle</label>
+          <label id="label-page-actuelle">Pages actuelle</label>
           <input type="number" id="page-actuelle" min="0" placeholder="0">
         </div>
         <div class="form-group">
-          <label>Pages totales</label>
+          <label id="label-pages-totales">Pages totales</label>
           <input type="number" id="pages-totales" min="0" placeholder="0">
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="statut-modal-cancel">Annuler</button>
         <button class="btn btn-primary" id="statut-modal-save">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal configuration du suivi de progression -->
+  <div class="overlay hidden" id="progression-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Configurer le suivi</h2>
+        <button class="modal-close" id="progression-close">✕</button>
+      </div>
+      <div class="form-group">
+        <label>Unité de suivi</label>
+        <input type="text" id="progression-unite" list="unite-suggestions" placeholder="pages, chapitres, parties…">
+        <datalist id="unite-suggestions">
+          <option value="pages">
+          <option value="chapitres">
+          <option value="parties">
+          <option value="%">
+        </datalist>
+      </div>
+      <div class="form-group">
+        <label>Total <span style="color:var(--muted);font-weight:400">(facultatif)</span></label>
+        <input type="number" id="progression-total-input" min="1" placeholder="ex : 300">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="progression-cancel">Annuler</button>
+        <button class="btn btn-primary" id="progression-save">Enregistrer</button>
       </div>
     </div>
   </div>
