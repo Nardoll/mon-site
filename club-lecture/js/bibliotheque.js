@@ -1,7 +1,7 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
 import { getLivres, getMembres, addLivre, getVotes, getStatutsForLivre } from "./db.js";
-import { formatDate, STATUTS_LIVRE, showToast } from "./utils.js";
+import { formatDate, formatMois, STATUTS_LIVRE, showToast } from "./utils.js";
 
 await requireAuth();
 initNav("bibliotheque");
