@@ -14,14 +14,15 @@
       <h1>Accueil</h1>
     </div>
 
-    <!-- Livre du mois en cours -->
-    <div id="current-book-section">
+    <!-- Frise chronologique -->
+    <div id="frise-section"></div>
+
+    <!-- Livre du mois -->
+    <div id="current-book-section" style="margin-bottom:2.5rem">
       <div class="loading">Chargement…</div>
     </div>
 
-    <div class="divider"></div>
-
-    <!-- Chronologie -->
+    <!-- Chronologie livres élus -->
     <div class="section-title">Chronologie des livres élus</div>
     <div id="timeline-section">
       <div class="loading">Chargement…</div>
@@ -44,16 +45,14 @@
           <option value="termine">Terminé</option>
         </select>
       </div>
-      <div id="pages-fields">
-        <div class="form-row">
-          <div class="form-group">
-            <label>Page actuelle</label>
-            <input type="number" id="page-actuelle" min="0" placeholder="0">
-          </div>
-          <div class="form-group">
-            <label>Pages totales</label>
-            <input type="number" id="pages-totales" min="0" placeholder="0">
-          </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Page actuelle</label>
+          <input type="number" id="page-actuelle" min="0" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label>Pages totales</label>
+          <input type="number" id="pages-totales" min="0" placeholder="0">
         </div>
       </div>
       <div class="modal-footer">

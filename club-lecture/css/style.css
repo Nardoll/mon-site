@@ -275,6 +275,17 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 .vtable tfoot td.elim-avg { color: #666; }
 .stars { font-size: .72rem; letter-spacing: -.05em; display: block; }
 
+/* ── Frise chronologique ─────────────────── */
+.frise-wrap {
+  overflow-x: auto;
+  margin-bottom: 2rem;
+  padding-bottom: .5rem;
+  user-select: none;
+}
+.frise-wrap::-webkit-scrollbar { height: 4px; }
+.frise-wrap::-webkit-scrollbar-track { background: transparent; }
+.frise-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
 /* ── Fiche timeline ──────────────────────── */
 .ft-timeline { position: relative; padding-left: 1.5rem; }
 .ft-timeline::before { content: ''; position: absolute; left: .28rem; top: .6rem; bottom: .6rem; width: 2px; background: var(--border); }

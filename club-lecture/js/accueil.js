@@ -1,70 +1,190 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getMembres } from "./db.js";
-import { getVotes } from "./db.js";
-import { getStatutsForLivre, upsertStatutLecture, getLivreById } from "./db.js";
-import { formatMois, STATUTS_LECTURE, STATUTS_ORDRE, cycleStatut, initiales, showToast } from "./utils.js";
+import { getMembres, getLivres, getVotes, getStatutsForLivre, upsertStatutLecture, getLivreById } from "./db.js";
+import { formatMois, formatDate, STATUTS_LECTURE, initiales, showToast } from "./utils.js";
 
 await requireAuth();
 initNav("accueil");
 
-let allVotes = [];
-let allMembres = [];
-let currentLivreId = null;
-let editMembre = null;
+let allVotes = [], allMembres = [], allLivres = [];
+let currentLivreId = null, currentVote = null, editMembreId = null;
 
 async function init() {
-  [allVotes, allMembres] = await Promise.all([getVotes(), getMembres()]);
-  renderCurrentBook();
+  [allVotes, allMembres, allLivres] = await Promise.all([getVotes(), getMembres(), getLivres()]);
+  renderFrise();
+  await renderCurrentBook();
   renderTimeline();
+  initFriseDrag();
 }
 
-function votesElus() {
-  return allVotes
-    .filter(v => v.livre_elu)
-    .sort((a, b) => a.annee !== b.annee ? a.annee - b.annee : a.mois - b.mois);
+// ── Helpers ────────────────────────────────────────────────────────
+
+function timeSince(ts) {
+  if (!ts) return null;
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const days = Math.floor((new Date() - d) / 86400000);
+  if (days < 1) return "aujourd'hui";
+  if (days < 30) return `il y a ${days} j`;
+  const months = Math.floor(days / 30.5);
+  if (months < 12) return `il y a ${months} mois`;
+  const years = Math.floor(months / 12);
+  return `il y a ${years} an${years > 1 ? "s" : ""}`;
 }
 
-function moyenneFromVote(vote, livreId) {
-  const r = (vote.resultats || []).find(x => x.livre_id === livreId);
-  return r?.moyenne ?? null;
+function toDate(ts) {
+  if (!ts) return null;
+  return ts.toDate ? ts.toDate() : new Date(ts);
+}
+
+function nomMembre(id) {
+  return allMembres.find(m => m.id === id)?.nom ?? "—";
+}
+
+// ── Frise chronologique ────────────────────────────────────────────
+
+function buildEvents() {
+  const events = [];
+
+  allMembres.forEach(m => {
+    const d = toDate(m.date_arrivee);
+    if (!d) return;
+    events.push({ date: d, type: "membre", size: "sm", data: m });
+  });
+
+  allLivres.forEach(l => {
+    const d = toDate(l.date_proposition);
+    if (!d) return;
+    events.push({ date: d, type: "livre", size: "md", data: l });
+  });
+
+  allVotes.forEach(v => {
+    const d = new Date(v.annee, v.mois - 1, 15);
+    events.push({ date: d, type: v.livre_elu ? "elu" : "vote", size: "lg", data: v });
+  });
+
+  return events.sort((a, b) => a.date - b.date);
+}
+
+function renderFrise() {
+  const section = document.getElementById("frise-section");
+  const events = buildEvents();
+  if (!events.length) { section.innerHTML = ""; return; }
+
+  const H = 280, AXIS = 138, DOT_R = 7, STEM = 20;
+  const WIDTHS = { sm: 118, md: 148, lg: 168 };
+
+  const cols = events.map((ev, i) => {
+    const isTop = i % 2 === 0;
+    const w = WIDTHS[ev.size] || 148;
+    const dotBg = { membre: "var(--muted)", livre: "var(--accent)", vote: "var(--purple)", elu: "var(--green)" }[ev.type] || "var(--muted)";
+    const dotSize = { sm: 10, md: 12, lg: 16 }[ev.size] || 12;
+    const dotY = AXIS - dotSize / 2;
+    const stemTop = isTop ? AXIS - STEM - dotSize / 2 : AXIS + dotSize / 2;
+    const cardBottom = isTop ? `${H - AXIS + STEM + dotSize / 2}px` : "auto";
+    const cardTop    = isTop ? "auto" : `${AXIS + dotSize / 2 + STEM}px`;
+
+    const dateStr = ev.date.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" });
+    const dateLabelY = isTop ? `top:${AXIS + dotSize / 2 + 3}px` : `bottom:${H - AXIS + dotSize / 2 + 3}px`;
+
+    let icon = "", title = "", sub = "";
+    if (ev.type === "membre") {
+      icon = "👤"; title = ev.data.nom; sub = "Arrivée";
+    } else if (ev.type === "livre") {
+      icon = "📚";
+      title = ev.data.titre.length > 22 ? ev.data.titre.slice(0, 20) + "…" : ev.data.titre;
+      sub = nomMembre(ev.data.propose_par);
+    } else if (ev.type === "vote") {
+      icon = "🗳️"; title = "Vote";
+      sub = `${formatMois(ev.data.mois, ev.data.annee)}<br>${(ev.data.resultats || []).length} livres`;
+    } else if (ev.type === "elu") {
+      const r = (ev.data.resultats || []).find(x => x.livre_id === ev.data.livre_elu);
+      icon = "🏆";
+      const t = r?.titre ?? "Livre élu";
+      title = t.length > 22 ? t.slice(0, 20) + "…" : t;
+      sub = formatMois(ev.data.mois, ev.data.annee);
+    }
+
+    const borderColor = { membre: "#333", livre: "rgba(232,164,74,.45)", vote: "rgba(122,106,240,.45)", elu: "rgba(106,191,105,.45)" }[ev.type];
+
+    return `
+      <div style="position:relative;flex-shrink:0;width:${w}px;height:${H}px">
+        <div style="position:absolute;top:${dotY}px;left:calc(50% - ${dotSize/2}px);width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:${dotBg};border:2.5px solid #0f0f0f;z-index:2"></div>
+        <div style="position:absolute;left:calc(50% - 1px);top:${stemTop}px;width:2px;height:${STEM}px;background:var(--border)"></div>
+        <div style="position:absolute;top:${cardTop};bottom:${cardBottom};left:5%;width:90%;background:var(--surface);border:1px solid ${borderColor};border-radius:6px;padding:.45rem .55rem;text-align:center">
+          <span style="font-size:${ev.size === "lg" ? "1.15rem" : ev.size === "sm" ? ".85rem" : "1rem"};display:block;margin-bottom:.15rem">${icon}</span>
+          <div style="font-size:.72rem;font-weight:700;line-height:1.25;color:#e0e0e0">${title}</div>
+          <div style="font-size:.65rem;color:var(--muted);margin-top:.15rem;line-height:1.3">${sub}</div>
+        </div>
+        <div style="position:absolute;${dateLabelY};left:0;right:0;text-align:center;font-size:.6rem;color:#555">${dateStr}</div>
+      </div>`;
+  }).join("");
+
+  section.innerHTML = `
+    <div class="frise-wrap" id="frise-wrap">
+      <div style="display:inline-flex;position:relative;height:${H}px;padding:0 3.5rem 0 1rem;min-width:100%" id="frise-track">
+        <div style="position:absolute;left:0;right:2.2rem;top:${AXIS}px;height:2px;background:var(--border)"></div>
+        <div style="position:absolute;right:1rem;top:${AXIS - 7}px;border-left:15px solid var(--muted);border-top:8px solid transparent;border-bottom:8px solid transparent"></div>
+        ${cols}
+      </div>
+    </div>`;
+}
+
+function initFriseDrag() {
+  const wrap = document.getElementById("frise-wrap");
+  if (!wrap) return;
+  let isDown = false, startX, scrollLeft;
+  wrap.addEventListener("mousedown", e => { isDown = true; startX = e.pageX - wrap.offsetLeft; scrollLeft = wrap.scrollLeft; wrap.style.cursor = "grabbing"; });
+  wrap.addEventListener("mouseleave", () => { isDown = false; wrap.style.cursor = "grab"; });
+  wrap.addEventListener("mouseup", () => { isDown = false; wrap.style.cursor = "grab"; });
+  wrap.addEventListener("mousemove", e => { if (!isDown) return; e.preventDefault(); wrap.scrollLeft = scrollLeft - (e.pageX - wrap.offsetLeft - startX); });
+  wrap.style.cursor = "grab";
+}
+
+// ── Livre du mois ──────────────────────────────────────────────────
+
+function detectScale(vote, livreId) {
+  const r = (vote?.resultats || []).find(x => x.livre_id === livreId);
+  const notes = Object.values(r?.notes || {}).map(Number).filter(n => !isNaN(n));
+  return notes.length && Math.max(...notes) <= 5 ? 5 : 10;
 }
 
 async function renderCurrentBook() {
   const section = document.getElementById("current-book-section");
-  const elus = votesElus();
+  const elus = allVotes.filter(v => v.livre_elu).sort((a, b) => a.annee !== b.annee ? a.annee - b.annee : a.mois - b.mois);
   if (!elus.length) {
     section.innerHTML = `<div class="empty-state"><span class="big-icon">📖</span>Aucun livre élu pour l'instant.</div>`;
     return;
   }
 
   const latest = elus[elus.length - 1];
+  currentVote = latest;
   currentLivreId = latest.livre_elu;
 
-  const [livre, statuts] = await Promise.all([
-    getLivreById(currentLivreId),
-    getStatutsForLivre(currentLivreId)
-  ]);
-
+  const [livre, statuts] = await Promise.all([getLivreById(currentLivreId), getStatutsForLivre(currentLivreId)]);
   const statutByMembre = {};
   statuts.forEach(s => { statutByMembre[s.membre_id] = s; });
 
-  const moy = moyenneFromVote(latest, currentLivreId);
+  const r = (latest.resultats || []).find(x => x.livre_id === currentLivreId);
+  const scale = detectScale(latest, currentLivreId);
+  const moy = r?.moyenne ?? null;
+  const proposeur = nomMembre(livre?.propose_par);
+  const since = livre?.date_proposition ? timeSince(livre.date_proposition) : null;
 
   section.innerHTML = `
     <div class="section-title">Lecture du mois — ${formatMois(latest.mois, latest.annee)}</div>
-    <div class="current-grid">
-      <div class="card">
-        <div class="card-title">📖 ${livre?.titre ?? "—"}</div>
-        <div style="color:var(--muted);font-size:.85rem;margin-bottom:.5rem">${livre?.auteur ?? ""}</div>
-        ${moy !== null ? `<div style="font-size:1.1rem;font-weight:700;color:var(--accent)">${moy.toFixed(1)} / 10</div>` : ""}
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.75rem;margin-bottom:1rem">
+        <div>
+          <div style="font-size:1.2rem;font-weight:700">${livre?.titre ?? "—"}</div>
+          <div style="font-size:.8rem;color:var(--muted);margin-top:.3rem">
+            ${livre?.auteur ? livre.auteur + " · " : ""}${since ? `Proposé ${since} par ${proposeur}` : ""}
+          </div>
+        </div>
+        ${moy !== null ? `<div style="text-align:right"><span style="font-size:1.5rem;font-weight:800;color:var(--accent)">${Number(moy).toFixed(1)}</span><span style="font-size:.85rem;color:var(--muted)"> / ${scale}</span></div>` : ""}
       </div>
-      <div class="card">
-        <div class="card-title">Avancements</div>
-        <ul class="status-list" id="status-list"></ul>
-      </div>
-    </div>
-  `;
+      <div style="height:1px;background:var(--border);margin-bottom:1rem"></div>
+      <ul class="status-list" id="status-list"></ul>
+    </div>`;
 
   renderStatusList(statutByMembre);
 }
@@ -79,15 +199,14 @@ function renderStatusList(statutByMembre) {
     let progress = "";
     if (s?.page_actuelle && s?.pages_totales && s.pages_totales > 0) {
       const pct = Math.min(100, Math.round(s.page_actuelle / s.pages_totales * 100));
-      progress = `
-        <div class="progress-wrap">
-          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
-          <span class="progress-text">${s.page_actuelle}/${s.pages_totales}</span>
-        </div>`;
+      progress = `<div class="progress-wrap" style="margin-top:.2rem">
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <span class="progress-text">${s.page_actuelle}/${s.pages_totales}</span>
+      </div>`;
     }
     return `
       <li class="status-row">
-        <span class="member-name">${m.nom}</span>
+        <span style="font-size:.88rem">${m.nom}</span>
         <div>
           <span class="st-badge st-${info.css}" data-membre="${m.id}" data-statut="${statut}">${info.label}</span>
           ${progress}
@@ -95,35 +214,30 @@ function renderStatusList(statutByMembre) {
       </li>`;
   }).join("");
 
-  list.querySelectorAll(".st-badge").forEach(badge => {
-    badge.addEventListener("click", () => openStatutModal(badge.dataset.membre, badge.dataset.statut));
-  });
+  list.querySelectorAll(".st-badge").forEach(b => b.addEventListener("click", () => openStatutModal(b.dataset.membre, b.dataset.statut)));
 }
+
+// ── Chronologie livres élus ────────────────────────────────────────
 
 function renderTimeline() {
   const section = document.getElementById("timeline-section");
-  const elus = votesElus();
-
+  const elus = allVotes.filter(v => v.livre_elu).sort((a, b) => b.annee !== a.annee ? b.annee - a.annee : b.mois - a.mois);
   if (!elus.length) {
     section.innerHTML = `<div class="empty-state"><span class="big-icon">📅</span>Aucun livre élu pour l'instant.</div>`;
     return;
   }
-
-  const reversed = [...elus].reverse();
-  section.innerHTML = `<div class="timeline">${reversed.map(v => {
+  section.innerHTML = `<div class="timeline">${elus.map(v => {
     const r = (v.resultats || []).find(x => x.livre_id === v.livre_elu);
-    const moy = r?.moyenne;
-    const titre = r?.titre ?? v.livre_elu;
-    const auteur = r?.auteur ?? "";
+    const scale = detectScale(v, v.livre_elu);
     return `
       <div class="tl-item">
-        <div class="tl-card" data-vote="${v.id}">
+        <div class="tl-card">
           <div class="tl-month">${formatMois(v.mois, v.annee)}</div>
           <div class="tl-info">
-            <div class="tl-title">${titre}</div>
-            ${auteur ? `<div class="tl-author">${auteur}</div>` : ""}
+            <div class="tl-title">${r?.titre ?? v.livre_elu}</div>
+            ${r?.auteur ? `<div class="tl-author">${r.auteur}</div>` : ""}
           </div>
-          ${moy !== null && moy !== undefined ? `<div class="tl-score">${Number(moy).toFixed(1)}/10</div>` : ""}
+          ${r?.moyenne !== null && r?.moyenne !== undefined ? `<div class="tl-score">${Number(r.moyenne).toFixed(1)}/${scale}</div>` : ""}
         </div>
       </div>`;
   }).join("")}</div>`;
@@ -132,39 +246,46 @@ function renderTimeline() {
 // ── Modal statut ───────────────────────────────────────────────────
 
 function openStatutModal(membreId, currentStatut) {
-  editMembre = membreId;
+  editMembreId = membreId;
   const m = allMembres.find(x => x.id === membreId);
   document.getElementById("statut-modal-title").textContent = `Statut — ${m?.nom ?? ""}`;
   document.getElementById("statut-select").value = currentStatut;
-  document.getElementById("statut-overlay").classList.remove("hidden");
+  const s = document.getElementById("statut-overlay");
+  const stored = document.querySelector(`.st-badge[data-membre="${membreId}"]`)?.closest(".status-row");
+  const statuts = document.querySelectorAll(`[data-membre="${membreId}"]`);
+  // Pre-fill pages if existing
+  const existing = null; // will be re-fetched on save
+  document.getElementById("page-actuelle").value = "";
+  document.getElementById("pages-totales").value = "";
+  s.classList.remove("hidden");
 }
 
-document.getElementById("statut-modal-close").addEventListener("click", closeStatutModal);
-document.getElementById("statut-modal-cancel").addEventListener("click", closeStatutModal);
-document.getElementById("statut-overlay").addEventListener("click", e => { if (e.target === e.currentTarget) closeStatutModal(); });
+["statut-modal-close","statut-modal-cancel"].forEach(id => {
+  document.getElementById(id).addEventListener("click", () => {
+    document.getElementById("statut-overlay").classList.add("hidden");
+    editMembreId = null;
+  });
+});
 
-function closeStatutModal() {
-  document.getElementById("statut-overlay").classList.add("hidden");
-  editMembre = null;
-}
+document.getElementById("statut-overlay").addEventListener("click", e => {
+  if (e.target === e.currentTarget) { document.getElementById("statut-overlay").classList.add("hidden"); editMembreId = null; }
+});
 
 document.getElementById("statut-modal-save").addEventListener("click", async () => {
-  if (!editMembre || !currentLivreId) return;
+  if (!editMembreId || !currentLivreId) return;
   const statut = document.getElementById("statut-select").value;
   const page_actuelle = document.getElementById("page-actuelle").value;
   const pages_totales = document.getElementById("pages-totales").value;
   try {
-    await upsertStatutLecture({ membre_id: editMembre, livre_id: currentLivreId, statut, page_actuelle, pages_totales });
+    await upsertStatutLecture({ membre_id: editMembreId, livre_id: currentLivreId, statut, page_actuelle, pages_totales });
     showToast("Statut mis à jour", "success");
-    closeStatutModal();
-    // Refresh
+    document.getElementById("statut-overlay").classList.add("hidden");
+    editMembreId = null;
     const statuts = await getStatutsForLivre(currentLivreId);
     const statutByMembre = {};
     statuts.forEach(s => { statutByMembre[s.membre_id] = s; });
     renderStatusList(statutByMembre);
-  } catch (e) {
-    showToast("Erreur : " + e.message, "error");
-  }
+  } catch (e) { showToast("Erreur : " + e.message, "error"); }
 });
 
 init().catch(console.error);
