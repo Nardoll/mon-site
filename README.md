@@ -4,6 +4,13 @@
 
 ---
 
+## ⚠️ Notes importantes pour Claude Code
+
+> **Ne jamais push sans confirmation explicite de Tom.**
+> Netlify a atteint sa limite mensuelle de déploiements en une seule journée. Le site est désormais hébergé sur **Cloudflare Pages** (fonctionnel, même repo GitHub). Pour économiser les déploiements : regrouper les modifications en packs avant de push, et **toujours attendre le feu vert de Tom** avant tout `git push`.
+
+---
+
 ## Contexte général
 
 Site **personnel et privé** de Tom (utilisateur). Multi-sections indépendantes. La page d'accueil (`/`) dit simplement "rien à voir ici". Chaque section n'est accessible que si on connaît son URL exacte — il n'y a aucun lien depuis l'accueil.
