@@ -105,7 +105,7 @@ function renderFrise() {
       sub = formatMois(ev.data.mois, ev.data.annee);
     }
 
-    const borderColor = { membre: "#333", livre: "rgba(232,164,74,.45)", vote: "rgba(122,106,240,.45)", elu: "rgba(106,191,105,.45)" }[ev.type];
+    const borderColor = { membre: "#3a2e50", livre: "rgba(240,176,74,.45)", vote: "rgba(160,140,245,.45)", elu: "rgba(116,212,160,.45)" }[ev.type];
 
     return `
       <div class="frise-ev-col" data-type="${ev.type}" data-id="${ev.data.id}" style="position:relative;flex-shrink:0;width:${w}px;height:${H}px;cursor:pointer">
