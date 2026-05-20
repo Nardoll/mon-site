@@ -105,11 +105,11 @@ function renderFrise() {
       sub = formatMois(ev.data.mois, ev.data.annee);
     }
 
-    const borderColor = { membre: "#3a2e50", livre: "rgba(240,176,74,.45)", vote: "rgba(160,140,245,.45)", elu: "rgba(116,212,160,.45)" }[ev.type];
+    const borderColor = { membre: "var(--frise-membre-border)", livre: "var(--frise-livre-border)", vote: "var(--frise-vote-border)", elu: "var(--frise-elu-border)" }[ev.type];
 
     return `
       <div class="frise-ev-col" data-type="${ev.type}" data-id="${ev.data.id}" style="position:relative;flex-shrink:0;width:${w}px;height:${H}px;cursor:pointer">
-        <div style="position:absolute;top:${dotY}px;left:calc(50% - ${dotSize/2}px);width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:${dotBg};border:2.5px solid #0f0f0f;z-index:2"></div>
+        <div style="position:absolute;top:${dotY}px;left:calc(50% - ${dotSize/2}px);width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:${dotBg};border:2.5px solid var(--bg);z-index:2"></div>
         <div style="position:absolute;left:calc(50% - 1px);top:${stemTop}px;width:2px;height:${STEM}px;background:var(--border)"></div>
         <div style="position:absolute;top:${cardTop};bottom:${cardBottom};left:5%;width:90%;background:var(--surface);border:1px solid ${borderColor};border-radius:6px;padding:.45rem .55rem;text-align:center">
           <span style="font-size:${ev.size === "lg" ? "1.15rem" : ev.size === "sm" ? ".85rem" : "1rem"};display:block;margin-bottom:.15rem">${icon}</span>
