@@ -107,8 +107,8 @@ function renderChart(sorted, scale, threshold, eluId) {
     const barH = Math.max(2, Math.round((moy / scale) * barAreaH));
     const isWinner = r.livre_id === eluId;
     const isElim = !isWinner && moy < threshold;
-    const color = isWinner ? "var(--green)" : isElim ? "#555" : "var(--purple)";
-    const valColor = isWinner ? "var(--green)" : isElim ? "#666" : "var(--purple)";
+    const color = isWinner ? "var(--green)" : isElim ? "var(--elim)" : "var(--purple)";
+    const valColor = isWinner ? "var(--green)" : isElim ? "var(--elim)" : "var(--purple)";
     return `
       <div class="vchart-col">
         <div class="vchart-val" style="color:${valColor}">${Number(moy).toFixed(2)}</div>
@@ -124,7 +124,7 @@ function renderChart(sorted, scale, threshold, eluId) {
     <div class="vchart-legend">
       <div class="vchart-legend-item"><div class="vchart-legend-dot" style="background:var(--green)"></div>Gagnant</div>
       <div class="vchart-legend-item"><div class="vchart-legend-dot" style="background:var(--purple)"></div>Conservé (≥ ${threshold})</div>
-      <div class="vchart-legend-item"><div class="vchart-legend-dot" style="background:#555"></div>Éliminé (< ${threshold})</div>
+      <div class="vchart-legend-item"><div class="vchart-legend-dot" style="background:var(--elim)"></div>Éliminé (< ${threshold})</div>
     </div>
     <div class="vchart-outer">
       <div class="vchart-wrap">

@@ -25,6 +25,7 @@
   --frise-livre-border: rgba(232,164,74,.45);
   --frise-vote-border: rgba(122,106,240,.45);
   --frise-elu-border: rgba(106,191,105,.45);
+  --elim: #555;
 }
 
 /* ── Thème clair ─────────────────────────── */
@@ -50,6 +51,7 @@
   --frise-livre-border: rgba(200,120,0,.4);
   --frise-vote-border: rgba(104,64,216,.4);
   --frise-elu-border: rgba(26,158,106,.4);
+  --elim: #9080b8;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -329,7 +331,9 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 .vtable tfoot td.winner-avg { color: var(--green); }
 .vtable tfoot td.elim-avg { color: var(--muted); }
 [data-theme="light"] .vtable td.winner-cell { background: rgba(26,158,106,.08); }
-[data-theme="light"] .vtable td.elim-cell { background: rgba(100,90,150,.06); }
+[data-theme="light"] .vtable td.elim-cell { background: rgba(144,128,184,.1); }
+[data-theme="light"] .vchart-bar { opacity: .78; }
+[data-theme="light"] .chart-bar { opacity: .82; }
 .stars { font-size: .72rem; letter-spacing: -.05em; display: block; }
 
 /* ── Frise chronologique ─────────────────── */

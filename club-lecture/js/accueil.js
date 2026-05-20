@@ -113,10 +113,10 @@ function renderFrise() {
         <div style="position:absolute;left:calc(50% - 1px);top:${stemTop}px;width:2px;height:${STEM}px;background:var(--border)"></div>
         <div style="position:absolute;top:${cardTop};bottom:${cardBottom};left:5%;width:90%;background:var(--surface);border:1px solid ${borderColor};border-radius:6px;padding:.45rem .55rem;text-align:center">
           <span style="font-size:${ev.size === "lg" ? "1.15rem" : ev.size === "sm" ? ".85rem" : "1rem"};display:block;margin-bottom:.15rem">${icon}</span>
-          <div style="font-size:.72rem;font-weight:700;line-height:1.25;color:#e0e0e0">${title}</div>
+          <div style="font-size:.72rem;font-weight:700;line-height:1.25;color:var(--text)">${title}</div>
           <div style="font-size:.65rem;color:var(--muted);margin-top:.15rem;line-height:1.3">${sub}</div>
         </div>
-        <div style="position:absolute;${dateLabelY};left:0;right:0;text-align:center;font-size:.6rem;color:#555">${dateStr}</div>
+        <div style="position:absolute;${dateLabelY};left:0;right:0;text-align:center;font-size:.6rem;color:var(--muted)">${dateStr}</div>
       </div>`;
   }).join("");
 
