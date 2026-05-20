@@ -20,6 +20,51 @@
     </div>
   </main>
 
+  <!-- Modal détail vote -->
+  <div class="overlay hidden" id="detail-overlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 id="detail-title">Vote</h2>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <button class="btn btn-secondary btn-sm" id="detail-edit">✏️ Modifier le mois</button>
+          <button class="modal-close" id="detail-close">✕</button>
+        </div>
+      </div>
+      <div id="detail-content"></div>
+    </div>
+  </div>
+
+  <!-- Modal modifier mois -->
+  <div class="overlay hidden" id="edit-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Modifier le mois</h2>
+        <button class="modal-close" id="edit-close">✕</button>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Mois</label>
+          <select id="e-mois">
+            <option value="1">Janvier</option><option value="2">Février</option>
+            <option value="3">Mars</option><option value="4">Avril</option>
+            <option value="5">Mai</option><option value="6">Juin</option>
+            <option value="7">Juillet</option><option value="8">Août</option>
+            <option value="9">Septembre</option><option value="10">Octobre</option>
+            <option value="11">Novembre</option><option value="12">Décembre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Année</label>
+          <input type="number" id="e-annee" min="2020" max="2099">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="edit-cancel">Annuler</button>
+        <button class="btn btn-primary" id="edit-save">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal saisie vote -->
   <div class="overlay hidden" id="vote-overlay">
     <div class="modal modal-lg">
