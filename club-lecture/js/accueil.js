@@ -127,6 +127,11 @@ function renderFrise() {
         ${cols}
       </div>
     </div>`;
+
+  requestAnimationFrame(() => {
+    const wrap = document.getElementById("frise-wrap");
+    if (wrap) wrap.scrollLeft = wrap.scrollWidth;
+  });
 }
 
 function initFriseDrag() {
