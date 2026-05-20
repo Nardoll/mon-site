@@ -232,8 +232,10 @@ function renderStatusList() {
     let progress = "";
     if (s?.page_actuelle && s?.pages_totales && s.pages_totales > 0) {
       const pct = Math.min(100, Math.round(s.page_actuelle / s.pages_totales * 100));
-      progress = `<div class="progress-wrap" style="margin-top:.2rem">
-        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      progress = `<div class="progress-wrap">
+        <div class="progress-circle" style="--pct:${pct}%">
+          <span class="progress-circle-text">${pct}%</span>
+        </div>
         <span class="progress-text">${s.page_actuelle}/${s.pages_totales}${unite ? ` ${unite}` : ""}</span>
       </div>`;
     }

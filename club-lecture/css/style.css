@@ -165,10 +165,13 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 .status-row { display: flex; align-items: center; justify-content: space-between; padding: .55rem 0; border-bottom: 1px solid var(--border); }
 .status-row:last-child { border-bottom: none; }
 
-.progress-wrap { display: flex; align-items: center; gap: .5rem; margin-top: .25rem; }
+.progress-wrap { display: flex; align-items: center; gap: .5rem; margin-top: .35rem; }
 .progress-bar { flex: 1; height: 4px; background: var(--border); border-radius: 2px; }
 .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; }
 .progress-text { font-size: .72rem; color: var(--muted); white-space: nowrap; }
+.progress-circle { width: 32px; height: 32px; border-radius: 50%; background: conic-gradient(var(--accent) 0% var(--pct, 0%), var(--border) var(--pct, 0%) 100%); display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; }
+.progress-circle::before { content: ''; position: absolute; width: 24px; height: 24px; border-radius: 50%; background: var(--surface); }
+.progress-circle-text { position: relative; z-index: 1; font-size: .52rem; font-weight: 700; color: var(--text); line-height: 1; }
 
 /* ── Charts / Histograms ─────────────────── */
 .chart { padding: .5rem 0; }
