@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Site personnel</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0e0e;
+      --surface: #161616;
+      --border: #2a2a2a;
+      --text: #c8c8c8;
+      --muted: #555;
+      --accent: #7a6af0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 3rem 3.5rem;
+      max-width: 540px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .icon {
+      font-size: 2.5rem;
+      margin-bottom: 1.5rem;
+      display: block;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #e8e8e8;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.01em;
+    }
+
+    .divider {
+      width: 40px;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 2px;
+      margin: 0 auto 1.5rem;
+    }
+
+    p {
+      line-height: 1.75;
+      color: var(--text);
+      margin-bottom: 1rem;
+      font-size: 0.97rem;
+    }
+
+    p:last-child { margin-bottom: 0; }
+
+    .note {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.88rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    code {
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      background: #1e1e1e;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.15em 0.45em;
+      font-size: 0.9em;
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <span class="icon">🔒</span>
+    <h1>Site à usage personnel</h1>
+    <div class="divider"></div>
+
+    <p>
+      Si vous êtes arrivé ici par erreur, il n'y a rien à faire ici.
+      Ce site n'est pas public et ne contient rien d'intéressant pour un visiteur lambda.
+    </p>
+
+    <p>
+      Si vous avez une bonne raison d'être ici, vous connaissez déjà
+      l'URL exacte de la section qui vous est destinée.
+    </p>
+
+    <p class="note">
+      Accès direct par URL uniquement — par exemple&nbsp;:
+      <code>ce-site.netlify.app/votre-section/</code>
+    </p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JDR</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0e0e;
+      --surface: #161616;
+      --border: #2a2a2a;
+      --text: #c8c8c8;
+      --muted: #555;
+      --accent: #cf6679;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 3rem 3.5rem;
+      max-width: 540px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .icon { font-size: 2.5rem; margin-bottom: 1.5rem; display: block; }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #e8e8e8;
+      margin-bottom: 1.5rem;
+    }
+
+    .divider {
+      width: 40px;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 2px;
+      margin: 0 auto 1.5rem;
+    }
+
+    p {
+      line-height: 1.75;
+      color: var(--muted);
+      font-size: 0.97rem;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <span class="icon">🎲</span>
+    <h1>JDR</h1>
+    <div class="divider"></div>
+    <p>Section en construction.</p>
+  </div>
+</body>
+</html>
