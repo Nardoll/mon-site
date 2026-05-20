@@ -10,9 +10,10 @@ let membres = [], livres = [], votes = [];
 
 async function init() {
   [membres, livres, votes] = await Promise.all([getMembres(), getLivres(), getVotes()]);
-  // Set default date to today
   document.getElementById("m-date").value = new Date().toISOString().split("T")[0];
   renderGrid();
+  const openId = new URLSearchParams(window.location.search).get("open");
+  if (openId) openProfil(openId);
 }
 
 function renderGrid() {

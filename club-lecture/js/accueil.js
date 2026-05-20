@@ -107,7 +107,7 @@ function renderFrise() {
     const borderColor = { membre: "#333", livre: "rgba(232,164,74,.45)", vote: "rgba(122,106,240,.45)", elu: "rgba(106,191,105,.45)" }[ev.type];
 
     return `
-      <div style="position:relative;flex-shrink:0;width:${w}px;height:${H}px">
+      <div class="frise-ev-col" data-type="${ev.type}" data-id="${ev.data.id}" style="position:relative;flex-shrink:0;width:${w}px;height:${H}px;cursor:pointer">
         <div style="position:absolute;top:${dotY}px;left:calc(50% - ${dotSize/2}px);width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:${dotBg};border:2.5px solid #0f0f0f;z-index:2"></div>
         <div style="position:absolute;left:calc(50% - 1px);top:${stemTop}px;width:2px;height:${STEM}px;background:var(--border)"></div>
         <div style="position:absolute;top:${cardTop};bottom:${cardBottom};left:5%;width:90%;background:var(--surface);border:1px solid ${borderColor};border-radius:6px;padding:.45rem .55rem;text-align:center">
@@ -132,16 +132,28 @@ function renderFrise() {
     const wrap = document.getElementById("frise-wrap");
     if (wrap) wrap.scrollLeft = wrap.scrollWidth;
   });
+
+  // Click handlers (naviguer vers la page)
+  section.querySelectorAll(".frise-ev-col").forEach(el => {
+    el.addEventListener("click", () => {
+      const { type, id } = el.dataset;
+      if (type === "membre") window.location.href = `membres.html?open=${id}`;
+      else if (type === "livre") window.location.href = `bibliotheque.html?open=${id}`;
+      else if (type === "vote" || type === "elu") window.location.href = `votes.html?open=${id}`;
+    });
+  });
 }
 
 function initFriseDrag() {
   const wrap = document.getElementById("frise-wrap");
   if (!wrap) return;
-  let isDown = false, startX, scrollLeft;
-  wrap.addEventListener("mousedown", e => { isDown = true; startX = e.pageX - wrap.offsetLeft; scrollLeft = wrap.scrollLeft; wrap.style.cursor = "grabbing"; });
+  let isDown = false, startX, scrollLeft, moved = false;
+  wrap.addEventListener("mousedown", e => { isDown = true; moved = false; startX = e.pageX - wrap.offsetLeft; scrollLeft = wrap.scrollLeft; wrap.style.cursor = "grabbing"; });
   wrap.addEventListener("mouseleave", () => { isDown = false; wrap.style.cursor = "grab"; });
   wrap.addEventListener("mouseup", () => { isDown = false; wrap.style.cursor = "grab"; });
-  wrap.addEventListener("mousemove", e => { if (!isDown) return; e.preventDefault(); wrap.scrollLeft = scrollLeft - (e.pageX - wrap.offsetLeft - startX); });
+  wrap.addEventListener("mousemove", e => { if (!isDown) return; moved = true; e.preventDefault(); wrap.scrollLeft = scrollLeft - (e.pageX - wrap.offsetLeft - startX); });
+  // Bloquer le click si c'était un drag
+  wrap.addEventListener("click", e => { if (moved) { e.stopPropagation(); moved = false; } }, true);
   wrap.style.cursor = "grab";
 }
 
@@ -236,7 +248,7 @@ function renderTimeline() {
     const scale = detectScale(v, v.livre_elu);
     return `
       <div class="tl-item">
-        <div class="tl-card">
+        <div class="tl-card" data-livre-id="${v.livre_elu}">
           <div class="tl-month">${formatMois(v.mois, v.annee)}</div>
           <div class="tl-info">
             <div class="tl-title">${r?.titre ?? v.livre_elu}</div>
@@ -246,6 +258,12 @@ function renderTimeline() {
         </div>
       </div>`;
   }).join("")}</div>`;
+
+  section.querySelectorAll(".tl-card[data-livre-id]").forEach(card => {
+    card.addEventListener("click", () => {
+      window.location.href = `bibliotheque.html?open=${card.dataset.livreId}`;
+    });
+  });
 }
 
 // ── Modal statut ───────────────────────────────────────────────────

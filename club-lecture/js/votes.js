@@ -15,6 +15,8 @@ async function init() {
   populateLivreSelect();
   setDefaultDate();
   renderList();
+  const openId = new URLSearchParams(window.location.search).get("open");
+  if (openId) openDetail(openId);
 }
 
 function setDefaultDate() {

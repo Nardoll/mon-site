@@ -15,6 +15,8 @@ async function init() {
   populateMembresFilter();
   populateMembresPropose();
   renderTable();
+  const openId = new URLSearchParams(window.location.search).get("open");
+  if (openId) openFiche(openId);
 }
 
 function nomMembre(id) {
