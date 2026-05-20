@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bibliothèque — Club de lecture</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main class="main">
+    <div class="page-header">
+      <h1>Bibliothèque</h1>
+      <button class="btn btn-primary" id="btn-proposer">+ Proposer un livre</button>
+    </div>
+
+    <div class="card">
+      <div class="filter-bar">
+        <input type="text" id="filter-search" placeholder="Rechercher titre / auteur…">
+        <select id="filter-statut">
+          <option value="">Tous les statuts</option>
+          <option value="en_proposition">En proposition</option>
+          <option value="elu">Élu</option>
+          <option value="refuse">Refusé</option>
+        </select>
+        <select id="filter-propose">
+          <option value="">Tous les membres</option>
+        </select>
+      </div>
+
+      <div class="table-wrap">
+        <table id="livres-table">
+          <thead>
+            <tr>
+              <th data-col="titre">Titre</th>
+              <th data-col="auteur">Auteur</th>
+              <th data-col="annee">Année</th>
+              <th data-col="propose_par">Proposé par</th>
+              <th data-col="date_proposition">Date</th>
+              <th data-col="statut">Statut</th>
+            </tr>
+          </thead>
+          <tbody id="livres-tbody">
+            <tr><td colspan="6" class="loading">Chargement…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal proposer un livre -->
+  <div class="overlay hidden" id="propose-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Proposer un livre</h2>
+        <button class="modal-close" id="propose-close">✕</button>
+      </div>
+      <div class="form-group">
+        <label>Titre <span style="color:var(--red)">*</span></label>
+        <input type="text" id="p-titre" placeholder="Titre du livre">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Auteur</label>
+          <input type="text" id="p-auteur" placeholder="Optionnel">
+        </div>
+        <div class="form-group">
+          <label>Année</label>
+          <input type="number" id="p-annee" placeholder="Optionnel" min="1000" max="2099">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Proposé par <span style="color:var(--red)">*</span></label>
+        <select id="p-membre"></select>
+      </div>
+      <div class="form-group">
+        <label>Date de proposition</label>
+        <input type="date" id="p-date">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="propose-cancel">Annuler</button>
+        <button class="btn btn-primary" id="propose-save">Proposer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal fiche livre -->
+  <div class="overlay hidden" id="fiche-overlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 id="fiche-titre">Fiche livre</h2>
+        <button class="modal-close" id="fiche-close">✕</button>
+      </div>
+      <div id="fiche-content"></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/nav.js"></script>
+  <script type="module" src="js/bibliotheque.js"></script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Votes — Club de lecture</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main class="main">
+    <div class="page-header">
+      <h1>Votes</h1>
+      <button class="btn btn-primary" id="btn-add-vote">+ Saisir un vote</button>
+    </div>
+
+    <div id="votes-list">
+      <div class="loading">Chargement…</div>
+    </div>
+  </main>
+
+  <!-- Modal saisie vote -->
+  <div class="overlay hidden" id="vote-overlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2>Saisir un vote</h2>
+        <button class="modal-close" id="vote-close">✕</button>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Mois</label>
+          <select id="v-mois">
+            <option value="1">Janvier</option><option value="2">Février</option>
+            <option value="3">Mars</option><option value="4">Avril</option>
+            <option value="5">Mai</option><option value="6">Juin</option>
+            <option value="7">Juillet</option><option value="8">Août</option>
+            <option value="9">Septembre</option><option value="10">Octobre</option>
+            <option value="11">Novembre</option><option value="12">Décembre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Année</label>
+          <input type="number" id="v-annee" min="2020" max="2099">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Ajouter un livre au vote</label>
+        <div style="display:flex;gap:.5rem">
+          <select id="v-livre-select" style="flex:1"></select>
+          <button class="btn btn-secondary" id="v-add-livre">Ajouter</button>
+        </div>
+      </div>
+
+      <div id="v-matrix-section"></div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="vote-cancel">Annuler</button>
+        <button class="btn btn-primary" id="vote-save">Enregistrer le vote</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/nav.js"></script>
+  <script type="module" src="js/votes.js"></script>
+</body>
+</html>

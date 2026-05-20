@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Membres — Club de lecture</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main class="main">
+    <div class="page-header">
+      <h1>Membres</h1>
+      <button class="btn btn-primary" id="btn-add-membre">+ Ajouter un membre</button>
+    </div>
+
+    <div class="member-grid" id="membres-grid">
+      <div class="loading" style="grid-column:1/-1">Chargement…</div>
+    </div>
+
+    <!-- Profil membre -->
+    <div id="profil-section" class="hidden"></div>
+  </main>
+
+  <!-- Modal ajouter membre -->
+  <div class="overlay hidden" id="membre-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Ajouter un membre</h2>
+        <button class="modal-close" id="membre-close">✕</button>
+      </div>
+      <div class="form-group">
+        <label>Nom <span style="color:var(--red)">*</span></label>
+        <input type="text" id="m-nom" placeholder="Prénom Nom">
+      </div>
+      <div class="form-group">
+        <label>Date d'arrivée</label>
+        <input type="date" id="m-date">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="membre-cancel">Annuler</button>
+        <button class="btn btn-primary" id="membre-save">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal profil -->
+  <div class="overlay hidden" id="profil-overlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 id="profil-title">Profil</h2>
+        <button class="modal-close" id="profil-close">✕</button>
+      </div>
+      <div id="profil-content"></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/nav.js"></script>
+  <script type="module" src="js/membres.js"></script>
+</body>
+</html>
