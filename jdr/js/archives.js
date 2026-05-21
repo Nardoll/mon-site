@@ -12,6 +12,7 @@ const PRESETS = {
   avancement:   ['Idée', 'En préparation', 'Prêt', 'En cours', 'Arrêté', 'Terminé'],
   createur:     ['Tom/Nardoll', 'Thomas Laversin', 'FibreTigre', 'Simon Stålenhag'],
   emplacement:  ['PDF', 'Livre', 'Notion', 'Drive', 'LegendKeeper', 'Obsidian', 'Canva', 'Word'],
+  systeme:      ['Custom', '2d6+bullshit', 'Aria', 'Mundaris', 'Appel de Cthulhu', '2d6 + 10 comp.', '2d6 + 8 comp.', 'Tales from the loop', 'Cthulhu Simplified', 'Aucun'],
   univers:      [],
   participants: [],
 };
@@ -90,7 +91,7 @@ async function removeProjet(id) {
 
 // ── Options découvertes depuis la base ─────────────────
 function updateDiscovered() {
-  const fields = ['type', 'avancement', 'createur', 'emplacement', 'univers', 'participants'];
+  const fields = ['type', 'avancement', 'createur', 'emplacement', 'systeme', 'univers', 'participants'];
   for (const f of fields) {
     const fromDB = allProjets.flatMap(p => p[f] || []);
     discovered[f] = [...new Set([...(PRESETS[f] || []), ...fromDB])];
@@ -284,6 +285,7 @@ function detailHTML(p) {
   html += row('Avancement', avancChips(p.avancement));
   html += row('Date de début', tsToStr(p.date_debut));
   html += row('Créateur', chips(p.createur));
+  html += row('Système de jeu', chips(p.systeme));
   html += row('Univers', chips(p.univers));
   html += row('Emplacement', chips(p.emplacement));
   if (p.youtube) html += row('YouTube', '▶ Session enregistrée');
@@ -327,6 +329,7 @@ function openForm(id) {
   initMs('ms-type',         discovered.type,         p?.type || []);
   initMs('ms-avancement',   discovered.avancement,   p?.avancement || []);
   initMs('ms-createur',     discovered.createur,     p?.createur || []);
+  initMs('ms-systeme',      discovered.systeme,      p?.systeme || []);
   initMs('ms-univers',      discovered.univers,      p?.univers || []);
   initMs('ms-emplacement',  discovered.emplacement,  p?.emplacement || []);
   initMs('ms-participants', discovered.participants, p?.participants || []);
@@ -406,6 +409,11 @@ function buildFormHTML(p) {
         <div class="form-row">
           <label class="form-label">Créateur</label>
           <div id="ms-createur" class="ms-wrap"></div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">Système de jeu</label>
+          <div id="ms-systeme" class="ms-wrap"></div>
         </div>
 
         <div class="form-row">
@@ -503,6 +511,7 @@ async function handleSave() {
     type:        msRefs['ms-type']?.getValue()        || [],
     avancement:  msRefs['ms-avancement']?.getValue()  || [],
     createur:    msRefs['ms-createur']?.getValue()    || [],
+    systeme:     msRefs['ms-systeme']?.getValue()     || [],
     univers:     msRefs['ms-univers']?.getValue()     || [],
     emplacement: msRefs['ms-emplacement']?.getValue() || [],
     youtube:      document.getElementById('f-youtube').checked,
