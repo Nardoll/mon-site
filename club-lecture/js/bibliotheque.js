@@ -154,9 +154,9 @@ function renderElusList() {
       </div>
       <div class="bib-elu-scores">
         ${nf !== null
-          ? `<div class="bib-elu-note-finale">${nf.toFixed(1)}/10</div>`
+          ? `<div class="bib-elu-note-finale">${nf.toFixed(1)}<span class="bib-elu-note-label">/10 club</span></div>`
           : `<div class="bib-elu-no-note">Non noté</div>`}
-        ${moy !== null ? `<div class="bib-elu-score-vote">vote : ${Number(moy).toFixed(1)}/${scale}</div>` : ""}
+        ${moy !== null ? `<div class="bib-elu-score-vote">Sélection : ${Number(moy).toFixed(1)}/${scale}</div>` : ""}
       </div>
     </div>`;
   }).join("");
@@ -338,6 +338,34 @@ async function openFiche(id) {
       </div>
     </div>`).join("")}</div>`;
 
+  // Réunion associée
+  const reunion = reunions.find(r => r.livre_id === id);
+  let reunionHTML = "";
+  if (reunion) {
+    const nf = (() => {
+      const vals = Object.values(reunion.notes_finales || {}).map(Number).filter(n => !isNaN(n) && n > 0);
+      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    })();
+    const participants = reunion.participant_ids || [];
+    const notesParParticipant = participants.map(memId => {
+      const note = reunion.notes_finales?.[memId];
+      return `<span style="font-size:.8rem">${nomMembre(memId)}${note ? ` <strong style="color:var(--accent)">${Number(note).toFixed(1)}/10</strong>` : ""}</span>`;
+    }).join(" · ");
+    reunionHTML = `
+      <div class="divider"></div>
+      <div class="card-title mb-2">📝 Réunion</div>
+      <div style="font-size:.85rem;line-height:1.8">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem">
+          <span style="color:var(--muted)">${reunion.date ? formatDate(reunion.date) : "Date non fixée"} · ${participants.length} participant${participants.length > 1 ? "s" : ""}</span>
+          ${nf !== null ? `<strong style="font-size:1rem;color:var(--accent)">${nf.toFixed(1)}/10</strong>` : ""}
+        </div>
+        ${participants.length ? `<div style="margin-top:.4rem;color:var(--muted)">${notesParParticipant}</div>` : ""}
+      </div>
+      <div style="margin-top:.75rem">
+        <a href="reunions.html?open=${reunion.id}" class="btn btn-secondary btn-sm">📝 Voir la fiche réunion →</a>
+      </div>`;
+  }
+
   document.getElementById("fiche-content").innerHTML = `
     <dl class="book-detail-meta">
       <dt>Auteur</dt><dd>${livre.auteur || "—"}</dd>
@@ -350,6 +378,7 @@ async function openFiche(id) {
     <div class="divider"></div>
     <div class="card-title mb-2">Historique</div>
     ${tlHTML}
+    ${reunionHTML}
     <div style="height:1px;background:var(--border);margin:1.5rem 0"></div>
     <div style="text-align:center">
       <a href="commentaires.html?livre=${id}" class="btn btn-secondary btn-sm">💬 Commentaires de lecture</a>

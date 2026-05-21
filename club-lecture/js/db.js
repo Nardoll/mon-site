@@ -218,6 +218,14 @@ export async function cloturerVoteActif(docId, voteData) {
   return deleteDoc(doc(db, "votes_actifs", docId));
 }
 
+export async function annulerVoteActif(docId) {
+  return deleteDoc(doc(db, "votes_actifs", docId));
+}
+
+export async function deleteVote(id) {
+  return deleteDoc(doc(db, "votes", id));
+}
+
 // ── Réunions ───────────────────────────────────────────────────────
 
 export async function getReunions() {

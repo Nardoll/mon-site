@@ -1,16 +1,16 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getMembres, addMembre, getLivres, getVotes, updateMembreInfos, getCommentairesForMembre } from "./db.js";
+import { getMembres, addMembre, getLivres, getVotes, updateMembreInfos, getCommentairesForMembre, getReunions } from "./db.js";
 import { formatDate, formatMois, initiales, showToast } from "./utils.js";
 
 await requireAuth();
 initNav("membres");
 
-let membres = [], livres = [], votes = [];
+let membres = [], livres = [], votes = [], reunions = [];
 let currentProfilId = null;
 
 async function init() {
-  [membres, livres, votes] = await Promise.all([getMembres(), getLivres(), getVotes()]);
+  [membres, livres, votes, reunions] = await Promise.all([getMembres(), getLivres(), getVotes(), getReunions()]);
   document.getElementById("m-date").value = new Date().toISOString().split("T")[0];
   renderGrid();
   const openId = new URLSearchParams(window.location.search).get("open");
@@ -183,6 +183,25 @@ async function openProfil(id) {
       }).join("")
     : `<div class="text-muted" style="font-size:.85rem">Aucun commentaire enregistré.</div>`;
 
+  // ── Réunions ──────────────────────────────────────────────────────
+  const reunionsMembre = reunions.filter(r => (r.participant_ids || []).includes(id))
+    .sort((a, b) => (b.date?.seconds ?? 0) - (a.date?.seconds ?? 0));
+
+  const reunionsSection = reunionsMembre.length
+    ? reunionsMembre.map(r => {
+        const titre = r.livre_id ? (livres.find(l => l.id === r.livre_id)?.titre ?? "—") : "Aucun livre";
+        const note = r.notes_finales?.[id];
+        const noteStr = note ? `<strong style="color:var(--accent)">${Number(note).toFixed(1)}/10</strong>` : `<span style="color:var(--muted)">Non noté</span>`;
+        return `<div class="vmr" style="cursor:pointer" data-reunion-id="${r.id}">
+          <div class="vmr-header">
+            <span class="vmr-month">${formatMois(r.mois, r.annee)}</span>
+            <span class="vmr-top" style="flex:1;font-size:.84rem">${titre}</span>
+            <span>${noteStr}</span>
+          </div>
+        </div>`;
+      }).join("")
+    : `<div class="text-muted" style="font-size:.85rem">Aucune réunion enregistrée.</div>`;
+
   document.getElementById("profil-title").textContent = membre.nom;
   document.getElementById("profil-content").innerHTML = `
     <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
@@ -203,12 +222,23 @@ async function openProfil(id) {
     <div id="cmr-list">${commentsSection}</div>
 
     <div class="divider"></div>
+    <div class="card-title mb-2">📝 Réunions</div>
+    <div id="reunions-membre-list">${reunionsSection}</div>
+
+    <div class="divider"></div>
     <div class="card-title mb-2">🗳️ Participation aux votes</div>
     ${votesSection}
   `;
 
   attachCommentInteractions();
   attachVoteInteractions(participation, id);
+
+  document.getElementById("reunions-membre-list")?.querySelectorAll("[data-reunion-id]").forEach(el => {
+    el.addEventListener("click", () => {
+      document.getElementById("profil-overlay").classList.add("hidden");
+      window.location.href = `reunions.html?open=${el.dataset.reunionId}`;
+    });
+  });
 }
 
 function escapeHtml(str) {

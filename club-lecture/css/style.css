@@ -517,5 +517,6 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 /* ── Bib élus — scores note finale ───────────────── */
 .bib-elu-scores { text-align:right; flex-shrink:0; }
 .bib-elu-note-finale { font-size:1.1rem; font-weight:800; color:var(--accent); }
+.bib-elu-note-label { font-size:.7rem; font-weight:400; opacity:.7; margin-left:1px; }
 .bib-elu-score-vote { font-size:.71rem; color:var(--muted); }
 .bib-elu-no-note { font-size:.74rem; color:var(--muted); font-style:italic; }

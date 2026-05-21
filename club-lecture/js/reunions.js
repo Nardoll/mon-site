@@ -15,6 +15,8 @@ async function init() {
     getReunions(), getMembres(), getLivres(), getVotes()
   ]);
   renderList();
+  const openId = new URLSearchParams(window.location.search).get("open");
+  if (openId) openDetail(openId);
 }
 
 function getLivreForMois(mois, annee) {
@@ -103,7 +105,7 @@ function renderDetailContent(r) {
     ? participants.map(membreId => {
         const note = r.notes_finales?.[membreId] ?? "";
         return `<div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.4rem">
-          <span style="flex:1;font-size:.88rem">${nomMembre(membreId)}</span>
+          <a href="membres.html?open=${membreId}" style="flex:1;font-size:.88rem;color:inherit;text-decoration:none">${nomMembre(membreId)}</a>
           <input type="number" class="note-finale-input" data-membre="${membreId}"
             min="1" max="10" step="0.5" placeholder="—" value="${note}" style="width:80px">
           <span style="font-size:.78rem;color:var(--muted)">/10</span>
@@ -111,13 +113,17 @@ function renderDetailContent(r) {
       }).join("")
     : `<div class="text-muted" style="font-size:.85rem">Aucun participant enregistré.</div>`;
 
+  const livreLink = r.livre_id
+    ? `<a href="bibliotheque.html?open=${r.livre_id}" style="color:var(--accent);text-decoration:none">${getLivreTitle(r.livre_id)} →</a>`
+    : "—";
+
   document.getElementById("detail-content").innerHTML = `
     <dl class="book-detail-meta">
       <dt>Statut</dt><dd>${r.statut === "passee" ? "✅ Passée" : "📅 Prévue"}</dd>
       <dt>Date</dt><dd>${r.date ? formatDate(r.date) : "Non fixée"}</dd>
       <dt>Mois</dt><dd>${formatMois(r.mois, r.annee)}</dd>
-      <dt>Livre</dt><dd>${r.livre_id ? getLivreTitle(r.livre_id) : "—"}</dd>
-      <dt>Participants</dt><dd>${participants.map(nomMembre).join(", ") || "—"}</dd>
+      <dt>Livre</dt><dd>${livreLink}</dd>
+      <dt>Participants</dt><dd>${participants.map(id => `<a href="membres.html?open=${id}" style="color:var(--accent);text-decoration:none">${nomMembre(id)}</a>`).join(", ") || "—"}</dd>
       ${r.lien_video ? `<dt>Vidéo</dt><dd><a href="${r.lien_video}" target="_blank" rel="noopener" style="color:var(--accent)">Voir l'enregistrement →</a></dd>` : ""}
     </dl>
     ${r.compte_rendu ? `
