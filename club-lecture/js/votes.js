@@ -373,14 +373,15 @@ document.getElementById("confirm-launch").addEventListener("click", async () => 
 function openSoumettreModal() {
   if (!voteActif) return;
   const sel = document.getElementById("s-membre");
-  sel.innerHTML = '<option value="">— Qui êtes-vous ? —</option>';
+  sel.innerHTML = '<option value="">— Choisir —</option>';
   (voteActif.membre_ids || []).forEach(id => {
     const opt = document.createElement("option");
     opt.value = id;
     opt.textContent = membres.find(m => m.id === id)?.nom ?? id;
     sel.appendChild(opt);
   });
-  renderNotesForm("");
+  document.getElementById("s-step-identity").classList.remove("hidden");
+  document.getElementById("s-step-notes").classList.add("hidden");
   document.getElementById("soumettre-overlay").classList.remove("hidden");
 }
 
@@ -388,7 +389,7 @@ function renderNotesForm(membreId) {
   const container = document.getElementById("s-notes-list");
   if (!voteActif) return;
   const echelle = voteActif.echelle || 5;
-  const existing = membreId ? (voteActif.bulletins?.[membreId] ?? {}) : {};
+  const existing = voteActif.bulletins?.[membreId] ?? {};
   container.innerHTML = (voteActif.livre_ids || []).map(livre_id => {
     const livre = livres.find(l => l.id === livre_id);
     const val = existing[livre_id] ?? "";
@@ -400,7 +401,29 @@ function renderNotesForm(membreId) {
   }).join("");
 }
 
-document.getElementById("s-membre").addEventListener("change", e => renderNotesForm(e.target.value));
+document.getElementById("s-confirm-identity").addEventListener("click", () => {
+  const membreId = document.getElementById("s-membre").value;
+  if (!membreId) { showToast("Choisissez votre nom dans la liste.", "error"); return; }
+  const nom = membres.find(m => m.id === membreId)?.nom ?? membreId;
+
+  if (!confirm(`Vous êtes bien ${nom} ?`)) return;
+
+  const aDejaVote = voteActif.bulletins?.[membreId];
+  if (aDejaVote && Object.keys(aDejaVote).length > 0) {
+    if (!confirm(`${nom} a déjà soumis un vote. Voulez-vous le modifier et écraser le vote précédent ?`)) return;
+  }
+
+  document.getElementById("s-voter-label").textContent = `Vote de ${nom}`;
+  renderNotesForm(membreId);
+  document.getElementById("s-step-identity").classList.add("hidden");
+  document.getElementById("s-step-notes").classList.remove("hidden");
+});
+
+document.getElementById("s-back-identity").addEventListener("click", () => {
+  document.getElementById("s-step-notes").classList.add("hidden");
+  document.getElementById("s-step-identity").classList.remove("hidden");
+});
+
 document.getElementById("btn-soumettre-vote").addEventListener("click", openSoumettreModal);
 ["soumettre-close", "soumettre-cancel"].forEach(id => {
   document.getElementById(id).addEventListener("click", () => document.getElementById("soumettre-overlay").classList.add("hidden"));
@@ -412,7 +435,7 @@ document.getElementById("soumettre-overlay").addEventListener("click", e => {
 document.getElementById("soumettre-save").addEventListener("click", async () => {
   if (!voteActif) return;
   const membreId = document.getElementById("s-membre").value;
-  if (!membreId) { showToast("Indiquez qui vous êtes.", "error"); return; }
+  if (!membreId) { showToast("Identité non confirmée.", "error"); return; }
   const notes = {};
   document.querySelectorAll(".note-vote-input").forEach(inp => {
     const v = inp.value.trim();
