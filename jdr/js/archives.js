@@ -574,92 +574,105 @@ function renderDates() {
 function MultiSelect(container, opts, current) {
   let selected = [...current];
   let options  = [...new Set(opts)];
-  let query    = '';
   let open     = false;
 
   function h(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  function draw() {
-    const filtered  = options.filter(o => o.toLowerCase().includes(query.toLowerCase()));
-    const canCreate = query.trim() && !options.some(o => o.toLowerCase() === query.trim().toLowerCase());
+  // Structure initiale — créée une seule fois pour ne jamais détruire l'input
+  container.innerHTML = `<div class="ms-field"><span class="ms-chips"></span><input class="ms-input" type="text" placeholder="Ajouter…"></div>`;
 
-    const chipsHTML = selected.map(s =>
+  const field    = container.querySelector('.ms-field');
+  const chipsEl  = container.querySelector('.ms-chips');
+  const input    = container.querySelector('.ms-input');
+
+  function drawChips() {
+    chipsEl.innerHTML = selected.map(s =>
       `<span class="ms-chip">${h(s)}<button type="button" class="ms-rm" data-v="${h(s)}">×</button></span>`
     ).join('');
-
-    const dropHTML = open ? `
-      <div class="ms-dropdown">
-        ${filtered.map(o => `
-          <div class="ms-opt${selected.includes(o) ? ' ms-sel' : ''}" data-o="${h(o)}">
-            <span>${h(o)}</span>${selected.includes(o) ? '<span class="ms-check">✓</span>' : ''}
-          </div>`).join('')}
-        ${canCreate ? `<div class="ms-opt ms-create" data-create="${h(query.trim())}">+ Créer « ${h(query.trim())} »</div>` : ''}
-        ${!filtered.length && !canCreate ? `<div class="ms-empty">Aucune option</div>` : ''}
-      </div>` : '';
-
-    container.innerHTML = `
-      <div class="ms-field">
-        ${chipsHTML}
-        <input class="ms-input" type="text" value="${h(query)}" placeholder="${selected.length ? '' : 'Ajouter…'}">
-      </div>
-      ${dropHTML}`;
-
-    const input = container.querySelector('.ms-input');
-    const field = container.querySelector('.ms-field');
-
-    field.addEventListener('mousedown', e => {
-      if (e.target !== input) { e.preventDefault(); input.focus(); }
-    });
-
-    const dropdown = container.querySelector('.ms-dropdown');
-    if (dropdown) dropdown.addEventListener('mousedown', e => e.preventDefault());
-
-    input.addEventListener('focus', () => { open = true; draw(); });
-    input.addEventListener('blur',  () => setTimeout(() => { open = false; draw(); }, 200));
-    input.addEventListener('input', e => { query = e.target.value; draw(); });
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Backspace' && !query && selected.length) {
-        selected.pop(); draw(); return;
-      }
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const q = query.trim();
-        if (!q) return;
-        if (!options.some(o => o.toLowerCase() === q.toLowerCase())) options.push(q);
-        const actual = options.find(o => o.toLowerCase() === q.toLowerCase());
-        if (actual && !selected.includes(actual)) selected.push(actual);
-        query = ''; draw();
-      }
-    });
-
-    container.querySelectorAll('.ms-rm').forEach(btn => {
+    input.placeholder = selected.length ? '' : 'Ajouter…';
+    chipsEl.querySelectorAll('.ms-rm').forEach(btn => {
       btn.addEventListener('mousedown', e => {
         e.preventDefault();
         selected = selected.filter(s => s !== btn.dataset.v);
-        draw();
+        drawChips();
       });
     });
-    container.querySelectorAll('.ms-opt[data-o]').forEach(opt => {
+  }
+
+  function drawDropdown() {
+    container.querySelector('.ms-dropdown')?.remove();
+    if (!open) return;
+
+    const query    = input.value;
+    const filtered = options.filter(o => o.toLowerCase().includes(query.toLowerCase()));
+    const canCreate = query.trim() && !options.some(o => o.toLowerCase() === query.trim().toLowerCase());
+
+    const drop = document.createElement('div');
+    drop.className = 'ms-dropdown';
+    drop.innerHTML = `
+      ${filtered.map(o => `
+        <div class="ms-opt${selected.includes(o) ? ' ms-sel' : ''}" data-o="${h(o)}">
+          <span>${h(o)}</span>${selected.includes(o) ? '<span class="ms-check">✓</span>' : ''}
+        </div>`).join('')}
+      ${canCreate ? `<div class="ms-opt ms-create" data-create="${h(query.trim())}">+ Créer « ${h(query.trim())} »</div>` : ''}
+      ${!filtered.length && !canCreate ? `<div class="ms-empty">Aucune option</div>` : ''}`;
+
+    drop.addEventListener('mousedown', e => e.preventDefault());
+
+    drop.querySelectorAll('.ms-opt[data-o]').forEach(opt => {
       opt.addEventListener('mousedown', e => {
         e.preventDefault();
         const v = opt.dataset.o;
         selected = selected.includes(v) ? selected.filter(s => s !== v) : [...selected, v];
-        query = ''; draw();
+        input.value = '';
+        drawChips();
+        drawDropdown();
       });
     });
-    container.querySelectorAll('.ms-create').forEach(opt => {
+
+    drop.querySelectorAll('.ms-create').forEach(opt => {
       opt.addEventListener('mousedown', e => {
         e.preventDefault();
         const v = opt.dataset.create;
         if (!options.includes(v)) options.push(v);
         if (!selected.includes(v)) selected.push(v);
-        query = ''; draw();
+        input.value = '';
+        drawChips();
+        drawDropdown();
       });
     });
+
+    container.appendChild(drop);
   }
 
-  draw();
+  // Listeners sur l'input — attachés une seule fois
+  field.addEventListener('mousedown', e => {
+    if (e.target !== input) { e.preventDefault(); input.focus(); }
+  });
+
+  input.addEventListener('focus', () => { open = true; drawDropdown(); });
+  input.addEventListener('blur',  () => setTimeout(() => { open = false; drawDropdown(); }, 200));
+  input.addEventListener('input', () => drawDropdown());
+  input.addEventListener('keydown', e => {
+    const query = input.value;
+    if (e.key === 'Backspace' && !query && selected.length) {
+      selected.pop(); drawChips(); return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const q = query.trim();
+      if (!q) return;
+      if (!options.some(o => o.toLowerCase() === q.toLowerCase())) options.push(q);
+      const actual = options.find(o => o.toLowerCase() === q.toLowerCase());
+      if (actual && !selected.includes(actual)) selected.push(actual);
+      input.value = '';
+      drawChips();
+      drawDropdown();
+    }
+  });
+
+  drawChips();
   return { getValue: () => [...selected], getOpts: () => [...options] };
 }
