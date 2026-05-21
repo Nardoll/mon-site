@@ -467,3 +467,55 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
   .form-row { grid-template-columns: 1fr; }
   .book-detail-meta { grid-template-columns: 1fr; }
 }
+
+/* ── Vote actif banner ───────────────────────────── */
+.vote-actif-banner { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; background:var(--surface); border:1.5px solid var(--accent); border-radius:var(--r); padding:.9rem 1.25rem; margin-bottom:1.25rem; }
+.vote-actif-info { flex:1; min-width:0; }
+.vote-actif-title { font-weight:700; font-size:.95rem; }
+.vote-actif-countdown { font-size:.8rem; color:var(--muted); margin-top:.15rem; }
+.vote-actif-actions { display:flex; gap:.5rem; flex-wrap:wrap; }
+
+/* ── Checklist (lancer vote, réunions) ───────────── */
+.check-list { display:flex; flex-direction:column; gap:.35rem; max-height:180px; overflow-y:auto; border:1px solid var(--border); border-radius:6px; padding:.5rem .75rem; }
+.check-item { display:flex; align-items:center; gap:.5rem; font-size:.86rem; cursor:pointer; }
+.check-item.check-item-disabled { opacity:.45; cursor:not-allowed; }
+.check-item input[type="checkbox"] { cursor:pointer; flex-shrink:0; }
+
+/* ── Podium (accueil) ────────────────────────────── */
+.podium-wrap { margin-bottom:2.5rem; display:flex; flex-direction:column; gap:1.25rem; align-items:center; }
+.podium-top { display:flex; align-items:flex-end; justify-content:center; gap:.85rem; }
+.podium-step { display:flex; flex-direction:column; align-items:center; gap:.35rem; }
+.podium-medal { font-size:1.5rem; }
+.podium-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:.8rem 1rem; text-align:center; transition:transform .15s, box-shadow .15s; min-width:140px; max-width:200px; }
+.podium-card:hover { transform:translateY(-3px); box-shadow:0 6px 20px rgba(0,0,0,.25); }
+.podium-card.gold { border-color:#d4af37; }
+.podium-card.silver { border-color:#a8a9ad; }
+.podium-card.bronze { border-color:#cd7f32; }
+.podium-rank-1 .podium-card { min-width:170px; padding:1rem 1.25rem; }
+.podium-score { font-size:1.45rem; font-weight:800; color:var(--accent); line-height:1.1; }
+.podium-rank-1 .podium-score { font-size:1.85rem; }
+.podium-title { font-size:.83rem; font-weight:700; margin-top:.3rem; line-height:1.3; }
+.podium-rank-1 .podium-title { font-size:.93rem; }
+.podium-author { font-size:.72rem; color:var(--muted); margin-top:.1rem; }
+.podium-month { font-size:.67rem; color:var(--muted); margin-top:.2rem; }
+.podium-outsider { display:flex; flex-direction:column; align-items:center; gap:.45rem; }
+.podium-outsider-label { font-size:.74rem; color:var(--muted); font-weight:600; letter-spacing:.06em; text-transform:uppercase; }
+.podium-outsider-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:.75rem 1.1rem; display:flex; align-items:center; gap:.85rem; min-width:260px; transition:transform .15s; }
+.podium-outsider-card:hover { transform:translateY(-2px); }
+
+/* ── Réunions ────────────────────────────────────── */
+.reunion-list { display:flex; flex-direction:column; gap:.5rem; margin-bottom:1rem; }
+.reunion-item { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:.8rem 1.1rem; cursor:pointer; transition:background .15s; display:flex; align-items:center; gap:1rem; }
+.reunion-item:hover { background:var(--surface2); }
+.reunion-date { font-size:.82rem; font-weight:600; min-width:90px; flex-shrink:0; color:var(--muted); }
+.reunion-livre { flex:1; min-width:0; }
+.reunion-livre-titre { font-size:.88rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.reunion-livre-mois { font-size:.73rem; color:var(--muted); }
+.reunion-note { font-size:1rem; font-weight:800; color:var(--accent); flex-shrink:0; }
+.reunion-participants { font-size:.73rem; color:var(--muted); flex-shrink:0; white-space:nowrap; }
+
+/* ── Bib élus — scores note finale ───────────────── */
+.bib-elu-scores { text-align:right; flex-shrink:0; }
+.bib-elu-note-finale { font-size:1.1rem; font-weight:800; color:var(--accent); }
+.bib-elu-score-vote { font-size:.71rem; color:var(--muted); }
+.bib-elu-no-note { font-size:.74rem; color:var(--muted); font-style:italic; }

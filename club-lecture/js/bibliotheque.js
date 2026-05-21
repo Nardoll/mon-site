@@ -1,6 +1,6 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getLivres, getMembres, addLivre, getVotes, getStatutsForLivre, updateLivreInfos } from "./db.js";
+import { getLivres, getMembres, addLivre, getVotes, getStatutsForLivre, updateLivreInfos, getReunions } from "./db.js";
 import { formatDate, formatMois, STATUTS_LIVRE, showToast } from "./utils.js";
 
 await requireAuth();
@@ -12,13 +12,14 @@ const viewMode = params.get("vue") === "table" ? "table" : "visual";
 document.getElementById("view-visual").classList.toggle("hidden", viewMode === "table");
 document.getElementById("view-table").classList.toggle("hidden", viewMode !== "table");
 
-let livres = [], membres = [], votes = [];
+let livres = [], membres = [], votes = [], reunions = [];
 let sortCol = "date_proposition", sortDir = "desc";
 let filters = { search: "", statut: "", propose: "" };
 let currentFicheId = null;
+let eluSortMode = "chron";
 
 async function init() {
-  [livres, membres, votes] = await Promise.all([getLivres(), getMembres(), getVotes()]);
+  [livres, membres, votes, reunions] = await Promise.all([getLivres(), getMembres(), getVotes(), getReunions()]);
   populateMembresFilter();
   populateMembresPropose();
   if (viewMode === "table") renderTable();
@@ -64,7 +65,6 @@ function populateMembresPropose() {
 
 function renderVisual() {
   const propositions = livres.filter(l => l.statut === "en_proposition");
-  const elus = votes.filter(v => v.livre_elu).sort((a, b) => b.annee !== a.annee ? b.annee - a.annee : b.mois - a.mois);
   const refuses = livres.filter(l => l.statut === "refuse");
 
   // ── En proposition ──────────────────────────────────────────────
@@ -85,25 +85,7 @@ function renderVisual() {
   }
 
   // ── Élus ────────────────────────────────────────────────────────
-  const elusList = document.getElementById("elus-list");
-  if (elus.length) {
-    elusList.innerHTML = elus.map(v => {
-      const r = (v.resultats || []).find(x => x.livre_id === v.livre_elu);
-      const scale = detectScale(v.resultats);
-      const moy = r?.moyenne ?? null;
-      return `<div class="bib-elu-item" data-id="${v.livre_elu}">
-        <div class="bib-elu-month">${formatMois(v.mois, v.annee)}</div>
-        <div class="bib-elu-info">
-          <div class="bib-elu-title">${r?.titre ?? v.livre_elu}</div>
-          ${r?.auteur ? `<div class="bib-elu-author">${r.auteur}</div>` : ""}
-        </div>
-        ${moy !== null ? `<div class="bib-elu-score">${Number(moy).toFixed(1)}/${scale}</div>` : ""}
-      </div>`;
-    }).join("");
-    elusList.querySelectorAll(".bib-elu-item").forEach(el => el.addEventListener("click", () => openFiche(el.dataset.id)));
-  } else {
-    elusList.innerHTML = `<div class="text-muted" style="font-size:.85rem">Aucun livre élu pour l'instant.</div>`;
-  }
+  renderElusList();
 
   // ── Éliminés ────────────────────────────────────────────────────
   const elimGrid = document.getElementById("elim-grid");
@@ -127,6 +109,67 @@ function renderVisual() {
     elimGrid.innerHTML = `<div class="text-muted" style="font-size:.85rem">Aucun livre éliminé pour l'instant.</div>`;
   }
 }
+
+function notesFinalesMap() {
+  const map = {};
+  reunions.forEach(r => {
+    if (!r.livre_id || !r.notes_finales) return;
+    const notes = Object.values(r.notes_finales).map(Number).filter(n => !isNaN(n) && n > 0);
+    if (notes.length) map[r.livre_id] = notes.reduce((a, b) => a + b, 0) / notes.length;
+  });
+  return map;
+}
+
+function renderElusList() {
+  const nfMap = notesFinalesMap();
+  const elusVotes = votes.filter(v => v.livre_elu);
+
+  let sorted;
+  if (eluSortMode === "note") {
+    const avecNote = elusVotes.filter(v => nfMap[v.livre_elu] !== undefined)
+      .sort((a, b) => nfMap[b.livre_elu] - nfMap[a.livre_elu]);
+    const sansNote = elusVotes.filter(v => nfMap[v.livre_elu] === undefined)
+      .sort((a, b) => b.annee !== a.annee ? b.annee - a.annee : b.mois - a.mois);
+    sorted = [...avecNote, ...sansNote];
+  } else {
+    sorted = [...elusVotes].sort((a, b) => b.annee !== a.annee ? b.annee - a.annee : b.mois - a.mois);
+  }
+
+  const elusList = document.getElementById("elus-list");
+  if (!sorted.length) {
+    elusList.innerHTML = `<div class="text-muted" style="font-size:.85rem">Aucun livre élu pour l'instant.</div>`;
+    return;
+  }
+
+  elusList.innerHTML = sorted.map(v => {
+    const r = (v.resultats || []).find(x => x.livre_id === v.livre_elu);
+    const scale = detectScale(v.resultats);
+    const moy = r?.moyenne ?? null;
+    const nf = nfMap[v.livre_elu] ?? null;
+    return `<div class="bib-elu-item" data-id="${v.livre_elu}">
+      <div class="bib-elu-month">${formatMois(v.mois, v.annee)}</div>
+      <div class="bib-elu-info">
+        <div class="bib-elu-title">${r?.titre ?? v.livre_elu}</div>
+        ${r?.auteur ? `<div class="bib-elu-author">${r.auteur}</div>` : ""}
+      </div>
+      <div class="bib-elu-scores">
+        ${nf !== null
+          ? `<div class="bib-elu-note-finale">${nf.toFixed(1)}/10</div>`
+          : `<div class="bib-elu-no-note">Non noté</div>`}
+        ${moy !== null ? `<div class="bib-elu-score-vote">vote : ${Number(moy).toFixed(1)}/${scale}</div>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+  elusList.querySelectorAll(".bib-elu-item").forEach(el => el.addEventListener("click", () => openFiche(el.dataset.id)));
+}
+
+function updateSortEluButtons() {
+  document.getElementById("sort-elu-chron").className = `btn btn-sm ${eluSortMode === "chron" ? "btn-primary" : "btn-secondary"}`;
+  document.getElementById("sort-elu-note").className = `btn btn-sm ${eluSortMode === "note" ? "btn-primary" : "btn-secondary"}`;
+}
+
+document.getElementById("sort-elu-chron").addEventListener("click", () => { eluSortMode = "chron"; updateSortEluButtons(); renderElusList(); });
+document.getElementById("sort-elu-note").addEventListener("click", () => { eluSortMode = "note"; updateSortEluButtons(); renderElusList(); });
 
 // ── Vue table ──────────────────────────────────────────────────────
 

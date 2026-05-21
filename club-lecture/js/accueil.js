@@ -1,20 +1,20 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getMembres, getLivres, getVotes, getStatutsForLivre, upsertStatutLecture, getLivreById, updateLivre, addCommentaire, getCommentairesForLivre } from "./db.js";
+import { getMembres, getLivres, getVotes, getStatutsForLivre, upsertStatutLecture, getLivreById, updateLivre, addCommentaire, getCommentairesForLivre, getReunions } from "./db.js";
 import { formatMois, formatDate, STATUTS_LECTURE, initiales, showToast } from "./utils.js";
 
 await requireAuth();
 initNav("accueil");
 
-let allVotes = [], allMembres = [], allLivres = [];
+let allVotes = [], allMembres = [], allLivres = [], allReunions = [];
 let currentLivreId = null, currentVote = null, editMembreId = null;
 let currentLivre = null, statutByMembre = {};
 
 async function init() {
-  [allVotes, allMembres, allLivres] = await Promise.all([getVotes(), getMembres(), getLivres()]);
+  [allVotes, allMembres, allLivres, allReunions] = await Promise.all([getVotes(), getMembres(), getLivres(), getReunions()]);
   renderFrise();
   await renderCurrentBook();
-  renderTimeline();
+  renderPodium();
   initFriseDrag();
 }
 
@@ -318,34 +318,74 @@ function renderStatusList() {
   list.querySelectorAll(".st-badge").forEach(b => b.addEventListener("click", () => openStatutModal(b.dataset.membre, b.dataset.statut)));
 }
 
-// ── Chronologie livres élus ────────────────────────────────────────
+// ── Podium / Palmarès ──────────────────────────────────────────────
 
-function renderTimeline() {
-  const section = document.getElementById("timeline-section");
-  const elus = allVotes.filter(v => v.livre_elu).sort((a, b) => b.annee !== a.annee ? b.annee - a.annee : b.mois - a.mois);
-  if (!elus.length) {
-    section.innerHTML = `<div class="empty-state"><span class="big-icon">📅</span>Aucun livre élu pour l'instant.</div>`;
+function computeNoteFinale(reunion) {
+  if (!reunion?.notes_finales) return null;
+  const notes = Object.values(reunion.notes_finales).map(Number).filter(n => !isNaN(n) && n > 0);
+  if (!notes.length) return null;
+  return notes.reduce((a, b) => a + b, 0) / notes.length;
+}
+
+function renderPodium() {
+  const section = document.getElementById("podium-section");
+
+  const elusAvecNote = allVotes
+    .filter(v => v.livre_elu)
+    .map(v => {
+      const reunion = allReunions.find(r => r.livre_id === v.livre_elu);
+      const nf = computeNoteFinale(reunion);
+      const r = (v.resultats || []).find(x => x.livre_id === v.livre_elu);
+      return { livre_id: v.livre_elu, titre: r?.titre ?? v.livre_elu, auteur: r?.auteur ?? "", mois: v.mois, annee: v.annee, noteFinale: nf };
+    })
+    .filter(e => e.noteFinale !== null)
+    .sort((a, b) => b.noteFinale - a.noteFinale);
+
+  if (!elusAvecNote.length) {
+    section.innerHTML = `<div class="empty-state"><span class="big-icon">🏆</span>Les notes seront affichées après les réunions.</div>`;
     return;
   }
-  section.innerHTML = `<div class="timeline">${elus.map(v => {
-    const r = (v.resultats || []).find(x => x.livre_id === v.livre_elu);
-    const scale = detectScale(v, v.livre_elu);
-    return `
-      <div class="tl-item">
-        <div class="tl-card" data-livre-id="${v.livre_elu}">
-          <div class="tl-month">${formatMois(v.mois, v.annee)}</div>
-          <div class="tl-info">
-            <div class="tl-title">${r?.titre ?? v.livre_elu}</div>
-            ${r?.auteur ? `<div class="tl-author">${r.auteur}</div>` : ""}
-          </div>
-          ${r?.moyenne !== null && r?.moyenne !== undefined ? `<div class="tl-score">${Number(r.moyenne).toFixed(1)}/${scale}</div>` : ""}
-        </div>
-      </div>`;
-  }).join("")}</div>`;
 
-  section.querySelectorAll(".tl-card[data-livre-id]").forEach(card => {
-    card.addEventListener("click", () => {
-      window.location.href = `bibliotheque.html?open=${card.dataset.livreId}`;
+  // Podium : ordre 2e, 1er, 3e (pyramide visuelle)
+  const top = elusAvecNote.slice(0, 3);
+  const outsider = elusAvecNote[3] ?? null;
+  const podiumSlots = [top[1], top[0], top[2]];
+  const medals = ["🥈", "🥇", "🥉"];
+  const classes = ["silver", "gold", "bronze"];
+  const rankClasses = ["podium-rank-2", "podium-rank-1", "podium-rank-3"];
+
+  const podiumHtml = `<div class="podium-top">
+    ${podiumSlots.map((e, i) => e ? `
+      <div class="podium-step ${rankClasses[i]}">
+        <div class="podium-medal">${medals[i]}</div>
+        <div class="podium-card ${classes[i]}" data-livre-id="${e.livre_id}" style="cursor:pointer">
+          <div class="podium-score">${e.noteFinale.toFixed(1)}<span style="font-size:.52em;color:var(--muted);font-weight:500">/10</span></div>
+          <div class="podium-title">${e.titre}</div>
+          ${e.auteur ? `<div class="podium-author">${e.auteur}</div>` : ""}
+          <div class="podium-month">${formatMois(e.mois, e.annee)}</div>
+        </div>
+      </div>` : `<div class="podium-step"></div>`
+    ).join("")}
+  </div>`;
+
+  const outsiderHtml = outsider ? `
+    <div class="podium-outsider">
+      <div class="podium-outsider-label">Meilleur outsider</div>
+      <div class="podium-outsider-card" data-livre-id="${outsider.livre_id}" style="cursor:pointer">
+        <span style="font-size:1.4rem">🏅</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${outsider.titre}</div>
+          ${outsider.auteur ? `<div style="font-size:.75rem;color:var(--muted)">${outsider.auteur}</div>` : ""}
+        </div>
+        <div style="font-size:1.05rem;font-weight:800;color:var(--accent);flex-shrink:0">${outsider.noteFinale.toFixed(1)}/10</div>
+      </div>
+    </div>` : "";
+
+  section.innerHTML = `<div class="podium-wrap">${podiumHtml}${outsiderHtml}</div>`;
+
+  section.querySelectorAll("[data-livre-id]").forEach(el => {
+    el.addEventListener("click", () => {
+      window.location.href = `bibliotheque.html?open=${el.dataset.livreId}`;
     });
   });
 }

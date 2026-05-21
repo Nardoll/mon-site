@@ -11,6 +11,7 @@ export function initNav(active) {
     { id: "bibliotheque", href: "/club-lecture/bibliotheque.html", icon: "📚", label: "Bibliothèque" },
     { id: "votes",        href: "/club-lecture/votes.html",        icon: "🗳️",  label: "Votes" },
     { id: "membres",      href: "/club-lecture/membres.html",      icon: "👥", label: "Membres" },
+    { id: "reunions",     href: "/club-lecture/reunions.html",     icon: "📝", label: "Réunions" },
   ];
 
   const isLight = document.documentElement.dataset.theme === "light";

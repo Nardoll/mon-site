@@ -13,12 +13,12 @@
 
 ## Contexte général
 
-Site **personnel et privé** de Tom (utilisateur). Multi-sections indépendantes. La page d'accueil (`/`) dit simplement "rien à voir ici". Chaque section n'est accessible que si on connaît son URL exacte — il n'y a aucun lien depuis l'accueil.
+Site **personnel et privé** de Tom. Multi-sections indépendantes. La page d'accueil (`/`) présente le site et ses différentes sections avec des cartes visuelles. Chaque section n'est accessible qu'avec un mot de passe.
 
 **Sections existantes :**
 - `/club-lecture/` — Fonctionnel et en développement actif
-- `/recettes/` — Placeholder vide
-- `/jdr/` — Placeholder vide
+- `/recettes/` — Placeholder désactivé (card grisée)
+- `/jdr/` — Placeholder désactivé (card grisée)
 
 ---
 
@@ -29,14 +29,14 @@ Site **personnel et privé** de Tom (utilisateur). Multi-sections indépendantes
 | Langages | HTML / CSS / JS vanilla uniquement |
 | Framework | Aucun — pas de React, Vue, bundler, ni npm |
 | Base de données | Firebase Firestore v10.12.2 via CDN (ES modules natifs) |
-| Hébergement | Netlify — déploiement automatique à chaque push sur `main` |
+| Hébergement | Cloudflare Pages — déploiement automatique à chaque push sur `main` |
 | Repo GitHub | `https://github.com/Nardoll/mon-site` (branche `main`) |
 
-**Contrainte importante :** ES modules natifs dans le navigateur. Ça fonctionne en HTTPS (Netlify) ou via l'extension Live Server de VS Code. Pas de `file://`.
+**Contrainte importante :** ES modules natifs dans le navigateur. Ça fonctionne en HTTPS (Cloudflare Pages) ou via l'extension Live Server de VS Code. Pas de `file://`.
 
 **Workflow :**
 1. Modifier les fichiers dans VS Code
-2. `git add` + `git commit` + `git push` → Netlify déploie en ~30 secondes
+2. `git add` + `git commit` + `git push` → Cloudflare Pages déploie en ~30 secondes
 
 ---
 
@@ -44,8 +44,8 @@ Site **personnel et privé** de Tom (utilisateur). Multi-sections indépendantes
 
 ```
 Mon Site/
-├── index.html                   Page d'accueil publique ("rien à voir ici")
-├── netlify.toml                 Config Netlify : URLs inconnues → index.html (404)
+├── index.html                   Page d'accueil publique (hero + 3 cartes sections)
+├── netlify.toml                 Config redirections (héritage — Cloudflare Pages utilisé)
 ├── README.md                    Ce fichier
 │
 ├── club-lecture/
@@ -53,6 +53,8 @@ Mon Site/
 │   ├── bibliotheque.html        Page Bibliothèque
 │   ├── votes.html               Page Votes
 │   ├── membres.html             Page Membres
+│   ├── commentaires.html        Page Commentaires de lecture (par livre)
+│   ├── reunions.html            Page Réunions
 │   ├── firebase-config.js       Initialisation Firebase + export `db`
 │   ├── css/
 │   │   └── style.css            Tous les styles (dark theme, sidebar, composants)
@@ -64,13 +66,30 @@ Mon Site/
 │       ├── accueil.js           Logique page Accueil
 │       ├── bibliotheque.js      Logique page Bibliothèque
 │       ├── votes.js             Logique page Votes
-│       └── membres.js           Logique page Membres
+│       ├── membres.js           Logique page Membres
+│       ├── commentaires.js      Logique page Commentaires de lecture
+│       └── reunions.js          Logique page Réunions
 │
 ├── recettes/
 │   └── index.html               Placeholder (section à développer)
 └── jdr/
     └── index.html               Placeholder (section à développer)
 ```
+
+---
+
+## Page d'accueil publique (`/`)
+
+**`index.html` (racine)** — Page visuelle de présentation du site.
+
+- **Hero** : pill "🔒 Accès privé", titre du site, courte description
+- **3 cartes sections** en grille :
+  - **Club de lecture** → lien `href="/club-lecture/"`, accent orange `#e8a44a`
+  - **Recettes** → désactivée (`opacity:.38; filter:saturate(.4); pointer-events:none`)
+  - **JDR** → désactivée (idem)
+- **Effets hover** sur les cartes actives : lift, glow coloré, ligne accent en haut, flèche `→` apparaît
+- Chaque carte a ses propres variables CSS `--card-accent` et `--card-glow`
+- Pas de JS, pas de mot de passe — page entièrement publique et statique
 
 ---
 
@@ -83,6 +102,11 @@ Mon Site/
 - Pas de système de comptes/login — tout le club partage le même mot de passe.
 - Les règles Firestore sont `allow read, write: if true` (accès public à la base). Le mot de passe JS empêche l'accès via le site ; les données ne sont pas sensibles.
 
+### Sidebar
+
+- **Bouton "🏠 Accueil du site"** en bas de la sidebar (`nav.js`), au-dessus du bouton de bascule de thème. Lien `href="/"`. Style `.sidebar-home-link`.
+- `.sidebar-bottom` : `display:flex; flex-direction:column; gap:.5rem` — les éléments du bas s'empilent verticalement.
+
 ### Pages et fonctionnalités
 
 #### Accueil (`index.html` + `accueil.js`)
@@ -92,19 +116,40 @@ Mon Site/
    - **Noms des membres cliquables** → navigue vers leur profil (`membres.html?open=MEMBRE_ID`)
    - **Badges de statut cliquables** → modal pour mettre à jour son statut de lecture
    - **Configuration du suivi** (bouton "⚙️ Configurer le suivi") → modal pour définir l'unité (`pages`, `chapitres`, `parties`, etc.) et le total (ex: 300). Stocké sur le document livre dans Firestore, partagé entre tous les membres. La modale de statut adapte ses labels et pré-remplit le total automatiquement. La barre de progression affiche l'unité (ex: `50/300 pages`).
-3. **Chronologie des livres élus** — timeline verticale de tous les livres élus, du plus récent au plus ancien, avec note. **Chaque carte est cliquable** → ouvre la fiche du livre dans la bibliothèque (`bibliotheque.html?open=LIVRE_ID`).
+   - **Bouton "💬 Laisser un commentaire"** → modal directement depuis l'accueil pour ajouter un commentaire sur le livre du mois
+   - **Bouton "📖 Voir les commentaires (N) · ⚠️ spoilers"** → lien vers `commentaires.html?livre=LIVRE_ID`
+3. **Palmarès (Podium)** — affiche le top 3 des livres ayant la meilleure note finale (moyenne des notes données par les membres lors des réunions). Mise en page visuelle en podium : 2e à gauche, 1er au centre (plus grand), 3e à droite. Un 4e slot "🏅 Meilleur outsider" s'affiche sous le podium. **Seuls les livres ayant une réunion avec des notes finales** apparaissent ici. Chaque carte est cliquable → `bibliotheque.html?open=LIVRE_ID`.
 
 #### Bibliothèque (`bibliotheque.html` + `bibliotheque.js`)
+
+Deux vues alternées :
+
+**Vue visuelle** (défaut, `#view-visual`) :
+- **Section "En proposition"** : grille de cards, une par livre proposé (titre, auteur, année, membre)
+- **Section "Livres élus"** : liste des livres lus par le club, avec deux boutons de tri :
+  - **"📅 Chronologique"** (défaut) — du plus récent au plus ancien
+  - **"⭐ Note finale"** — par note finale décroissante (moyenne des notes réunion)
+  - Chaque item affiche la **note finale** en grand (`bib-elu-note-finale`) si disponible, et la note de vote en plus petit (`bib-elu-score-vote`) en dessous
+- **Section "Éliminés"** : grille de cards pour les livres avec statut `refuse`
+- Lien "Voir en tableau →" pour passer à la vue table (`?vue=table`)
+- Bouton "Proposer un livre" dans l'en-tête
+
+**Vue tableau** (`?vue=table`, `#view-table`) :
 - Tableau filtrable (texte libre sur titre/auteur) et triable par colonne (clic sur en-tête)
 - Filtres : statut, membre proposant
-- Bouton "Proposer un livre" → modal (titre obligatoire, auteur/année optionnels, membre, date)
-- Clic sur un livre → **fiche détaillée** :
-  - Métadonnées en haut (auteur, année, proposé par, date, statut)
-  - Bouton "✏️ Modifier" dans le header → formulaire inline pour corriger titre, auteur, année, proposé par, date (ne touche pas au statut ni aux votes)
-  - Section "Avancements membres" **uniquement si le livre est élu**
-  - Chronologie : date de proposition → chaque vote avec note moyenne → résultat final (Élu / Éliminé)
+- Lien "← Vue visuelle" pour revenir
+- Bouton "Proposer un livre" identique
+
+**Fiche détaillée (modal)** — partagée entre les deux vues, ouverte au clic sur n'importe quel livre :
+- Métadonnées en haut (auteur, année, proposé par, date, statut)
+- Bouton "✏️ Modifier" dans le header → formulaire inline pour corriger titre, auteur, année, proposé par, date
+- Section "Avancements membres" **uniquement si le livre est élu**
+- Chronologie : date de proposition → chaque vote avec note moyenne → résultat final
+- **Bouton "💬 Commentaires de lecture"** → lien vers `commentaires.html?livre=LIVRE_ID`
+
 - Statuts des livres : `en_proposition` / `elu` / `refuse` (affiché "**Éliminé**" — ne pas utiliser "Refusé")
 - **Auto-ouverture** : si l'URL contient `?open=LIVRE_ID`, la fiche du livre s'ouvre automatiquement au chargement
+- La vue est détectée via `?vue=table` dans l'URL au chargement du module
 
 #### Votes (`votes.html` + `votes.js`)
 - Liste des votes : une ligne par vote (mois + livre élu) → clic pour ouvrir détail
@@ -112,12 +157,17 @@ Mon Site/
   - Graphe en barres **verticales** : vert = gagnant, violet = conservé (≥ 2.5), gris = éliminé (< 2.5). Ligne en tirets rouges au seuil 2.5.
   - Tableau individuel : lignes = membres, colonnes = livres, avec note + étoiles. Dernière ligne = moyennes.
   - Bouton "✏️ Modifier le mois" pour corriger mois/année d'un vote existant.
-- **Saisie d'un vote** (modal) :
-  - Sélectionner mois/année
-  - Ajouter des livres depuis la liste "en proposition"
-  - Grille de saisie des notes (sur 5)
-  - À l'enregistrement : livre avec la plus haute moyenne → `elu`, livres avec moyenne ≤ 2.5 → `refuse` (= "Éliminé")
-  - En cas d'égalité pour la 1ère place → aucun livre élu automatiquement
+- **Bannière vote actif** (`#vote-actif-banner`) : s'affiche dès qu'un vote est en cours. Affiche un compte à rebours en temps réel. Boutons "🗳️ Voter" (pour soumettre son bulletin) et "Clôturer maintenant".
+- **Lancer un vote** (modal `#lancer-overlay`) : remplace l'ancienne "Saisie manuelle"
+  - Sélection mois/année
+  - Durée en texte libre : `"24h"`, `"1h30"`, `"15min"`, ou nombre seul = heures (analysé par `parseDuree()`)
+  - Liste de livres (`#l-livres-list`) : livres "en proposition" cochés par défaut, élus/refusés affichés mais désactivés
+  - Liste de membres (`#l-membres-list`) : à cocher manuellement
+  - Échelle de notes (défaut : 5)
+  - Bouton "Confirmer →" → modal de confirmation récapitulative avant de lancer
+- **Soumettre son bulletin** (modal `#soumettre-overlay`) : chaque membre choisit son identité dans un select, puis saisit une note par livre. Soumission partielle possible (les bulletins existants ne sont pas écrasés grâce à la mise à jour par champ Firestore `bulletins.MEMBRE_ID`).
+- **Clôture automatique** : à chaque chargement de la page, si `voteActif.expires_at < now()` → calcule les résultats, sauvegarde dans la collection `votes`, supprime le document `votes_actifs`. Même logique si la page reste ouverte pendant l'expiration (setInterval toutes les secondes).
+- **Logique des résultats** : livre avec la plus haute moyenne (unique) → `elu`, livres avec moyenne ≤ 2.5 → `refuse`. Égalité au sommet → `livre_elu = null`.
 - **Auto-ouverture** : si l'URL contient `?open=VOTE_ID`, le détail du vote s'ouvre automatiquement au chargement
 
 #### Membres (`membres.html` + `membres.js`)
@@ -126,10 +176,51 @@ Mon Site/
 - Clic sur un membre → **profil** (modal) :
   - Résumé : initiales, nom, date d'arrivée, nb propositions, nb votes
   - Bouton "✏️ Modifier" dans le header → formulaire inline pour corriger nom et date d'arrivée
-  - Livres proposés avec statut
-  - Statuts de lecture personnels
-  - Historique des notes données dans les votes (graphe par session de vote)
+  - **Livres proposés** : liste avec statut + date de proposition
+  - **Participations aux votes** (`.vmr`) : liste des mois où le membre a voté ; chaque ligne montre son choix n°1 et le nombre de livres dans le vote. **Clic → histogramme** de tous ses votes pour ce mois, triés du préféré au moins préféré. Format `.chart-label` fixe (130px) pour alignement parfait.
+  - **Barre de recherche** au-dessus des votes : filtre les livres et affiche un histogramme consolidé de toutes les notes données à ce livre à travers toutes les sessions de vote
+  - **Commentaires** (`.cmr`) : liste des livres commentés par le membre. Chaque ligne est cliquable → affiche les commentaires du membre pour ce livre, avec click-to-reveal pour la protection anti-spoiler. Lien "📖 Voir tous les commentaires" vers `commentaires.html?livre=LIVRE_ID`
+  - ~~Statuts de lecture~~ — section supprimée
 - **Auto-ouverture** : si l'URL contient `?open=MEMBRE_ID`, le profil s'ouvre automatiquement au chargement
+
+#### Réunions (`reunions.html` + `reunions.js`)
+
+Page de gestion des réunions du club. Chaque réunion correspond à une séance de discussion autour d'un livre élu.
+
+- **Deux sections** : "Prévues" (statut `prevue`) et "Passées" (statut `passee`)
+- **Liste** : date, mois correspondant, titre du livre associé (si trouvé), note finale (si disponible), participants
+- **Ajouter / Modifier** (modal `#form-overlay`) :
+  - Statut : `prevue` ou `passee`
+  - Date (optionnelle) : champ date
+  - Mois/Année : le livre élu de ce mois est affiché automatiquement sous le champ (`#livre-display`)
+  - Participants : liste de cases à cocher (tous les membres)
+  - Compte rendu : textarea libre
+  - Lien vidéo : URL optionnelle
+- **Fiche détail** (modal `#detail-overlay`) :
+  - Toutes les métadonnées + compte rendu + lien vidéo
+  - **Notes finales** : pour chaque participant, un input (1–10) pour saisir sa note de lecture. Bouton "💾 Enregistrer les notes" → met à jour `notes_finales` dans Firestore → recalcule et affiche la note finale moyenne (`computeNoteFinale()`)
+  - Bouton "✏️ Modifier" → ouvre le formulaire en mode édition (affiche les valeurs existantes)
+- **Note finale** = moyenne des notes finales > 0 des participants. Alimente le **Palmarès** de l'accueil et la **bibliothèque** (tri + affichage).
+- **Auto-remplissage du livre** : quand le mois/année change dans le formulaire, `updateLivreDisplay()` cherche le vote correspondant dans la collection `votes` et affiche le livre élu.
+
+#### Commentaires de lecture (`commentaires.html` + `commentaires.js`)
+
+Page dédiée aux commentaires de lecture pour un livre donné. URL : `commentaires.html?livre=LIVRE_ID`.
+
+- **En-tête** : titre de la page (`Commentaires — [Titre du livre]`), lien retour vers la fiche bibliothèque
+- **Barre de suivi** (`.suivi-bar`) — visible uniquement pour les livres avec `statut === "elu"` :
+  - Label affichant l'unité et le total configurés (ex: `Suivi en pages · 300 max`)
+  - Bouton "⚙️ Configurer le suivi" → modal identique à celui de l'accueil (`progression_unite` / `progression_total`), met à jour Firestore et rafraîchit les labels d'avancement dans les commentaires
+- **Filtre par membre** : select dropdown (peuplé dynamiquement avec les membres ayant commenté)
+- **Liste des commentaires** (`.comment-list`) : triée par avancement croissant (avancement null en dernier)
+  - Chaque carte (`.comment-card`) : header avec avatar, nom, titre du commentaire (si présent), label d'avancement, date, flèche `▶` (`<span class="comment-arrow">`)
+  - **Clic sur le header** → révèle le corps : avertissement spoiler `⚠️`, texte du commentaire
+  - **Bouton "✏️ Modifier"** dans le corps → formulaire inline de modification (date, avancement, titre, texte). Sauvegarde via `updateCommentaire()` puis re-render
+- **Bouton "💬 Laisser un commentaire"** → modal d'ajout avec : membre (select), date (auto-remplie à aujourd'hui), avancement (optionnel, label adapté à l'unité du livre), case à cocher "Ajouter un titre" → champ titre (avec rappel anti-spoiler), textarea
+- **Titre optionnel** : le titre est visible dans le header de la card SANS cliquer — **ne doit pas contenir de spoiler**. La case est décochée par défaut.
+- Les corps de commentaires sont protégés par un clic : ils ne s'affichent pas au chargement, uniquement sur interaction explicite (protection anti-spoiler).
+
+---
 
 ### Design
 
@@ -139,7 +230,24 @@ Mon Site/
 - Toutes les couleurs passent par des **variables CSS** dans `style.css` (`:root` + `[data-theme="light"]`). Les couleurs inline en JS utilisent `var(--nom)` pour être automatiquement mises à jour au changement de thème sans re-render.
 - Sidebar fixe à gauche (240px), responsive mobile
 - Polices système (`Segoe UI`, `system-ui`)
-- Composants CSS définis dans `style.css` : `.card`, `.btn`, `.badge`, `.overlay`/`.modal`, `.st-badge` (statuts lecture), `.vtable` (tableau votes), `.vchart` (graphe vertical), `.frise-wrap` (frise chronologique), `.ft-timeline` (chronologie fiche livre), `.tl-*` (timeline accueil), `.progress-circle` (cercle de progression en donut, `conic-gradient`), `.sidebar-bottom` + `.theme-toggle` (bouton de bascule thème)
+- **Classe utilitaire critique** : `.hidden { display: none !important; }` — règle générale dans `style.css`. Sans ce `!important`, les éléments flex/grid ignorent le `display:none` hérité et restent visibles.
+- Composants CSS définis dans `style.css` :
+  - `.card`, `.btn`, `.badge`, `.overlay`/`.modal`
+  - `.st-badge` (statuts lecture)
+  - `.vtable` (tableau votes), `.vchart` (graphe vertical)
+  - `.frise-wrap` (frise chronologique), `.ft-timeline` (chronologie fiche livre)
+  - `.tl-*` (timeline accueil), `.progress-circle` (cercle de progression en donut)
+  - `.sidebar-bottom` + `.theme-toggle` + `.sidebar-home-link` (sidebar)
+  - `.vmr`, `.vmr-header`, `.vmr-detail` (participations aux votes dans profil membre)
+  - `.cmr`, `.cmr-header`, `.cmr-detail`, `.cmr-item`, `.cmr-link` (commentaires dans profil membre)
+  - `.comment-list`, `.comment-card`, `.comment-header`, `.comment-body`, `.comment-arrow`, `.comment-author`, `.comment-advance`, `.comment-date`, `.comment-spoiler-warn`, `.comment-text` (page commentaires)
+  - `.chart-label` : largeur fixe `width:130px; min-width:130px; max-width:130px; flex-shrink:0` — indispensable pour aligner les barres des histogrammes de vote (sans `max-width`, les longs titres décalent tout)
+  - `.bib-section`, `.prop-grid`/`.prop-card`, `.bib-elu-list`/`.bib-elu-item`, `.elim-grid`/`.elim-card` (bibliothèque — vue visuelle)
+  - `.bib-elu-scores`, `.bib-elu-note-finale`, `.bib-elu-score-vote`, `.bib-elu-no-note` (notes dans la section livres élus — note finale grande, note vote petite)
+  - `.vote-actif-banner` et sous-classes (bandeau vote en cours — bordure accent)
+  - `.check-list`, `.check-item`, `.check-item-disabled` (listes à cocher dans le formulaire de lancement de vote)
+  - `.podium-wrap`, `.podium-top`, `.podium-step`, `.podium-medal`, `.podium-card`, `.podium-rank-1/2/3`, `.podium-score`, `.podium-title`, `.podium-author`, `.podium-month`, `.podium-outsider` (palmarès — page accueil)
+  - `.reunion-list`, `.reunion-item`, `.reunion-date`, `.reunion-livre`, `.reunion-livre-titre`, `.reunion-livre-mois`, `.reunion-note`, `.reunion-participants` (liste réunions)
 
 ---
 
@@ -167,11 +275,11 @@ Mon Site/
 | `propose_par` | string | ID du document membre |
 | `date_proposition` | Timestamp | |
 | `statut` | string | `en_proposition` · `elu` · `refuse` |
-| `progression_unite` | string \| null | Unité de suivi pour le livre du mois (ex: `pages`, `chapitres`) |
-| `progression_total` | number \| null | Total de l'unité (ex: `300` pour 300 pages) |
+| `progression_unite` | string \| null | Unité de suivi (ex: `pages`, `chapitres`) |
+| `progression_total` | number \| null | Total de l'unité (ex: `300`) |
 
 > **Attention :** dans l'UI, `refuse` s'affiche toujours "Éliminé" (jamais "Refusé").  
-> `progression_unite` et `progression_total` ne sont pertinents que pour le livre actuellement élu (livre du mois). Ils sont configurés depuis l'accueil.
+> `progression_unite` et `progression_total` sont configurables depuis l'accueil (livre du mois) **et** depuis la page commentaires (livres avec statut `elu`).
 
 #### `votes`
 | Champ | Type | Description |
@@ -197,6 +305,40 @@ Mon Site/
 - Livres avec moyenne ≤ 2.5 → `statut = "refuse"`
 - Égalité au sommet → aucun livre élu (`livre_elu = null`)
 
+#### `votes_actifs`
+
+Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (interrogé via `getDocs` — le premier document est retourné).
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `mois` | number | 1–12 |
+| `annee` | number | |
+| `livre_ids` | array | IDs des livres soumis au vote |
+| `membre_ids` | array | IDs des membres invités à voter |
+| `echelle` | number | Échelle de notes (ex: 5 ou 10) |
+| `expires_at` | Timestamp | Date/heure d'expiration automatique |
+| `bulletins` | map | `{ MEMBRE_ID: { LIVRE_ID: note, … }, … }` |
+| `cree_le` | Timestamp | Timestamp création |
+
+> **Clôture** : à chaque chargement de `votes.js`, si `expires_at < now()`, le vote est clôturé automatiquement (côté client). Les résultats sont calculés, sauvegardés dans `votes`, puis le document `votes_actifs` est supprimé.  
+> **Soumission partielle** : chaque bulletin est mis à jour via `bulletins.MEMBRE_ID` (point-notation Firestore) pour ne pas écraser les autres bulletins.
+
+#### `reunions`
+| Champ | Type | Description |
+|-------|------|-------------|
+| `statut` | string | `prevue` · `passee` |
+| `date` | Timestamp \| null | Date de la réunion |
+| `mois` | number | 1–12 |
+| `annee` | number | |
+| `livre_id` | string \| null | ID du livre élu correspondant |
+| `participant_ids` | array | IDs des membres présents |
+| `compte_rendu` | string | Texte libre du compte rendu |
+| `lien_video` | string \| null | URL vidéo (optionnel) |
+| `notes_finales` | map | `{ MEMBRE_ID: note (1-10), … }` |
+| `cree_le` | Timestamp | Timestamp création |
+
+> **Note finale** = moyenne de `notes_finales` (valeurs > 0). Alimente le palmarès (accueil) et le tri/affichage de la bibliothèque.
+
 #### `notes_lecture`
 | Champ | Type | Description |
 |-------|------|-------------|
@@ -215,6 +357,20 @@ Mon Site/
 | `pages_totales` | number | Optionnel |
 | `mis_a_jour` | Timestamp | Timestamp dernière modif |
 
+#### `commentaires_lecture`
+| Champ | Type | Description |
+|-------|------|-------------|
+| `livre_id` | string | ID livre |
+| `membre_id` | string | ID membre |
+| `date_commentaire` | Timestamp | Date du commentaire |
+| `avancement` | number \| null | Position dans le livre (ex: page, chapitre) — optionnel |
+| `titre` | string \| null | Titre court visible sans cliquer (sans spoiler) — optionnel |
+| `contenu` | string | Corps du commentaire (masqué par défaut, click-to-reveal) |
+| `cree_le` | Timestamp | Timestamp création |
+
+> Les commentaires sont triés par `avancement` croissant (null en dernier, valeur fictive 99999).  
+> La modification d'un commentaire existant passe par `updateCommentaire()` dans `db.js`.
+
 ---
 
 ## URLs
@@ -226,6 +382,8 @@ Mon Site/
 | Club de lecture — Bibliothèque | `/club-lecture/bibliotheque.html` |
 | Club de lecture — Votes | `/club-lecture/votes.html` |
 | Club de lecture — Membres | `/club-lecture/membres.html` |
+| Club de lecture — Commentaires | `/club-lecture/commentaires.html?livre=LIVRE_ID` |
+| Club de lecture — Réunions | `/club-lecture/reunions.html` |
 | Recettes (placeholder) | `/recettes/` |
 | JDR (placeholder) | `/jdr/` |
 
@@ -240,4 +398,13 @@ Mon Site/
 - **Frise vs Chronologie** — la frise (accueil, en haut) est horizontale et montre TOUS les événements. La chronologie (accueil, en bas) montre uniquement les livres élus, verticalement.
 - **Avancements membres dans la fiche livre** — s'affiche UNIQUEMENT si le livre a le statut `elu`.
 - **Modification des fiches** — le bouton "✏️ Modifier" dans les modales bibliothèque et membres permet de corriger les informations de base. Il remplace le contenu de la modale par un formulaire inline ; "Annuler" revient à la fiche sans sauvegarder. Les votes ne sont pas modifiables depuis ces fiches (intégrité des données).
-- **Suivi de progression normalisé** — `progression_unite` et `progression_total` sont stockés sur le document livre (Firestore). Tous les membres voient la même unité et le même total dans la modale de mise à jour du statut.
+- **Suivi de progression normalisé** — `progression_unite` et `progression_total` sont stockés sur le document livre (Firestore). Tous les membres voient la même unité et le même total dans la modale de mise à jour du statut. Configurable depuis l'accueil (livre du mois) et depuis la page commentaires (tous les livres élus).
+- **Protection anti-spoiler des commentaires** — le corps de chaque commentaire est masqué au chargement (`.comment-body.hidden`). Le clic sur le header révèle le contenu. Le titre (optionnel, visible sans cliquer) ne doit jamais contenir de spoiler — un avertissement est affiché dans le formulaire de saisie.
+- **Bibliothèque deux vues** — la vue visuelle est le défaut. La vue tableau s'active via `?vue=table`. La détection se fait au chargement du module JS via `URLSearchParams`, avant le rendu.
+- **Commentaires triés par avancement** — l'ordre naturel de lecture dans le livre. Les commentaires sans avancement (null) apparaissent en dernier (valeur fictive 99999 pour le tri).
+- **`escapeHtml` dans les templates HTML** — utilisé systématiquement pour les données utilisateur dans les templates de rendu JS (`&`, `<`, `>`, `"` échappés). Ne pas insérer de données brutes dans `innerHTML`.
+- **Vote actif — un seul à la fois** — la collection `votes_actifs` ne contient jamais qu'un seul document. Si un vote est déjà en cours, le bouton "Lancer" est désactivé. La clôture (auto ou manuelle) supprime le document avant d'écrire dans `votes`.
+- **Clôture côté client** — il n'y a pas de Cloud Function ni de cron serveur. La clôture du vote est déclenchée par le premier chargement de `votes.js` après l'expiration. Fiable pour un club privé avec des connexions régulières.
+- **Notes finales séparées des notes de vote** — les notes de vote (pendant le choix du livre) sont stockées dans `votes.resultats[].notes`. Les notes finales (après lecture, lors de la réunion) sont stockées dans `reunions.notes_finales`. Ce sont deux scores distincts : le premier mesure l'intérêt *avant* lecture, le second la satisfaction *après*.
+- **Palmarès basé uniquement sur la note finale** — seuls les livres ayant une réunion avec des notes finales renseignées apparaissent dans le podium de l'accueil. Un livre élu sans réunion (ou sans notes) n'y figure pas.
+- **`editReunionId` vs `currentReunionId`** (réunions.js) — deux variables distinctes pour éviter les conflits entre la fiche détail ouverte (`currentReunionId`) et le formulaire d'édition (`editReunionId`). Après la sauvegarde d'une édition, la fiche détail est rouverte avec `currentReunionId`.

@@ -186,6 +186,66 @@ export async function updateCommentaire(id, { contenu, titre, date_commentaire, 
   return updateDoc(doc(db, "commentaires_lecture", id), data);
 }
 
+// ── Votes actifs ───────────────────────────────────────────────────
+
+export async function getVoteActif() {
+  const s = await getDocs(collection(db, "votes_actifs"));
+  const docs = snap(s);
+  return docs.length ? docs[0] : null;
+}
+
+export async function lancerVote({ mois, annee, livre_ids, membre_ids, echelle, expires_at }) {
+  return addDoc(collection(db, "votes_actifs"), {
+    mois: Number(mois),
+    annee: Number(annee),
+    livre_ids,
+    membre_ids,
+    echelle: Number(echelle),
+    expires_at: Timestamp.fromDate(expires_at instanceof Date ? expires_at : new Date(expires_at)),
+    bulletins: {},
+    cree_le: serverTimestamp(),
+  });
+}
+
+export async function soumettreVote(docId, membre_id, notes) {
+  const updates = {};
+  updates[`bulletins.${membre_id}`] = notes;
+  return updateDoc(doc(db, "votes_actifs", docId), updates);
+}
+
+export async function cloturerVoteActif(docId, voteData) {
+  await addVote(voteData);
+  return deleteDoc(doc(db, "votes_actifs", docId));
+}
+
+// ── Réunions ───────────────────────────────────────────────────────
+
+export async function getReunions() {
+  const s = await getDocs(collection(db, "reunions"));
+  return snap(s).sort((a, b) => (b.date?.seconds ?? 0) - (a.date?.seconds ?? 0));
+}
+
+export async function addReunion({ statut, date, mois, annee, livre_id, participant_ids, compte_rendu, lien_video }) {
+  return addDoc(collection(db, "reunions"), {
+    statut,
+    date: date ? Timestamp.fromDate(new Date(date)) : null,
+    mois: Number(mois),
+    annee: Number(annee),
+    livre_id: livre_id || null,
+    participant_ids: participant_ids || [],
+    compte_rendu: compte_rendu || "",
+    lien_video: lien_video || null,
+    notes_finales: {},
+    cree_le: serverTimestamp(),
+  });
+}
+
+export async function updateReunion(id, data) {
+  const d = { ...data };
+  if (typeof d.date === "string") d.date = d.date ? Timestamp.fromDate(new Date(d.date)) : null;
+  return updateDoc(doc(db, "reunions", id), d);
+}
+
 export async function upsertStatutLecture({ membre_id, livre_id, statut, page_actuelle, pages_totales }) {
   const q = query(
     collection(db, "statuts_lecture"),

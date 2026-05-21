@@ -28,7 +28,13 @@
 
       <!-- Livres élus -->
       <div class="bib-section">
-        <div class="section-title">🏆 Livres élus</div>
+        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:.75rem;flex-wrap:wrap">
+          <div class="section-title" style="margin:0">🏆 Livres élus</div>
+          <div style="display:flex;gap:.4rem">
+            <button class="btn btn-sm btn-primary" id="sort-elu-chron">📅 Chronologique</button>
+            <button class="btn btn-sm btn-secondary" id="sort-elu-note">⭐ Note finale</button>
+          </div>
+        </div>
         <div class="bib-elu-list" id="elus-list"></div>
       </div>
 

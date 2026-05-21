@@ -1,6 +1,6 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getVotes, getMembres, getLivres, addVote, updateVote } from "./db.js";
+import { getVotes, getMembres, getLivres, addVote, updateVote, getVoteActif, lancerVote, soumettreVote, cloturerVoteActif } from "./db.js";
 import { formatMois, moyenne, showToast } from "./utils.js";
 
 await requireAuth();
@@ -8,35 +8,99 @@ initNav("votes");
 
 let votes = [], membres = [], livres = [];
 let currentVoteId = null;
-let selectedLivres = [];
+let voteActif = null;
+let pendingVoteData = null;
+let countdownInterval = null;
 
 async function init() {
   [votes, membres, livres] = await Promise.all([getVotes(), getMembres(), getLivres()]);
-  populateLivreSelect();
-  setDefaultDate();
+  voteActif = await getVoteActif();
+
+  if (voteActif && voteActif.expires_at?.toMillis() < Date.now()) {
+    await closeExpiredVote(voteActif);
+    voteActif = null;
+  }
+
   renderList();
+  renderActiveVoteBanner();
+  if (voteActif) startCountdown();
+
   const openId = new URLSearchParams(window.location.search).get("open");
   if (openId) openDetail(openId);
 }
 
-function setDefaultDate() {
-  const now = new Date();
-  document.getElementById("v-annee").value = now.getFullYear();
-  document.getElementById("v-mois").value = now.getMonth() + 1;
-}
+// ── Clôture automatique ────────────────────────────────────────────
 
-function populateLivreSelect() {
-  const sel = document.getElementById("v-livre-select");
-  sel.innerHTML = '<option value="">— Choisir un livre —</option>';
-  livres.filter(l => l.statut === "en_proposition").forEach(l => {
-    const opt = document.createElement("option");
-    opt.value = l.id;
-    opt.textContent = `${l.titre}${l.auteur ? ` — ${l.auteur}` : ""}`;
-    sel.appendChild(opt);
+async function closeExpiredVote(va) {
+  const bulletins = va.bulletins || {};
+  const resultats = (va.livre_ids || []).map(livre_id => {
+    const livre = livres.find(l => l.id === livre_id);
+    const notes = {};
+    Object.entries(bulletins).forEach(([membreId, b]) => {
+      const n = b?.[livre_id];
+      if (n !== undefined && n !== null && n !== "") notes[membreId] = Number(n);
+    });
+    const vals = Object.values(notes);
+    const moy = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    return { livre_id, titre: livre?.titre ?? livre_id, auteur: livre?.auteur ?? "", notes, moyenne: moy };
   });
+
+  const withMoy = resultats.filter(r => r.moyenne !== null);
+  let livre_elu = null;
+  if (withMoy.length) {
+    const max = Math.max(...withMoy.map(r => r.moyenne));
+    const winners = withMoy.filter(r => r.moyenne === max);
+    if (winners.length === 1) livre_elu = winners[0].livre_id;
+  }
+
+  await cloturerVoteActif(va.id, { mois: va.mois, annee: va.annee, resultats, livre_elu });
+  votes = await getVotes();
+  livres = await getLivres();
+  showToast("Vote clôturé !", "success");
+  renderList();
 }
 
-// ── Vote list ──────────────────────────────────────────────────────
+// ── Bannière vote actif ────────────────────────────────────────────
+
+function renderActiveVoteBanner() {
+  const banner = document.getElementById("vote-actif-banner");
+  if (!voteActif) { banner.classList.add("hidden"); return; }
+  banner.classList.remove("hidden");
+  document.getElementById("vote-actif-title").textContent =
+    `🗳️ Vote en cours — ${formatMois(voteActif.mois, voteActif.annee)}`;
+  updateCountdown();
+}
+
+function startCountdown() {
+  if (countdownInterval) clearInterval(countdownInterval);
+  updateCountdown();
+  countdownInterval = setInterval(() => {
+    if (!voteActif) { clearInterval(countdownInterval); return; }
+    if (voteActif.expires_at.toMillis() <= Date.now()) {
+      clearInterval(countdownInterval);
+      closeExpiredVote(voteActif).then(() => { voteActif = null; renderActiveVoteBanner(); });
+      return;
+    }
+    updateCountdown();
+  }, 1000);
+}
+
+function updateCountdown() {
+  const el = document.getElementById("vote-actif-countdown");
+  if (!el || !voteActif) return;
+  const ms = voteActif.expires_at.toMillis() - Date.now();
+  if (ms <= 0) { el.textContent = "Vote expiré — clôture en cours…"; return; }
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  const parts = [];
+  if (h > 0) parts.push(`${h}h`);
+  if (m > 0 || h > 0) parts.push(`${m}min`);
+  parts.push(`${s}s`);
+  el.textContent = `Se termine dans ${parts.join(" ")}`;
+}
+
+// ── Liste des votes ────────────────────────────────────────────────
 
 function renderList() {
   const container = document.getElementById("votes-list");
@@ -44,33 +108,31 @@ function renderList() {
     container.innerHTML = `<div class="empty-state"><span class="big-icon">🗳️</span>Aucun vote enregistré.</div>`;
     return;
   }
-
   container.innerHTML = `<div class="vote-list">${votes.map(v => {
     const eluResult = (v.resultats || []).find(r => r.livre_id === v.livre_elu);
-    const eluLabel = eluResult ? `<strong>${eluResult.titre}</strong>` : `<span style="color:var(--muted);font-style:italic">Aucun élu</span>`;
-    return `
-      <div class="vote-item" data-id="${v.id}">
-        <div class="vote-item-month">${formatMois(v.mois, v.annee)}</div>
-        <div class="vote-item-elu">📖 ${eluLabel}</div>
-        <div class="vote-item-actions">
-          <span style="color:var(--muted);font-size:.8rem">${(v.resultats || []).length} livre(s)</span>
-          <span style="color:var(--muted)">›</span>
-        </div>
-      </div>`;
+    const eluLabel = eluResult
+      ? `<strong>${eluResult.titre}</strong>`
+      : `<span style="color:var(--muted);font-style:italic">Aucun élu</span>`;
+    return `<div class="vote-item" data-id="${v.id}">
+      <div class="vote-item-month">${formatMois(v.mois, v.annee)}</div>
+      <div class="vote-item-elu">📖 ${eluLabel}</div>
+      <div class="vote-item-actions">
+        <span style="color:var(--muted);font-size:.8rem">${(v.resultats || []).length} livre(s)</span>
+        <span style="color:var(--muted)">›</span>
+      </div>
+    </div>`;
   }).join("")}</div>`;
-
   container.querySelectorAll(".vote-item").forEach(el => {
     el.addEventListener("click", () => openDetail(el.dataset.id));
   });
 }
 
-// ── Detail modal ───────────────────────────────────────────────────
+// ── Détail vote ────────────────────────────────────────────────────
 
 function openDetail(id) {
   currentVoteId = id;
   const vote = votes.find(v => v.id === id);
   if (!vote) return;
-
   document.getElementById("detail-title").textContent = `Vote — ${formatMois(vote.mois, vote.annee)}`;
   document.getElementById("detail-content").innerHTML = renderDetailContent(vote);
   document.getElementById("detail-overlay").classList.remove("hidden");
@@ -79,17 +141,12 @@ function openDetail(id) {
 function renderDetailContent(vote) {
   const resultats = vote.resultats || [];
   if (!resultats.length) return `<div class="empty-state">Aucune donnée.</div>`;
-
   const sorted = [...resultats].sort((a, b) => (b.moyenne ?? 0) - (a.moyenne ?? 0));
-
-  // Detect scale
   const allNotes = resultats.flatMap(r => Object.values(r.notes || {})).map(Number).filter(n => !isNaN(n));
   const maxNote = allNotes.length ? Math.max(...allNotes) : 10;
   const scale = maxNote <= 5 ? 5 : 10;
   const threshold = 2.5;
-
   const eluId = vote.livre_elu;
-
   return `
     ${renderChart(sorted, scale, threshold, eluId)}
     <div class="divider"></div>
@@ -101,25 +158,18 @@ function renderDetailContent(vote) {
 function renderChart(sorted, scale, threshold, eluId) {
   const barAreaH = 220;
   const thresholdBottom = Math.round((threshold / scale) * barAreaH);
-
   const bars = sorted.map(r => {
     const moy = r.moyenne ?? 0;
     const barH = Math.max(2, Math.round((moy / scale) * barAreaH));
     const isWinner = r.livre_id === eluId;
     const isElim = !isWinner && moy < threshold;
     const color = isWinner ? "var(--green)" : isElim ? "var(--elim)" : "var(--purple)";
-    const valColor = isWinner ? "var(--green)" : isElim ? "var(--elim)" : "var(--purple)";
-    return `
-      <div class="vchart-col">
-        <div class="vchart-val" style="color:${valColor}">${Number(moy).toFixed(2)}</div>
-        <div class="vchart-bar" style="height:${barH}px;background:${color}"></div>
-      </div>`;
+    return `<div class="vchart-col">
+      <div class="vchart-val" style="color:${color}">${Number(moy).toFixed(2)}</div>
+      <div class="vchart-bar" style="height:${barH}px;background:${color}"></div>
+    </div>`;
   }).join("");
-
-  const labels = sorted.map(r =>
-    `<div class="vchart-label-col">${r.titre ?? "?"}</div>`
-  ).join("");
-
+  const labels = sorted.map(r => `<div class="vchart-label-col">${r.titre ?? "?"}</div>`).join("");
   return `
     <div class="vchart-legend">
       <div class="vchart-legend-item"><div class="vchart-legend-dot" style="background:var(--green)"></div>Gagnant</div>
@@ -143,10 +193,8 @@ function renderTable(sorted, membres, scale, eluId) {
   const headers = sorted.map(r => {
     const isWinner = r.livre_id === eluId;
     const isElim = !isWinner && (r.moyenne ?? 0) < 2.5;
-    const cls = isWinner ? "winner-col" : isElim ? "elim-col" : "";
-    return `<th class="${cls}">${r.titre ?? "?"}</th>`;
+    return `<th class="${isWinner ? "winner-col" : isElim ? "elim-col" : ""}">${r.titre ?? "?"}</th>`;
   }).join("");
-
   const rows = membres.map(m => {
     const cells = sorted.map(r => {
       const note = r.notes?.[m.id];
@@ -155,27 +203,20 @@ function renderTable(sorted, membres, scale, eluId) {
       const isWinner = r.livre_id === eluId;
       const isElim = !isWinner && (r.moyenne ?? 0) < 2.5;
       const cls = isWinner ? "winner-cell" : isElim ? "elim-cell" : "";
-      const stars = renderStars(n, scale);
-      return `<td class="${cls}">${n}/${scale}<br><span class="stars">${stars}</span></td>`;
+      return `<td class="${cls}">${n}/${scale}<br><span class="stars">${renderStars(n, scale)}</span></td>`;
     }).join("");
     return `<tr><td class="member-cell">${m.nom}</td>${cells}</tr>`;
   }).join("");
-
   const avgCells = sorted.map(r => {
     const isWinner = r.livre_id === eluId;
     const isElim = !isWinner && (r.moyenne ?? 0) < 2.5;
-    const cls = isWinner ? "winner-avg" : isElim ? "elim-avg" : "";
-    return `<td class="${cls}">${r.moyenne !== null && r.moyenne !== undefined ? Number(r.moyenne).toFixed(2) : "—"}</td>`;
+    return `<td class="${isWinner ? "winner-avg" : isElim ? "elim-avg" : ""}">${r.moyenne !== null && r.moyenne !== undefined ? Number(r.moyenne).toFixed(2) : "—"}</td>`;
   }).join("");
-
-  return `
-    <div class="vtable-wrap">
-      <table class="vtable">
-        <thead><tr><th>Votant</th>${headers}</tr></thead>
-        <tbody>${rows}</tbody>
-        <tfoot><tr><td class="member-cell">Moyenne</td>${avgCells}</tr></tfoot>
-      </table>
-    </div>`;
+  return `<div class="vtable-wrap"><table class="vtable">
+    <thead><tr><th>Votant</th>${headers}</tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td class="member-cell">Moyenne</td>${avgCells}</tr></tfoot>
+  </table></div>`;
 }
 
 function renderStars(note, scale) {
@@ -183,7 +224,7 @@ function renderStars(note, scale) {
   return "★".repeat(normalized) + "☆".repeat(5 - normalized);
 }
 
-// ── Close detail ───────────────────────────────────────────────────
+// ── Fermer détail ──────────────────────────────────────────────────
 
 document.getElementById("detail-close").addEventListener("click", () => {
   document.getElementById("detail-overlay").classList.add("hidden");
@@ -193,7 +234,7 @@ document.getElementById("detail-overlay").addEventListener("click", e => {
   if (e.target === e.currentTarget) { document.getElementById("detail-overlay").classList.add("hidden"); currentVoteId = null; }
 });
 
-// ── Edit month modal ───────────────────────────────────────────────
+// ── Modifier mois ──────────────────────────────────────────────────
 
 document.getElementById("detail-edit").addEventListener("click", () => {
   const vote = votes.find(v => v.id === currentVoteId);
@@ -202,11 +243,9 @@ document.getElementById("detail-edit").addEventListener("click", () => {
   document.getElementById("e-annee").value = vote.annee;
   document.getElementById("edit-overlay").classList.remove("hidden");
 });
-
 ["edit-close", "edit-cancel"].forEach(id => {
   document.getElementById(id).addEventListener("click", () => document.getElementById("edit-overlay").classList.add("hidden"));
 });
-
 document.getElementById("edit-save").addEventListener("click", async () => {
   if (!currentVoteId) return;
   const mois = Number(document.getElementById("e-mois").value);
@@ -217,108 +256,186 @@ document.getElementById("edit-save").addEventListener("click", async () => {
     document.getElementById("edit-overlay").classList.add("hidden");
     votes = await getVotes();
     renderList();
-    // Refresh detail title
     document.getElementById("detail-title").textContent = `Vote — ${formatMois(mois, annee)}`;
-  } catch (e) {
-    showToast("Erreur : " + e.message, "error");
+  } catch (e) { showToast("Erreur : " + e.message, "error"); }
+});
+
+// ── Lancer un vote ─────────────────────────────────────────────────
+
+function parseDuree(text) {
+  const s = text.toLowerCase().trim();
+  let ms = 0;
+  const matchH = s.match(/(\d+(?:[.,]\d+)?)\s*h/);
+  const matchM = s.match(/(\d+)\s*min/);
+  if (matchH) ms += parseFloat(matchH[1].replace(",", ".")) * 3600000;
+  if (matchM) ms += parseInt(matchM[1]) * 60000;
+  if (!matchH && !matchM) {
+    const n = parseFloat(s.replace(",", "."));
+    if (!isNaN(n) && n > 0) ms = n * 3600000;
   }
-});
-
-// ── Saisie vote modal ──────────────────────────────────────────────
-
-document.getElementById("btn-add-vote").addEventListener("click", () => {
-  selectedLivres = [];
-  renderMatrix();
-  document.getElementById("vote-overlay").classList.remove("hidden");
-});
-
-["vote-close","vote-cancel"].forEach(id => {
-  document.getElementById(id).addEventListener("click", () => document.getElementById("vote-overlay").classList.add("hidden"));
-});
-document.getElementById("vote-overlay").addEventListener("click", e => {
-  if (e.target === e.currentTarget) document.getElementById("vote-overlay").classList.add("hidden");
-});
-
-document.getElementById("v-add-livre").addEventListener("click", () => {
-  const sel = document.getElementById("v-livre-select");
-  const id = sel.value;
-  if (!id) return;
-  if (selectedLivres.find(l => l.livre_id === id)) { showToast("Déjà dans la liste.", "error"); return; }
-  const livre = livres.find(l => l.id === id);
-  selectedLivres.push({ livre_id: id, titre: livre?.titre ?? id, auteur: livre?.auteur ?? "" });
-  sel.value = "";
-  renderMatrix();
-});
-
-function renderMatrix() {
-  const section = document.getElementById("v-matrix-section");
-  if (!selectedLivres.length) {
-    section.innerHTML = `<div class="text-muted" style="margin-top:.75rem;font-size:.85rem">Aucun livre sélectionné.</div>`;
-    return;
-  }
-  const membresHeader = membres.map(m => `<th>${m.nom}</th>`).join("");
-  const rows = selectedLivres.map((l, li) => {
-    const inputs = membres.map(m =>
-      `<td><input type="number" min="0" max="5" step="0.5" placeholder="—" class="note-input" data-livre="${li}" data-membre="${m.id}"></td>`
-    ).join("");
-    return `<tr>
-      <td class="book-cell">
-        ${l.titre}
-        <button class="btn btn-ghost btn-sm" data-remove="${li}" style="float:right;padding:.1rem .3rem">✕</button>
-      </td>
-      ${inputs}
-    </tr>`;
-  }).join("");
-
-  section.innerHTML = `
-    <div class="matrix-wrap">
-      <table class="matrix-table">
-        <thead><tr><th class="book-cell">Livre</th>${membresHeader}</tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-    <div style="margin-top:.5rem;font-size:.75rem;color:var(--muted)">Notes sur 5</div>`;
-
-  section.querySelectorAll("[data-remove]").forEach(btn => {
-    btn.addEventListener("click", () => { selectedLivres.splice(Number(btn.dataset.remove), 1); renderMatrix(); });
-  });
+  return ms || null;
 }
 
-document.getElementById("vote-save").addEventListener("click", async () => {
-  if (!selectedLivres.length) { showToast("Ajoutez au moins un livre.", "error"); return; }
-  const mois = Number(document.getElementById("v-mois").value);
-  const annee = Number(document.getElementById("v-annee").value);
-  if (!annee) { showToast("Entrez l'année.", "error"); return; }
+function openLancerVoteModal() {
+  if (voteActif) { showToast("Un vote est déjà en cours.", "error"); return; }
+  const now = new Date();
+  document.getElementById("l-annee").value = now.getFullYear();
+  document.getElementById("l-mois").value = now.getMonth() + 1;
+  document.getElementById("l-duree").value = "";
+  document.getElementById("l-echelle").value = "5";
 
-  const resultats = selectedLivres.map((l, li) => {
-    const notes = {};
-    membres.forEach(m => {
-      const inp = document.querySelector(`.note-input[data-livre="${li}"][data-membre="${m.id}"]`);
-      const v = inp?.value;
-      if (v !== "" && v !== undefined && v !== null && v !== "") notes[m.id] = Number(v);
-    });
-    return { livre_id: l.livre_id, titre: l.titre, auteur: l.auteur, notes, moyenne: moyenne(notes) };
-  });
+  const livresList = document.getElementById("l-livres-list");
+  livresList.innerHTML = livres.map(l => {
+    const actif = l.statut === "en_proposition";
+    const label = l.statut !== "en_proposition"
+      ? ` <span style="font-size:.72rem;color:var(--muted)">(${l.statut === "elu" ? "élu" : "éliminé"})</span>`
+      : "";
+    return `<label class="check-item${actif ? "" : " check-item-disabled"}">
+      <input type="checkbox" name="l-livre" value="${l.id}" ${actif ? "checked" : ""} ${actif ? "" : "disabled"}>
+      ${l.titre}${label}
+    </label>`;
+  }).join("") || `<div style="font-size:.85rem;color:var(--muted)">Aucun livre disponible.</div>`;
 
-  const withMoy = resultats.filter(r => r.moyenne !== null);
-  let livre_elu = null;
-  if (withMoy.length) {
-    const max = Math.max(...withMoy.map(r => r.moyenne));
-    const winners = withMoy.filter(r => r.moyenne === max);
-    if (winners.length === 1) livre_elu = winners[0].livre_id;
-  }
+  const membresList = document.getElementById("l-membres-list");
+  membresList.innerHTML = membres.map(m => `
+    <label class="check-item">
+      <input type="checkbox" name="l-membre" value="${m.id}" checked>
+      ${m.nom}
+    </label>`).join("");
 
+  document.getElementById("lancer-overlay").classList.remove("hidden");
+}
+
+document.getElementById("btn-lancer-vote").addEventListener("click", openLancerVoteModal);
+["lancer-close", "lancer-cancel"].forEach(id => {
+  document.getElementById(id).addEventListener("click", () => document.getElementById("lancer-overlay").classList.add("hidden"));
+});
+document.getElementById("lancer-overlay").addEventListener("click", e => {
+  if (e.target === e.currentTarget) document.getElementById("lancer-overlay").classList.add("hidden");
+});
+
+document.getElementById("lancer-confirm").addEventListener("click", () => {
+  const mois = Number(document.getElementById("l-mois").value);
+  const annee = Number(document.getElementById("l-annee").value);
+  const dureeText = document.getElementById("l-duree").value.trim();
+  const echelle = Number(document.getElementById("l-echelle").value) || 5;
+
+  const dureeMs = parseDuree(dureeText);
+  if (!dureeMs) { showToast("Durée invalide. Ex : 24h, 1h30, 15min", "error"); return; }
+
+  const selectedLivreIds = [...document.querySelectorAll("input[name='l-livre']:checked")].map(el => el.value);
+  const selectedMembreIds = [...document.querySelectorAll("input[name='l-membre']:checked")].map(el => el.value);
+  if (!selectedLivreIds.length) { showToast("Sélectionnez au moins un livre.", "error"); return; }
+  if (!selectedMembreIds.length) { showToast("Sélectionnez au moins un membre.", "error"); return; }
+
+  const expiresAt = new Date(Date.now() + dureeMs);
+  pendingVoteData = { mois, annee, echelle, livre_ids: selectedLivreIds, membre_ids: selectedMembreIds, expires_at: expiresAt };
+
+  const livreNames = selectedLivreIds.map(id => livres.find(l => l.id === id)?.titre ?? id);
+  const membreNames = selectedMembreIds.map(id => membres.find(m => m.id === id)?.nom ?? id);
+
+  document.getElementById("confirm-content").innerHTML = `
+    <dl class="book-detail-meta">
+      <dt>Mois</dt><dd>${formatMois(mois, annee)}</dd>
+      <dt>Se termine le</dt><dd>${expiresAt.toLocaleString("fr-FR", { day:"2-digit", month:"long", year:"numeric", hour:"2-digit", minute:"2-digit" })}</dd>
+      <dt>Livres (${selectedLivreIds.length})</dt><dd>${livreNames.join(", ")}</dd>
+      <dt>Membres (${selectedMembreIds.length})</dt><dd>${membreNames.join(", ")}</dd>
+      <dt>Échelle</dt><dd>1 à ${echelle}</dd>
+    </dl>`;
+
+  document.getElementById("lancer-overlay").classList.add("hidden");
+  document.getElementById("confirm-overlay").classList.remove("hidden");
+});
+
+["confirm-close"].forEach(id => {
+  document.getElementById(id).addEventListener("click", () => document.getElementById("confirm-overlay").classList.add("hidden"));
+});
+document.getElementById("confirm-back").addEventListener("click", () => {
+  document.getElementById("confirm-overlay").classList.add("hidden");
+  document.getElementById("lancer-overlay").classList.remove("hidden");
+});
+
+document.getElementById("confirm-launch").addEventListener("click", async () => {
+  if (!pendingVoteData) return;
   try {
-    await addVote({ mois, annee, resultats, livre_elu });
-    showToast("Vote enregistré !", "success");
-    document.getElementById("vote-overlay").classList.add("hidden");
-    votes = await getVotes();
-    livres = await getLivres();
-    renderList();
-    populateLivreSelect();
-  } catch (e) {
-    showToast("Erreur : " + e.message, "error");
-  }
+    await lancerVote(pendingVoteData);
+    voteActif = await getVoteActif();
+    showToast("Vote lancé !", "success");
+    document.getElementById("confirm-overlay").classList.add("hidden");
+    pendingVoteData = null;
+    renderActiveVoteBanner();
+    startCountdown();
+  } catch (e) { showToast("Erreur : " + e.message, "error"); }
+});
+
+// ── Soumettre son vote ─────────────────────────────────────────────
+
+function openSoumettreModal() {
+  if (!voteActif) return;
+  const sel = document.getElementById("s-membre");
+  sel.innerHTML = '<option value="">— Qui êtes-vous ? —</option>';
+  (voteActif.membre_ids || []).forEach(id => {
+    const opt = document.createElement("option");
+    opt.value = id;
+    opt.textContent = membres.find(m => m.id === id)?.nom ?? id;
+    sel.appendChild(opt);
+  });
+  renderNotesForm("");
+  document.getElementById("soumettre-overlay").classList.remove("hidden");
+}
+
+function renderNotesForm(membreId) {
+  const container = document.getElementById("s-notes-list");
+  if (!voteActif) return;
+  const echelle = voteActif.echelle || 5;
+  const existing = membreId ? (voteActif.bulletins?.[membreId] ?? {}) : {};
+  container.innerHTML = (voteActif.livre_ids || []).map(livre_id => {
+    const livre = livres.find(l => l.id === livre_id);
+    const val = existing[livre_id] ?? "";
+    return `<div class="form-group">
+      <label>${livre?.titre ?? livre_id}</label>
+      <input type="number" class="note-vote-input" data-livre="${livre_id}"
+        min="1" max="${echelle}" step="0.5" placeholder="Note (1–${echelle})" value="${val}">
+    </div>`;
+  }).join("");
+}
+
+document.getElementById("s-membre").addEventListener("change", e => renderNotesForm(e.target.value));
+document.getElementById("btn-soumettre-vote").addEventListener("click", openSoumettreModal);
+["soumettre-close", "soumettre-cancel"].forEach(id => {
+  document.getElementById(id).addEventListener("click", () => document.getElementById("soumettre-overlay").classList.add("hidden"));
+});
+document.getElementById("soumettre-overlay").addEventListener("click", e => {
+  if (e.target === e.currentTarget) document.getElementById("soumettre-overlay").classList.add("hidden");
+});
+
+document.getElementById("soumettre-save").addEventListener("click", async () => {
+  if (!voteActif) return;
+  const membreId = document.getElementById("s-membre").value;
+  if (!membreId) { showToast("Indiquez qui vous êtes.", "error"); return; }
+  const notes = {};
+  document.querySelectorAll(".note-vote-input").forEach(inp => {
+    const v = inp.value.trim();
+    if (v !== "") notes[inp.dataset.livre] = Number(v);
+  });
+  if (!Object.keys(notes).length) { showToast("Entrez au moins une note.", "error"); return; }
+  try {
+    await soumettreVote(voteActif.id, membreId, notes);
+    voteActif.bulletins = { ...(voteActif.bulletins || {}), [membreId]: notes };
+    showToast("Vote soumis !", "success");
+    document.getElementById("soumettre-overlay").classList.add("hidden");
+  } catch (e) { showToast("Erreur : " + e.message, "error"); }
+});
+
+// ── Clôturer manuellement ──────────────────────────────────────────
+
+document.getElementById("btn-cloturer-vote").addEventListener("click", async () => {
+  if (!voteActif) return;
+  if (!confirm("Clôturer le vote maintenant et calculer les résultats ?")) return;
+  if (countdownInterval) clearInterval(countdownInterval);
+  await closeExpiredVote(voteActif);
+  voteActif = null;
+  renderActiveVoteBanner();
 });
 
 init().catch(console.error);
