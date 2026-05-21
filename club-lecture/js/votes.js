@@ -282,7 +282,6 @@ function openLancerVoteModal() {
   document.getElementById("l-annee").value = now.getFullYear();
   document.getElementById("l-mois").value = now.getMonth() + 1;
   document.getElementById("l-duree").value = "";
-  document.getElementById("l-echelle").value = "5";
 
   const livresList = document.getElementById("l-livres-list");
   livresList.innerHTML = livres.map(l => {
@@ -318,7 +317,7 @@ document.getElementById("lancer-confirm").addEventListener("click", () => {
   const mois = Number(document.getElementById("l-mois").value);
   const annee = Number(document.getElementById("l-annee").value);
   const dureeText = document.getElementById("l-duree").value.trim();
-  const echelle = Number(document.getElementById("l-echelle").value) || 5;
+  const echelle = 5;
 
   const dureeMs = parseDuree(dureeText);
   if (!dureeMs) { showToast("Durée invalide. Ex : 24h, 1h30, 15min", "error"); return; }
@@ -340,7 +339,6 @@ document.getElementById("lancer-confirm").addEventListener("click", () => {
       <dt>Se termine le</dt><dd>${expiresAt.toLocaleString("fr-FR", { day:"2-digit", month:"long", year:"numeric", hour:"2-digit", minute:"2-digit" })}</dd>
       <dt>Livres (${selectedLivreIds.length})</dt><dd>${livreNames.join(", ")}</dd>
       <dt>Membres (${selectedMembreIds.length})</dt><dd>${membreNames.join(", ")}</dd>
-      <dt>Échelle</dt><dd>1 à ${echelle}</dd>
     </dl>`;
 
   document.getElementById("lancer-overlay").classList.add("hidden");
@@ -385,20 +383,41 @@ function openSoumettreModal() {
   document.getElementById("soumettre-overlay").classList.remove("hidden");
 }
 
-function renderNotesForm(membreId) {
+function renderNotesForm() {
   const container = document.getElementById("s-notes-list");
   if (!voteActif) return;
-  const echelle = voteActif.echelle || 5;
-  const existing = voteActif.bulletins?.[membreId] ?? {};
-  container.innerHTML = (voteActif.livre_ids || []).map(livre_id => {
+  const ratings = [1, 2, 3, 4, 5];
+  const headers = ratings.map(n => `<th style="text-align:center;min-width:52px;font-weight:600;font-size:.82rem">${n}/5</th>`).join("");
+  const rows = (voteActif.livre_ids || []).map(livre_id => {
     const livre = livres.find(l => l.id === livre_id);
-    const val = existing[livre_id] ?? "";
-    return `<div class="form-group">
-      <label>${livre?.titre ?? livre_id}</label>
-      <input type="number" class="note-vote-input" data-livre="${livre_id}"
-        min="1" max="${echelle}" step="0.5" placeholder="Note (1–${echelle})" value="${val}">
-    </div>`;
+    const dp = livre?.date_proposition?.seconds;
+    const moisPropo = dp
+      ? new Date(dp * 1000).toLocaleDateString("fr-FR", { month: "long" })
+      : null;
+    const moisStr = moisPropo ? ` — depuis ${moisPropo.charAt(0).toUpperCase() + moisPropo.slice(1)}` : "";
+    const label = [livre?.titre, livre?.auteur ? `de ${livre.auteur}` : null, livre?.annee ? `(${livre.annee})` : null].filter(Boolean).join(" ") + moisStr;
+    const radios = ratings.map(n =>
+      `<td style="text-align:center;vertical-align:middle">
+        <input type="radio" name="vote-livre-${livre_id}" value="${n}" style="cursor:pointer;width:18px;height:18px">
+      </td>`
+    ).join("");
+    return `<tr style="border-top:1px solid var(--border)">
+      <td style="padding:.55rem .5rem .55rem 0;vertical-align:middle;font-size:.82rem;line-height:1.35;color:var(--accent);min-width:130px">${label}</td>
+      ${radios}
+    </tr>`;
   }).join("");
+
+  container.innerHTML = `
+    <div style="overflow-x:auto;margin-bottom:.5rem">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th style="text-align:left;padding-bottom:.4rem"></th>
+          ${headers}
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="font-size:.73rem;color:var(--muted);margin-top:.25rem">* Une note par livre est requise pour soumettre.</div>`;
 }
 
 document.getElementById("s-confirm-identity").addEventListener("click", () => {
@@ -414,7 +433,7 @@ document.getElementById("s-confirm-identity").addEventListener("click", () => {
   }
 
   document.getElementById("s-voter-label").textContent = `Vote de ${nom}`;
-  renderNotesForm(membreId);
+  renderNotesForm();
   document.getElementById("s-step-identity").classList.add("hidden");
   document.getElementById("s-step-notes").classList.remove("hidden");
 });
@@ -437,11 +456,11 @@ document.getElementById("soumettre-save").addEventListener("click", async () => 
   const membreId = document.getElementById("s-membre").value;
   if (!membreId) { showToast("Identité non confirmée.", "error"); return; }
   const notes = {};
-  document.querySelectorAll(".note-vote-input").forEach(inp => {
-    const v = inp.value.trim();
-    if (v !== "") notes[inp.dataset.livre] = Number(v);
+  (voteActif.livre_ids || []).forEach(livre_id => {
+    const checked = document.querySelector(`input[name="vote-livre-${livre_id}"]:checked`);
+    if (checked) notes[livre_id] = Number(checked.value);
   });
-  if (!Object.keys(notes).length) { showToast("Entrez au moins une note.", "error"); return; }
+  if (!Object.keys(notes).length) { showToast("Cochez au moins une note par livre.", "error"); return; }
   try {
     await soumettreVote(voteActif.id, membreId, notes);
     voteActif.bulletins = { ...(voteActif.bulletins || {}), [membreId]: notes };
