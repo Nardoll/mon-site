@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jeux de rôle — Archives</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <main class="main-content" id="main-content" style="display:none">
+    <div class="page-header">
+      <h1 class="page-title">📁 Archives</h1>
+      <p class="page-subtitle">Notes de campagne, comptes rendus et fiches personnages</p>
+    </div>
+
+    <div class="placeholder-empty">
+      <div class="placeholder-empty-icon">📁</div>
+      <div class="placeholder-empty-title">Rien ici pour l'instant</div>
+      <p class="placeholder-empty-desc">Les archives sont en cours de construction. Du contenu sera ajouté prochainement.</p>
+    </div>
+  </main>
+
+  <script type="module">
+    import { requireAuth } from './js/auth.js';
+    import { initNav } from './js/nav.js';
+    requireAuth(() => {
+      document.getElementById('main-content').style.display = '';
+      initNav('archives');
+    });
+  </script>
+
+</body>
+</html>

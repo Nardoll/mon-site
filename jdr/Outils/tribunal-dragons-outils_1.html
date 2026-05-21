@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le Tribunal des Dragons - Outils du MJ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #f4a460;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #d4af37;
+            font-style: italic;
+            margin-bottom: 30px;
+        }
+        
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .tab-button {
+            background: #2c3e50;
+            color: #ecf0f1;
+            border: 2px solid #f4a460;
+            padding: 12px 25px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 1.1em;
+            transition: all 0.3s;
+            font-family: 'Georgia', serif;
+        }
+        
+        .tab-button:hover {
+            background: #f4a460;
+            color: #1a1a2e;
+            transform: translateY(-2px);
+        }
+        
+        .tab-button.active {
+            background: #d4af37;
+            color: #1a1a2e;
+            border-color: #d4af37;
+        }
+        
+        .tab-content {
+            display: none;
+            background: rgba(44, 62, 80, 0.9);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .generate-button {
+            background: linear-gradient(135deg, #d4af37 0%, #f4a460 100%);
+            color: #1a1a2e;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2em;
+            cursor: pointer;
+            border-radius: 8px;
+            display: block;
+            margin: 20px auto;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .generate-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+        }
+        
+        .npc-card {
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+            padding: 25px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 2px solid #f4a460;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+        }
+        
+        .npc-section {
+            margin: 15px 0;
+        }
+        
+        .npc-label {
+            color: #d4af37;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+            display: block;
+        }
+        
+        .npc-value {
+            color: #ecf0f1;
+            font-size: 1.05em;
+            margin-left: 10px;
+        }
+        
+        .table-container {
+            background: #2c3e50;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .table-title {
+            color: #f4a460;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        
+        th {
+            background: #34495e;
+            color: #d4af37;
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #4a5f7f;
+        }
+        
+        td {
+            padding: 10px;
+            border: 1px solid #4a5f7f;
+            color: #ecf0f1;
+        }
+        
+        tr:nth-child(even) {
+            background: rgba(52, 73, 94, 0.5);
+        }
+        
+        tr:hover {
+            background: rgba(244, 164, 96, 0.2);
+        }
+        
+        .dice-column {
+            width: 80px;
+            text-align: center;
+            font-weight: bold;
+            color: #d4af37;
+        }
+        
+        .intro-text {
+            background: rgba(52, 73, 94, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f4a460;
+            font-style: italic;
+            color: #bdc3c7;
+        }
+        
+        .section-divider {
+            height: 2px;
+            background: linear-gradient(to right, transparent, #f4a460, transparent);
+            margin: 30px 0;
+        }
+        
+        .history-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #f4a460;
+        }
+        
+        .history-title {
+            color: #d4af37;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .history-item {
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #4a5f7f;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        
+        .history-item:hover {
+            border-color: #f4a460;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(244, 164, 96, 0.3);
+        }
+        
+        .history-item-name {
+            color: #d4af37;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+        
+        .history-item-origin {
+            color: #bdc3c7;
+            font-size: 0.9em;
+            font-style: italic;
+        }
+        
+        .history-item-profession {
+            color: #ecf0f1;
+            font-size: 0.85em;
+            margin-top: 5px;
+        }
+        
+        .flair-selector {
+            background: rgba(52, 73, 94, 0.7);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .flair-dropdown {
+            background: #2c3e50;
+            color: #ecf0f1;
+            border: 2px solid #f4a460;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            font-family: 'Georgia', serif;
+            min-width: 250px;
+        }
+        
+        .flair-roll-button {
+            background: linear-gradient(135deg, #d4af37 0%, #f4a460 100%);
+            color: #1a1a2e;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .flair-roll-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+        }
+        
+        .flair-result {
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+            padding: 25px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 2px solid #d4af37;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+            text-align: center;
+        }
+        
+        .flair-result-number {
+            color: #d4af37;
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .flair-result-text {
+            color: #ecf0f1;
+            font-size: 1.3em;
+            line-height: 1.6;
+        }
+        
+        @media (max-width: 768px) {
+            h1 { font-size: 1.8em; }
+            .tab-button { padding: 10px 15px; font-size: 1em; }
+            .npc-card { padding: 15px; }
+            th, td { padding: 8px; font-size: 0.9em; }
+            .history-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+            .flair-selector { flex-direction: column; }
+            .flair-dropdown { min-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐉 Le Tribunal des Dragons 🐉</h1>
+        <p class="subtitle">Outils du Maître de Jeu</p>
+        
+        <div class="tabs">
+            <button class="tab-button active" onclick="showTab('pnj')">Générateur de PNJ</button>
+            <button class="tab-button" onclick="showTab('chapeau')">Chapeau du Prestidigitateur</button>
+            <button class="tab-button" onclick="showTab('flair')">Flair Infaillible</button>
+        </div>
+        
+        <!-- ONGLET GÉNÉRATEUR DE PNJ -->
+        <div id="pnj" class="tab-content active">
+            <div class="intro-text">
+                Générez des PNJ aléatoires pour enrichir votre campagne. Chaque PNJ est unique et s'inspire de l'univers du Tribunal des Dragons.
+            </div>
+            
+            <button class="generate-button" onclick="generateNPC()">⚡ Générer un PNJ ⚡</button>
+            
+            <div id="npc-result"></div>
+            
+            <div class="history-section" id="history-section" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 class="history-title" style="margin: 0;">📚 Historique des PNJ Générés</h2>
+                    <button class="generate-button" style="margin: 0; padding: 10px 20px; font-size: 1em;" onclick="clearHistory()">🗑️ Effacer l'historique</button>
+                </div>
+                <div class="history-grid" id="history-grid"></div>
+            </div>
+        </div>
+        
+        <!-- ONGLET CHAPEAU DU PRESTIDIGITATEUR -->
+        <div id="chapeau" class="tab-content">
+            <div class="intro-text">
+                Table des offrandes du Chapeau Magique d'Harry Fraudeur. Le joueur lance 1d100 et vous lui indiquez l'objet correspondant. Plus le résultat est élevé, plus l'objet demandé est difficile à obtenir.
+            </div>
+            
+            <div class="table-container">
+                <h3 class="table-title">Table des Offrandes du Chapeau (1d100)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="dice-column">Dé</th>
+                            <th>Objet Demandé</th>
+                        </tr>
+                    </thead>
+                    <tbody id="chapeau-table"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- ONGLET FLAIR INFAILLIBLE -->
+        <div id="flair" class="tab-content">
+            <div class="intro-text">
+                Tables de secrets pour la compétence "Flair Infaillible" du Détective de Renom. Choisissez la table appropriée selon la qualité de la réussite du jet de Perception. Lancez 1d100 pour déterminer le secret révélé.
+            </div>
+            
+            <div class="flair-selector">
+                <select id="flair-table-select" class="flair-dropdown">
+                    <option value="1">🔍 Secrets Anecdotiques (Réussite Normale)</option>
+                    <option value="2">🔎 Secrets Intéressants (Bonne Réussite)</option>
+                    <option value="3">🔬 Secrets Cruciaux (Réussite Exceptionnelle)</option>
+                </select>
+                <button class="flair-roll-button" onclick="rollFlair()">🎲 Tirer un Secret</button>
+            </div>
+            
+            <div id="flair-roll-result"></div>
+            
+            <div class="section-divider"></div>
+            
+            <div class="table-container">
+                <h3 class="table-title">🔍 Secrets Anecdotiques (Réussite Normale)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="dice-column">1d100</th>
+                            <th>Secret Révélé</th>
+                        </tr>
+                    </thead>
+                    <tbody id="flair-table-1"></tbody>
+                </table>
+            </div>
+            
+            <div class="section-divider"></div>
+            
+            <div class="table-container">
+                <h3 class="table-title">🔎 Secrets Intéressants (Bonne Réussite)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="dice-column">1d100</th>
+                            <th>Secret Révélé</th>
+                        </tr>
+                    </thead>
+                    <tbody id="flair-table-2"></tbody>
+                </table>
+            </div>
+            
+            <div class="section-divider"></div>
+            
+            <div class="table-container">
+                <h3 class="table-title">🔬 Secrets Cruciaux (Réussite Exceptionnelle)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="dice-column">1d100</th>
+                            <th>Secret Révélé</th>
+                        </tr>
+                    </thead>
+                    <tbody id="flair-table-3"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== DONNÉES ====================
+        
+        // Origines avec noms, noms de famille et probabilités
+        const origines = {
+            "Aqabah": {
+                noms: ["Alayab", "Fatima", "Hassan", "Layla", "Malik", "Nadia", "Omar", "Salma", "Tariq", "Yasmin", "Khalid", "Zahra", "Rashid", "Amira", "Jamal", "Soraya", "Farid", "Mariam", "Samir", "Leila"],
+                nomsFamille: ["al-Rashid", "al-Mansur", "ibn Fadlan", "al-Hakim", "al-Zahir", "ibn Khalid", "al-Amin", "al-Qadir", "ibn Tariq", "al-Nasir", "al-Aziz", "ibn Hassan", "al-Mukhtar", "al-Salim", "ibn Omar", "al-Karim", "al-Walid", "ibn Samir", "al-Jabbar", "al-Basir"],
+                villes: ["Aqabah", "Ashanul", "Irem"],
+                description: "le désert sacré du Maghreb, terre de sagesse et de bibliothèques",
+                poids: 2 // Probabilité faible
+            },
+            "Pays Blanc": {
+                noms: ["Bjorn", "Astrid", "Erik", "Freya", "Ragnar", "Sigrid", "Olaf", "Ingrid", "Leif", "Helga", "Thor", "Brynhild", "Sven", "Gudrun", "Harald", "Thyra", "Ivar", "Eira", "Gunnar", "Runa"],
+                nomsFamille: ["Eriksson", "Bjornsson", "Thorsson", "Olafsson", "Haraldsson", "Svensson", "Ivarsson", "Leifsson", "Ragnardottir", "Astridsdottir", "Freyasdottir", "Ingridsdottir", "Helgasdottir", "Sigridsdottir", "Gudrunsdottir", "Thyrasdottir", "Brynhilddottir", "Eiradottir", "Runasdottir", "Gunnardottir"],
+                villes: ["Pays Blanc"],
+                description: "les terres glacées du nord, patrie de guerriers farouches",
+                poids: 0.5 // Probabilité très très faible
+            },
+            "Pays Môn": {
+                noms: ["Bilbo", "Primrose", "Meriadoc", "Eglantine", "Peregrin", "Marigold", "Samwise", "Ruby", "Fredegar", "Lily", "Tolman", "Daisy", "Hamfast", "Angelica", "Wilcome", "Pansy", "Fosco", "Belladonna", "Rowan", "Poppy"],
+                nomsFamille: ["Sacquet", "Gamegie", "Brandebouc", "Touque", "Bolger", "Bophin", "Fierpied", "Sonnecor", "Sanglebuc", "Fouille", "Fierte", "Chaumine", "Berger", "Poiredebeurre", "Laboureur", "Sacquet-de-Bessac", "Fouinard", "Bruyere", "Vertefeuille", "Chenevert"],
+                villes: ["Pays Môn"],
+                description: "les petites gens, artisans et cultivateurs talentueux",
+                poids: 1 // Probabilité très faible
+            },
+            "Royaume d'Aria": {
+                noms: ["Archibald", "Gwendoline", "Baudouin", "Mathilde", "Godefroy", "Alienor", "Thibault", "Blanche", "Eustache", "Ermengarde", "Foulques", "Iseult", "Raimbaud", "Jehanne", "Gaucher", "Yolande", "Anseau", "Peronelle", "Ogier", "Margot"],
+                nomsFamille: ["de Montfort", "de Beaumont", "de Courtenay", "de Lusignan", "de Châtillon", "de Bourbon", "de Vermandois", "de Dreux", "de Dampierre", "de Foix", "de Narbonne", "de Blois", "de Nevers", "de Guyenne", "de Vergy", "de Mâcon", "de Sancerre", "de Champagne", "de Flandre", "de Provence"],
+                villes: ["Valcouleur", "Voide", "Fouillat", "Wandermere", "Naporia", "Aria", "Rideau", "Arance", "Claveau", "Malbouzon"],
+                description: "le royaume médiéval occidental, terres de chevaliers et de traditions",
+                poids: 5 // Probabilité moyenne
+            },
+            "Esperenza": {
+                noms: ["Rodrigo", "Carmen", "Diego", "Isabella", "Miguel", "Dolores", "Fernando", "Lucia", "Rafael", "Ana", "Juan", "Maria", "Pablo", "Rosa", "Carlos", "Beatriz", "Manuel", "Elena", "Antonio", "Sofia"],
+                nomsFamille: ["Cortes", "Diaz", "Mendoza", "Ramirez", "Velasquez", "Morales", "Navarro", "Torres", "Cruz", "Reyes", "Flores", "Ramos", "Castro", "Herrera", "Medina", "Ortiz", "Santos", "Rivera", "Vargas", "Delgado"],
+                villes: ["Esperenza"],
+                description: "l'île des pirates et corsaires, refuge des flibustiers",
+                poids: 1 // Probabilité très faible
+            },
+            "Kniga": {
+                noms: ["Alexei", "Anastasia", "Boris", "Ekaterina", "Dimitri", "Irina", "Fyodor", "Natasha", "Igor", "Olga", "Mikhail", "Svetlana", "Nikolai", "Tatiana", "Pavel", "Yelena", "Sergei", "Galina", "Vladimir", "Katya"],
+                nomsFamille: ["Volkov", "Sokolov", "Popov", "Ivanov", "Petrov", "Vasiliev", "Kuznetsov", "Novikov", "Fedorov", "Morozov", "Orlov", "Andreev", "Egorov", "Lebedev", "Kozlov", "Pavlov", "Stepanov", "Smirnov", "Grigoriev", "Dmitriev"],
+                villes: ["Kniga"],
+                description: "le royaume vertical de l'est, la sublime citadelle d'acier",
+                poids: 5 // Probabilité moyenne
+            },
+            "Altabianca": {
+                noms: ["Cristoforo", "Marianna", "Vincenzo", "Adelina", "Giacomo", "Serafina", "Domenico", "Angelica", "Raffaele", "Claudia", "Benedetto", "Violetta", "Amadeo", "Celestina", "Sebastiano", "Lucrezia", "Massimo", "Fiora", "Marcello", "Isadora"],
+                nomsFamille: ["Medici", "Foscari", "Dandolo", "Vendramin", "Contarini", "Mocenigo", "Grimani", "Corner", "Barbarigo", "Venier", "Priuli", "Gritti", "Loredan", "Trevisan", "Morosini", "Pisani", "Zorzi", "Bembo", "Falier", "Marcello"],
+                villes: ["Altabianca", "Altamira"],
+                description: "la cité-état maritime vénitienne, carrefour du commerce",
+                poids: 5 // Probabilité moyenne
+            },
+            "Varna": {
+                noms: ["Marcus", "Julia", "Gaius", "Livia", "Lucius", "Claudia", "Titus", "Octavia", "Flavius", "Cornelia", "Aurelius", "Valeria", "Maximus", "Antonia", "Cassius", "Marcella", "Quintus", "Sabina", "Decimus", "Faustina"],
+                nomsFamille: ["Aurelius", "Flavius", "Cornelius", "Claudius", "Julius", "Valerius", "Antonius", "Cassius", "Fabius", "Horatius", "Livius", "Marius", "Octavius", "Quintus", "Sergius", "Titus", "Varus", "Marcellus", "Brutus", "Scipio"],
+                villes: ["Varna", "Atina"],
+                description: "les cités romaines antiques, héritières des légions",
+                poids: 2 // Probabilité faible
+            },
+            "Osmanlie": {
+                noms: ["Mehmet", "Ayşe", "Ahmet", "Fatma", "Mustafa", "Zeynep", "Ali", "Emine", "Hüseyin", "Hatice", "İbrahim", "Safiye", "Osman", "Şerife", "Yusuf", "Hanife", "Mahmut", "Rukiye", "Süleyman", "Naile"],
+                nomsFamille: ["Yılmaz", "Kaya", "Demir", "Şahin", "Çelik", "Yıldız", "Aydın", "Öztürk", "Arslan", "Doğan", "Aslan", "Çetin", "Koç", "Kurt", "Özdemir", "Erdoğan", "Yavuz", "Şen", "Güneş", "Polat"],
+                villes: ["Estenpoli", "Sannakale"],
+                description: "les terres ottomanes frontalières, entre tradition et mystère",
+                poids: 1 // Probabilité très faible
+            },
+            "Béryte": {
+                noms: ["Hiram", "Jezebel", "Hanno", "Elissa", "Baal", "Astarte", "Melqart", "Tanit", "Hamilcar", "Dido", "Hannibal", "Sophonisba", "Mago", "Alissar", "Adherbal", "Salammbo", "Gisco", "Arishtat", "Bomilcar", "Sophoniba"],
+                nomsFamille: ["Baal-Shamin", "Melqart-Baal", "Tanit-Ashtart", "Eshmun-Azar", "Hiram-Baal", "Hanno-Melqart", "Hamilcar-Barca", "Adherbal-Baal", "Mago-Hanno", "Gisco-Baal", "Bomilcar-Hanno", "Sapho-Baal", "Maharbal", "Hasdrubal", "Hamilcar", "Himilco", "Sichaeus", "Pygmalion", "Acerbas", "Barca"],
+                villes: ["Béryte", "Sidon", "Birkanda"],
+                description: "la cité du savoir phénicienne, terre de navigateurs et marchands",
+                poids: 2 // Probabilité faible
+            },
+            "Mirabilia": {
+                noms: ["Alessandro", "Bianca", "Carlo", "Daniela", "Enzo", "Federica", "Giorgio", "Isabella", "Lorenzo", "Margherita", "Niccolo", "Olivia", "Pietro", "Rosa", "Salvatore", "Valentina", "Marco", "Sofia", "Luca", "Elena"],
+                nomsFamille: ["Rossi", "Ferrari", "Bianchi", "Romano", "Colombo", "Ricci", "Marino", "Greco", "Bruno", "Gallo", "Conti", "De Luca", "Mancini", "Costa", "Giordano", "Rizzo", "Lombardi", "Moretti", "Barbieri", "Fontana"],
+                villes: ["Quai-des-Sables", "Alusia", "Sostile", "Nol", "Torini"],
+                description: "la merveilleuse Mirabilia, royaume italien de la Renaissance",
+                poids: 10 // Probabilité importante
+            },
+            "Île du Roi-Sorcier-Dragon": {
+                noms: ["Benetto", "Chiara", "Dante", "Emilia", "Franco", "Giulia", "Luciano", "Maria", "Paolo", "Serena", "Antonio", "Beatrice", "Fabio", "Lucia", "Matteo", "Viola", "Cosimo", "Francesca", "Raphael", "Caterina"],
+                nomsFamille: ["Bellini", "Caruso", "D'Angelo", "Esposito", "Fiore", "Gentile", "Leone", "Martini", "Neri", "Orlando", "Pellegrino", "Russo", "Santoro", "Testa", "Vitale", "Amato", "Benedetti", "Castelli", "Donati", "Fabbri"],
+                villes: ["Île du Roi-Sorcier-Dragon"],
+                description: "l'île mystérieuse du seigneur draconique",
+                poids: 2 // Probabilité faible
+            },
+            "Bharat": {
+                noms: ["Arjun", "Priya", "Ravi", "Lakshmi", "Vikram", "Anaya", "Dev", "Kavya", "Rohan", "Diya", "Aditya", "Meera", "Karan", "Nisha", "Ishaan", "Sanjana", "Nikhil", "Pooja", "Rahul", "Shreya"],
+                nomsFamille: ["Sharma", "Verma", "Gupta", "Kumar", "Singh", "Patel", "Reddy", "Rao", "Nair", "Iyer", "Joshi", "Desai", "Mehta", "Shah", "Malhotra", "Kapoor", "Chopra", "Bose", "Dutta", "Banerjee"],
+                villes: ["Kashi", "Patan", "Kanhpur", "Lakhnau", "Agravana"],
+                description: "les terres mystiques indiennes, entre spiritualité et traditions",
+                poids: 5 // Probabilité moyenne
+            },
+            "Amasya": {
+                noms: ["Wei", "Mei", "Chen", "Li", "Wang", "Yan", "Zhang", "Xiu", "Liu", "Ling", "Huang", "Jing", "Zhao", "Fang", "Wu", "Yun", "Zhou", "Qing", "Sun", "Hong"],
+                nomsFamille: ["Wang", "Li", "Zhang", "Liu", "Chen", "Yang", "Huang", "Zhao", "Wu", "Zhou", "Xu", "Sun", "Ma", "Zhu", "Hu", "Guo", "He", "Gao", "Lin", "Luo"],
+                villes: ["Amasya"],
+                description: "l'empire céleste chinois, terre de dragons et de sagesse",
+                poids: 5 // Probabilité moyenne
+            },
+            "Île du Paradis": {
+                noms: ["Themistocles", "Ariadne", "Perseus", "Cassandra", "Leonidas", "Penelope", "Achilles", "Andromeda", "Odysseus", "Circe", "Theseus", "Medea", "Hector", "Helena", "Ajax", "Artemisia", "Diomedes", "Atalanta", "Nestor", "Daphne"],
+                nomsFamille: ["Petrarca", "Boccaccio", "Malatesta", "Visconti", "Sforza", "Gonzaga", "Orsini", "Colonna", "Baglioni", "Montefeltro", "Borgia", "Della Rovere", "Farnese", "Medici", "Pazzi", "Strozzi", "Albizzi", "Ridolfi", "Tornabuoni", "Salviati"],
+                villes: ["Île du Paradis"],
+                description: "l'île enchantée mêlant Renaissance italienne et mythes grecs",
+                poids: 2 // Probabilité faible
+            },
+            "Keos": {
+                noms: ["Amenhotep", "Nefertari", "Ramses", "Cleopatra", "Tutankh", "Hatshepsut", "Thutmose", "Nefertiti", "Akhenaten", "Ankhesenamun", "Seti", "Tiye", "Horemheb", "Merneith", "Khafre", "Nitocris", "Khufu", "Ahmose", "Senusret", "Sobekneferu"],
+                nomsFamille: ["Amen-Ra", "Ptah-Hotep", "Sobek-Neferu", "Nefer-Ka-Re", "Kheper-Ka-Ra", "Djeser-Ka-Re", "User-Maat-Re", "Neb-Maat-Re", "Menkau-Re", "Ankh-Kheper-Re", "Sekhmet-Neferu", "Hathor-Neferu", "Thoth-Mes", "Horus-Aha", "Anubis-Khenti", "Osiris-Neb", "Set-Nakht", "Bastet-Neferu", "Isis-Nofret", "Ra-Hotep"],
+                villes: ["Keos", "Eleiphée", "Ains Shams"],
+                description: "les terres des pharaons, héritières de l'Égypte antique",
+                poids: 5 // Probabilité moyenne
+            }
+        };
+
+        const descriptionsPhysiques = [
+            "grand et élancé", "petit et trapu", "corpulent et jovial", "mince comme un roseau", "musculeux et imposant",
+            "voûté par l'âge", "d'allure frêle", "athlétique et agile", "de stature moyenne", "au visage émacié",
+            "aux larges épaules", "au dos légèrement bossu", "d'apparence robuste", "aux mains calleuses", "d'allure distinguée",
+            "aux traits fins", "au visage marqué par la vie", "d'apparence juvénile", "au regard perçant", "aux cheveux grisonnants",
+            "complètement chauve", "aux longs cheveux tressés", "au nez crochu", "aux yeux dissymétriques", "aux oreilles décollées",
+            "borgne avec un bandeau", "portant des cicatrices visibles", "aux doigts manquants", "boiteux d'une jambe", "au dos tatoué",
+            "aux dents en or", "aux yeux de couleurs différentes", "aux mains tremblantes", "couvert de taches de rousseur", "albinos",
+            "extrêmement pâle", "au teint basané", "aux cheveux d'un blanc éclatant", "portant une barbe imposante", "au visage juvénile malgré l'âge",
+            "vêtu de haillons malgré sa richesse", "toujours impeccablement vêtu", "portant des gants en permanence", "au parfum entêtant", "sentant le poisson",
+            "empestant le tabac", "dégageant une odeur de fleurs", "au rire tonitruant", "à la voix fluette", "au ton monocorde"
+        ];
+
+        const traitsCaractere = [
+            "méfiant et soupçonneux", "jovial et accueillant", "taciturne et renfermé", "curieux et bavard", "arrogant et hautain",
+            "humble et effacé", "colérique et impulsif", "patient et posé", "nerveux et agité", "calme et serein",
+            "cupide et calculateur", "généreux et altruiste", "paranoïaque", "optimiste béat", "pessimiste chronique",
+            "obsédé par la propreté", "désordonné et négligent", "menteur compulsif", "d'une honnêteté brutale", "superstitieux",
+            "sceptique envers tout", "fanatique religieux", "athée militant", "romantique incurable", "cynique désabusé",
+            "manipulateur subtil", "naïf et crédule", "courageux jusqu'à la témérité", "lâche et fuyant", "loyal jusqu'à la mort",
+            "traître opportuniste", "perfectionniste obsessionnel", "négligent et approximatif", "autoritaire et dominateur", "soumis et servile",
+            "rebelle et contestataire", "conformiste strict", "créatif et original", "conservateur et rigide", "gourmand insatiable",
+            "ascète et frugal", "fêtard invétéré", "sobre et sérieux", "séducteur compulsif", "misanthrope asocial",
+            "grégaire et social", "rancunier implacable", "prompt au pardon", "jaloux et possessif", "détaché et indifférent"
+        ];
+
+        const professions = [
+            "aubergiste", "marchand d'épices", "forgeron", "tisserand", "boulanger", "boucher", "tanneur", "charpentier",
+            "maçon", "potier", "verrier", "orfèvre", "tailleur", "cordonnier", "sellier", "tonnelier",
+            "meunier", "brasseur", "vigneron", "pêcheur", "chasseur", "trappeur", "berger", "paysan",
+            "jardinier", "apothicaire", "guérisseur", "sage-femme", "barbier-chirurgien", "scribe", "copiste", "bibliothécaire",
+            "professeur", "précepteur", "moine", "prêtre", "inquisiteur", "garde", "soldat", "mercenaire",
+            "espion", "assassin", "voleur", "contrebandier", "pirate", "corsaire", "marin", "capitaine de navire",
+            "cartographe", "explorateur", "guide", "messager", "crieur public", "héraut", "musicien", "barde",
+            "jongleur", "saltimbanque", "prestidigitateur", "acteur", "peintre", "sculpteur", "poète", "écrivain",
+            "architecte", "ingénieur", "alchimiste", "astrologue", "devin", "diseuse de bonne aventure", "joaillier", "antiquaire",
+            "collectionneur", "usurier", "banquier", "courtier", "notaire", "juge", "magistrat", "diplomate",
+            "ambassadeur", "conseiller", "noble déchu", "chevalier errant", "palefrenier", "dresseur d'animaux", "fauconnier", "maître-chien",
+            "gladiateur", "champion d'arène", "professeur d'escrime", "gardien de phare", "gardien de pont", "péager", "douanier", "inspecteur",
+            "détective privé", "enquêteur", "archéologue", "chasseur de trésors", "érudit", "philosophe", "historien", "généalogiste"
+        ];
+
+        const secrets = [
+            "possède une dette envers la guilde des Assassins", "a volé un artefact sacré dans sa jeunesse", "est le bâtard d'un noble important",
+            "a trahi son meilleur ami par cupidité", "cache une maladie mortelle et incurable", "est recherché pour meurtre dans une autre contrée",
+            "entretient une liaison secrète avec quelqu'un de haut rang", "a falsifié des documents officiels", "pratique la magie interdite en secret",
+            "fait du trafic d'objets volés", "est un déserteur de l'armée royale", "cache son véritable sexe depuis des années",
+            "a changé d'identité après un crime", "est membre d'une société secrète", "vénère un dieu démoniaque en cachette",
+            "a vendu son âme à une entité surnaturelle", "a abandonné ses enfants", "est responsable de la mort de sa famille", "escroqué des dizaines de personnes",
+            "a incendié volontairement un bâtiment", "cache des documents compromettants", "est un agent double", "a assisté à un meurtre sans rien dire",
+            "connaît l'emplacement d'un trésor", "détient la preuve d'un complot", "a menti sur ses origines nobles", "cache une fortune volée",
+            "souffre d'une malédiction ancestrale", "est hanté par un fantôme", "a pactisé avec un dragon", "possède un objet maudit",
+            "est l'héritier légitime d'un trône", "a tué son mentor", "fait partie d'une prophétie", "a découvert un secret d'État",
+            "entend des voix dans sa tête", "peut voir l'avenir dans les rêves", "est possédé par un esprit", "a un jumeau maléfique",
+            "a été ressuscité d'entre les morts", "est immunisé aux poisons", "ne vieillit plus depuis un événement mystérieux", "a survécu à une exécution",
+            "collectionne des parties de corps", "pratique le cannibalisme rituel", "torture de petits animaux", "se nourrit exclusivement de sang",
+            "dort dans un cercueil", "parle à des objets inanimés", "croit être réincarné", "pense être poursuivi par le destin",
+            "joue compulsivement tout son argent", "est kleptomane irrécupérable", "consomme des substances hallucinogènes", "a une dépendance à l'alcool",
+            "ne peut s'empêcher de mentir", "sabote inconsciemment ses relations", "se fait passer pour mort ailleurs", "a fui un mariage arrangé",
+            "utilise un faux nom et titre", "cache une difformité sous ses vêtements", "ne sait ni lire ni écrire malgré son statut", "est analphabète mais le cache bien",
+            "a peur panique d'un animal banal", "souffre de terreurs nocturnes violentes", "fait des crises d'épilepsie", "perd la mémoire périodiquement",
+            "a un trouble de la personnalité", "entend mieux qu'un humain normal", "peut sentir le mensonge", "possède une mémoire photographique",
+            "rêve systématiquement du futur proche", "voit les auras des gens", "ressent les émotions d'autrui", "détecte la magie instinctivement",
+            "prépare un attentat politique", "recrute pour une rébellion", "empoisonne lentement quelqu'un", "fait chanter un personnage important",
+            "sabote l'économie locale", "manipule les cours des marchés", "trafique de faux documents officiels", "a découvert une conspiration majeure",
+            "protège un fugitif dangereux", "cache un criminel recherché", "aide des esclaves à s'enfuir", "organise un réseau clandestin",
+            "cherche à renverser le pouvoir local", "prépare une guerre civile", "finance une armée secrète", "construit des armes interdites",
+            "expérimente sur des cobayes humains", "crée des poisons innombrables", "élève des créatures dangereuses", "invoque des démons régulièrement",
+            "a découvert une ruine antique", "connaît un passage secret crucial", "garde une carte vers un trésor légendaire", "possède une clé mystérieuse",
+            "sait où trouver un dragon endormi", "connaît le vrai nom d'un démon", "détient un grimoire de magie noire", "a découvert une relique divine"
+        ];
+
+        const liens = [
+            "un médaillon contenant un portrait", "une clé rouillée d'origine inconnue", "une bague ornée d'une pierre étrange", "une dague au pommeau gravé",
+            "une lettre jamais envoyée", "un livre ancien aux pages codées", "une fiole de liquide mystérieux", "une carte incomplète",
+            "un morceau de tissu brodé", "une pièce de monnaie étrangère", "un fragment de poterie ancienne", "un os gravé de symboles",
+            "une plume d'oiseau rare", "un caillou luminescent", "une dent de créature inconnue", "un éclat de cristal coloré",
+            "une vieille taverne abandonnée", "un puits tari au centre ville", "une statue brisée dans un parc", "un arbre centenaire marqué",
+            "une vieille tour en ruine", "un pont de pierre effondré", "un moulin désaffecté", "une chapelle oubliée",
+            "une fontaine asséchée", "un ancien théâtre", "des catacombes sous la ville", "une grotte près du village",
+            "le tombeau d'un ancêtre", "une ancienne forge abandonnée", "un phare éteint", "un manoir hanté",
+            "une personne disparue il y a dix ans", "un enfant qu'il a sauvé autrefois", "un ancien amour qu'il a trahi", "un rival de toujours",
+            "un mentor présumé mort", "un créancier impitoyable", "un parent éloigné puissant", "un ancien compagnon d'armes",
+            "une prophétie concernant sa lignée", "une dette d'honneur non réglée", "un serment fait sous contrainte", "une promesse impossible à tenir",
+            "un rêve récurrent obsédant", "une vision divine reçue", "une malédiction héréditaire", "un don surnaturel caché",
+            "un dragon aperçu dans sa jeunesse", "un fantôme qui le suit", "une voix qu'il entend parfois", "un pressentiment constant",
+            "un rituel qu'il doit accomplir", "un objet qu'il doit trouver", "une personne qu'il doit protéger", "un lieu qu'il doit atteindre",
+            "une vérité qu'il doit révéler", "un mensonge qu'il doit maintenir", "un secret qu'il doit découvrir", "une vengeance à accomplir",
+            "une recette de famille précieuse", "une technique artisanale unique", "un talent caché pour la musique", "une connaissance des plantes rares",
+            "un don pour les langues étrangères", "une mémoire des visages infaillible", "une intuition pour les affaires", "un sens de l'orientation parfait"
+        ];
+
+        const accroches = [
+            "fuit des poursuivants", "cherche quelqu'un de disparu", "enquête sur un meurtre", "livre un colis mystérieux",
+            "vient d'hériter d'une fortune", "a perdu tous ses biens", "cherche à se venger", "fuit une malédiction",
+            "poursuit un voleur", "est en pèlerinage", "cherche un maître", "fuit un mariage forcé",
+            "cherche à se racheter", "cache une blessure grave", "a besoin d'argent rapidement", "doit livrer un message urgent",
+            "observe quelqu'un discrètement", "attend un contact", "cache quelque chose d'important", "vient d'arriver en ville",
+            "est de passage pour une nuit", "cherche un emploi", "propose ses services", "vend des marchandises rares",
+            "colporte des rumeurs", "cherche des informations", "offre une récompense", "demande protection",
+            "organise une réunion secrète", "recrute pour une mission", "cherche des mercenaires", "propose un marché douteux",
+            "fête une victoire récente", "noie son chagrin", "célèbre un anniversaire", "attend des nouvelles importantes",
+            "joue de l'argent", "a trop bu", "cherche une bagarre", "tente de séduire quelqu'un",
+            "récite des poèmes", "raconte des histoires", "chante des ballades", "joue d'un instrument",
+            "dessine des portraits", "peint un paysage", "sculpte une figurine", "lit un livre rare",
+            "étudie une carte", "déchiffre un manuscrit", "copie un texte", "rédige une lettre",
+            "prie avec ferveur", "médite en silence", "consulte les étoiles", "lit les lignes de la main",
+            "soigne un blessé", "prépare un remède", "mélange des potions", "bénit des voyageurs",
+            "répare un objet", "affûte une lame", "tresse une corde", "cuisine un plat",
+            "négocie un prix", "marchande âprement", "évalue des gemmes", "compte des pièces"
+        ];
+
+        // Objets du chapeau (100 éléments) - Répartition ajustée par difficulté
+        const objetsChapeau = [
+            // 1-10 : Hyper simple (objets trouvés partout, gratuits)
+            "Un brin d'herbe", "Une feuille morte", "Un caillou ordinaire", "Un peu de poussière", "Un fétu de paille",
+            "Une brindille", "Un bout de ficelle usée", "Un morceau d'écorce", "Une plume d'oiseau commun", "Un grain de sable",
+            
+            // 11-30 : Facile (objets achetables facilement, quelques sous)
+            "Un légume frais", "Un fruit de saison", "Un morceau de pain", "Un œuf", "Une chandelle",
+            "Un bout de savon", "Une poignée de sel", "Un peu de farine", "Une tasse en terre", "Un bol simple",
+            "Une cuillère en bois", "Un clou", "Un bouton", "Un bout de tissu", "Une aiguille",
+            "Un dé à coudre", "Une ficelle propre", "Un morceau de craie", "Un peigne en bois", "Un mouchoir",
+            
+            // 31-70 : Objets courants mais demandent un peu d'effort (pas trop difficile)
+            "Une pièce de cuivre", "Une pièce d'argent", "Trois pièces de cuivre", "Un livre de prières", "Une carte à jouer",
+            "Une bougie parfumée", "Un sachet d'épices", "Une fiole en verre", "Un sifflet", "Un petit coffret en bois",
+            "Une ceinture en cuir", "Un chapeau", "Une écharpe", "Un morceau de cire à cacheter", "De l'encre",
+            "Une plume d'écriture", "Un parchemin vierge", "Un jeu de dés", "Une lanterne", "Une boussole",
+            "Un sablier", "Une petite cloche", "Un miroir de poche", "Un pot de miel", "Une paire de gants",
+            "Des chaussettes de laine", "Un couteau de cuisine", "Une bourse en cuir", "Un sac de voyage", "Une gourde",
+            "Une couverture", "Un briquet à silex", "Un hameçon", "Une corde de 10 mètres", "Un pied-de-biche",
+            "Une petite pelle", "Un marteau", "Un ciseau à bois", "Une lime", "Une pince",
+            
+            // 71-90 : Très difficile (objets rares, précieux, spécifiques ou dangereux)
+            "Une pièce de cuivre d'une ville précise", "Une pièce d'or d'un royaume lointain", "Un bijou en argent d'une famille noble", "Une gemme brute non taillée", "Une perle noire naturelle",
+            "Un fragment d'ambre avec un insecte", "Un livre écrit en langue ancienne", "Un parchemin avec un sceau royal", "Une lettre signée d'un personnage célèbre", "Un portrait miniature peint à la main",
+            "Une statuette d'ivoire sculpté", "Un instrument de musique rare", "Une carte nautique ancienne", "Un astrolabe fonctionnel", "Une longue-vue de capitaine",
+            "Un jeu d'échecs en ébène et nacre", "Un poison mortel rare", "Un antidote exotique", "Une plante médicinale légendaire", "Une dent de grand prédateur",
+            
+            // 91-100 : Quasi impossible mais réalisable (objets uniques, très rares)
+            "La couronne d'un roi", "Un fragment de météorite", "Un os de dragon", "Une larme pétrifiée", "Le dernier exemplaire d'un livre brûlé",
+            "Une plume de phénix", "Un morceau d'un temple sacré", "Le sceau brisé d'un empereur", "Un fragment d'âme capturé", "Le dernier soupir d'un mourant dans une fiole"
+        ];
+
+        // Secrets Flair Infaillible
+        const secretsFlairInutiles = [
+            "Suce encore son pouce", "Dort avec une poupée en chiffon", "A peur du noir", "Ne sait pas nager", "Déteste les chats",
+            "Adore les sucreries", "Ronfle très fort", "Parle dans son sommeil", "Se cure le nez en public", "Mâche bruyamment",
+            "A un tic nerveux à l'œil", "Cligne excessivement des yeux", "Tousse quand il ment", "Rougit facilement", "Transpire abondamment",
+            "A une haleine de poisson", "Porte toujours les mêmes chaussettes", "Ne se lave jamais les mains", "Craint les araignées", "Sursaute au moindre bruit",
+            "Compte obsessionnellement les marches", "Évite les fissures du pavé", "Doit toucher le bois trois fois", "Ne marche jamais sur les lignes", "Salue les pies",
+            "Porte un caillou porte-bonheur", "Crache par-dessus son épaule", "Croise les doigts en permanence", "Frappe le bois compulsivement", "Évite le chiffre 13",
+            "Parle à ses plantes", "Donne des noms à ses objets", "Chante sous la douche", "Danse quand il est seul", "Fait des grimaces au miroir",
+            "Collectionne les cailloux", "Garde tous les boutons perdus", "Accumule les bouts de ficelle", "Conserve de vieux journaux", "Thésaurise les boîtes vides",
+            "Préfère les nombres pairs", "Mange toujours dans le même ordre", "Doit finir son assiette", "Ne mélange jamais ses aliments", "Coupe sa nourriture en morceaux égaux",
+            "Porte des sous-vêtements à l'envers", "A cousu un bouton fétiche", "Cache une mèche de cheveux", "Garde une dent de lait", "Conserve son cordon ombilical",
+            "Croit aux fées", "Pense que les miroirs volent l'âme", "Évite de marcher sous les échelles", "Craint les chats noirs", "Jette du sel renversé",
+            "Parle tout seul constamment", "Répond à ses propres questions", "Rit de ses blagues", "S'applaudit lui-même", "Se félicite à voix haute",
+            "Chantonne tout le temps", "Siffle en travaillant", "Fredonne nerveusement", "Tapote du pied sans cesse", "Tambourine des doigts",
+            "Se gratte l'oreille quand il réfléchit", "Tire sur ses cheveux", "Mordille ses lèvres", "Mâche l'intérieur de sa joue", "Se frotte le nez",
+            "Renifle avant de parler", "Soupire exagérément", "Bâille ostensiblement", "S'étire bruyamment", "Craque ses articulations",
+            "Porte toujours du bleu", "Ne porte que du noir", "Évite le rouge", "Préfère les rayures", "Déteste les pois",
+            "A peur des oiseaux", "Craint les souris", "Fuit les papillons", "Évite les grenouilles", "Déteste les escargots",
+            "Ne supporte pas le bruit de mastication", "Est irrité par les tapotements", "Hait les sifflements", "Déteste qu'on tousse", "Ne tolère pas qu'on renifle",
+            "Vérifie trois fois la porte", "Contrôle sans cesse sa bourse", "Tâte ses poches constamment", "Regarde derrière lui souvent", "Scrute les coins sombres",
+            "Pense que tout le monde le regarde", "Croit qu'on parle de lui", "S'imagine des complots", "Se méfie de tout le monde", "Voit des espions partout"
+        ];
+
+        const secretsFlairMoyens = [
+            "Est profondément endetté", "A un enfant illégitime", "Entretient une maîtresse", "Joue compulsivement", "Boit en cachette",
+            "Vole régulièrement son employeur", "Fraude sur les comptes", "Revend des marchandises volées", "Accepte des pots-de-vin", "Fait du marché noir",
+            "A déserté l'armée", "A changé d'identité", "Fuit une condamnation", "A une double vie", "Ment sur ses origines",
+            "Cache une maladie", "Souffre de cauchemars récurrents", "Est poursuivi par des créanciers", "Doit de l'argent à la mafia", "A une dette d'honneur",
+            "Trafique de faux documents", "Falsifie des signatures", "Vend des produits frelatés", "Dilue les alcools", "Triche sur les poids",
+            "Espionne pour quelqu'un", "Rapporte des informations", "Surveille des personnes", "Est un indicateur", "Dénonce ses concurrents",
+            "Pratique l'usure", "Prête à des taux exorbitants", "Ruine intentionnellement des rivaux", "Manipule les prix", "Crée des pénuries artificielles",
+            "A trahi un ami", "A dénoncé un complice", "A volé un partenaire", "A abandonné quelqu'un", "A rompu un serment",
+            "Triche aux cartes", "Pipe les dés", "Truque les jeux", "Arrange des paris", "Manipule des compétitions",
+            "Couche avec la femme/mari d'un autre", "A une liaison interdite", "Fréquente des prostituées", "Entretient plusieurs amants", "Trompe son conjoint",
+            "Maltraite ses employés", "Exploite des enfants", "Sous-paye systématiquement", "Impose des conditions inhumaines", "Refuse les soins aux malades",
+            "Cache une fortune", "Dissimule des biens", "A un trésor enterré", "Possède des économies secrètes", "Planque de l'or",
+            "Fait du recel", "Achète des objets volés", "Écoule de la contrebande", "Cache des marchandises illégales", "Stocke des produits interdits",
+            "Intimide les témoins", "Menace des créanciers", "Fait peur aux concurrents", "Harcèle ses débiteurs", "Terrorise les faibles",
+            "Sabote le travail d'autrui", "Détruit des marchandises", "Gâche des récoltes", "Contamine des produits", "Ruine des affaires",
+            "Diffame ses rivaux", "Répand des rumeurs", "Invente des scandales", "Salit des réputations", "Calomnie publiquement",
+            "Achète des faveurs sexuelles", "Abuse de sa position", "Harcèle sexuellement", "Fait des avances déplacées", "Exploite les vulnérables",
+            "Consomme des drogues", "Est dépendant à l'opium", "Fume des herbes interdites", "S'injecte des substances", "Inhale des vapeurs",
+            "Vend des drogues", "Fait du trafic de stupéfiants", "Distribue de l'opium", "Produit des substances illicites", "Empoisonne avec des drogues",
+            "Fraude les impôts", "Cache ses revenus", "Falsifie ses déclarations", "Soudoie les percepteurs", "Évite les taxes"
+        ];
+
+        const secretsFlairCruciaux = [
+            "Est un assassin à gages", "A tué plusieurs personnes", "A commis un meurtre récent", "Prépare un assassinat", "A empoisonné quelqu'un",
+            "Espionne pour un royaume ennemi", "Est un agent infiltré", "Travaille pour l'opposition", "Trahit son pays", "Vend des secrets d'État",
+            "Prépare un coup d'État", "Conspire contre le roi", "Organise une rébellion", "Finance des révolutionnaires", "Arme des insurgés",
+            "Invoque des démons régulièrement", "Pratique la nécromancie", "A pactisé avec un diable", "Vénère des dieux maléfiques", "Sacrifie des innocents",
+            "Kidnappe des enfants", "Fait du trafic d'esclaves", "Enlève des femmes", "Séquestre des otages", "Vend des prisonniers",
+            "A découvert un dragon vivant", "Connaît l'emplacement d'un trésor légendaire", "Possède une relique divine", "Détient un artefact ancien", "A trouvé une cité perdue",
+            "Sait où se cache un criminel célèbre", "Protège un fugitif notoire", "Cache un meurtrier", "Abrite un traître", "Héberge un espion ennemi",
+            "Prépare un attentat majeur", "Planifie un empoisonnement de masse", "Organise un incendie criminel", "Va faire sauter un bâtiment", "Prévoit un sabotage",
+            "Détient des preuves d'un complot", "A des documents compromettants", "Possède des lettres incriminantes", "Garde des témoignages explosifs", "Conserve des aveux",
+            "Connaît le vrai meurtrier", "Sait qui a tué le noble", "A vu l'assassinat", "Peut identifier le coupable", "Détient la preuve d'innocence",
+            "Empoisonne lentement quelqu'un", "Administre du poison par doses", "Contamine la nourriture", "Infecte avec une maladie", "Inocule un virus",
+            "Fabrique de faux documents officiels", "Crée de fausses identités", "Falsifie des sceaux royaux", "Forge des lettres de créance", "Produit de faux ordres",
+            "Dirige un réseau criminel", "Commande une guilde de voleurs", "Contrôle le marché noir", "Gère un syndicat du crime", "Règne sur la pègre",
+            "Expérimente sur des humains", "Torture des cobayes", "Teste des poisons", "Pratique la vivisection", "Mène des expériences interdites",
+            "Cache une armée secrète", "Entraîne des mercenaires", "Stocke des armes", "Prépare une invasion", "Rassemble des troupes",
+            "Possède un grimoire de magie noire", "Détient un livre maudit", "A un manuscrit démoniaque", "Garde un codex interdit", "Conserve des sorts tabous",
+            "Connaît le nom véritable d'un démon", "Peut invoquer un archidémon", "Contrôle un esprit puissant", "Commande à un diable", "A asservi une entité",
+            "A découvert un passage vers un autre monde", "Sait ouvrir un portail", "Connaît un rituel de téléportation", "Peut voyager entre les plans", "Accède à une dimension",
+            "Est immortel/ne vieillit plus", "A tué un dieu mineur", "Possède une partie d'âme divine", "A volé de l'essence divine", "S'est approprié un pouvoir divin",
+            "Prépare la fin du monde", "Cherche à libérer une entité cosmique", "Veut réveiller un dieu ancien", "Tente d'ouvrir une brèche dimensionnelle", "Complote l'apocalypse"
+        ];
+
+        // ==================== FONCTIONS ====================
+
+        function showTab(tabName) {
+            // Masquer tous les contenus
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+            
+            // Désactiver tous les boutons
+            const buttons = document.querySelectorAll('.tab-button');
+            buttons.forEach(button => button.classList.remove('active'));
+            
+            // Activer l'onglet sélectionné
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function random(array) {
+            return array[Math.floor(Math.random() * array.length)];
+        }
+
+        // Historique des PNJ
+        let npcHistory = [];
+
+        // Fonction pour sélectionner une origine pondérée
+        function randomWeighted(origines) {
+            const entries = Object.entries(origines);
+            const totalWeight = entries.reduce((sum, [_, data]) => sum + data.poids, 0);
+            let random = Math.random() * totalWeight;
+            
+            for (const [key, data] of entries) {
+                random -= data.poids;
+                if (random <= 0) {
+                    return key;
+                }
+            }
+            return entries[0][0]; // Fallback
+        }
+
+        function generateNPC() {
+            // Sélection de l'origine avec probabilité
+            const origineKey = randomWeighted(origines);
+            const origine = origines[origineKey];
+            
+            // Génération des attributs
+            const prenom = random(origine.noms);
+            const nomFamille = random(origine.nomsFamille);
+            const nomComplet = `${prenom} (${nomFamille})`;
+            const ville = random(origine.villes);
+            const description = `${random(descriptionsPhysiques)}, ${random(descriptionsPhysiques)}`;
+            const caractere = `${random(traitsCaractere)}, ${random(traitsCaractere)}`;
+            const profession = random(professions);
+            const secret = random(secrets);
+            const lien = random(liens);
+            const accroche = random(accroches);
+            
+            // Création de l'objet PNJ
+            const npc = {
+                nom: nomComplet,
+                prenom: prenom,
+                nomFamille: nomFamille,
+                origineKey,
+                ville,
+                origineDescription: origine.description,
+                description,
+                caractere,
+                profession,
+                secret,
+                lien,
+                accroche,
+                timestamp: Date.now()
+            };
+            
+            // Ajout à l'historique
+            npcHistory.unshift(npc);
+            
+            // Affichage du PNJ actuel
+            displayNPC(npc);
+            
+            // Mise à jour de l'historique
+            updateHistory();
+        }
+        
+        function displayNPC(npc) {
+            const resultDiv = document.getElementById('npc-result');
+            resultDiv.innerHTML = `
+                <div class="npc-card">
+                    <div class="npc-section">
+                        <span class="npc-label">👤 Nom :</span>
+                        <span class="npc-value">${npc.nom}</span>
+                    </div>
+                    
+                    <div class="npc-section">
+                        <span class="npc-label">🌍 Origine :</span>
+                        <span class="npc-value">${npc.origineKey} (${npc.ville}) - ${npc.origineDescription}</span>
+                    </div>
+                    
+                    <div class="npc-section">
+                        <span class="npc-label">📋 Description physique :</span>
+                        <span class="npc-value">${npc.description}</span>
+                    </div>
+                    
+                    <div class="npc-section">
+                        <span class="npc-label">🎭 Traits de caractère :</span>
+                        <span class="npc-value">${npc.caractere}</span>
+                    </div>
+                    
+                    <div class="npc-section">
+                        <span class="npc-label">💼 Profession :</span>
+                        <span class="npc-value">${npc.profession}</span>
+                    </div>
+                    
+                    <div class="npc-section">
+                        <span class="npc-label">🔒 Secret / Quête personnelle :</span>
+                        <span class="npc-value">${npc.secret}</span>
+                    </div>
+                    
+                    <div class="npc-section">
+                        <span class="npc-label">🔗 Lien significatif :</span>
+                        <span class="npc-value">${npc.lien}</span>
+                    </div>
+                    
+                    <div class="npc-section">
+                        <span class="npc-label">❓ Pourquoi il/elle est là :</span>
+                        <span class="npc-value">${npc.accroche}</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function updateHistory() {
+            const historySection = document.getElementById('history-section');
+            const historyGrid = document.getElementById('history-grid');
+            
+            if (npcHistory.length > 0) {
+                historySection.style.display = 'block';
+                
+                historyGrid.innerHTML = npcHistory.map((npc, index) => `
+                    <div class="history-item" onclick="showHistoryNPC(${index})">
+                        <div class="history-item-name">${npc.nom}</div>
+                        <div class="history-item-origin">${npc.origineKey}</div>
+                        <div class="history-item-profession">${npc.profession}</div>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        function showHistoryNPC(index) {
+            const npc = npcHistory[index];
+            displayNPC(npc);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        function clearHistory() {
+            if (confirm("Êtes-vous sûr de vouloir effacer tout l'historique des PNJ ?")) {
+                npcHistory = [];
+                const historySection = document.getElementById('history-section');
+                const historyGrid = document.getElementById('history-grid');
+                historySection.style.display = 'none';
+                historyGrid.innerHTML = '';
+            }
+        }
+        
+        // Fonction pour tirer un secret de Flair
+        function rollFlair() {
+            const selectElement = document.getElementById('flair-table-select');
+            const tableType = selectElement.value;
+            
+            let secretsList;
+            let tableName;
+            
+            switch(tableType) {
+                case '1':
+                    secretsList = secretsFlairInutiles;
+                    tableName = "Secrets Anecdotiques";
+                    break;
+                case '2':
+                    secretsList = secretsFlairMoyens;
+                    tableName = "Secrets Intéressants";
+                    break;
+                case '3':
+                    secretsList = secretsFlairCruciaux;
+                    tableName = "Secrets Cruciaux";
+                    break;
+            }
+            
+            const roll = Math.floor(Math.random() * secretsList.length) + 1;
+            const secret = secretsList[roll - 1];
+            
+            const resultDiv = document.getElementById('flair-roll-result');
+            resultDiv.innerHTML = `
+                <div class="flair-result">
+                    <div class="flair-result-number">🎲 ${tableName} - Résultat : ${roll}</div>
+                    <div class="flair-result-text">${secret}</div>
+                </div>
+            `;
+        }
+
+        // Initialisation des tables
+        window.onload = function() {
+            // Table du chapeau
+            const chapeauTable = document.getElementById('chapeau-table');
+            objetsChapeau.forEach((objet, index) => {
+                const row = chapeauTable.insertRow();
+                const cellDice = row.insertCell(0);
+                const cellObject = row.insertCell(1);
+                cellDice.className = 'dice-column';
+                cellDice.textContent = index + 1;
+                cellObject.textContent = objet;
+            });
+            
+            // Tables de flair
+            function populateFlairTable(tableId, secrets) {
+                const table = document.getElementById(tableId);
+                secrets.forEach((secret, index) => {
+                    const row = table.insertRow();
+                    const cellDice = row.insertCell(0);
+                    const cellSecret = row.insertCell(1);
+                    cellDice.className = 'dice-column';
+                    cellDice.textContent = index + 1;
+                    cellSecret.textContent = secret;
+                });
+            }
+            
+            populateFlairTable('flair-table-1', secretsFlairInutiles);
+            populateFlairTable('flair-table-2', secretsFlairMoyens);
+            populateFlairTable('flair-table-3', secretsFlairCruciaux);
+        };
+    </script>
+</body>
+</html>

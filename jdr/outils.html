@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jeux de rôle — Outils</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <main class="main-content" id="main-content" style="display:none">
+    <div class="page-header">
+      <h1 class="page-title">🛠️ Outils</h1>
+      <p class="page-subtitle">Générateurs et tables d'aide au jeu</p>
+    </div>
+
+    <div class="tool-grid">
+
+      <div class="tool-card">
+        <div class="tool-card-icon">⚔️</div>
+        <div>
+          <div class="tool-card-campaign">Les Enfants de Makryon</div>
+          <div class="tool-card-title">Générateur de PNJ</div>
+        </div>
+        <p class="tool-card-desc">Génère des personnages non-joueurs pour la ville de Makryon : noms procéduraux, apparence détaillée, caractère, profession et accroche narrative.</p>
+        <a href="Outils/generateur-pnj-makryon_1.html" target="_blank" class="btn-primary">Ouvrir →</a>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-card-icon">🐉</div>
+        <div>
+          <div class="tool-card-campaign">Le Tribunal des Dragons</div>
+          <div class="tool-card-title">Outils du MJ</div>
+        </div>
+        <p class="tool-card-desc">Trois outils réunis : générateur de PNJ avec origines multiples, table du chapeau du prestidigitateur (1d100), et flair infaillible du détective de renom.</p>
+        <a href="Outils/tribunal-dragons-outils_1.html" target="_blank" class="btn-primary">Ouvrir →</a>
+      </div>
+
+      <div class="tool-card">
+        <div class="tool-card-icon">⧗</div>
+        <div>
+          <div class="tool-card-campaign">Chroniques d'Aria</div>
+          <div class="tool-card-title">La Roue du Paradoxe</div>
+        </div>
+        <p class="tool-card-desc">Roue interactive pour les conséquences d'une altération temporelle. Tourne la roue pour révéler un événement favorable, défavorable ou mystérieux.</p>
+        <a href="Outils/paradoxe_temporel_4.html" target="_blank" class="btn-primary">Ouvrir →</a>
+      </div>
+
+    </div>
+  </main>
+
+  <script type="module">
+    import { requireAuth } from './js/auth.js';
+    import { initNav } from './js/nav.js';
+    requireAuth(() => {
+      document.getElementById('main-content').style.display = '';
+      initNav('outils');
+    });
+  </script>
+
+</body>
+</html>

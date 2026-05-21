@@ -1,0 +1,378 @@
+/* ═══════════════════════════════════
+   JDR — Variables & Thèmes
+═══════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #080e08;
+  --surface: #111811;
+  --surface2: #192219;
+  --border: #253225;
+  --text: #c4d8bc;
+  --muted: #6b8c63;
+  --accent: #4e8a5c;
+  --accent-hover: #5a9e6f;
+  --accent-glow: rgba(78,138,92,.18);
+  --accent2: #9b3535;
+  --sidebar-w: 240px;
+}
+
+[data-theme="light"] {
+  --bg: #f0f7ed;
+  --surface: #ffffff;
+  --surface2: #e4f0de;
+  --border: #bdd9b0;
+  --text: #1a2f15;
+  --muted: #5a7852;
+  --accent: #3a6e48;
+  --accent-hover: #2d5a3c;
+  --accent-glow: rgba(58,110,72,.15);
+  --accent2: #8b3535;
+}
+
+/* ═══════════════════════════════════
+   Layout
+═══════════════════════════════════ */
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.main-content {
+  margin-left: var(--sidebar-w);
+  padding: 2rem 2.5rem;
+  min-height: 100vh;
+}
+
+.hidden { display: none !important; }
+
+/* ═══════════════════════════════════
+   Auth Gate
+═══════════════════════════════════ */
+#auth-gate {
+  position: fixed; inset: 0;
+  background: #050a05;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999; padding: 1rem;
+}
+
+.gate-card {
+  background: #111811;
+  border: 1px solid #2a3828;
+  border-radius: 14px;
+  padding: 2.5rem 3rem;
+  width: 100%; max-width: 380px;
+  text-align: center;
+}
+
+.gate-icon { font-size: 2rem; margin-bottom: 1rem; display: block; }
+
+.gate-card h2 {
+  font-size: 1.1rem; font-weight: 700; color: #c4d8bc;
+  margin-bottom: .35rem;
+}
+
+.gate-card p { font-size: .83rem; color: #6b8c63; margin-bottom: 1.5rem; }
+
+.gate-card input {
+  width: 100%; background: #0a0e0a; border: 1px solid #2a3828;
+  border-radius: 6px; color: #c4d8bc; padding: .6rem .8rem;
+  font-size: .95rem; text-align: center; letter-spacing: .1em;
+  transition: border-color .15s; margin-bottom: .75rem;
+  font-family: inherit;
+}
+
+.gate-card input:focus { outline: none; border-color: #4e8a5c; }
+
+.gate-card button {
+  width: 100%; background: #4e8a5c; color: #fff;
+  border: none; border-radius: 6px; padding: .6rem;
+  font-size: .9rem; font-weight: 600; cursor: pointer;
+  font-family: inherit; transition: background .15s;
+}
+
+.gate-card button:hover { background: #5a9e6f; }
+.gate-error { font-size: .8rem; color: #9b3535; margin-top: .5rem; min-height: 1.2em; }
+
+/* ═══════════════════════════════════
+   Sidebar
+═══════════════════════════════════ */
+.sidebar {
+  width: var(--sidebar-w);
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  padding: 1.25rem 1.25rem .75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--accent);
+  letter-spacing: -.01em;
+}
+
+.sidebar-nav {
+  flex: 1;
+  list-style: none;
+  padding: .5rem 0;
+}
+
+.sidebar-nav li { display: block; }
+
+.sidebar-nav .nav-link {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .55rem 1.25rem;
+  color: var(--text);
+  text-decoration: none;
+  font-size: .9rem;
+  border-left: 2px solid transparent;
+  transition: background .12s, color .12s, border-color .12s;
+}
+
+.sidebar-nav .nav-link:hover {
+  background: var(--surface2);
+  color: var(--accent);
+}
+
+.sidebar-nav .nav-link.active {
+  background: var(--accent-glow);
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+.sidebar-bottom {
+  padding: .75rem 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.sidebar-home-link {
+  display: block;
+  padding: .45rem .75rem;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: .82rem;
+  border-radius: 6px;
+  transition: background .12s, color .12s;
+}
+
+.sidebar-home-link:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  padding: .35rem .75rem;
+  font-size: .82rem;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background .12s, color .12s;
+}
+
+.theme-toggle:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+/* ═══════════════════════════════════
+   Composants communs
+═══════════════════════════════════ */
+.page-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -.02em;
+}
+
+.page-subtitle {
+  font-size: .88rem;
+  color: var(--muted);
+  margin-top: .3rem;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: .5rem 1.1rem;
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .15s;
+  font-family: inherit;
+}
+
+.btn-primary:hover { background: var(--accent-hover); }
+
+/* Badge "En développement" */
+.badge-dev {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  background: rgba(155,53,53,.15);
+  color: var(--accent2);
+  border: 1px solid rgba(155,53,53,.3);
+  border-radius: 99px;
+  padding: .3em .85em;
+}
+
+/* ═══════════════════════════════════
+   Accueil — Cartes de navigation
+═══════════════════════════════════ */
+.welcome-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.welcome-link-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.5rem;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  position: relative;
+  overflow: hidden;
+  transition: border-color .15s, transform .15s, box-shadow .15s;
+}
+
+.welcome-link-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform .18s;
+}
+
+.welcome-link-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0,0,0,.25);
+}
+
+.welcome-link-card:hover::before { transform: scaleX(1); }
+
+.welcome-link-card-icon { font-size: 1.5rem; }
+.welcome-link-card-title { font-size: 1rem; font-weight: 700; color: var(--text); }
+.welcome-link-card-desc { font-size: .85rem; color: var(--muted); line-height: 1.5; }
+.welcome-link-card-arrow { font-size: .85rem; color: var(--accent); margin-top: auto; }
+
+/* ═══════════════════════════════════
+   Outils — Grille de cartes
+═══════════════════════════════════ */
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.tool-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.tool-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-glow), 0 4px 16px rgba(0,0,0,.25);
+}
+
+.tool-card-icon { font-size: 1.75rem; }
+
+.tool-card-campaign {
+  font-size: .72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--accent);
+  margin-bottom: .2rem;
+}
+
+.tool-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tool-card-desc {
+  font-size: .88rem;
+  color: var(--muted);
+  line-height: 1.55;
+  flex: 1;
+}
+
+/* ═══════════════════════════════════
+   Archives — Placeholder
+═══════════════════════════════════ */
+.placeholder-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 40vh;
+  gap: 1rem;
+  text-align: center;
+}
+
+.placeholder-empty-icon { font-size: 3rem; opacity: .3; }
+.placeholder-empty-title { font-size: 1.1rem; font-weight: 600; color: var(--text); opacity: .55; }
+.placeholder-empty-desc { font-size: .88rem; color: var(--muted); max-width: 320px; }
+
+/* ═══════════════════════════════════
+   Responsive
+═══════════════════════════════════ */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main-content { margin-left: 0; padding: 1.25rem; }
+}

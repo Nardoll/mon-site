@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur PNJ - Les Enfants de Makryon</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #2c1810 0%, #1a0f0a 100%);
+            color: #e8d5c4;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 700px;
+            width: 100%;
+            background: rgba(40, 25, 15, 0.95);
+            border: 3px solid #8b6914;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7),
+                        inset 0 0 20px rgba(139, 105, 20, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #d4af37;
+            font-size: 2em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            font-variant: small-caps;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #a08040;
+            font-size: 0.9em;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+
+        .button-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #8b6914 0%, #6b4f0f 100%);
+            color: #fff;
+            border: 2px solid #d4af37;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Georgia', serif;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(139, 105, 20, 0.4);
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #a08020 0%, #8b6914 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .pnj-card {
+            background: rgba(60, 40, 25, 0.8);
+            border: 2px solid #6b4f0f;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 20px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .pnj-card.show {
+            display: block;
+        }
+
+        .pnj-name {
+            font-size: 1.8em;
+            color: #d4af37;
+            margin-bottom: 5px;
+            font-weight: bold;
+            border-bottom: 2px solid #8b6914;
+            padding-bottom: 10px;
+        }
+
+        .pnj-gender {
+            font-size: 0.9em;
+            color: #a08040;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .pnj-section {
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(40, 25, 15, 0.5);
+            border-left: 3px solid #8b6914;
+            border-radius: 5px;
+        }
+
+        .pnj-label {
+            font-weight: bold;
+            color: #d4af37;
+            font-size: 0.95em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .pnj-content {
+            color: #e8d5c4;
+            line-height: 1.6;
+            margin-top: 5px;
+        }
+
+        .mots-cles {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .mot-cle {
+            background: #6b4f0f;
+            color: #d4af37;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            border: 1px solid #8b6914;
+        }
+
+        .quartier-tag {
+            display: inline-block;
+            background: rgba(139, 105, 20, 0.3);
+            color: #d4af37;
+            padding: 3px 10px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            margin-left: 10px;
+            border: 1px solid #8b6914;
+        }
+
+        .history-container {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #8b6914;
+        }
+
+        .history-title {
+            color: #d4af37;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .history-item {
+            background: rgba(40, 25, 15, 0.6);
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 5px;
+            border-left: 2px solid #6b4f0f;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .history-item:hover {
+            background: rgba(60, 40, 25, 0.8);
+            border-left-color: #8b6914;
+        }
+
+        .clear-history {
+            background: rgba(139, 20, 20, 0.6);
+            border-color: #8b1414;
+            padding: 8px 20px;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        .clear-history:hover {
+            background: rgba(160, 30, 30, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚔️ Générateur de PNJ ⚔️</h1>
+        <div class="subtitle">Les Enfants de Makryon</div>
+        
+        <div class="button-container">
+            <button onclick="genererPNJ()">Générer un PNJ</button>
+        </div>
+
+        <div id="pnjCard" class="pnj-card">
+            <div class="pnj-name" id="pnjName"></div>
+            <div class="pnj-gender" id="pnjGender"></div>
+            
+            <div class="pnj-section">
+                <div class="pnj-label">📍 Apparence</div>
+                <div class="pnj-content" id="pnjApparence"></div>
+            </div>
+
+            <div class="pnj-section">
+                <div class="pnj-label">🎭 Caractère</div>
+                <div class="pnj-content" id="pnjCaractere"></div>
+            </div>
+
+            <div class="pnj-section">
+                <div class="pnj-label">💼 Profession / Rôle</div>
+                <div class="pnj-content" id="pnjProfession"></div>
+            </div>
+
+            <div class="pnj-section">
+                <div class="pnj-label">🔑 Mots-clés</div>
+                <div class="mots-cles" id="pnjMotsCles"></div>
+            </div>
+
+            <div class="pnj-section">
+                <div class="pnj-label">💡 Accroche / Hook</div>
+                <div class="pnj-content" id="pnjAccroche"></div>
+            </div>
+        </div>
+
+        <div class="history-container">
+            <div class="history-title">📜 Historique des PNJ</div>
+            <div id="historyList"></div>
+            <button class="clear-history" onclick="clearHistory()">Effacer l'historique</button>
+        </div>
+    </div>
+
+    <script>
+        // GÉNÉRATEUR DE NOMS PROCÉDURAL
+        const syllabesDebut = [
+            "Al", "Ar", "Bra", "Cal", "Dar", "El", "Eph", "Fal", "Gal", "Her", "Il", "Jor", 
+            "Kae", "Lys", "Mak", "Nik", "Or", "Phe", "Qua", "Rhe", "Sel", "Tha", "Ul", "Vas",
+            "Wen", "Xan", "Ydr", "Zek", "Ath", "Cor", "Dam", "Er", "Fid", "Gre", "Ism", 
+            "Jal", "Kes", "Lor", "Men", "Ner", "Oth", "Pyr", "Sar", "Tiv", "Urg", "Val",
+            "Xen", "Yar", "Zal", "Bri", "Dion", "Fal", "Hest", "Ion", "Kaly", "Myr", "Nai",
+            "Oph", "Ral", "Saph", "Tyr", "Vel", "Ylis", "Zor", "Don", "Kyr", "Mael", "Syl",
+            "Thyr", "Vor", "Zel", "Aur", "Drak", "Fen", "Mor", "Rath", "Thal", "Vex"
+        ];
+
+        const syllabesMilieu = [
+            "an", "ar", "el", "en", "er", "es", "ia", "io", "ir", "is", "on", "or", "os", 
+            "yn", "yr", "al", "eth", "il", "im", "ol", "om", "un", "ur", "ae", "ei", "eo",
+            "ias", "iel", "ien", "ios", "lyn", "mal", "nas", "ral", "ren", "ros", "sal", 
+            "tan", "tel", "thos", "van", "ven", "vil", "xos", "yan", "zel", "dros", "kos",
+            "mos", "nos", "phos", "rios", "sson", "thon", "vos", "wyn", "zos"
+        ];
+
+        const syllabesFin = [
+            "a", "ah", "an", "ara", "as", "ea", "el", "en", "er", "es", "ia", "ian", "iel",
+            "ien", "il", "in", "ion", "ir", "is", "ith", "on", "or", "os", "ra", "rah", "ral",
+            "ran", "ras", "riel", "rin", "ris", "ron", "ros", "ryn", "ssa", "thar", "thel",
+            "theon", "tos", "us", "van", "vel", "ven", "vik", "vir", "xa", "xia", "yal",
+            "yan", "yne", "yra", "yssa", "zel", "ziel", "dra", "kos", "mos", "nos", "phos",
+            "reos", "sarios", "thos", "vanos", "xandros", "yros"
+        ];
+
+        const surnoms = [
+            "le Sage", "la Rusée", "Trois-Doigts", "l'Aveugle", "la Voilée", "le Boiteux",
+            "Main-de-Fer", "Langue-d'Argent", "l'Ancien", "la Jeune", "le Tatoué", "Œil-Perçant",
+            "Dos-Courbé", "la Muette", "le Bavard", "Pierre-Froide", "Cœur-Tendre", "Dent-d'Or",
+            "la Cicatrice", "le Roux", "la Noire", "Pied-Léger", "Main-Leste", "la Borgne",
+            "le Balafré", "Tête-Brûlée", "la Folle", "le Crieur", "l'Ombre", "la Fumée",
+            "Brise-Os", "Coupe-Bourse", "la Sangsue", "le Renard", "l'Aigle", "la Vipère",
+            "Croc-Blanc", "Peau-de-Cuir", "la Tempête", "le Muet", "Chante-Mort", "l'Aiguille",
+            "Dos-Large", "la Sombre", "Main-Molle", "Tête-Dure", "Œil-de-Lynx", "la Rapide",
+            "le Boitillant", "Jambe-Tordue", "la Sanglante", "Barbe-Noire", "la Pâle",
+            "le Rieur", "Sans-Pitié", "la Douce", "le Cruel", "Langue-Fourchue", "Face-de-Rat"
+        ];
+
+        function genererNomProcedural() {
+            const longueur = Math.random() > 0.7 ? 3 : 2; // 30% de noms à 3 syllabes
+            let nom = random(syllabesDebut);
+            
+            if (longueur === 3) {
+                nom += random(syllabesMilieu).toLowerCase();
+            }
+            
+            nom += random(syllabesFin).toLowerCase();
+            
+            return nom;
+        }
+
+        const quartiers = [
+            "La Colline de Marbre", "La Colline des Guildes", "La Colline des Murmures",
+            "La Colline du Guet", "La Colline du Vent", "Le Port", "Quartier des Larmes",
+            "Quartier des Sens", "Quartier des Temples", "Grand Quartier", "Petit Port",
+            "Quartier de Boue", "La Vieille", "Centre-Parc", "Quartier Interdit", "L'Arène",
+            "Cimetière", "Décharge", "La Huitième Colline", "Le Mont d'Antan", "Petit Namnek",
+            "Port Milicien", "Quartier des Ambassades", "Quartiers Heureux", "Quartier du Phare",
+            "Résidence Meleane", "La Vieille Ville"
+        ];
+
+        const ages = [
+            {tranche: "Adolescent", age: () => 13 + Math.floor(Math.random() * 6)},
+            {tranche: "Jeune adulte", age: () => 19 + Math.floor(Math.random() * 10)},
+            {tranche: "Adulte", age: () => 29 + Math.floor(Math.random() * 16)},
+            {tranche: "D'âge mûr", age: () => 45 + Math.floor(Math.random() * 15)},
+            {tranche: "Âgé", age: () => 60 + Math.floor(Math.random() * 20)},
+            {tranche: "Très âgé", age: () => 80 + Math.floor(Math.random() * 30)}
+        ];
+
+        const corpulences = [
+            "maigre et nerveux", "élancé et gracieux", "athlétique et musclé", 
+            "corpulent et imposant", "petit et trapu", "grand et dégingandé",
+            "frêle et délicat", "robuste et carré", "mince et agile", "massif et lourd",
+            "de taille moyenne", "voûté par l'âge", "sec et anguleux", "rond et jovial",
+            "svelte et distingué", "chétif et maladif", "fort comme un bœuf"
+        ];
+
+        const visages = [
+            "visage carré et buriné", "traits fins et délicats", "face ronde et joviale",
+            "visage émacié et creusé", "traits réguliers et banals", "nez crochu et menton pointu",
+            "pommettes hautes et saillantes", "face poupin et juvénile", "mâchoire carrée et puissante",
+            "visage marqué de rides profondes", "traits asymétriques", "face plate et large",
+            "nez cassé plusieurs fois", "visage couvert de taches de rousseur", "traits nobles et aristocratiques",
+            "face grêlée par la petite vérole", "menton fuyant", "front haut et dégagé",
+            "visage anguleux et sévère", "traits doux et arrondis"
+        ];
+
+        const cheveux = [
+            "cheveux noirs corbeau", "tignasse rousse ébouriffée", "crâne rasé de près",
+            "cheveux gris fer", "boucles châtaines désordonnées", "cheveux blancs comme neige",
+            "calvitie naissante", "longs cheveux tressés", "cheveux bruns coupés court",
+            "chevelure blonde sale", "crâne dégarni", "cheveux poivre et sel",
+            "mèches grises aux tempes", "cheveux noirs gominés", "cheveux filasse décolorés par le soleil",
+            "dreadlocks ornées de perles", "coupe militaire stricte", "cheveux hirsutes jamais peignés",
+            "queue de cheval serrée", "cheveux fins et clairsemés"
+        ];
+
+        const yeux = [
+            "yeux noirs perçants", "regard bleu délavé", "yeux verts émeraude",
+            "regard gris acier", "yeux marron doux", "yeux vairons (un bleu, un brun)",
+            "regard fuyant et nerveux", "yeux injectés de sang", "yeux plissés constamment",
+            "regard vide et absent", "yeux brillants d'intelligence", "yeux cernés de fatigue",
+            "regard calculateur et froid", "yeux rieurs avec des pattes d'oie", "yeux globuleux",
+            "regard voilé par la cataracte", "yeux bridés et méfiants", "yeux pétillants de malice",
+            "regard dur comme la pierre", "yeux toujours larmoyants"
+        ];
+
+        const particuliers = [
+            "cicatrice barrant la joue", "tatouage tribal sur le front", "oreille manquante",
+            "doigts tachés d'encre", "mains calleuses de travailleur", "verrue proéminente sur le nez",
+            "dents en or", "dent de devant cassée", "barbe fournie et bien taillée",
+            "bouc en pointe", "favoris démesurés", "pilosité faciale anarchique",
+            "grain de beauté marquant", "cicatrices de brûlure sur les bras", "anneau nasal",
+            "multiples piercings aux oreilles", "ongles rongés jusqu'au sang", "doigts bagués",
+            "parfum entêtant", "odeur de sueur et de saleté", "voix rauque de fumeur",
+            "bégaiement léger", "accent étranger prononcé", "démarche claudicante",
+            "toux chronique", "tic nerveux (clignement)", "se gratte constamment",
+            "dos voûté", "posture militaire rigide", "gestes nerveux et saccadés"
+        ];
+
+        const vetements = [
+            "tunique simple et rapiécée", "robe élégante mais usée", "armure de cuir clouté",
+            "habits de bonne facture", "vêtements crasseux et troués", "cape à capuche sombre",
+            "tablier de travail taché", "costume de fonctionnaire strict", "tenue bariolée voyante",
+            "habits de deuil noirs", "vêtements de marin délavés par le sel", "robe de prêtre sobre",
+            "tenue militaire débraillée", "vêtements trop grands pour lui", "tenue trop serrée",
+            "manteau de fourrure miteux", "ceinture cloutée", "bottes montantes fatiguées",
+            "sandales de cuir usées", "gants de cuir fin", "châle élimé sur les épaules",
+            "foulard coloré au cou", "bandeau sur un œil", "bandages sales aux mains",
+            "bijoux clinquants et faux", "amulette religieuse visible", "sacoche en bandoulière",
+            "bourse bien garnie à la ceinture", "dague cérémonielle au flanc", "bâton de marche sculpté"
+        ];
+
+        const caracteres = [
+            "Méfiant et rusé, préfère observer avant d'agir",
+            "Jovial en façade mais calculateur en sous-main",
+            "Autoritaire et direct, déteste perdre son temps",
+            "Timide et réservé, mais loyal envers ses proches",
+            "Bavard incorrigible, adore les ragots et les histoires",
+            "Impassible et méthodique, traite tout comme une procédure",
+            "Impulsif et passionné, s'enflamme facilement",
+            "Cynique et désabusé, a vu trop de choses",
+            "Curieux et naïf, pose beaucoup de questions",
+            "Manipulateur subtil, toujours plusieurs coups d'avance",
+            "Paranoïaque, voit des complots partout",
+            "Généreux mais distrait, tête en l'air",
+            "Ambitieux et déterminé, prêt à tout pour réussir",
+            "Résigné et fataliste, accepte son sort",
+            "Enthousiaste et énergique, toujours positif",
+            "Mélancolique et nostalgique du passé",
+            "Agressif et prompt à la bagarre",
+            "Lâche et servile face à l'autorité",
+            "Orgueilleux et susceptible à l'extrême",
+            "Superstitieux, voit des présages partout",
+            "Avare et pingre, compte chaque pièce",
+            "Prodigue et dépensier, dilapide tout",
+            "Séducteur invétéré, drague tout ce qui bouge",
+            "Prude et coincé, choqué par la moindre grivoiserie",
+            "Menteur pathologique, embellit toujours la vérité",
+            "Honnête jusqu'à la brutalité, dit ce qu'il pense",
+            "Paresseux chronique, évite tout effort",
+            "Hyperactif, ne tient jamais en place",
+            "Obsessionnel du détail et de l'ordre",
+            "Chaotique et brouillon, perd tout",
+            "Protecteur et maternel/paternel",
+            "Égoïste et ne pense qu'à lui",
+            "Martyr, se plaint constamment de son sort",
+            "Stoïque, ne montre jamais ses émotions",
+            "Théâtral et dramatique, exagère tout",
+            "Philosophe amateur, pontifie sur tout",
+            "Pragmatique terre-à-terre, méprise les rêveurs",
+            "Idéaliste naïf, croit au meilleur de chacun",
+            "Vengeur, n'oublie jamais un affront",
+            "Pacifiste convaincu, horreur de la violence",
+            "Sadique, prend plaisir à la souffrance d'autrui",
+            "Empathique à l'excès, souffre pour les autres",
+            "Fataliste religieux, tout est la volonté des dieux",
+            "Athée pragmatique, se moque des superstitions",
+            "Alcoolique fonctionnel, toujours légèrement ivre",
+            "Puritain abstinent, juge les plaisirs de la chair"
+        ];
+
+        const professions = [
+            {job: "Marchand ambulant", detail: "vend des curiosités et des babioles"},
+            {job: "Aubergiste", detail: "tient une taverne dans le quartier"},
+            {job: "Garde de la milice", detail: "patrouille régulière, connaît les rues"},
+            {job: "Artisan verrier", detail: "membre de la guilde, travaille le verre"},
+            {job: "Docker", detail: "charge et décharge les navires au port"},
+            {job: "Scribe public", detail: "écrit lettres et contrats pour les illettrés"},
+            {job: "Domestique", detail: "au service d'une famille aisée"},
+            {job: "Prêtre mineur", detail: "dessert un petit temple du quartier"},
+            {job: "Contremaître", detail: "supervise les travaux et les ouvriers"},
+            {job: "Courtier", detail: "arrange des transactions discrètes"},
+            {job: "Colporteur de nouvelles", detail: "vend des rumeurs et informations"},
+            {job: "Apothicaire", detail: "prépare remèdes et potions"},
+            {job: "Voleur à la tire", detail: "opère dans les marchés bondés"},
+            {job: "Musicien de rue", detail: "joue pour quelques pièces"},
+            {job: "Ancien soldat", detail: "reconverti en garde ou mercenaire"},
+            {job: "Blanchisseuse", detail: "lave le linge des quartiers riches"},
+            {job: "Cartographe", detail: "dessine plans et cartes de la cité"},
+            {job: "Éleveur de pigeons", detail: "utilise les oiseaux pour messages"},
+            {job: "Réparateur", detail: "rafistole objets et outils cassés"},
+            {job: "Guide touristique", detail: "fait visiter la cité aux étrangers"},
+            {job: "Tailleur de pierre", detail: "travaille le marbre de Makryon"},
+            {job: "Boucher", detail: "tient un étal au marché"},
+            {job: "Boulanger", detail: "fournit le pain quotidien du quartier"},
+            {job: "Forgeron", detail: "répare armes et outils"},
+            {job: "Tanneur", detail: "traite les peaux, métier malodorant"},
+            {job: "Tisserand", detail: "fabrique étoffes et vêtements"},
+            {job: "Potier", detail: "façonne jarres et vaisselle"},
+            {job: "Pêcheur", detail: "ramène poisson frais chaque matin"},
+            {job: "Vigneron", detail: "cultive la vigne et produit du vin"},
+            {job: "Berger", detail: "garde les troupeaux hors de la ville"},
+            {job: "Sage-femme", detail: "aide aux accouchements du quartier"},
+            {job: "Barbier-chirurgien", detail: "coupe cheveux et soigne plaies"},
+            {job: "Croque-mort", detail: "s'occupe des morts et des funérailles"},
+            {job: "Fossoyeur", detail: "creuse les tombes au cimetière"},
+            {job: "Bourreau", detail: "exécute les sentences de mort"},
+            {job: "Geôlier", detail: "surveille les prisonniers à La Vieille"},
+            {job: "Changeur", detail: "échange les monnaies étrangères"},
+            {job: "Usurier", detail: "prête de l'argent à taux exorbitant"},
+            {job: "Prostituée", detail: "travaille dans le Quartier des Sens"},
+            {job: "Proxénète", detail: "gère un réseau de travailleurs du sexe"},
+            {job: "Gladiateur", detail: "combat dans l'Arène pour la gloire"},
+            {job: "Dresseur d'animaux", detail: "entraîne bêtes pour spectacles"},
+            {job: "Jongleur", detail: "divertit sur les places publiques"},
+            {job: "Diseuse de bonne aventure", detail: "lit l'avenir dans les cartes"},
+            {job: "Alchimiste clandestin", detail: "prépare potions illégales"},
+            {job: "Contrebandier", detail: "fait passer marchandises interdites"},
+            {job: "Receleur", detail: "achète et revend objets volés"},
+            {job: "Espion", detail: "vend des secrets à qui paye"},
+            {job: "Assassin", detail: "tue sur commande, tarifs selon cible"},
+            {job: "Mendiant professionnel", detail: "connaît tous les coins généreux"},
+            {job: "Ramasseur d'ordures", detail: "nettoie les rues chaque nuit"},
+            {job: "Égoutier", detail: "entretient le réseau souterrain"},
+            {job: "Veilleur de nuit", detail: "patrouille et crie les heures"},
+            {job: "Allumeur de réverbères", detail: "éclaire les rues au crépuscule"},
+            {job: "Crieur public", detail: "annonce nouvelles et décrets"},
+            {job: "Porteur d'eau", detail: "livre l'eau aux maisons"},
+            {job: "Messager", detail: "transporte lettres et colis urgents"},
+            {job: "Batelier", detail: "transporte gens et marchandises par eau"},
+            {job: "Constructeur de navires", detail: "bâtit et répare bateaux"},
+            {job: "Voilier", detail: "fabrique et répare les voiles"},
+            {job: "Cordier", detail: "tresse cordes et filets"},
+            {job: "Tonnelier", detail: "fabrique barils et tonneaux"},
+            {job: "Charron", detail: "construit et répare charrettes"},
+            {job: "Sellier", detail: "travaille le cuir pour harnais"},
+            {job: "Armurier", detail: "forge armes de qualité"},
+            {job: "Vitrier", detail: "pose et répare les vitres"},
+            {job: "Charpentier", detail: "construit charpentes et meubles"},
+            {job: "Maçon", detail: "bâtit murs et fondations"},
+            {job: "Couvreur", detail: "répare les toits qui fuient"},
+            {job: "Peintre en bâtiment", detail: "décore façades et intérieurs"},
+            {job: "Mosaïste", detail: "crée fresques et pavements"},
+            {job: "Orfèvre", detail: "travaille l'or et l'argent fin"},
+            {job: "Joaillier", detail: "taille et sertit pierres précieuses"},
+            {job: "Parfumeur", detail: "compose essences rares"},
+            {job: "Confiseur", detail: "prépare sucreries et douceurs"},
+            {job: "Brasseur", detail: "fabrique bières et alcools"},
+            {job: "Fromager", detail: "affine fromages de toute sorte"},
+            {job: "Épicier", detail: "vend épices venues de loin"},
+            {job: "Libraire", detail: "copie et vend manuscrits"},
+            {job: "Professeur privé", detail: "enseigne aux enfants nobles"},
+            {job: "Archiviste", detail: "classe documents officiels"},
+            {job: "Traducteur", detail: "maîtrise plusieurs langues"},
+            {job: "Astronome amateur", detail: "observe les étoiles la nuit"},
+            {job: "Herboriste", detail: "connaît plantes et simples"},
+            {job: "Vétérinaire", detail: "soigne animaux malades"}
+        ];
+
+        const accroches = [
+            "Cherche désespérément quelqu'un pour une tâche urgente et louche",
+            "Possède une information précieuse sur un événement récent",
+            "A perdu un objet de valeur et offre une récompense",
+            "Est témoin d'un crime mais a peur de parler",
+            "Propose un travail bien payé mais ne dit pas tout",
+            "A une dette envers quelqu'un de dangereux",
+            "Cherche à se venger d'une injustice subie",
+            "Peut fournir un accès à un lieu normalement interdit",
+            "Connaît un secret sur l'une des Maisons",
+            "A besoin d'aide pour fuir quelqu'un ou quelque chose",
+            "Vend des objets d'origine douteuse",
+            "Peut enseigner une compétence rare",
+            "Cherche un membre de sa famille disparu",
+            "A découvert quelque chose d'étrange dans le quartier",
+            "Propose un marché : un service contre un autre",
+            "Est poursuivi par des créanciers impitoyables",
+            "Cache quelqu'un ou quelque chose d'illégal",
+            "Veut engager des gardes du corps pour la nuit",
+            "Prétend avoir vu un fantôme ou une apparition",
+            "Cherche quelqu'un pour livrer un message secret",
+            "A trouvé un objet magique mais ne sait pas comment l'utiliser",
+            "Veut faire chanter quelqu'un d'influent",
+            "Cherche des complices pour un cambriolage",
+            "A été témoin d'une rencontre suspecte entre notables",
+            "Vend de fausses informations aux naïfs",
+            "Est un espion déguisé cherchant à recruter",
+            "Veut engager quelqu'un pour un faux témoignage",
+            "Cherche à saboter le commerce d'un rival",
+            "Prétend pouvoir prédire l'avenir contre paiement",
+            "A découvert un passage secret dans les égouts",
+            "Vend des reliques religieuses contrefaites",
+            "Cherche à organiser une évasion de prison",
+            "Veut faire passer un message à quelqu'un à La Vieille",
+            "Propose de falsifier des documents officiels",
+            "Cherche des cobayes pour tester une potion",
+            "A vu quelque chose d'interdit dans le Quartier Interdit",
+            "Vend des places pour un spectacle clandestin",
+            "Cherche à retrouver un amour perdu",
+            "Propose d'organiser un combat truqué à l'Arène",
+            "A une carte menant à un trésor caché",
+            "Veut engager quelqu'un pour empoisonner un rival",
+            "Cherche protection contre la Maison Lokyon",
+            "Prétend pouvoir communiquer avec les morts",
+            "Vend de l'eau de la Place des Larmes aux vertus miraculeuses",
+            "Cherche à infiltrer l'Académie pour voler un grimoire",
+            "Propose de parier sur des courses illégales",
+            "A découvert un réseau de tunnels sous la ville",
+            "Veut engager quelqu'un pour séduire quelqu'un d'autre",
+            "Cherche un faux alibi pour un crime qu'il n'a pas commis",
+            "Propose de révéler l'identité d'un changeforme caché"
+        ];
+
+        let history = JSON.parse(localStorage.getItem('pnjHistory')) || [];
+
+        function random(array) {
+            return array[Math.floor(Math.random() * array.length)];
+        }
+
+        function genererPNJ() {
+            const genre = Math.random() > 0.5 ? 'masculin' : 'féminin';
+            const prenom = genererNomProcedural();
+            const surnom = Math.random() > 0.5 ? ` "${random(surnoms)}"` : '';
+            const nom = prenom + surnom;
+            
+            // Génération détaillée de l'apparence
+            const ageInfo = random(ages);
+            const ageExact = ageInfo.age();
+            const corpulence = random(corpulences);
+            const visage = random(visages);
+            const cheveu = random(cheveux);
+            const oeil = random(yeux);
+            const particulier = random(particuliers);
+            const vetement = random(vetements);
+            
+            const apparenceComplete = `${ageInfo.tranche} (${ageExact} ans), ${corpulence}. ${visage}, ${cheveu}, ${oeil}. ${particulier}. Porte ${vetement}.`;
+            
+            const caractere = random(caracteres);
+            const profession = random(professions);
+            const quartier = random(quartiers);
+            const accroche = random(accroches);
+            
+            // Générer 3 mots-clés
+            const motsClesPossibles = [
+                "Discret", "Méfiant", "Bavard", "Généreux", "Avare", "Loyal", "Traître",
+                "Curieux", "Prudent", "Impulsif", "Patient", "Nerveux", "Calme",
+                "Rusé", "Naïf", "Cynique", "Idéaliste", "Pragmatique", "Rêveur",
+                "Violent", "Pacifique", "Ambitieux", "Résigné", "Opportuniste",
+                "Superstitieux", "Rationnel", "Mystérieux", "Transparent", "Humble", "Arrogant",
+                "Alcoolique", "Religieux", "Athée", "Cultivé", "Illettré", "Malade",
+                "Vigoureux", "Colérique", "Doux", "Sadique", "Empathique", "Menteur",
+                "Honnête", "Lâche", "Courageux", "Paranoïaque", "Naïf", "Calculateur",
+                "Prodigue", "Économe", "Séducteur", "Timide", "Exhibitionniste", "Pudique",
+                "Fataliste", "Volontaire", "Paresseux", "Travailleur", "Obsessionnel", "Désordonné"
+            ];
+            
+            const motsCles = [];
+            while(motsCles.length < 3) {
+                const mot = random(motsClesPossibles);
+                if(!motsCles.includes(mot)) motsCles.push(mot);
+            }
+
+            const pnj = {
+                nom,
+                genre: genre === 'masculin' ? 'Homme' : 'Femme',
+                apparence: apparenceComplete,
+                caractere,
+                profession: `${profession.job} — ${profession.detail}`,
+                quartier,
+                motsCles,
+                accroche,
+                timestamp: new Date().toLocaleString('fr-FR')
+            };
+
+            afficherPNJ(pnj);
+            ajouterHistorique(pnj);
+        }
+
+        function afficherPNJ(pnj) {
+            document.getElementById('pnjName').textContent = pnj.nom;
+            document.getElementById('pnjGender').innerHTML = `${pnj.genre} <span class="quartier-tag">${pnj.quartier}</span>`;
+            document.getElementById('pnjApparence').textContent = pnj.apparence;
+            document.getElementById('pnjCaractere').textContent = pnj.caractere;
+            document.getElementById('pnjProfession').textContent = pnj.profession;
+            document.getElementById('pnjAccroche').textContent = pnj.accroche;
+            
+            const motsClesContainer = document.getElementById('pnjMotsCles');
+            motsClesContainer.innerHTML = '';
+            pnj.motsCles.forEach(mot => {
+                const span = document.createElement('span');
+                span.className = 'mot-cle';
+                span.textContent = mot;
+                motsClesContainer.appendChild(span);
+            });
+
+            const card = document.getElementById('pnjCard');
+            card.classList.remove('show');
+            setTimeout(() => card.classList.add('show'), 10);
+        }
+
+        function ajouterHistorique(pnj) {
+            history.unshift(pnj);
+            if(history.length > 10) history = history.slice(0, 10);
+            localStorage.setItem('pnjHistory', JSON.stringify(history));
+            afficherHistorique();
+        }
+
+        function afficherHistorique() {
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = '';
+            
+            if(history.length === 0) {
+                historyList.innerHTML = '<div class="history-item" style="opacity: 0.5; cursor: default;">Aucun PNJ généré pour le moment</div>';
+                return;
+            }
+
+            history.forEach((pnj, index) => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                item.innerHTML = `<strong>${pnj.nom}</strong> — ${pnj.profession.split(' — ')[0]} <span style="opacity: 0.6; font-size: 0.85em;">(${pnj.timestamp})</span>`;
+                item.onclick = () => afficherPNJ(pnj);
+                historyList.appendChild(item);
+            });
+        }
+
+        function clearHistory() {
+            if(confirm('Voulez-vous vraiment effacer tout l\'historique ?')) {
+                history = [];
+                localStorage.removeItem('pnjHistory');
+                afficherHistorique();
+            }
+        }
+
+        // Charger l'historique au démarrage
+        afficherHistorique();
+
+        // Générer un premier PNJ automatiquement
+        window.addEventListener('load', () => {
+            setTimeout(genererPNJ, 500);
+        });
+    </script>
+</body>
+</html>
