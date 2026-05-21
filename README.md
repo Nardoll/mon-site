@@ -17,8 +17,8 @@ Site **personnel et privé** de Tom. Multi-sections indépendantes. La page d'ac
 
 **Sections existantes :**
 - `/club-lecture/` — Fonctionnel et en développement actif
-- `/recettes/` — Placeholder désactivé (card grisée)
-- `/jdr/` — Placeholder désactivé (card grisée)
+- `/jdr/` — Page d'accueil active, protégée par mot de passe, en cours de développement
+- `/recettes/` — Supprimée de l'accueil public (dossier conservé mais non lié)
 
 ---
 
@@ -44,7 +44,7 @@ Site **personnel et privé** de Tom. Multi-sections indépendantes. La page d'ac
 
 ```
 Mon Site/
-├── index.html                   Page d'accueil publique (hero + 3 cartes sections)
+├── index.html                   Page d'accueil publique (hero + 2 cartes sections actives)
 ├── netlify.toml                 Config redirections (héritage — Cloudflare Pages utilisé)
 ├── README.md                    Ce fichier
 │
@@ -70,10 +70,10 @@ Mon Site/
 │       ├── commentaires.js      Logique page Commentaires de lecture
 │       └── reunions.js          Logique page Réunions
 │
-├── recettes/
-│   └── index.html               Placeholder (section à développer)
-└── jdr/
-    └── index.html               Placeholder (section à développer)
+├── jdr/
+│   └── index.html               Page d'accueil JDR (auth intégrée, page de bienvenue)
+└── recettes/
+    └── index.html               Placeholder non lié (retiré de l'accueil public)
 ```
 
 ---
@@ -83,13 +83,13 @@ Mon Site/
 **`index.html` (racine)** — Page visuelle de présentation du site.
 
 - **Hero** : pill "🔒 Accès privé", titre du site, courte description
-- **3 cartes sections** en grille :
+- **2 cartes sections** en grille (`repeat(2, 1fr)`, `max-width: 580px`) :
   - **Club de lecture** → lien `href="/club-lecture/"`, accent orange `#e8a44a`
-  - **Recettes** → désactivée (`opacity:.38; filter:saturate(.4); pointer-events:none`)
-  - **JDR** → désactivée (idem)
-- **Effets hover** sur les cartes actives : lift, glow coloré, ligne accent en haut, flèche `→` apparaît
+  - **Jeux de rôle** → lien `href="/jdr/"`, accent rose `#cf6679`
+- **Effets hover** sur les cartes : lift, glow coloré, ligne accent en haut, flèche `→` apparaît
 - Chaque carte a ses propres variables CSS `--card-accent` et `--card-glow`
 - Pas de JS, pas de mot de passe — page entièrement publique et statique
+- ~~Recettes~~ : carte retirée (section non lancée)
 
 ---
 
@@ -144,8 +144,13 @@ Deux vues alternées :
 - Métadonnées en haut (auteur, année, proposé par, date, statut)
 - Bouton "✏️ Modifier" dans le header → formulaire inline pour corriger titre, auteur, année, proposé par, date
 - Section "Avancements membres" **uniquement si le livre est élu**
-- Chronologie : date de proposition → chaque vote avec note moyenne → résultat final
+- Chronologie : date de proposition → chaque vote avec note de sélection moyenne → résultat final
+- **Section "📝 Réunion"** (si une réunion est associée au livre) : date, nombre de participants, notes individuelles (nom + note), lien "Voir la fiche réunion →" vers `reunions.html?open=REUNION_ID`
 - **Bouton "💬 Commentaires de lecture"** → lien vers `commentaires.html?livre=LIVRE_ID`
+
+**Labels des notes dans la liste des élus :**
+- Grand score en accent = **note du club** (moyenne des notes réunion, `/10 club`)
+- Petit texte gris = **note de sélection** du vote (`Sélection : X/5`)
 
 - Statuts des livres : `en_proposition` / `elu` / `refuse` (affiché "**Éliminé**" — ne pas utiliser "Refusé")
 - **Auto-ouverture** : si l'URL contient `?open=LIVRE_ID`, la fiche du livre s'ouvre automatiquement au chargement
@@ -157,15 +162,18 @@ Deux vues alternées :
   - Graphe en barres **verticales** : vert = gagnant, violet = conservé (≥ 2.5), gris = éliminé (< 2.5). Ligne en tirets rouges au seuil 2.5.
   - Tableau individuel : lignes = membres, colonnes = livres, avec note + étoiles. Dernière ligne = moyennes.
   - Bouton "✏️ Modifier le mois" pour corriger mois/année d'un vote existant.
-- **Bannière vote actif** (`#vote-actif-banner`) : s'affiche dès qu'un vote est en cours. Affiche un compte à rebours en temps réel. Boutons "🗳️ Voter" (pour soumettre son bulletin) et "Clôturer maintenant".
-- **Lancer un vote** (modal `#lancer-overlay`) : remplace l'ancienne "Saisie manuelle"
+- **Bannière vote actif** (`#vote-actif-banner`) : s'affiche dès qu'un vote est en cours. Affiche un compte à rebours en temps réel. Boutons "🗳️ Voter", "Clôturer" et "🗑️ Annuler" (ce dernier supprime le vote sans calculer de résultats ni modifier les statuts des livres).
+- **Lancer un vote** (modal `#lancer-overlay`) :
   - Sélection mois/année
   - Durée en texte libre : `"24h"`, `"1h30"`, `"15min"`, ou nombre seul = heures (analysé par `parseDuree()`)
   - Liste de livres (`#l-livres-list`) : livres "en proposition" cochés par défaut, élus/refusés affichés mais désactivés
   - Liste de membres (`#l-membres-list`) : à cocher manuellement
-  - Échelle de notes (défaut : 5)
+  - **Échelle fixe à 5** — pas de champ de saisie, toujours /5
   - Bouton "Confirmer →" → modal de confirmation récapitulative avant de lancer
-- **Soumettre son bulletin** (modal `#soumettre-overlay`) : chaque membre choisit son identité dans un select, puis saisit une note par livre. Soumission partielle possible (les bulletins existants ne sont pas écrasés grâce à la mise à jour par champ Firestore `bulletins.MEMBRE_ID`).
+- **Soumettre son bulletin** (modal `#soumettre-overlay`) — flux en deux étapes :
+  1. **Étape 1 — Identification** : sélectionner son nom → "Continuer →" → confirmation *"Vous êtes bien [nom] ?"*. Si ce nom a déjà voté → *"[nom] a déjà soumis un vote. Voulez-vous le modifier et écraser le vote précédent ?"*
+  2. **Étape 2 — Notes** : tableau de **boutons radio** (1/5, 2/5, 3/5, 4/5, 5/5), une ligne par livre. Le formulaire est **toujours vide** (jamais pré-rempli, même en cas d'écrasement). Bouton "← Changer" pour revenir à l'étape 1.
+  - Les votes des autres membres ne sont jamais visibles dans ce formulaire.
 - **Clôture automatique** : à chaque chargement de la page, si `voteActif.expires_at < now()` → calcule les résultats, sauvegarde dans la collection `votes`, supprime le document `votes_actifs`. Même logique si la page reste ouverte pendant l'expiration (setInterval toutes les secondes).
 - **Logique des résultats** : livre avec la plus haute moyenne (unique) → `elu`, livres avec moyenne ≤ 2.5 → `refuse`. Égalité au sommet → `livre_elu = null`.
 - **Auto-ouverture** : si l'URL contient `?open=VOTE_ID`, le détail du vote s'ouvre automatiquement au chargement
@@ -180,6 +188,7 @@ Deux vues alternées :
   - **Participations aux votes** (`.vmr`) : liste des mois où le membre a voté ; chaque ligne montre son choix n°1 et le nombre de livres dans le vote. **Clic → histogramme** de tous ses votes pour ce mois, triés du préféré au moins préféré. Format `.chart-label` fixe (130px) pour alignement parfait.
   - **Barre de recherche** au-dessus des votes : filtre les livres et affiche un histogramme consolidé de toutes les notes données à ce livre à travers toutes les sessions de vote
   - **Commentaires** (`.cmr`) : liste des livres commentés par le membre. Chaque ligne est cliquable → affiche les commentaires du membre pour ce livre, avec click-to-reveal pour la protection anti-spoiler. Lien "📖 Voir tous les commentaires" vers `commentaires.html?livre=LIVRE_ID`
+  - **Réunions** : liste des réunions auxquelles le membre a participé (mois, titre du livre, note individuelle donnée). Chaque ligne est cliquable → redirige vers `reunions.html?open=REUNION_ID`
   - ~~Statuts de lecture~~ — section supprimée
 - **Auto-ouverture** : si l'URL contient `?open=MEMBRE_ID`, le profil s'ouvre automatiquement au chargement
 
@@ -202,6 +211,8 @@ Page de gestion des réunions du club. Chaque réunion correspond à une séance
   - Bouton "✏️ Modifier" → ouvre le formulaire en mode édition (affiche les valeurs existantes)
 - **Note finale** = moyenne des notes finales > 0 des participants. Alimente le **Palmarès** de l'accueil et la **bibliothèque** (tri + affichage).
 - **Auto-remplissage du livre** : quand le mois/année change dans le formulaire, `updateLivreDisplay()` cherche le vote correspondant dans la collection `votes` et affiche le livre élu.
+- **Liens croisés** : dans la fiche détail, le titre du livre est cliquable → `bibliotheque.html?open=LIVRE_ID` ; les noms des participants (dans la dl *et* dans le tableau de notes finales) sont cliquables → `membres.html?open=MEMBRE_ID`.
+- **Auto-ouverture** : si l'URL contient `?open=REUNION_ID`, la fiche détail s'ouvre automatiquement au chargement.
 
 #### Commentaires de lecture (`commentaires.html` + `commentaires.js`)
 
@@ -248,6 +259,16 @@ Page dédiée aux commentaires de lecture pour un livre donné. URL : `commentai
   - `.check-list`, `.check-item`, `.check-item-disabled` (listes à cocher dans le formulaire de lancement de vote)
   - `.podium-wrap`, `.podium-top`, `.podium-step`, `.podium-medal`, `.podium-card`, `.podium-rank-1/2/3`, `.podium-score`, `.podium-title`, `.podium-author`, `.podium-month`, `.podium-outsider` (palmarès — page accueil)
   - `.reunion-list`, `.reunion-item`, `.reunion-date`, `.reunion-livre`, `.reunion-livre-titre`, `.reunion-livre-mois`, `.reunion-note`, `.reunion-participants` (liste réunions)
+
+---
+
+## Section JDR (`/jdr/`)
+
+- **Mot de passe** : `Orpheus Cordovan` (avec majuscules et espace)
+- **Mécanisme** : auth gate entièrement intégré dans `jdr/index.html` (pas de fichier `auth.js` séparé — JS inline autonome). Hash SHA-256 stocké en dur, SESSION_KEY `"jdr_auth"`.
+- **Contenu actuel** : page de bienvenue simple ("Bonjour et bienvenu !"), badge "🚧 En développement". Aucune Firebase, aucune sidebar.
+- **Style** : thème sombre rose/rouge (`--accent: #cf6679`), cohérent avec la carte de l'accueil public.
+- **À développer** : section vierge, à construire selon les besoins futurs.
 
 ---
 
@@ -384,8 +405,7 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 | Club de lecture — Membres | `/club-lecture/membres.html` |
 | Club de lecture — Commentaires | `/club-lecture/commentaires.html?livre=LIVRE_ID` |
 | Club de lecture — Réunions | `/club-lecture/reunions.html` |
-| Recettes (placeholder) | `/recettes/` |
-| JDR (placeholder) | `/jdr/` |
+| JDR — Accueil | `/jdr/` |
 
 ---
 
@@ -394,7 +414,9 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 - **Pas de système de login individuel** — tout le club partage un mot de passe unique. Les noms des membres sont sélectionnés dans des listes déroulantes.
 - **Pas d'index Firestore composites** — tous les tris se font en JS après récupération complète des collections. Évite les erreurs d'index manquants.
 - **"Refusé" ne s'affiche jamais** — le terme affiché partout est "Éliminé". La valeur stockée en base reste `"refuse"` (ne pas changer la valeur Firestore).
-- **Notes sur 5** — la saisie des votes se fait sur une échelle 0–5. La détection de l'échelle (5 ou 10) est automatique dans les graphes.
+- **Notes sur 5 — fixe** — l'échelle de vote est toujours /5, sans possibilité de la modifier lors du lancement. La saisie se fait via boutons radio (1/5 à 5/5), pas de champ numérique libre. La détection de l'échelle (5 ou 10) reste automatique dans les graphes de résultats (pour les anciens votes).
+- **Votes permanents** — il n'existe pas de bouton de suppression pour un vote terminé. Seul un vote *actif* peut être annulé (sans enregistrer de résultats). Cela garantit l'intégrité de l'historique.
+- **Soumission de vote anonymisée** — le formulaire de vote est toujours vide à l'ouverture (jamais pré-rempli), que ce soit un premier vote ou un écrasement. Un membre ne voit jamais les notes des autres.
 - **Frise vs Chronologie** — la frise (accueil, en haut) est horizontale et montre TOUS les événements. La chronologie (accueil, en bas) montre uniquement les livres élus, verticalement.
 - **Avancements membres dans la fiche livre** — s'affiche UNIQUEMENT si le livre a le statut `elu`.
 - **Modification des fiches** — le bouton "✏️ Modifier" dans les modales bibliothèque et membres permet de corriger les informations de base. Il remplace le contenu de la modale par un formulaire inline ; "Annuler" revient à la fiche sans sauvegarder. Les votes ne sont pas modifiables depuis ces fiches (intégrité des données).
@@ -408,3 +430,5 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 - **Notes finales séparées des notes de vote** — les notes de vote (pendant le choix du livre) sont stockées dans `votes.resultats[].notes`. Les notes finales (après lecture, lors de la réunion) sont stockées dans `reunions.notes_finales`. Ce sont deux scores distincts : le premier mesure l'intérêt *avant* lecture, le second la satisfaction *après*.
 - **Palmarès basé uniquement sur la note finale** — seuls les livres ayant une réunion avec des notes finales renseignées apparaissent dans le podium de l'accueil. Un livre élu sans réunion (ou sans notes) n'y figure pas.
 - **`editReunionId` vs `currentReunionId`** (réunions.js) — deux variables distinctes pour éviter les conflits entre la fiche détail ouverte (`currentReunionId`) et le formulaire d'édition (`editReunionId`). Après la sauvegarde d'une édition, la fiche détail est rouverte avec `currentReunionId`.
+- **Auth JDR autonome** — la section JDR n'utilise pas le fichier `auth.js` du club de lecture. L'authentification est du JS inline dans `jdr/index.html` : même mécanique SHA-256/sessionStorage mais indépendante, avec SESSION_KEY `"jdr_auth"` et hash propre.
+- **Liens croisés entre pages** — les fiches livre (bibliothèque), membre et réunion sont interconnectées : la fiche livre affiche un encart réunion avec lien vers la fiche réunion ; la fiche réunion rend le livre et les participants cliquables vers leurs fiches respectives ; la fiche membre liste les réunions avec lien vers chacune. Toutes les pages supportent l'auto-ouverture via `?open=ID`.
