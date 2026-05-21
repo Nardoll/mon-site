@@ -607,9 +607,17 @@ function MultiSelect(container, opts, current) {
       ${dropHTML}`;
 
     const input = container.querySelector('.ms-input');
+    const field = container.querySelector('.ms-field');
+
+    field.addEventListener('mousedown', e => {
+      if (e.target !== input) { e.preventDefault(); input.focus(); }
+    });
+
+    const dropdown = container.querySelector('.ms-dropdown');
+    if (dropdown) dropdown.addEventListener('mousedown', e => e.preventDefault());
 
     input.addEventListener('focus', () => { open = true; draw(); });
-    input.addEventListener('blur',  () => setTimeout(() => { open = false; draw(); }, 180));
+    input.addEventListener('blur',  () => setTimeout(() => { open = false; draw(); }, 200));
     input.addEventListener('input', e => { query = e.target.value; draw(); });
     input.addEventListener('keydown', e => {
       if (e.key === 'Backspace' && !query && selected.length) {
