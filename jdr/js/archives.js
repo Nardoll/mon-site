@@ -304,6 +304,12 @@ function detailHTML(p) {
     html += `</div>`;
   }
 
+  if (p.commentaires) {
+    html += `<div class="detail-section"><div class="detail-section-title">Commentaires</div>`;
+    html += `<p style="white-space:pre-wrap;margin:0;line-height:1.6">${escH(p.commentaires)}</p>`;
+    html += `</div>`;
+  }
+
   return html;
 }
 
@@ -461,6 +467,13 @@ function buildFormHTML(p) {
         </div>
       </div>
 
+      <div class="form-section">
+        <div class="form-section-title">Commentaires</div>
+        <div class="form-row">
+          <textarea id="f-commentaires" class="form-input" rows="5" placeholder="Remarques libres sur ce projet…" style="resize:vertical">${escH(p?.commentaires || '')}</textarea>
+        </div>
+      </div>
+
       <div class="form-actions">
         ${editId ? `<button type="button" id="form-delete" class="btn-danger">🗑 Supprimer</button>` : ''}
         <div style="flex:1"></div>
@@ -492,9 +505,10 @@ async function handleSave() {
     createur:    msRefs['ms-createur']?.getValue()    || [],
     univers:     msRefs['ms-univers']?.getValue()     || [],
     emplacement: msRefs['ms-emplacement']?.getValue() || [],
-    youtube:     document.getElementById('f-youtube').checked,
-    deja_joue:   dejaJoue,
-    date_debut:  dateInputToTs(document.getElementById('f-date-debut').value),
+    youtube:      document.getElementById('f-youtube').checked,
+    deja_joue:    dejaJoue,
+    date_debut:   dateInputToTs(document.getElementById('f-date-debut').value),
+    commentaires: document.getElementById('f-commentaires').value.trim(),
   };
 
   if (dejaJoue) {
