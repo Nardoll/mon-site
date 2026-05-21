@@ -71,7 +71,20 @@ Mon Site/
 │       └── reunions.js          Logique page Réunions
 │
 ├── jdr/
-│   └── index.html               Page d'accueil JDR (auth intégrée, page de bienvenue)
+│   ├── index.html               Page d'accueil JDR (bienvenue + liens Archives/Outils)
+│   ├── archives.html            Base de données des projets JDR (filtres, tri, cartes/tableau)
+│   ├── outils.html              Liste des outils MJ (3 outils intégrés)
+│   ├── firebase-config.js       Initialisation Firebase + export `db` (même projet mon-site-e253f)
+│   ├── css/
+│   │   └── style.css            Tous les styles JDR (palette vert/rouge, sidebar, Archives, multi-select…)
+│   ├── js/
+│   │   ├── auth.js              Auth JDR (SHA-256, sessionStorage, SESSION_KEY "jdr_auth")
+│   │   ├── nav.js               Injection sidebar JDR + thème (localStorage "jdr_theme")
+│   │   └── archives.js          Logique page Archives (Firestore, multi-select, formulaire, détail)
+│   └── Outils/
+│       ├── generateur-pnj-makryon_1.html     Générateur PNJ — Les Enfants de Makryon
+│       ├── tribunal-dragons-outils_1.html    Outils MJ — Le Tribunal des Dragons (3 onglets)
+│       └── paradoxe_temporel_4.html          Roue du Paradoxe — Chroniques d'Aria
 └── recettes/
     └── index.html               Placeholder non lié (retiré de l'accueil public)
 ```
@@ -264,11 +277,67 @@ Page dédiée aux commentaires de lecture pour un livre donné. URL : `commentai
 
 ## Section JDR (`/jdr/`)
 
+### Accès / Sécurité
+
 - **Mot de passe** : `Orpheus Cordovan` (avec majuscules et espace)
-- **Mécanisme** : auth gate entièrement intégré dans `jdr/index.html` (pas de fichier `auth.js` séparé — JS inline autonome). Hash SHA-256 stocké en dur, SESSION_KEY `"jdr_auth"`.
-- **Contenu actuel** : page de bienvenue simple ("Bonjour et bienvenu !"), badge "🚧 En développement". Aucune Firebase, aucune sidebar.
-- **Style** : thème sombre rose/rouge (`--accent: #cf6679`), cohérent avec la carte de l'accueil public.
-- **À développer** : section vierge, à construire selon les besoins futurs.
+- **Mécanisme** : `jdr/js/auth.js` — SHA-256 du mot de passe saisi comparé au hash stocké en dur. Si correct → `sessionStorage.setItem("jdr_auth", "1")`. Chaque page appelle `requireAuth(callback)` avant tout rendu.
+- **SESSION_KEY** : `"jdr_auth"` (distinct du club de lecture)
+
+### Sidebar
+
+- Même structure que le club de lecture : sidebar fixe 240px à gauche, liens de navigation, bouton "🏠 Accueil du site" en bas, bascule thème
+- Thème persisté via `localStorage` clé `"jdr_theme"`
+- Palette différente : vert forêt `#4e8a5c` (accent), rouge sang `#9b3535` (secondaire), fond très sombre `#080e08`
+
+### Pages
+
+#### Accueil (`index.html`)
+Page de bienvenue avec deux cartes-liens vers Archives et Outils.
+
+#### Archives (`archives.html` + `archives.js`)
+
+Base de données Notion-style des projets JDR. Collection Firestore : `jdr_projets`.
+
+**Fonctionnalités :**
+- **Deux vues** : Cartes (défaut) et Tableau
+- **Filtres** : recherche texte (nom, univers, créateur), avancement, type
+- **Tri** : récents, nom A→Z/Z→A, date de début, note
+- **Ajouter/modifier** : formulaire modal complet
+- **Supprimer** : bouton dans le formulaire d'édition uniquement
+
+**Formulaire — champs :**
+- Nom (obligatoire)
+- Type (multi-select : Campagne, Mini Campagne, One shot)
+- Avancement (multi-select : Idée, En préparation, Prêt, En cours, Arrêté, Terminé)
+- Date de début
+- YouTube (checkbox)
+- Créateur (multi-select)
+- Univers (multi-select)
+- Emplacement du scénario (multi-select : PDF, Livre, Notion, Drive, LegendKeeper, Obsidian, Canva, Word)
+- **Section "Déjà joué ?"** (conditionnelle via checkbox) :
+  - Satisfaction (étoiles interactives 0–5)
+  - Séances MJ / Séances joueurs
+  - Participants (multi-select)
+  - Format (IRL / Online)
+  - Dates des séances (liste dynamique de champs date)
+- Commentaires (textarea libre)
+
+**Composant Multi-select :**
+- Chips pour les valeurs sélectionnées
+- Dropdown filtrable à la frappe
+- Création de nouvelles options via "+ Créer « xxx »" ou touche Entrée
+- Backspace supprime le dernier chip
+- Architecture : input jamais détruit (évite le blur prématuré), chips et dropdown mis à jour séparément
+
+#### Outils (`outils.html`)
+
+Grille de 3 outils MJ, chacun s'ouvrant dans le même onglet :
+
+| Outil | Campagne | Fichier |
+|-------|----------|---------|
+| Générateur de PNJ | Les Enfants de Makryon | `Outils/generateur-pnj-makryon_1.html` |
+| Outils du MJ (PNJ + chapeau + détective) | Le Tribunal des Dragons | `Outils/tribunal-dragons-outils_1.html` |
+| La Roue du Paradoxe | Chroniques d'Aria | `Outils/paradoxe_temporel_4.html` |
 
 ---
 
@@ -360,6 +429,31 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 > **Note finale** = moyenne de `notes_finales` (valeurs > 0). Alimente le palmarès (accueil) et le tri/affichage de la bibliothèque.
 
+#### `jdr_projets`
+| Champ | Type | Description |
+|-------|------|-------------|
+| `nom` | string | Titre du projet (obligatoire) |
+| `type` | array | Campagne · Mini Campagne · One shot |
+| `avancement` | array | Idée · En préparation · Prêt · En cours · Arrêté · Terminé |
+| `date_debut` | Timestamp \| null | Date de début du projet |
+| `youtube` | boolean | Session enregistrée sur YouTube |
+| `createur` | array | Noms du ou des créateurs |
+| `univers` | array | Univers du projet |
+| `emplacement` | array | Où est stocké le scénario (PDF, Livre, Notion…) |
+| `deja_joue` | boolean | Le projet a été joué |
+| `satisfaction` | number \| null | Note de satisfaction 0–5 (si joué) |
+| `nb_seances_mj` | number \| null | Nombre de séances côté MJ |
+| `nb_seances_joueurs` | number \| null | Nombre de séances côté joueurs |
+| `participants` | array | Noms des participants |
+| `irl` | boolean | Partie en présentiel |
+| `online` | boolean | Partie en ligne |
+| `dates_seances` | array (Timestamp) | Dates individuelles des séances |
+| `commentaires` | string | Remarques libres |
+| `cree_le` | Timestamp | Timestamp création |
+| `mis_a_jour` | Timestamp | Timestamp dernière modification |
+
+> Les valeurs multi-select sont des arrays de strings. Les nouvelles options créées par l'utilisateur dans le formulaire sont sauvegardées en base et réapparaissent automatiquement dans les futurs formulaires (discovery depuis Firestore + PRESETS).
+
 #### `notes_lecture`
 | Champ | Type | Description |
 |-------|------|-------------|
@@ -406,6 +500,11 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 | Club de lecture — Commentaires | `/club-lecture/commentaires.html?livre=LIVRE_ID` |
 | Club de lecture — Réunions | `/club-lecture/reunions.html` |
 | JDR — Accueil | `/jdr/` |
+| JDR — Archives | `/jdr/archives.html` |
+| JDR — Outils | `/jdr/outils.html` |
+| JDR — Outil Makryon | `/jdr/Outils/generateur-pnj-makryon_1.html` |
+| JDR — Outil Tribunal | `/jdr/Outils/tribunal-dragons-outils_1.html` |
+| JDR — Outil Aria | `/jdr/Outils/paradoxe_temporel_4.html` |
 
 ---
 
