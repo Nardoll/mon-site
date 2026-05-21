@@ -1,6 +1,6 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getMembres, getLivreById, getCommentairesForLivre, addCommentaire } from "./db.js";
+import { getMembres, getLivreById, getCommentairesForLivre, addCommentaire, updateCommentaire, updateLivre } from "./db.js";
 import { formatDate, initiales, showToast } from "./utils.js";
 
 await requireAuth();
@@ -35,6 +35,7 @@ async function init() {
   populateMembresModal();
   renderComments();
   setupModal();
+  setupSuivi();
 }
 
 function nomMembre(id) {
@@ -48,6 +49,14 @@ function formatAvancement(avancement) {
   if (unite && total) return `${avancement}/${total} ${unite}`;
   if (unite) return `${avancement} ${unite}`;
   return `${avancement}`;
+}
+
+function advanceLabel() {
+  const unite = livre?.progression_unite || "";
+  const total = livre?.progression_total || null;
+  return unite
+    ? `${unite.charAt(0).toUpperCase() + unite.slice(1)} actuel(le)${total ? ` (sur ${total})` : ""}`
+    : "Avancement (optionnel)";
 }
 
 function populateMembresFilter() {
@@ -83,9 +92,14 @@ function renderComments() {
     return;
   }
 
-  container.innerHTML = `<div class="comment-list">${list.map((c, i) => {
+  const lbl = advanceLabel();
+
+  container.innerHTML = `<div class="comment-list">${list.map(c => {
     const avance = formatAvancement(c.avancement);
-    return `<div class="comment-card" data-idx="${i}">
+    const dateVal = c.date_commentaire?.seconds
+      ? new Date(c.date_commentaire.seconds * 1000).toISOString().split("T")[0]
+      : "";
+    return `<div class="comment-card" data-id="${c.id}">
       <div class="comment-header">
         <div class="avatar" style="width:32px;height:32px;font-size:.78rem;flex-shrink:0">${initiales(nomMembre(c.membre_id))}</div>
         <div style="flex:1;min-width:0">
@@ -93,11 +107,36 @@ function renderComments() {
           ${avance ? `<div class="comment-advance">${avance}</div>` : ""}
         </div>
         <div class="comment-date">${formatDate(c.date_commentaire)}</div>
-        <div style="font-size:.7rem;color:var(--muted);margin-left:.5rem">▶</div>
+        <span class="comment-arrow">▶</span>
       </div>
       <div class="comment-body hidden">
         <div class="comment-spoiler-warn">⚠️ Attention — potentiel spoiler</div>
         <div class="comment-text">${escapeHtml(c.contenu)}</div>
+        <button class="btn btn-ghost btn-sm comment-edit-btn" style="margin-top:.6rem">✏️ Modifier</button>
+        <div class="comment-edit-form hidden" style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--border)">
+          <div class="form-row" style="margin-bottom:.75rem">
+            <div>
+              <label style="display:block;font-size:.82rem;font-weight:500;color:var(--muted);margin-bottom:.35rem">Date</label>
+              <input type="date" class="edit-date" value="${dateVal}">
+            </div>
+            <div>
+              <label style="display:block;font-size:.82rem;font-weight:500;color:var(--muted);margin-bottom:.35rem">${escapeHtml(lbl)}</label>
+              <input type="number" class="edit-advance" min="0" placeholder="0" value="${c.avancement ?? ""}">
+            </div>
+          </div>
+          <div style="margin-bottom:.75rem">
+            <label style="display:block;font-size:.82rem;font-weight:500;color:var(--muted);margin-bottom:.35rem">Titre <span style="font-weight:400">(visible sans cliquer — pas de spoil !)</span></label>
+            <input type="text" class="edit-titre" placeholder="Titre du commentaire" value="${escapeHtml(c.titre ?? "")}">
+          </div>
+          <div style="margin-bottom:.75rem">
+            <label style="display:block;font-size:.82rem;font-weight:500;color:var(--muted);margin-bottom:.35rem">Commentaire</label>
+            <textarea class="edit-text" rows="5" style="resize:vertical">${escapeHtml(c.contenu)}</textarea>
+          </div>
+          <div style="display:flex;gap:.5rem;justify-content:flex-end">
+            <button class="btn btn-secondary btn-sm comment-edit-cancel">Annuler</button>
+            <button class="btn btn-primary btn-sm comment-edit-save">Enregistrer</button>
+          </div>
+        </div>
       </div>
     </div>`;
   }).join("")}</div>`;
@@ -105,27 +144,50 @@ function renderComments() {
   container.querySelectorAll(".comment-card").forEach(card => {
     card.querySelector(".comment-header").addEventListener("click", () => {
       const body = card.querySelector(".comment-body");
-      const arrow = card.querySelector(".comment-header div:last-child");
+      const arrow = card.querySelector(".comment-arrow");
       const isOpen = !body.classList.contains("hidden");
       body.classList.toggle("hidden", isOpen);
       card.querySelector(".comment-header").classList.toggle("open", !isOpen);
       arrow.textContent = isOpen ? "▶" : "▼";
     });
+
+    card.querySelector(".comment-edit-btn").addEventListener("click", () => {
+      card.querySelector(".comment-edit-form").classList.toggle("hidden");
+    });
+
+    card.querySelector(".comment-edit-cancel").addEventListener("click", () => {
+      card.querySelector(".comment-edit-form").classList.add("hidden");
+    });
+
+    card.querySelector(".comment-edit-save").addEventListener("click", async () => {
+      const commentId = card.dataset.id;
+      const contenu = card.querySelector(".edit-text").value.trim();
+      if (!contenu) { showToast("Le commentaire est vide.", "error"); return; }
+      const titre = card.querySelector(".edit-titre").value.trim() || null;
+      const dateVal = card.querySelector(".edit-date").value;
+      const advVal = card.querySelector(".edit-advance").value;
+      try {
+        await updateCommentaire(commentId, {
+          contenu,
+          titre,
+          date_commentaire: dateVal || null,
+          avancement: advVal !== "" ? advVal : null,
+        });
+        showToast("Commentaire modifié !", "success");
+        commentaires = await getCommentairesForLivre(livreId);
+        renderComments();
+      } catch (err) { showToast("Erreur : " + err.message, "error"); }
+    });
   });
 }
 
 function escapeHtml(str) {
-  return (str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return (str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function setupModal() {
   const overlay = document.getElementById("comment-overlay");
-  const unite = livre?.progression_unite || "";
-  const total = livre?.progression_total || null;
-  const advLabel = unite
-    ? `${unite.charAt(0).toUpperCase() + unite.slice(1)} actuel(le)${total ? ` (sur ${total})` : ""}`
-    : "Avancement (optionnel)";
-  document.getElementById("comm-advance-label").textContent = advLabel;
+  document.getElementById("comm-advance-label").textContent = advanceLabel();
 
   document.getElementById("comm-titre-toggle").addEventListener("change", e => {
     document.getElementById("comm-titre-wrap").classList.toggle("hidden", !e.target.checked);
@@ -162,6 +224,50 @@ function setupModal() {
       renderComments();
     } catch (e) { showToast("Erreur : " + e.message, "error"); }
   });
+}
+
+function setupSuivi() {
+  if (livre?.statut !== "elu") return;
+
+  const bar = document.getElementById("suivi-bar");
+  bar.classList.remove("hidden");
+  refreshSuiviLabel();
+
+  const overlay = document.getElementById("suivi-overlay");
+
+  document.getElementById("btn-suivi").addEventListener("click", () => {
+    document.getElementById("suivi-unite").value = livre?.progression_unite || "";
+    document.getElementById("suivi-total").value = livre?.progression_total || "";
+    overlay.classList.remove("hidden");
+  });
+
+  ["suivi-close", "suivi-cancel"].forEach(id => {
+    document.getElementById(id).addEventListener("click", () => overlay.classList.add("hidden"));
+  });
+  overlay.addEventListener("click", e => { if (e.target === e.currentTarget) overlay.classList.add("hidden"); });
+
+  document.getElementById("suivi-save").addEventListener("click", async () => {
+    const unite = document.getElementById("suivi-unite").value.trim();
+    const total = document.getElementById("suivi-total").value;
+    try {
+      await updateLivre(livreId, {
+        progression_unite: unite || null,
+        progression_total: total ? Number(total) : null,
+      });
+      livre = { ...livre, progression_unite: unite || null, progression_total: total ? Number(total) : null };
+      overlay.classList.add("hidden");
+      refreshSuiviLabel();
+      renderComments();
+      showToast("Suivi mis à jour !", "success");
+    } catch (err) { showToast("Erreur : " + err.message, "error"); }
+  });
+}
+
+function refreshSuiviLabel() {
+  const unite = livre?.progression_unite || "";
+  const total = livre?.progression_total || null;
+  document.getElementById("suivi-label").textContent =
+    unite ? `Suivi en ${unite}${total ? ` · ${total} max` : ""}` : "Aucun suivi configuré";
 }
 
 init().catch(console.error);

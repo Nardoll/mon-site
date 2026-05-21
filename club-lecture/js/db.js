@@ -179,6 +179,13 @@ export async function getCommentairesForMembre(membre_id) {
   return snap(s);
 }
 
+export async function updateCommentaire(id, { contenu, titre, date_commentaire, avancement }) {
+  const data = { contenu, titre: titre || null };
+  if (date_commentaire) data.date_commentaire = Timestamp.fromDate(new Date(date_commentaire));
+  data.avancement = avancement !== null && avancement !== undefined && avancement !== "" ? Number(avancement) : null;
+  return updateDoc(doc(db, "commentaires_lecture", id), data);
+}
+
 export async function upsertStatutLecture({ membre_id, livre_id, statut, page_actuelle, pages_totales }) {
   const q = query(
     collection(db, "statuts_lecture"),

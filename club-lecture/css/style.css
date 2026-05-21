@@ -422,6 +422,7 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 .comment-body { padding: .75rem 1rem; border-top: 1px solid var(--border); }
 .comment-spoiler-warn { font-size: .72rem; color: var(--red); font-weight: 600; margin-bottom: .5rem; }
 .comment-text { font-size: .88rem; line-height: 1.7; white-space: pre-wrap; }
+.comment-arrow { font-size: .7rem; color: var(--muted); margin-left: .5rem; flex-shrink: 0; }
 
 /* Comments in member profile */
 .cmr { border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: .45rem; }

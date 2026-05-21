@@ -18,6 +18,11 @@
       <button class="btn btn-primary" id="btn-add-comment">💬 Laisser un commentaire</button>
     </div>
 
+    <div id="suivi-bar" class="hidden" style="display:flex;align-items:center;gap:.75rem;font-size:.82rem;color:var(--muted);margin-bottom:.75rem">
+      <span id="suivi-label"></span>
+      <button class="btn btn-ghost btn-sm" id="btn-suivi">⚙️ Configurer le suivi</button>
+    </div>
+
     <div class="filter-bar" id="filter-bar" style="margin-bottom:1.25rem">
       <select id="filter-membre">
         <option value="">Tous les membres</option>
@@ -28,6 +33,34 @@
       <div class="loading">Chargement…</div>
     </div>
   </main>
+
+  <!-- Modal configuration du suivi -->
+  <div class="overlay hidden" id="suivi-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Configurer le suivi</h2>
+        <button class="modal-close" id="suivi-close">✕</button>
+      </div>
+      <div class="form-group">
+        <label>Unité de suivi</label>
+        <input type="text" id="suivi-unite" list="suivi-unite-suggestions" placeholder="pages, chapitres, parties…">
+        <datalist id="suivi-unite-suggestions">
+          <option value="pages">
+          <option value="chapitres">
+          <option value="parties">
+          <option value="%">
+        </datalist>
+      </div>
+      <div class="form-group">
+        <label>Total <span style="color:var(--muted);font-weight:400">(facultatif)</span></label>
+        <input type="number" id="suivi-total" min="1" placeholder="ex : 300">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="suivi-cancel">Annuler</button>
+        <button class="btn btn-primary" id="suivi-save">Enregistrer</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal ajouter un commentaire -->
   <div class="overlay hidden" id="comment-overlay">
