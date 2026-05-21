@@ -381,6 +381,68 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 }
 .sidebar-home-link:hover { color: var(--text); border-color: var(--muted); }
 
+/* ── Hidden utility ──────────────────────── */
+.hidden { display: none !important; }
+
+/* ── Library visual view ─────────────────── */
+.bib-section { margin-bottom: 2.5rem; }
+
+.prop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1rem; }
+.prop-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 1.25rem; cursor: pointer; transition: border-color .15s, background .15s; }
+.prop-card:hover { border-color: var(--accent); background: var(--surface2); }
+.prop-card-title { font-weight: 700; font-size: .93rem; margin-bottom: .2rem; }
+.prop-card-author { font-size: .78rem; color: var(--muted); min-height: 1.2em; margin-bottom: .75rem; }
+.prop-card-footer { display: flex; align-items: center; justify-content: space-between; font-size: .74rem; color: var(--muted); }
+
+.bib-elu-list { display: flex; flex-direction: column; gap: .55rem; }
+.bib-elu-item { display: flex; align-items: center; gap: 1rem; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--green); border-radius: var(--r); padding: .8rem 1.1rem; cursor: pointer; transition: background .15s; }
+.bib-elu-item:hover { background: var(--surface2); }
+.bib-elu-month { font-size: .74rem; color: var(--muted); min-width: 80px; flex-shrink: 0; }
+.bib-elu-info { flex: 1; }
+.bib-elu-title { font-weight: 700; font-size: .92rem; }
+.bib-elu-author { font-size: .77rem; color: var(--muted); }
+.bib-elu-score { font-size: .92rem; font-weight: 700; color: var(--green); white-space: nowrap; }
+
+.elim-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .85rem; }
+.elim-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid rgba(207,102,121,.45); border-radius: var(--r); padding: 1rem 1.1rem; cursor: pointer; transition: border-color .15s, opacity .15s; opacity: .65; }
+.elim-card:hover { border-color: var(--red); opacity: 1; }
+.elim-card-title { font-weight: 700; font-size: .88rem; margin-bottom: .15rem; }
+.elim-card-author { font-size: .76rem; color: var(--muted); margin-bottom: .6rem; min-height: 1.1em; }
+.elim-card-footer { display: flex; align-items: center; justify-content: space-between; font-size: .73rem; color: var(--muted); }
+.elim-score { color: var(--red); font-weight: 700; }
+
+/* ── Comments page ───────────────────────── */
+.comment-list { display: flex; flex-direction: column; gap: .6rem; }
+.comment-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+.comment-header { display: flex; align-items: center; gap: .75rem; padding: .75rem 1rem; cursor: pointer; transition: background .15s; }
+.comment-header:hover, .comment-header.open { background: var(--surface2); }
+.comment-author { font-weight: 600; font-size: .88rem; }
+.comment-advance { font-size: .78rem; color: var(--accent); font-weight: 500; }
+.comment-date { font-size: .74rem; color: var(--muted); margin-left: auto; flex-shrink: 0; }
+.comment-body { padding: .75rem 1rem; border-top: 1px solid var(--border); }
+.comment-spoiler-warn { font-size: .72rem; color: var(--red); font-weight: 600; margin-bottom: .5rem; }
+.comment-text { font-size: .88rem; line-height: 1.7; white-space: pre-wrap; }
+
+/* Comments in member profile */
+.cmr { border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: .45rem; }
+.cmr-header { display: flex; align-items: center; gap: .75rem; padding: .6rem .9rem; cursor: pointer; transition: background .15s; }
+.cmr-header:hover, .cmr-header.active { background: var(--surface2); }
+.cmr-title { flex: 1; font-size: .88rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmr-count { font-size: .75rem; color: var(--muted); flex-shrink: 0; }
+.cmr-arrow { font-size: .7rem; color: var(--muted); transition: transform .2s; flex-shrink: 0; }
+.cmr-arrow.open { transform: rotate(90deg); }
+.cmr-detail { padding: .5rem .9rem .75rem; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: .4rem; }
+.cmr-item { padding: .5rem .65rem; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; transition: background .15s; }
+.cmr-item:hover { background: var(--surface2); }
+.cmr-item-header { display: flex; align-items: center; gap: .5rem; }
+.cmr-item-advance { font-size: .76rem; color: var(--accent); font-weight: 500; }
+.cmr-item-date { font-size: .73rem; color: var(--muted); margin-left: auto; }
+.cmr-item-body { margin-top: .45rem; padding-top: .45rem; border-top: 1px solid var(--border); }
+.cmr-item-warn { font-size: .7rem; color: var(--red); font-weight: 600; margin-bottom: .3rem; }
+.cmr-item-text { font-size: .84rem; line-height: 1.65; white-space: pre-wrap; }
+.cmr-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .76rem; color: var(--accent); text-decoration: none; margin-top: .6rem; }
+.cmr-link:hover { text-decoration: underline; }
+
 /* ── Vote month rows (profil membre) ─────── */
 .vmr { border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: .45rem; }
 .vmr-header { display: flex; align-items: center; gap: .75rem; padding: .6rem .9rem; cursor: pointer; transition: background .15s; }

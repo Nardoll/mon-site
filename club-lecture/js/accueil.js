@@ -1,6 +1,6 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getMembres, getLivres, getVotes, getStatutsForLivre, upsertStatutLecture, getLivreById, updateLivre } from "./db.js";
+import { getMembres, getLivres, getVotes, getStatutsForLivre, upsertStatutLecture, getLivreById, updateLivre, addCommentaire, getCommentairesForLivre } from "./db.js";
 import { formatMois, formatDate, STATUTS_LECTURE, initiales, showToast } from "./utils.js";
 
 await requireAuth();
@@ -176,7 +176,7 @@ async function renderCurrentBook() {
   currentVote = latest;
   currentLivreId = latest.livre_elu;
 
-  const [livre, statuts] = await Promise.all([getLivreById(currentLivreId), getStatutsForLivre(currentLivreId)]);
+  const [livre, statuts, commentaires] = await Promise.all([getLivreById(currentLivreId), getStatutsForLivre(currentLivreId), getCommentairesForLivre(currentLivreId)]);
   currentLivre = livre;
   statutByMembre = {};
   statuts.forEach(s => { statutByMembre[s.membre_id] = s; });
@@ -211,15 +211,70 @@ async function renderCurrentBook() {
         <button class="btn btn-ghost btn-sm" id="btn-progression-config">⚙️ Configurer le suivi</button>
       </div>
       <ul class="status-list" id="status-list"></ul>
+      <div style="height:1px;background:var(--border);margin:.85rem 0"></div>
+      <div style="display:flex;gap:.65rem;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" id="btn-laisser-commentaire">💬 Laisser un commentaire</button>
+        <a href="commentaires.html?livre=${currentLivreId}" class="btn btn-secondary btn-sm">
+          📖 Voir les commentaires${commentaires.length > 0 ? ` (${commentaires.length})` : ""}${commentaires.length > 0 ? " · ⚠️ spoilers" : ""}
+        </a>
+      </div>
     </div>`;
 
   section.querySelector(".titre-livre-link").addEventListener("click", () => {
     window.location.href = `bibliotheque.html?open=${currentLivreId}`;
   });
   document.getElementById("btn-progression-config").addEventListener("click", openProgressionModal);
+  document.getElementById("btn-laisser-commentaire").addEventListener("click", () => openCommentaireModal(livre));
 
   renderStatusList();
 }
+
+// ── Modal commentaire de lecture ───────────────────────────────────
+
+function openCommentaireModal(livre) {
+  const sel = document.getElementById("comm-membre");
+  sel.innerHTML = '<option value="">— Choisir —</option>';
+  allMembres.forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m.id; opt.textContent = m.nom;
+    sel.appendChild(opt);
+  });
+
+  const unite = livre?.progression_unite || "";
+  const total = livre?.progression_total || null;
+  const advLabel = unite
+    ? `${unite.charAt(0).toUpperCase() + unite.slice(1)} actuel(le)${total ? ` (sur ${total})` : ""}`
+    : "Avancement (optionnel)";
+  document.getElementById("comm-advance-label").textContent = advLabel;
+  document.getElementById("comm-date").value = new Date().toISOString().split("T")[0];
+  document.getElementById("comm-advance").value = "";
+  document.getElementById("comm-text").value = "";
+  document.getElementById("commentaire-overlay").classList.remove("hidden");
+}
+
+["comm-close", "comm-cancel"].forEach(id => {
+  document.getElementById(id).addEventListener("click", () => {
+    document.getElementById("commentaire-overlay").classList.add("hidden");
+  });
+});
+
+document.getElementById("commentaire-overlay").addEventListener("click", e => {
+  if (e.target === e.currentTarget) document.getElementById("commentaire-overlay").classList.add("hidden");
+});
+
+document.getElementById("comm-save").addEventListener("click", async () => {
+  const membre_id = document.getElementById("comm-membre").value;
+  if (!membre_id) { showToast("Choisissez un membre.", "error"); return; }
+  const contenu = document.getElementById("comm-text").value.trim();
+  if (!contenu) { showToast("Le commentaire est vide.", "error"); return; }
+  const date_commentaire = document.getElementById("comm-date").value || new Date().toISOString().split("T")[0];
+  const avancement = document.getElementById("comm-advance").value;
+  try {
+    await addCommentaire({ livre_id: currentLivreId, membre_id, date_commentaire, avancement, contenu });
+    showToast("Commentaire publié !", "success");
+    document.getElementById("commentaire-overlay").classList.add("hidden");
+  } catch (e) { showToast("Erreur : " + e.message, "error"); }
+});
 
 function renderStatusList() {
   const list = document.getElementById("status-list");

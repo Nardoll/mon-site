@@ -6,6 +6,12 @@ import { formatDate, formatMois, STATUTS_LIVRE, showToast } from "./utils.js";
 await requireAuth();
 initNav("bibliotheque");
 
+// ── Vue mode ───────────────────────────────────────────────────────
+const params = new URLSearchParams(window.location.search);
+const viewMode = params.get("vue") === "table" ? "table" : "visual";
+document.getElementById("view-visual").classList.toggle("hidden", viewMode === "table");
+document.getElementById("view-table").classList.toggle("hidden", viewMode !== "table");
+
 let livres = [], membres = [], votes = [];
 let sortCol = "date_proposition", sortDir = "desc";
 let filters = { search: "", statut: "", propose: "" };
@@ -15,13 +21,24 @@ async function init() {
   [livres, membres, votes] = await Promise.all([getLivres(), getMembres(), getVotes()]);
   populateMembresFilter();
   populateMembresPropose();
-  renderTable();
-  const openId = new URLSearchParams(window.location.search).get("open");
+  if (viewMode === "table") renderTable();
+  else renderVisual();
+  const openId = params.get("open");
   if (openId) openFiche(openId);
 }
 
 function nomMembre(id) {
   return membres.find(m => m.id === id)?.nom ?? id ?? "—";
+}
+
+function detectScale(resultats) {
+  const all = (resultats || []).flatMap(r => Object.values(r.notes || {})).map(Number).filter(n => !isNaN(n));
+  return all.length && Math.max(...all) <= 5 ? 5 : 10;
+}
+
+function findVoteElim(livreId) {
+  const sorted = [...votes].sort((a, b) => b.annee !== a.annee ? b.annee - a.annee : b.mois - a.mois);
+  return sorted.find(v => (v.resultats || []).some(r => r.livre_id === livreId && r.moyenne !== null && r.moyenne <= 2.5));
 }
 
 function populateMembresFilter() {
@@ -43,7 +60,75 @@ function populateMembresPropose() {
   });
 }
 
-// ── Table ──────────────────────────────────────────────────────────
+// ── Vue visuelle ───────────────────────────────────────────────────
+
+function renderVisual() {
+  const propositions = livres.filter(l => l.statut === "en_proposition");
+  const elus = votes.filter(v => v.livre_elu).sort((a, b) => b.annee !== a.annee ? b.annee - a.annee : b.mois - a.mois);
+  const refuses = livres.filter(l => l.statut === "refuse");
+
+  // ── En proposition ──────────────────────────────────────────────
+  const propGrid = document.getElementById("prop-grid");
+  if (propositions.length) {
+    propGrid.innerHTML = propositions.map(l => `
+      <div class="prop-card" data-id="${l.id}">
+        <div class="prop-card-title">${l.titre}</div>
+        <div class="prop-card-author">${l.auteur || ""}</div>
+        <div class="prop-card-footer">
+          <span>${nomMembre(l.propose_par)}</span>
+          <span>${formatDate(l.date_proposition)}</span>
+        </div>
+      </div>`).join("");
+    propGrid.querySelectorAll(".prop-card").forEach(c => c.addEventListener("click", () => openFiche(c.dataset.id)));
+  } else {
+    propGrid.innerHTML = `<div class="text-muted" style="font-size:.85rem">Aucun livre en proposition.</div>`;
+  }
+
+  // ── Élus ────────────────────────────────────────────────────────
+  const elusList = document.getElementById("elus-list");
+  if (elus.length) {
+    elusList.innerHTML = elus.map(v => {
+      const r = (v.resultats || []).find(x => x.livre_id === v.livre_elu);
+      const scale = detectScale(v.resultats);
+      const moy = r?.moyenne ?? null;
+      return `<div class="bib-elu-item" data-id="${v.livre_elu}">
+        <div class="bib-elu-month">${formatMois(v.mois, v.annee)}</div>
+        <div class="bib-elu-info">
+          <div class="bib-elu-title">${r?.titre ?? v.livre_elu}</div>
+          ${r?.auteur ? `<div class="bib-elu-author">${r.auteur}</div>` : ""}
+        </div>
+        ${moy !== null ? `<div class="bib-elu-score">${Number(moy).toFixed(1)}/${scale}</div>` : ""}
+      </div>`;
+    }).join("");
+    elusList.querySelectorAll(".bib-elu-item").forEach(el => el.addEventListener("click", () => openFiche(el.dataset.id)));
+  } else {
+    elusList.innerHTML = `<div class="text-muted" style="font-size:.85rem">Aucun livre élu pour l'instant.</div>`;
+  }
+
+  // ── Éliminés ────────────────────────────────────────────────────
+  const elimGrid = document.getElementById("elim-grid");
+  if (refuses.length) {
+    elimGrid.innerHTML = refuses.map(l => {
+      const v = findVoteElim(l.id);
+      const r = v ? (v.resultats || []).find(x => x.livre_id === l.id) : null;
+      const scale = v ? detectScale(v.resultats) : 10;
+      const moy = r?.moyenne ?? null;
+      return `<div class="elim-card" data-id="${l.id}">
+        <div class="elim-card-title">${l.titre}</div>
+        <div class="elim-card-author">${l.auteur || ""}</div>
+        <div class="elim-card-footer">
+          <span>${v ? formatMois(v.mois, v.annee) : "—"}</span>
+          ${moy !== null ? `<span class="elim-score">${Number(moy).toFixed(1)}/${scale}</span>` : ""}
+        </div>
+      </div>`;
+    }).join("");
+    elimGrid.querySelectorAll(".elim-card").forEach(c => c.addEventListener("click", () => openFiche(c.dataset.id)));
+  } else {
+    elimGrid.innerHTML = `<div class="text-muted" style="font-size:.85rem">Aucun livre éliminé pour l'instant.</div>`;
+  }
+}
+
+// ── Vue table ──────────────────────────────────────────────────────
 
 function filteredLivres() {
   return livres.filter(l => {
@@ -56,14 +141,9 @@ function filteredLivres() {
     return true;
   }).sort((a, b) => {
     let va = a[sortCol], vb = b[sortCol];
-    if (sortCol === "date_proposition") {
-      va = va?.seconds ?? 0; vb = vb?.seconds ?? 0;
-    } else if (sortCol === "annee") {
-      va = va ?? 0; vb = vb ?? 0;
-    } else {
-      va = (va ?? "").toString().toLowerCase();
-      vb = (vb ?? "").toString().toLowerCase();
-    }
+    if (sortCol === "date_proposition") { va = va?.seconds ?? 0; vb = vb?.seconds ?? 0; }
+    else if (sortCol === "annee") { va = va ?? 0; vb = vb ?? 0; }
+    else { va = (va ?? "").toString().toLowerCase(); vb = (vb ?? "").toString().toLowerCase(); }
     if (va < vb) return sortDir === "asc" ? -1 : 1;
     if (va > vb) return sortDir === "asc" ? 1 : -1;
     return 0;
@@ -73,37 +153,27 @@ function filteredLivres() {
 function renderTable() {
   const tbody = document.getElementById("livres-tbody");
   const list = filteredLivres();
-
-  // Update sort indicators
   document.querySelectorAll("#livres-table th").forEach(th => {
     th.classList.remove("sort-asc", "sort-desc");
     if (th.dataset.col === sortCol) th.classList.add(`sort-${sortDir}`);
   });
-
   if (!list.length) {
     tbody.innerHTML = `<tr><td colspan="6" class="empty-state">Aucun livre trouvé.</td></tr>`;
     return;
   }
-
   tbody.innerHTML = list.map(l => {
     const st = STATUTS_LIVRE[l.statut] ?? STATUTS_LIVRE.en_proposition;
-    return `
-      <tr class="livre-row" data-id="${l.id}" style="cursor:pointer">
-        <td><strong>${l.titre}</strong></td>
-        <td>${l.auteur || "—"}</td>
-        <td>${l.annee || "—"}</td>
-        <td>${nomMembre(l.propose_par)}</td>
-        <td>${formatDate(l.date_proposition)}</td>
-        <td><span class="badge badge-${st.css}">${st.label}</span></td>
-      </tr>`;
+    return `<tr class="livre-row" data-id="${l.id}" style="cursor:pointer">
+      <td><strong>${l.titre}</strong></td>
+      <td>${l.auteur || "—"}</td>
+      <td>${l.annee || "—"}</td>
+      <td>${nomMembre(l.propose_par)}</td>
+      <td>${formatDate(l.date_proposition)}</td>
+      <td><span class="badge badge-${st.css}">${st.label}</span></td>
+    </tr>`;
   }).join("");
-
-  tbody.querySelectorAll(".livre-row").forEach(row => {
-    row.addEventListener("click", () => openFiche(row.dataset.id));
-  });
+  tbody.querySelectorAll(".livre-row").forEach(row => row.addEventListener("click", () => openFiche(row.dataset.id)));
 }
-
-// ── Sort & Filters ─────────────────────────────────────────────────
 
 document.querySelectorAll("#livres-table th").forEach(th => {
   th.addEventListener("click", () => {
@@ -118,17 +188,18 @@ document.getElementById("filter-search").addEventListener("input", e => { filter
 document.getElementById("filter-statut").addEventListener("change", e => { filters.statut = e.target.value; renderTable(); });
 document.getElementById("filter-propose").addEventListener("change", e => { filters.propose = e.target.value; renderTable(); });
 
-// ── Proposer un livre modal ────────────────────────────────────────
+// ── Proposer un livre ──────────────────────────────────────────────
 
-document.getElementById("btn-proposer").addEventListener("click", () => {
+function openProposeModal() {
   document.getElementById("p-date").value = new Date().toISOString().split("T")[0];
   document.getElementById("propose-overlay").classList.remove("hidden");
-});
+}
 
-["propose-close","propose-cancel"].forEach(id => {
-  document.getElementById(id).addEventListener("click", () => {
-    document.getElementById("propose-overlay").classList.add("hidden");
-  });
+document.getElementById("btn-proposer").addEventListener("click", openProposeModal);
+document.getElementById("btn-proposer-table").addEventListener("click", openProposeModal);
+
+["propose-close", "propose-cancel"].forEach(id => {
+  document.getElementById(id).addEventListener("click", () => document.getElementById("propose-overlay").classList.add("hidden"));
 });
 
 document.getElementById("propose-overlay").addEventListener("click", e => {
@@ -140,7 +211,6 @@ document.getElementById("propose-save").addEventListener("click", async () => {
   if (!titre) { showToast("Le titre est obligatoire.", "error"); return; }
   const propose_par = document.getElementById("p-membre").value;
   if (!propose_par) { showToast("Choisissez un membre.", "error"); return; }
-
   try {
     await addLivre({
       titre,
@@ -151,13 +221,10 @@ document.getElementById("propose-save").addEventListener("click", async () => {
     });
     showToast("Livre proposé !", "success");
     document.getElementById("propose-overlay").classList.add("hidden");
-    // Reset
-    ["p-titre","p-auteur","p-annee"].forEach(id => document.getElementById(id).value = "");
+    ["p-titre", "p-auteur", "p-annee"].forEach(id => document.getElementById(id).value = "");
     livres = await getLivres();
-    renderTable();
-  } catch (e) {
-    showToast("Erreur : " + e.message, "error");
-  }
+    if (viewMode === "table") renderTable(); else renderVisual();
+  } catch (e) { showToast("Erreur : " + e.message, "error"); }
 });
 
 // ── Fiche livre ────────────────────────────────────────────────────
@@ -177,14 +244,12 @@ async function openFiche(id) {
     .sort((a, b) => a.annee !== b.annee ? a.annee - b.annee : a.mois - b.mois);
 
   const st = STATUTS_LIVRE[livre.statut] ?? STATUTS_LIVRE.en_proposition;
-
-  // Detect scale from vote data
   const allNotes = votesDuLivre.flatMap(v =>
     (v.resultats || []).filter(r => r.livre_id === id).flatMap(r => Object.values(r.notes || {}))
   ).map(Number).filter(n => !isNaN(n));
   const scale = allNotes.length && Math.max(...allNotes) <= 5 ? 5 : 10;
 
-  // ── Avancements membres (élu seulement) ───
+  // Avancements membres (élu seulement)
   let avancementsHTML = "";
   if (livre.statut === "elu") {
     const rows = membres.map(m => {
@@ -192,7 +257,7 @@ async function openFiche(id) {
       const label = s
         ? s.statut === "termine" ? "✅ Terminé"
         : s.statut === "en_cours" ? `📖 En cours (${s.page_actuelle ?? "?"}p)`
-        : s.statut === "achete"   ? "🛒 Acheté"
+        : s.statut === "achete" ? "🛒 Acheté"
         : "—"
         : "—";
       return `<tr><td>${m.nom}</td><td>${label}</td></tr>`;
@@ -200,68 +265,35 @@ async function openFiche(id) {
     avancementsHTML = `
       <div class="divider"></div>
       <div class="card-title mb-2">Avancements membres</div>
-      <div class="table-wrap mb-3">
-        <table><thead><tr><th>Membre</th><th>Statut</th></tr></thead>
-        <tbody>${rows}</tbody></table>
-      </div>`;
+      <div class="table-wrap mb-3"><table><thead><tr><th>Membre</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }
 
-  // ── Chronologie ───────────────────────────
-  const tlItems = [];
-
-  // 1. Proposition
-  tlItems.push({
-    dot: "default",
-    label: `Proposé le ${formatDate(livre.date_proposition)}`,
-    detail: `par ${nomMembre(livre.propose_par)}`
-  });
-
-  // 2. Votes
+  // Chronologie
+  const tlItems = [{ dot: "default", label: `Proposé le ${formatDate(livre.date_proposition)}`, detail: `par ${nomMembre(livre.propose_par)}` }];
   for (const v of votesDuLivre) {
     const r = (v.resultats || []).find(x => x.livre_id === id);
     if (!r) continue;
     const moy = r.moyenne !== null && r.moyenne !== undefined ? Number(r.moyenne).toFixed(2) : "—";
     const isElu = v.livre_elu === id;
     const isElim = !isElu && r.moyenne !== null && r.moyenne <= 2.5;
-    tlItems.push({
-      dot: isElu ? "elu" : isElim ? "refuse" : "default",
-      label: `Vote de ${formatMois(v.mois, v.annee)}`,
-      detail: `Note moyenne : ${moy} / ${scale}`
-    });
+    tlItems.push({ dot: isElu ? "elu" : isElim ? "refuse" : "default", label: `Vote de ${formatMois(v.mois, v.annee)}`, detail: `Note moyenne : ${moy} / ${scale}` });
   }
-
-  // 3. Résultat final
   if (livre.statut === "elu") {
     const voteElu = votesDuLivre.find(v => v.livre_elu === id);
-    tlItems.push({
-      dot: "elu",
-      label: `Élu${voteElu ? ` en ${formatMois(voteElu.mois, voteElu.annee)}` : ""}`,
-      detail: null,
-      final: true
-    });
+    tlItems.push({ dot: "elu", label: `Élu${voteElu ? ` en ${formatMois(voteElu.mois, voteElu.annee)}` : ""}`, detail: null, final: true });
   } else if (livre.statut === "refuse") {
-    const voteElim = votesDuLivre.findLast(v =>
-      (v.resultats || []).some(r => r.livre_id === id && r.moyenne !== null && r.moyenne <= 2.5)
-    );
-    tlItems.push({
-      dot: "refuse",
-      label: `Éliminé${voteElim ? ` en ${formatMois(voteElim.mois, voteElim.annee)}` : ""}`,
-      detail: null,
-      final: true
-    });
+    const voteElim = findVoteElim(id);
+    tlItems.push({ dot: "refuse", label: `Éliminé${voteElim ? ` en ${formatMois(voteElim.mois, voteElim.annee)}` : ""}`, detail: null, final: true });
   }
 
-  const tlHTML = `
-    <div class="ft-timeline">
-      ${tlItems.map(item => `
-        <div class="ft-item">
-          <div class="ft-dot ft-dot-${item.dot}"></div>
-          <div class="ft-body">
-            <div class="ft-label ${item.final ? "ft-label-final ft-final-" + item.dot : ""}">${item.label}</div>
-            ${item.detail ? `<div class="ft-detail">${item.detail}</div>` : ""}
-          </div>
-        </div>`).join("")}
-    </div>`;
+  const tlHTML = `<div class="ft-timeline">${tlItems.map(item => `
+    <div class="ft-item">
+      <div class="ft-dot ft-dot-${item.dot}"></div>
+      <div class="ft-body">
+        <div class="ft-label ${item.final ? "ft-label-final ft-final-" + item.dot : ""}">${item.label}</div>
+        ${item.detail ? `<div class="ft-detail">${item.detail}</div>` : ""}
+      </div>
+    </div>`).join("")}</div>`;
 
   document.getElementById("fiche-content").innerHTML = `
     <dl class="book-detail-meta">
@@ -275,19 +307,22 @@ async function openFiche(id) {
     <div class="divider"></div>
     <div class="card-title mb-2">Historique</div>
     ${tlHTML}
+    <div style="height:1px;background:var(--border);margin:1.5rem 0"></div>
+    <div style="text-align:center">
+      <a href="commentaires.html?livre=${id}" class="btn btn-secondary btn-sm">💬 Commentaires de lecture</a>
+    </div>
   `;
 }
 
 document.getElementById("fiche-close").addEventListener("click", () => document.getElementById("fiche-overlay").classList.add("hidden"));
-document.getElementById("fiche-overlay").addEventListener("click", e => { if (e.target === e.currentTarget) document.getElementById("fiche-overlay").classList.add("hidden"); });
+document.getElementById("fiche-overlay").addEventListener("click", e => {
+  if (e.target === e.currentTarget) document.getElementById("fiche-overlay").classList.add("hidden");
+});
 
 // ── Modifier fiche livre ───────────────────────────────────────────
 
 function showFicheEditForm(livre) {
-  const membresOptions = membres.map(m =>
-    `<option value="${m.id}">${m.nom}</option>`
-  ).join("");
-
+  const membresOptions = membres.map(m => `<option value="${m.id}">${m.nom}</option>`).join("");
   document.getElementById("fiche-titre").textContent = "Modifier le livre";
   document.getElementById("fiche-content").innerHTML = `
     <div class="form-group">
@@ -317,16 +352,13 @@ function showFicheEditForm(livre) {
       <button class="btn btn-primary" id="edit-l-save">Enregistrer</button>
     </div>
   `;
-
   document.getElementById("edit-l-titre").value = livre.titre || "";
   document.getElementById("edit-l-auteur").value = livre.auteur || "";
   document.getElementById("edit-l-annee").value = livre.annee || "";
   document.getElementById("edit-l-membre").value = livre.propose_par || "";
   if (livre.date_proposition) {
-    const d = new Date(livre.date_proposition.seconds * 1000);
-    document.getElementById("edit-l-date").value = d.toISOString().split("T")[0];
+    document.getElementById("edit-l-date").value = new Date(livre.date_proposition.seconds * 1000).toISOString().split("T")[0];
   }
-
   document.getElementById("edit-l-cancel").addEventListener("click", () => openFiche(currentFicheId));
   document.getElementById("edit-l-save").addEventListener("click", async () => {
     const titre = document.getElementById("edit-l-titre").value.trim();
@@ -343,11 +375,9 @@ function showFicheEditForm(livre) {
       });
       showToast("Livre modifié !", "success");
       livres = await getLivres();
-      renderTable();
+      if (viewMode === "table") renderTable(); else renderVisual();
       openFiche(currentFicheId);
-    } catch (e) {
-      showToast("Erreur : " + e.message, "error");
-    }
+    } catch (e) { showToast("Erreur : " + e.message, "error"); }
   });
 }
 

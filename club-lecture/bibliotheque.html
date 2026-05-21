@@ -10,43 +10,82 @@
   <nav class="sidebar" id="sidebar"></nav>
 
   <main class="main">
-    <div class="page-header">
-      <h1>Bibliothèque</h1>
-      <button class="btn btn-primary" id="btn-proposer">+ Proposer un livre</button>
-    </div>
 
-    <div class="card">
-      <div class="filter-bar">
-        <input type="text" id="filter-search" placeholder="Rechercher titre / auteur…">
-        <select id="filter-statut">
-          <option value="">Tous les statuts</option>
-          <option value="en_proposition">En proposition</option>
-          <option value="elu">Élu</option>
-          <option value="refuse">Éliminé</option>
-        </select>
-        <select id="filter-propose">
-          <option value="">Tous les membres</option>
-        </select>
+    <!-- ── Vue visuelle (défaut) ─────────────────────────────────── -->
+    <div id="view-visual">
+      <div class="page-header">
+        <h1>Bibliothèque</h1>
+        <button class="btn btn-primary" id="btn-proposer">+ Proposer un livre</button>
       </div>
 
-      <div class="table-wrap">
-        <table id="livres-table">
-          <thead>
-            <tr>
-              <th data-col="titre">Titre</th>
-              <th data-col="auteur">Auteur</th>
-              <th data-col="annee">Année</th>
-              <th data-col="propose_par">Proposé par</th>
-              <th data-col="date_proposition">Date</th>
-              <th data-col="statut">Statut</th>
-            </tr>
-          </thead>
-          <tbody id="livres-tbody">
-            <tr><td colspan="6" class="loading">Chargement…</td></tr>
-          </tbody>
-        </table>
+      <!-- En proposition -->
+      <div class="bib-section">
+        <div class="section-title">📚 En proposition</div>
+        <div class="prop-grid" id="prop-grid">
+          <div class="loading">Chargement…</div>
+        </div>
+      </div>
+
+      <!-- Livres élus -->
+      <div class="bib-section">
+        <div class="section-title">🏆 Livres élus</div>
+        <div class="bib-elu-list" id="elus-list"></div>
+      </div>
+
+      <!-- Livres éliminés -->
+      <div class="bib-section">
+        <div class="section-title">🚫 Éliminés</div>
+        <div class="elim-grid" id="elim-grid"></div>
+      </div>
+
+      <div style="text-align:center;padding-bottom:2.5rem">
+        <a href="?vue=table" class="btn btn-secondary">📊 Base de données complète →</a>
       </div>
     </div>
+
+    <!-- ── Vue table ──────────────────────────────────────────────── -->
+    <div id="view-table" class="hidden">
+      <div class="page-header">
+        <div style="display:flex;align-items:center;gap:1rem">
+          <a href="bibliotheque.html" class="btn btn-ghost btn-sm">← Retour</a>
+          <h1>Base de données</h1>
+        </div>
+        <button class="btn btn-primary" id="btn-proposer-table">+ Proposer un livre</button>
+      </div>
+
+      <div class="card">
+        <div class="filter-bar">
+          <input type="text" id="filter-search" placeholder="Rechercher titre / auteur…">
+          <select id="filter-statut">
+            <option value="">Tous les statuts</option>
+            <option value="en_proposition">En proposition</option>
+            <option value="elu">Élu</option>
+            <option value="refuse">Éliminé</option>
+          </select>
+          <select id="filter-propose">
+            <option value="">Tous les membres</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table id="livres-table">
+            <thead>
+              <tr>
+                <th data-col="titre">Titre</th>
+                <th data-col="auteur">Auteur</th>
+                <th data-col="annee">Année</th>
+                <th data-col="propose_par">Proposé par</th>
+                <th data-col="date_proposition">Date</th>
+                <th data-col="statut">Statut</th>
+              </tr>
+            </thead>
+            <tbody id="livres-tbody">
+              <tr><td colspan="6" class="loading">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <!-- Modal proposer un livre -->

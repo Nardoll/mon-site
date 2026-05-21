@@ -1,6 +1,6 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getMembres, addMembre, getLivres, getVotes, updateMembreInfos } from "./db.js";
+import { getMembres, addMembre, getLivres, getVotes, updateMembreInfos, getCommentairesForMembre } from "./db.js";
 import { formatDate, formatMois, initiales, showToast } from "./utils.js";
 
 await requireAuth();
@@ -76,10 +76,16 @@ function detectScale(resultats) {
   return (allNotes.length && Math.max(...allNotes) <= 5) ? 5 : 10;
 }
 
-function openProfil(id) {
+async function openProfil(id) {
   currentProfilId = id;
   const membre = membres.find(m => m.id === id);
   if (!membre) return;
+
+  document.getElementById("profil-title").textContent = membre.nom;
+  document.getElementById("profil-content").innerHTML = `<div class="loading">Chargement…</div>`;
+  document.getElementById("profil-overlay").classList.remove("hidden");
+
+  const commentairesMembre = await getCommentairesForMembre(id);
 
   const proposes = livres.filter(l => l.propose_par === id);
   const participation = votes
@@ -134,6 +140,48 @@ function openProfil(id) {
        }).join("")}</div>`
     : `<div class="text-muted" style="font-size:.85rem">Aucune participation enregistrée.</div>`;
 
+  // ── Commentaires de lecture ───────────────────────────────────────
+  const commentsByLivre = {};
+  for (const c of commentairesMembre) {
+    if (!commentsByLivre[c.livre_id]) commentsByLivre[c.livre_id] = [];
+    commentsByLivre[c.livre_id].push(c);
+  }
+  const livresCommentes = Object.keys(commentsByLivre);
+
+  const commentsSection = livresCommentes.length
+    ? livresCommentes.map((livreId, idx) => {
+        const l = livres.find(x => x.id === livreId);
+        const cmrs = commentsByLivre[livreId];
+        return `<div class="cmr" data-cmr-idx="${idx}">
+          <div class="cmr-header">
+            <span class="cmr-title">${l?.titre ?? livreId}</span>
+            <span class="cmr-count">${cmrs.length} commentaire${cmrs.length > 1 ? "s" : ""}</span>
+            <span class="cmr-arrow">▶</span>
+          </div>
+          <div class="cmr-detail hidden">
+            ${cmrs.map((c, ci) => {
+              const unite = l?.progression_unite || "";
+              const total = l?.progression_total || null;
+              const avStr = c.avancement !== null && c.avancement !== undefined
+                ? (unite && total ? `${c.avancement}/${total} ${unite}` : unite ? `${c.avancement} ${unite}` : `${c.avancement}`)
+                : null;
+              return `<div class="cmr-item" data-cmr-item="${ci}">
+                <div class="cmr-item-header">
+                  ${avStr ? `<span class="cmr-item-advance">${avStr}</span>` : ""}
+                  <span class="cmr-item-date">${formatDate(c.date_commentaire)}</span>
+                </div>
+                <div class="cmr-item-body hidden">
+                  <div class="cmr-item-warn">⚠️ Potentiel spoiler</div>
+                  <div class="cmr-item-text">${escapeHtml(c.contenu)}</div>
+                </div>
+              </div>`;
+            }).join("")}
+            <a href="commentaires.html?livre=${livreId}" class="cmr-link">📖 Voir tous les commentaires sur ce livre →</a>
+          </div>
+        </div>`;
+      }).join("")
+    : `<div class="text-muted" style="font-size:.85rem">Aucun commentaire enregistré.</div>`;
+
   document.getElementById("profil-title").textContent = membre.nom;
   document.getElementById("profil-content").innerHTML = `
     <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
@@ -150,12 +198,46 @@ function openProfil(id) {
     ${proposesHTML}
 
     <div class="divider"></div>
+    <div class="card-title mb-2">💬 Commentaires de lecture</div>
+    <div id="cmr-list">${commentsSection}</div>
+
+    <div class="divider"></div>
     <div class="card-title mb-2">🗳️ Participation aux votes</div>
     ${votesSection}
   `;
 
-  document.getElementById("profil-overlay").classList.remove("hidden");
+  attachCommentInteractions();
   attachVoteInteractions(participation, id);
+}
+
+function escapeHtml(str) {
+  return (str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// ── Interactions commentaires ──────────────────────────────────────
+
+function attachCommentInteractions() {
+  const list = document.getElementById("cmr-list");
+  if (!list) return;
+
+  list.querySelectorAll(".cmr-header").forEach(header => {
+    header.addEventListener("click", () => {
+      const cmr = header.closest(".cmr");
+      const detail = cmr.querySelector(".cmr-detail");
+      const arrow = header.querySelector(".cmr-arrow");
+      const isOpen = !detail.classList.contains("hidden");
+      detail.classList.toggle("hidden", isOpen);
+      arrow.classList.toggle("open", !isOpen);
+      header.classList.toggle("active", !isOpen);
+    });
+  });
+
+  list.querySelectorAll(".cmr-item").forEach(item => {
+    item.addEventListener("click", () => {
+      const body = item.querySelector(".cmr-item-body");
+      body.classList.toggle("hidden");
+    });
+  });
 }
 
 // ── Interactions votes ──────────────────────────────────────────────

@@ -155,6 +155,29 @@ export async function getStatutsForMembre(membre_id) {
   return snap(s);
 }
 
+// ── Commentaires de lecture ────────────────────────────────────────
+
+export async function addCommentaire({ livre_id, membre_id, date_commentaire, avancement, contenu }) {
+  return addDoc(collection(db, "commentaires_lecture"), {
+    livre_id,
+    membre_id,
+    date_commentaire: Timestamp.fromDate(new Date(date_commentaire)),
+    avancement: avancement !== null && avancement !== "" && avancement !== undefined ? Number(avancement) : null,
+    contenu,
+    cree_le: serverTimestamp()
+  });
+}
+
+export async function getCommentairesForLivre(livre_id) {
+  const s = await getDocs(query(collection(db, "commentaires_lecture"), where("livre_id", "==", livre_id)));
+  return snap(s).sort((a, b) => (a.avancement ?? 99999) - (b.avancement ?? 99999));
+}
+
+export async function getCommentairesForMembre(membre_id) {
+  const s = await getDocs(query(collection(db, "commentaires_lecture"), where("membre_id", "==", membre_id)));
+  return snap(s);
+}
+
 export async function upsertStatutLecture({ membre_id, livre_id, statut, page_actuelle, pages_totales }) {
   const q = query(
     collection(db, "statuts_lecture"),

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Commentaires — Club de lecture</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1 id="page-title">Commentaires</h1>
+        <div class="text-muted" style="font-size:.82rem;margin-top:.2rem" id="page-subtitle"></div>
+      </div>
+      <button class="btn btn-primary" id="btn-add-comment">💬 Laisser un commentaire</button>
+    </div>
+
+    <div class="filter-bar" id="filter-bar" style="margin-bottom:1.25rem">
+      <select id="filter-membre">
+        <option value="">Tous les membres</option>
+      </select>
+    </div>
+
+    <div id="comments-container">
+      <div class="loading">Chargement…</div>
+    </div>
+  </main>
+
+  <!-- Modal ajouter un commentaire -->
+  <div class="overlay hidden" id="comment-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Laisser un commentaire</h2>
+        <button class="modal-close" id="comm-close">✕</button>
+      </div>
+      <div class="form-group">
+        <label>Membre <span style="color:var(--red)">*</span></label>
+        <select id="comm-membre"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="comm-date">
+        </div>
+        <div class="form-group">
+          <label id="comm-advance-label">Avancement</label>
+          <input type="number" id="comm-advance" min="0" placeholder="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Commentaire <span style="color:var(--red)">*</span></label>
+        <textarea id="comm-text" rows="6" placeholder="Votre ressenti, hypothèses, émotions… (attention aux spoilers pour les autres !)" style="resize:vertical"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="comm-cancel">Annuler</button>
+        <button class="btn btn-primary" id="comm-save">Publier</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/nav.js"></script>
+  <script type="module" src="js/commentaires.js"></script>
+</body>
+</html>
