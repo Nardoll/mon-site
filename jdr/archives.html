@@ -8,27 +8,111 @@
 </head>
 <body>
 
-  <main class="main-content" id="main-content" style="display:none">
-    <div class="page-header">
-      <h1 class="page-title">📁 Archives</h1>
-      <p class="page-subtitle">Notes de campagne, comptes rendus et fiches personnages</p>
+<main class="main-content" id="main-content" style="display:none">
+
+  <div class="page-header">
+    <div class="page-header-row">
+      <div>
+        <h1 class="page-title">📁 Archives</h1>
+        <p class="page-subtitle">Base de données des projets JDR</p>
+      </div>
+      <button id="btn-add" class="btn-primary">+ Ajouter un projet</button>
     </div>
 
-    <div class="placeholder-empty">
-      <div class="placeholder-empty-icon">📁</div>
-      <div class="placeholder-empty-title">Rien ici pour l'instant</div>
-      <p class="placeholder-empty-desc">Les archives sont en cours de construction. Du contenu sera ajouté prochainement.</p>
+    <div class="filter-bar">
+      <input type="text" id="filter-search" class="filter-input" placeholder="🔍 Rechercher...">
+      <select id="filter-avancement" class="filter-select">
+        <option value="">Avancement — tous</option>
+        <option>Idée</option>
+        <option>En préparation</option>
+        <option>Prêt</option>
+        <option>En cours</option>
+        <option>Arrêté</option>
+        <option>Terminé</option>
+      </select>
+      <select id="filter-type" class="filter-select">
+        <option value="">Type — tous</option>
+        <option>Campagne</option>
+        <option>Mini Campagne</option>
+        <option>One shot</option>
+      </select>
+      <select id="sort-select" class="filter-select">
+        <option value="cree_le:desc">Récents d'abord</option>
+        <option value="nom:asc">Nom A→Z</option>
+        <option value="nom:desc">Nom Z→A</option>
+        <option value="date_debut:desc">Date (récent)</option>
+        <option value="date_debut:asc">Date (ancien)</option>
+        <option value="satisfaction:desc">Note (↓)</option>
+      </select>
     </div>
-  </main>
 
-  <script type="module">
-    import { requireAuth } from './js/auth.js';
-    import { initNav } from './js/nav.js';
-    requireAuth(() => {
-      document.getElementById('main-content').style.display = '';
-      initNav('archives');
-    });
-  </script>
+    <div class="view-bar">
+      <div class="view-btns">
+        <button class="view-btn active" id="btn-view-cards">⊞ Cartes</button>
+        <button class="view-btn" id="btn-view-table">☰ Tableau</button>
+      </div>
+      <span class="proj-count" id="proj-count"></span>
+    </div>
+  </div>
+
+  <div id="view-cards" class="proj-grid"></div>
+
+  <div id="view-table" class="hidden">
+    <table class="proj-table">
+      <thead>
+        <tr>
+          <th class="sortable" data-field="nom">Nom</th>
+          <th>Type</th>
+          <th>Avancement</th>
+          <th>Créateur</th>
+          <th>Univers</th>
+          <th class="sortable" data-field="date_debut">Date début</th>
+          <th>YT</th>
+          <th>Joué</th>
+          <th class="sortable" data-field="satisfaction">Note</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+
+</main>
+
+<!-- Detail overlay -->
+<div id="detail-overlay" class="overlay hidden">
+  <div class="modal" id="detail-modal">
+    <div class="modal-header">
+      <h2 id="detail-title" class="modal-title"></h2>
+      <div class="modal-header-actions">
+        <button class="btn-ghost btn-sm" id="detail-edit-btn">✏️ Modifier</button>
+        <button class="modal-close" id="detail-close-btn">×</button>
+      </div>
+    </div>
+    <div class="modal-body" id="detail-body"></div>
+  </div>
+</div>
+
+<!-- Form overlay -->
+<div id="form-overlay" class="overlay hidden">
+  <div class="modal" id="form-modal">
+    <div class="modal-header">
+      <h2 id="form-title" class="modal-title">Nouveau projet</h2>
+      <button class="modal-close" id="form-close">×</button>
+    </div>
+    <div class="modal-body" id="form-body"></div>
+  </div>
+</div>
+
+<script type="module">
+  import { requireAuth } from './js/auth.js';
+  import { initNav } from './js/nav.js';
+  import { initArchives } from './js/archives.js';
+  requireAuth(() => {
+    document.getElementById('main-content').style.display = '';
+    initNav('archives');
+    initArchives();
+  });
+</script>
 
 </body>
 </html>
