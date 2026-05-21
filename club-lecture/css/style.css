@@ -227,7 +227,7 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 /* ── Charts / Histograms ─────────────────── */
 .chart { padding: .5rem 0; }
 .chart-row { display: flex; align-items: center; gap: .75rem; margin-bottom: .55rem; }
-.chart-label { min-width: 130px; font-size: .8rem; color: var(--muted); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chart-label { width: 130px; min-width: 130px; max-width: 130px; flex-shrink: 0; font-size: .8rem; color: var(--muted); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chart-bar-wrap { flex: 1; background: var(--chart-bar-bg); border-radius: 4px; height: 22px; }
 .chart-bar { height: 100%; background: var(--accent); border-radius: 4px; display: flex; align-items: center; padding: 0 .5rem; font-size: .73rem; color: var(--accent-text); font-weight: 700; min-width: 2px; transition: width .4s ease; }
 .chart-bar.best { background: var(--green); }
@@ -371,7 +371,26 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
   padding: .5rem .75rem; transition: all .15s; font-family: inherit;
 }
 .theme-toggle:hover { color: var(--text); border-color: var(--muted); }
-.sidebar-bottom { margin-top: auto; padding: 1rem 1.5rem; border-top: 1px solid var(--border); }
+.sidebar-bottom { margin-top: auto; padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: .5rem; }
+.sidebar-home-link {
+  display: flex; align-items: center; gap: .6rem;
+  width: 100%; text-decoration: none;
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  color: var(--muted); font-size: .82rem;
+  padding: .5rem .75rem; transition: all .15s;
+}
+.sidebar-home-link:hover { color: var(--text); border-color: var(--muted); }
+
+/* ── Vote month rows (profil membre) ─────── */
+.vmr { border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: .45rem; }
+.vmr-header { display: flex; align-items: center; gap: .75rem; padding: .6rem .9rem; cursor: pointer; transition: background .15s; }
+.vmr-header:hover, .vmr-header.active { background: var(--surface2); }
+.vmr-month { font-weight: 700; font-size: .88rem; min-width: 95px; flex-shrink: 0; }
+.vmr-top { flex: 1; font-size: .82rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vmr-count { font-size: .76rem; color: var(--muted); white-space: nowrap; flex-shrink: 0; }
+.vmr-arrow { font-size: .7rem; color: var(--muted); transition: transform .2s; flex-shrink: 0; }
+.vmr-arrow.open { transform: rotate(90deg); }
+.vmr-detail { padding: .6rem .9rem; border-top: 1px solid var(--border); }
 
 /* ── Responsive ──────────────────────────── */
 @media (max-width: 768px) {

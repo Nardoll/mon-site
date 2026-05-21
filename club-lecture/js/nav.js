@@ -27,6 +27,10 @@ export function initNav(active) {
       </a>
     `).join("")}
     <div class="sidebar-bottom">
+      <a href="/" class="sidebar-home-link">
+        <span>🏠</span>
+        <span>Accueil du site</span>
+      </a>
       <button class="theme-toggle" id="theme-toggle">
         <span id="theme-icon">${isLight ? "🌙" : "☀️"}</span>
         <span id="theme-label">${isLight ? "Mode sombre" : "Mode clair"}</span>
