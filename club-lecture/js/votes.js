@@ -1,6 +1,6 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getVotes, getMembres, getLivres, addVote, updateVote, getVoteActif, lancerVote, soumettreVote, cloturerVoteActif, annulerVoteActif, deleteVote } from "./db.js";
+import { getVotes, getMembres, getLivres, addVote, updateVote, getVoteActif, lancerVote, soumettreVote, cloturerVoteActif, annulerVoteActif } from "./db.js";
 import { formatMois, moyenne, showToast } from "./utils.js";
 
 await requireAuth();
@@ -492,19 +492,5 @@ document.getElementById("btn-annuler-vote").addEventListener("click", async () =
   } catch (e) { showToast("Erreur : " + e.message, "error"); }
 });
 
-document.getElementById("detail-delete").addEventListener("click", async () => {
-  if (!currentVoteId) return;
-  const vote = votes.find(v => v.id === currentVoteId);
-  if (!vote) return;
-  if (!confirm(`Supprimer définitivement le vote de ${formatMois(vote.mois, vote.annee)} ? Les statuts des livres ne seront pas modifiés.`)) return;
-  try {
-    await deleteVote(currentVoteId);
-    document.getElementById("detail-overlay").classList.add("hidden");
-    currentVoteId = null;
-    votes = await getVotes();
-    renderList();
-    showToast("Vote supprimé.", "success");
-  } catch (e) { showToast("Erreur : " + e.message, "error"); }
-});
 
 init().catch(console.error);

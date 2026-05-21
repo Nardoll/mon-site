@@ -3,23 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JDR</title>
+  <title>Jeux de rôle</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
       --bg: #0e0e0e;
       --surface: #161616;
+      --surface2: #1e1e1e;
       --border: #2a2a2a;
-      --text: #c8c8c8;
-      --muted: #555;
+      --text: #d0d0d0;
+      --muted: #888;
       --accent: #cf6679;
+      --accent-glow: rgba(207,102,121,.15);
     }
 
     body {
       background: var(--bg);
       color: var(--text);
       font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -30,20 +34,27 @@
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 16px;
       padding: 3rem 3.5rem;
-      max-width: 540px;
+      max-width: 560px;
       width: 100%;
       text-align: center;
     }
 
-    .icon { font-size: 2.5rem; margin-bottom: 1.5rem; display: block; }
+    .icon { font-size: 2.8rem; margin-bottom: 1.25rem; display: block; }
 
     h1 {
-      font-size: 1.4rem;
-      font-weight: 600;
-      color: #e8e8e8;
-      margin-bottom: 1.5rem;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #eee;
+      letter-spacing: -.02em;
+      margin-bottom: .5rem;
+    }
+
+    .subtitle {
+      font-size: .88rem;
+      color: var(--muted);
+      margin-bottom: 2rem;
     }
 
     .divider {
@@ -51,23 +62,152 @@
       height: 2px;
       background: var(--accent);
       border-radius: 2px;
-      margin: 0 auto 1.5rem;
+      margin: 0 auto 2rem;
     }
 
-    p {
-      line-height: 1.75;
-      color: var(--muted);
-      font-size: 0.97rem;
-      font-style: italic;
+    .welcome-text {
+      font-size: 1rem;
+      color: var(--text);
+      line-height: 1.8;
+      margin-bottom: 2rem;
     }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      font-size: .72rem;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      background: rgba(207,102,121,.12);
+      color: var(--accent);
+      border: 1px solid rgba(207,102,121,.25);
+      border-radius: 99px;
+      padding: .3em .85em;
+    }
+
+    /* ── Auth gate ──────────────────────────────── */
+    #auth-gate {
+      position: fixed; inset: 0;
+      background: #0a0a0a;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999; padding: 1rem;
+    }
+
+    .gate-card {
+      background: #161616;
+      border: 1px solid #2a2a2a;
+      border-radius: 14px;
+      padding: 2.5rem 3rem;
+      width: 100%; max-width: 380px;
+      text-align: center;
+    }
+
+    .gate-icon { font-size: 2rem; margin-bottom: 1rem; display: block; }
+
+    .gate-card h2 {
+      font-size: 1.1rem; font-weight: 700; color: #e0e0e0;
+      margin-bottom: .35rem;
+    }
+
+    .gate-card p { font-size: .83rem; color: #888; margin-bottom: 1.5rem; }
+
+    .gate-card input {
+      width: 100%; background: #111; border: 1px solid #2a2a2a;
+      border-radius: 6px; color: #e0e0e0; padding: .6rem .8rem;
+      font-size: .95rem; text-align: center; letter-spacing: .1em;
+      transition: border-color .15s; margin-bottom: .75rem;
+      font-family: inherit;
+    }
+
+    .gate-card input:focus { outline: none; border-color: #cf6679; }
+
+    .gate-card button {
+      width: 100%; background: #cf6679; color: #fff;
+      border: none; border-radius: 6px; padding: .6rem;
+      font-size: .9rem; font-weight: 600; cursor: pointer;
+      font-family: inherit; transition: background .15s;
+    }
+
+    .gate-card button:hover { background: #db7a8c; }
+    .gate-error { font-size: .8rem; color: #cf6679; margin-top: .5rem; min-height: 1.2em; }
   </style>
 </head>
 <body>
-  <div class="card">
+
+  <!-- Contenu (visible après auth) -->
+  <div class="card" id="main-content" style="display:none">
     <span class="icon">🎲</span>
-    <h1>JDR</h1>
+    <h1>Jeux de rôle</h1>
+    <p class="subtitle">Espace de travail et de test</p>
     <div class="divider"></div>
-    <p>Section en construction.</p>
+    <p class="welcome-text">
+      Bonjour et bienvenu !<br>
+      Cette section est en cours de construction.
+    </p>
+    <span class="badge">🚧 En développement</span>
   </div>
+
+  <!-- Auth gate -->
+  <div id="auth-gate">
+    <div class="gate-card">
+      <span class="gate-icon">🎲</span>
+      <h2>Jeux de rôle</h2>
+      <p>Espace privé — mot de passe requis</p>
+      <input type="password" id="gate-input" placeholder="••••••••" autocomplete="current-password">
+      <button id="gate-btn">Entrer</button>
+      <div class="gate-error" id="gate-error"></div>
+    </div>
+  </div>
+
+  <script>
+    const HASH = "1acdb3aa2fe5a0872845aac6436856fc381ff742686abc7c8eda579a5b053fcb";
+    const SESSION_KEY = "jdr_auth";
+
+    async function sha256(str) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    const gate = document.getElementById("auth-gate");
+    const input = document.getElementById("gate-input");
+    const btn = document.getElementById("gate-btn");
+    const error = document.getElementById("gate-error");
+    const content = document.getElementById("main-content");
+
+    function unlock() {
+      gate.remove();
+      content.style.display = "";
+    }
+
+    if (sessionStorage.getItem(SESSION_KEY) === "1") {
+      unlock();
+    } else {
+      input.focus();
+
+      async function attempt() {
+        const val = input.value;
+        if (!val) return;
+        btn.disabled = true;
+        btn.textContent = "…";
+        const h = await sha256(val);
+        if (h === HASH) {
+          sessionStorage.setItem(SESSION_KEY, "1");
+          unlock();
+        } else {
+          error.textContent = "Mot de passe incorrect.";
+          input.value = "";
+          input.focus();
+          btn.disabled = false;
+          btn.textContent = "Entrer";
+        }
+      }
+
+      btn.addEventListener("click", attempt);
+      input.addEventListener("keydown", e => { if (e.key === "Enter") attempt(); });
+    }
+  </script>
+
 </body>
 </html>

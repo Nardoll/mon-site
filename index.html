@@ -75,10 +75,10 @@
     /* ── Sections grid ────────────────────── */
     .sections-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 1.1rem;
       width: 100%;
-      max-width: 820px;
+      max-width: 580px;
       margin-bottom: 3rem;
     }
 
@@ -205,7 +205,7 @@
     }
 
     @media (min-width: 641px) and (max-width: 900px) {
-      .sections-grid { grid-template-columns: 1fr 1fr; }
+      .sections-grid { grid-template-columns: 1fr 1fr; max-width: 580px; }
     }
   </style>
 </head>
@@ -236,27 +236,18 @@
       <span class="card-arrow">→</span>
     </a>
 
-    <!-- Recettes -->
-    <div class="section-card disabled"
-         style="--card-accent:#6abf69;--card-glow:rgba(106,191,105,.12)">
-      <div class="card-icon">🍳</div>
-      <div class="card-body">
-        <div class="card-name">Recettes</div>
-        <div class="card-desc">Carnet de recettes et notes de cuisine.</div>
-      </div>
-      <span class="card-badge badge-wip">🚧 À venir</span>
-    </div>
-
     <!-- JDR -->
-    <div class="section-card disabled"
-         style="--card-accent:#cf6679;--card-glow:rgba(207,102,121,.12)">
+    <a href="/jdr/"
+       class="section-card"
+       style="--card-accent:#cf6679;--card-glow:rgba(207,102,121,.15)">
       <div class="card-icon">🎲</div>
       <div class="card-body">
         <div class="card-name">Jeux de rôle</div>
         <div class="card-desc">Ressources, personnages et notes de campagne.</div>
       </div>
-      <span class="card-badge badge-wip">🚧 À venir</span>
-    </div>
+      <span class="card-badge badge-locked">🔒 Mot de passe</span>
+      <span class="card-arrow">→</span>
+    </a>
 
   </div>
 
