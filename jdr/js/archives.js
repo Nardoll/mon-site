@@ -462,7 +462,7 @@ function buildFormHTML(p) {
       </div>
 
       <div class="form-actions">
-        ${id ? `<button type="button" id="form-delete" class="btn-danger">🗑 Supprimer</button>` : ''}
+        ${editId ? `<button type="button" id="form-delete" class="btn-danger">🗑 Supprimer</button>` : ''}
         <div style="flex:1"></div>
         <button type="button" id="form-cancel" class="btn-ghost">Annuler</button>
         <button type="submit" class="btn-primary">Enregistrer</button>
