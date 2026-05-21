@@ -51,6 +51,15 @@
         </div>
       </div>
       <div class="form-group">
+        <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
+          <input type="checkbox" id="comm-titre-toggle"> Ajouter un titre (optionnel)
+        </label>
+        <div id="comm-titre-wrap" class="hidden" style="margin-top:.5rem">
+          <input type="text" id="comm-titre" placeholder="Titre de votre commentaire">
+          <div style="font-size:.74rem;color:var(--muted);margin-top:.3rem">⚠️ Le titre est visible sans cliquer — aucun spoiler !</div>
+        </div>
+      </div>
+      <div class="form-group">
         <label>Commentaire <span style="color:var(--red)">*</span></label>
         <textarea id="comm-text" rows="6" placeholder="Votre ressenti, hypothèses, émotions… (attention aux spoilers pour les autres !)" style="resize:vertical"></textarea>
       </div>

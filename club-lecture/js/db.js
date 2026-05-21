@@ -157,12 +157,13 @@ export async function getStatutsForMembre(membre_id) {
 
 // ── Commentaires de lecture ────────────────────────────────────────
 
-export async function addCommentaire({ livre_id, membre_id, date_commentaire, avancement, contenu }) {
+export async function addCommentaire({ livre_id, membre_id, date_commentaire, avancement, titre, contenu }) {
   return addDoc(collection(db, "commentaires_lecture"), {
     livre_id,
     membre_id,
     date_commentaire: Timestamp.fromDate(new Date(date_commentaire)),
     avancement: avancement !== null && avancement !== "" && avancement !== undefined ? Number(avancement) : null,
+    titre: titre?.trim() || null,
     contenu,
     cree_le: serverTimestamp()
   });

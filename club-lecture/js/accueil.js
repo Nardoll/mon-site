@@ -249,8 +249,15 @@ function openCommentaireModal(livre) {
   document.getElementById("comm-date").value = new Date().toISOString().split("T")[0];
   document.getElementById("comm-advance").value = "";
   document.getElementById("comm-text").value = "";
+  document.getElementById("comm-titre").value = "";
+  document.getElementById("comm-titre-toggle").checked = false;
+  document.getElementById("comm-titre-wrap").classList.add("hidden");
   document.getElementById("commentaire-overlay").classList.remove("hidden");
 }
+
+document.getElementById("comm-titre-toggle").addEventListener("change", e => {
+  document.getElementById("comm-titre-wrap").classList.toggle("hidden", !e.target.checked);
+});
 
 ["comm-close", "comm-cancel"].forEach(id => {
   document.getElementById(id).addEventListener("click", () => {
@@ -269,8 +276,9 @@ document.getElementById("comm-save").addEventListener("click", async () => {
   if (!contenu) { showToast("Le commentaire est vide.", "error"); return; }
   const date_commentaire = document.getElementById("comm-date").value || new Date().toISOString().split("T")[0];
   const avancement = document.getElementById("comm-advance").value;
+  const titre = document.getElementById("comm-titre-toggle").checked ? document.getElementById("comm-titre").value : "";
   try {
-    await addCommentaire({ livre_id: currentLivreId, membre_id, date_commentaire, avancement, contenu });
+    await addCommentaire({ livre_id: currentLivreId, membre_id, date_commentaire, avancement, titre, contenu });
     showToast("Commentaire publié !", "success");
     document.getElementById("commentaire-overlay").classList.add("hidden");
   } catch (e) { showToast("Erreur : " + e.message, "error"); }

@@ -88,8 +88,8 @@ function renderComments() {
     return `<div class="comment-card" data-idx="${i}">
       <div class="comment-header">
         <div class="avatar" style="width:32px;height:32px;font-size:.78rem;flex-shrink:0">${initiales(nomMembre(c.membre_id))}</div>
-        <div>
-          <div class="comment-author">${nomMembre(c.membre_id)}</div>
+        <div style="flex:1;min-width:0">
+          <div class="comment-author">${nomMembre(c.membre_id)}${c.titre ? ` · <em style="font-weight:600;font-style:normal">${escapeHtml(c.titre)}</em>` : ""}</div>
           ${avance ? `<div class="comment-advance">${avance}</div>` : ""}
         </div>
         <div class="comment-date">${formatDate(c.date_commentaire)}</div>
@@ -127,10 +127,17 @@ function setupModal() {
     : "Avancement (optionnel)";
   document.getElementById("comm-advance-label").textContent = advLabel;
 
+  document.getElementById("comm-titre-toggle").addEventListener("change", e => {
+    document.getElementById("comm-titre-wrap").classList.toggle("hidden", !e.target.checked);
+  });
+
   document.getElementById("btn-add-comment").addEventListener("click", () => {
     document.getElementById("comm-date").value = new Date().toISOString().split("T")[0];
     document.getElementById("comm-advance").value = "";
     document.getElementById("comm-text").value = "";
+    document.getElementById("comm-titre").value = "";
+    document.getElementById("comm-titre-toggle").checked = false;
+    document.getElementById("comm-titre-wrap").classList.add("hidden");
     overlay.classList.remove("hidden");
   });
 
@@ -146,8 +153,9 @@ function setupModal() {
     if (!contenu) { showToast("Le commentaire est vide.", "error"); return; }
     const date_commentaire = document.getElementById("comm-date").value || new Date().toISOString().split("T")[0];
     const avancement = document.getElementById("comm-advance").value;
+    const titre = document.getElementById("comm-titre-toggle").checked ? document.getElementById("comm-titre").value : "";
     try {
-      await addCommentaire({ livre_id: livreId, membre_id, date_commentaire, avancement, contenu });
+      await addCommentaire({ livre_id: livreId, membre_id, date_commentaire, avancement, titre, contenu });
       showToast("Commentaire publié !", "success");
       overlay.classList.add("hidden");
       commentaires = await getCommentairesForLivre(livreId);

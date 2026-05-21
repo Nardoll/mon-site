@@ -167,6 +167,7 @@ async function openProfil(id) {
                 : null;
               return `<div class="cmr-item" data-cmr-item="${ci}">
                 <div class="cmr-item-header">
+                  ${c.titre ? `<span style="font-size:.82rem;font-weight:600">${escapeHtml(c.titre)}</span>` : ""}
                   ${avStr ? `<span class="cmr-item-advance">${avStr}</span>` : ""}
                   <span class="cmr-item-date">${formatDate(c.date_commentaire)}</span>
                 </div>
