@@ -98,6 +98,27 @@ function computeSessionsBuckets(projets, mode) {
     }
   });
 
+  // Remplir les trous pour une frise continue (mois/années sans séances → 0)
+  const sorted = Object.keys(buckets).sort();
+  if (sorted.length >= 2) {
+    if (mode === 'month') {
+      const [y0, m0] = sorted[0].split('-').map(Number);
+      const [y1, m1] = sorted[sorted.length - 1].split('-').map(Number);
+      let cy = y0, cm = m0;
+      while (cy < y1 || (cy === y1 && cm <= m1)) {
+        const key = `${cy}-${String(cm).padStart(2, '0')}`;
+        if (!(key in buckets)) buckets[key] = 0;
+        cm++; if (cm > 12) { cm = 1; cy++; }
+      }
+    } else {
+      const y0 = Number(sorted[0]);
+      const y1 = Number(sorted[sorted.length - 1]);
+      for (let y = y0; y <= y1; y++) {
+        if (!(String(y) in buckets)) buckets[String(y)] = 0;
+      }
+    }
+  }
+
   return Object.entries(buckets)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, val]) => ({ key, val: Math.round(val * 10) / 10 }));
