@@ -522,7 +522,28 @@ body {
 /* ═══════════════════════════════════
    Archives — Tableau
 ═══════════════════════════════════ */
+#view-table { overflow-x: auto; }
 .proj-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.th-c { text-align: center; }
+.td-c { text-align: center; }
+
+.cell-expand { cursor: pointer; position: relative; display: inline-block; }
+.cell-more { color: var(--accent); font-size: .78rem; font-weight: 600; }
+.cell-pop {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .35rem .6rem;
+  min-width: 130px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+}
+.cell-pop.open { display: block; }
+.cell-pop-item { padding: .18rem 0; font-size: .82rem; white-space: nowrap; color: var(--text); }
 
 .proj-table th {
   background: var(--surface);

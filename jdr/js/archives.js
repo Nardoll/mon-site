@@ -149,6 +149,10 @@ function setupListeners() {
       render();
     });
   });
+
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.cell-pop.open').forEach(p => p.classList.remove('open'));
+  });
 }
 
 function switchView(view) {
@@ -164,11 +168,28 @@ function switchView(view) {
 function filteredSorted() {
   let list = [...allProjets];
 
-  if (filterSearch) list = list.filter(p =>
-    (p.nom || '').toLowerCase().includes(filterSearch) ||
-    (p.univers || []).some(u => u.toLowerCase().includes(filterSearch)) ||
-    (p.createur || []).some(c => c.toLowerCase().includes(filterSearch))
-  );
+  if (filterSearch) {
+    const q = filterSearch;
+    list = list.filter(p => {
+      const tokens = [
+        p.nom,
+        ...(p.type || []),
+        ...(p.avancement || []),
+        ...(p.createur || []),
+        ...(p.univers || []),
+        ...(p.systeme || []),
+        ...(p.emplacement || []),
+        ...(p.participants || []),
+        p.irl    ? 'irl'    : '',
+        p.irl    ? 'présentiel' : '',
+        p.online ? 'online' : '',
+        p.nb_seances_mj != null ? String(p.nb_seances_mj) : '',
+        ...(p.dates_seances || []).map(ts => tsToStr(ts)),
+        p.commentaires,
+      ];
+      return tokens.some(t => (t || '').toLowerCase().includes(q));
+    });
+  }
   if (filterAvancement) list = list.filter(p => (p.avancement || []).includes(filterAvancement));
   if (filterType) list = list.filter(p => (p.type || []).includes(filterType));
 
@@ -227,27 +248,66 @@ function projCardHTML(p) {
     </div>`;
 }
 
+function datesCell(p) {
+  const dates = (p.dates_seances || []).map(ts => tsToStr(ts)).filter(Boolean);
+  if (!dates.length) return '—';
+  if (dates.length === 1) return escH(dates[0]);
+  const rest = dates.slice(1);
+  return `<span class="cell-expand" data-list="${escH(JSON.stringify(rest))}">${escH(dates[0])}<span class="cell-more"> +${rest.length}</span></span>`;
+}
+
+function participantsCell(p) {
+  const parts = p.participants || [];
+  if (!parts.length) return '—';
+  const MAX = 2;
+  if (parts.length <= MAX) return escH(parts.join(', '));
+  const shown = parts.slice(0, MAX).join(', ');
+  return `<span class="cell-expand" data-list="${escH(JSON.stringify(parts))}">${escH(shown)}<span class="cell-more">…</span></span>`;
+}
+
 function renderTable(list) {
   const tbody = document.getElementById('table-body');
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="9" class="table-empty">Aucun projet</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" class="table-empty">Aucun projet</td></tr>`;
     return;
   }
-  tbody.innerHTML = list.map(p => `
+  tbody.innerHTML = list.map(p => {
+    const fmt = [p.irl && 'IRL', p.online && 'Online'].filter(Boolean).join('+') || '—';
+    return `
     <tr class="table-row" data-id="${escH(p.id)}">
       <td class="td-nom">${escH(p.nom || '—')}</td>
       <td>${(p.type||[]).map(t=>`<span class="badge-type">${escH(t)}</span>`).join(' ') || '—'}</td>
       <td>${(p.avancement||[]).map(a=>`<span class="badge-avanc" style="background:${AVANC_COLOR[a]||'#5a5a6a'}">${escH(a)}</span>`).join(' ') || '—'}</td>
       <td>${escH((p.createur||[]).join(', ')) || '—'}</td>
       <td>${escH((p.univers||[]).join(', ')) || '—'}</td>
-      <td>${tsToStr(p.date_debut) || '—'}</td>
-      <td>${p.youtube ? '▶' : '—'}</td>
-      <td>${p.deja_joue ? '✓' : '—'}</td>
-      <td>${p.deja_joue && p.satisfaction ? starsHTML(p.satisfaction) : '—'}</td>
-    </tr>`).join('');
+      <td class="td-c">${p.deja_joue && p.nb_seances_mj != null ? p.nb_seances_mj : '—'}</td>
+      <td class="td-c">${p.deja_joue ? fmt : '—'}</td>
+      <td>${p.deja_joue ? participantsCell(p) : '—'}</td>
+      <td>${p.deja_joue ? datesCell(p) : '—'}</td>
+      <td class="td-c">${p.youtube ? '▶' : '—'}</td>
+      <td class="td-c">${p.deja_joue && p.satisfaction ? starsHTML(p.satisfaction) : '—'}</td>
+    </tr>`;
+  }).join('');
+
   tbody.querySelectorAll('.table-row').forEach(row =>
     row.addEventListener('click', () => openDetail(row.dataset.id))
   );
+
+  tbody.querySelectorAll('.cell-expand').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      document.querySelectorAll('.cell-pop.open').forEach(p => { if (p.parentElement !== el) p.classList.remove('open'); });
+      let pop = el.querySelector('.cell-pop');
+      if (!pop) {
+        const data = JSON.parse(el.dataset.list || '[]');
+        pop = document.createElement('div');
+        pop.className = 'cell-pop';
+        pop.innerHTML = data.map(s => `<div class="cell-pop-item">${escH(s)}</div>`).join('');
+        el.appendChild(pop);
+      }
+      pop.classList.toggle('open');
+    });
+  });
 }
 
 // ── Modal détail ───────────────────────────────────────
