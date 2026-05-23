@@ -253,7 +253,7 @@ export function renderStats(projets) {
   const creatH    = Math.max(240, Math.max(cpE.length, csE.length) * 38);
   const partH     = Math.max(300, Math.max(psE.length, ppE.length) * 38);
   const projPartH = Math.max(260, projByPart.length   * 36);
-  const satH      = Math.max(260, topSat.length       * 36);
+  const satH      = Math.max(160, topSat.length       * 40);
 
   document.getElementById('view-stats').innerHTML = `
     <div class="stat-kpis">

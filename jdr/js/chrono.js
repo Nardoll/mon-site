@@ -156,10 +156,11 @@ export function renderChrono(projets) {
       sub = `${escH(fmt(item._start))} — ${escH(fmt(item._end))}`;
     }
 
+    const showDate = parseFloat(h) >= 50;
     return `<div class="ch-v-bar" style="top:${top}px;height:${h}px;left:${left}px;width:${LANE_W}px;background:${color}"
       data-tip="${escH(tip)}" data-id="${escH(item.id)}">
       <span class="ch-v-bar-name">${escH(item.nom)}</span>
-      <span class="ch-v-bar-date">${sub}</span>
+      ${showDate ? `<span class="ch-v-bar-date">${sub}</span>` : ''}
     </div>`;
   }).join('');
 

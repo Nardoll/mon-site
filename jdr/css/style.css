@@ -913,6 +913,8 @@ body {
   max-height: 78vh;
   background: var(--bg);
   padding: 8px 0 16px;
+  width: fit-content;
+  max-width: 100%;
 }
 .ch-v-scene {
   position: relative;
@@ -949,7 +951,7 @@ body {
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
   z-index: 1;
   box-shadow: 0 2px 8px rgba(0,0,0,.28);
   transition: filter .15s, box-shadow .15s;
@@ -959,7 +961,7 @@ body {
   box-shadow: 0 4px 16px rgba(0,0,0,.45);
 }
 .ch-v-bar-name {
-  font-size: .72rem; font-weight: 700;
+  font-size: .8rem; font-weight: 700;
   color: rgba(255,255,255,.92);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   pointer-events: none;
