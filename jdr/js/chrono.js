@@ -1,4 +1,5 @@
-// ── chrono.js — Frise chronologique JDR ────────────────────────────
+// ── chrono.js — Frise chronologique verticale JDR ─────────────────
+
 function escH(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -14,7 +15,7 @@ function fmt(d) {
 
 function typeColor(p) {
   const t = p.type || [];
-  if (t.includes('Campagne')) return '#4e8a5c';
+  if (t.includes('Campagne'))      return '#4e8a5c';
   if (t.includes('Mini Campagne')) return '#2d7d9a';
   return '#c87a00';
 }
@@ -24,48 +25,101 @@ function isOneShot(p) {
   return !t.includes('Campagne') && !t.includes('Mini Campagne');
 }
 
-const LABEL_W = 200;
-const DAY_W   = 10;    // px per day
-const ROW_H   = 48;
+const DAY_H      = 3;              // px per day (vertical axis)
+const LANE_W     = 164;            // px — width of each lane column
+const LANE_GAP   = 8;             // px — gap between lanes
+const LABEL_W    = 58;            // px — left margin for month labels
+const BAR_MIN_H  = 28;            // px — minimum bar height
+const MIN_RANGE_D = Math.ceil(BAR_MIN_H / DAY_H); // days for one-shot collision box
+const GAP_MS     = 6 * 86400000;  // 6-day gap between items in same lane
 
 export function renderChrono(projets) {
   const wrap = document.getElementById('view-chrono');
 
-  const withDates = projets
-    .filter(p => (p.dates_seances || []).length > 0)
-    .map(p => ({
-      ...p,
-      _dates: (p.dates_seances || []).map(ts => tsToDate(ts)).filter(Boolean).sort((a, b) => a - b),
-    }))
-    .filter(p => p._dates.length > 0);
+  // Build flat list of displayable items
+  const items = [];
+  projets.forEach(p => {
+    const dates = (p.dates_seances || [])
+      .map(ts => tsToDate(ts)).filter(Boolean)
+      .sort((a, b) => a - b);
+    if (!dates.length) return;
 
-  if (!withDates.length) {
+    if (isOneShot(p)) {
+      dates.forEach(d => items.push({
+        id: p.id, nom: p.nom, type: p.type,
+        satisfaction: p.satisfaction, participants: p.participants,
+        _start: d, _end: d, _oneshot: true, _date: d,
+      }));
+    } else {
+      items.push({
+        id: p.id, nom: p.nom, type: p.type,
+        satisfaction: p.satisfaction, participants: p.participants,
+        nb_seances_mj: p.nb_seances_mj,
+        _start: dates[0], _end: dates[dates.length - 1],
+        _oneshot: false, _dates: dates,
+      });
+    }
+  });
+
+  if (!items.length) {
     wrap.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📅</div><p>Aucun projet avec des dates de séances.</p></div>`;
     return;
   }
 
-  // Date range
-  const allMs = withDates.flatMap(p => p._dates.map(d => d.getTime()));
-  let minDate = new Date(Math.min(...allMs));
-  let maxDate = new Date(Math.max(...allMs));
+  // Effective ms range (one-shots get a minimum box for collision)
+  items.forEach(item => {
+    item._startMs = item._start.getTime();
+    item._endMs   = Math.max(
+      item._end.getTime(),
+      item._startMs + MIN_RANGE_D * 86400000
+    );
+  });
+
+  // Global date range — pad 1 month on each side
+  const allMs = items.flatMap(i => [i._startMs, i._endMs]);
+  let minDate  = new Date(Math.min(...allMs));
+  let maxDate  = new Date(Math.max(...allMs));
   minDate = new Date(minDate.getFullYear(), minDate.getMonth() - 1, 1);
   maxDate = new Date(maxDate.getFullYear(), maxDate.getMonth() + 2, 0);
 
-  const totalMs   = maxDate - minDate;
-  const totalDays = totalMs / 86400000;
-  const trackW    = Math.max(totalDays * DAY_W, 900);
+  const totalMs = maxDate.getTime() - minDate.getTime();
+  const totalH  = (totalMs / 86400000) * DAY_H;
 
-  function toPx(d) {
-    return ((d - minDate) / totalMs * trackW).toFixed(1) + 'px';
+  // Vertical coordinate: top = maxDate (most recent), bottom = minDate (oldest)
+  function toPy(ms) {
+    return ((maxDate.getTime() - ms) / totalMs * totalH).toFixed(1);
   }
-  function spanPx(d1, d2) {
-    return Math.max(((d2 - d1) / totalMs * trackW), 28).toFixed(1) + 'px';
+  function barH(startMs, endMs) {
+    return Math.max(BAR_MIN_H, ((endMs - startMs) / totalMs * totalH)).toFixed(1);
   }
 
-  // Sort by first date
-  withDates.sort((a, b) => a._dates[0] - b._dates[0]);
+  // ── Lane assignment (greedy, desc _startMs) ──────────────────────
+  // laneFloor[i] = minimum _startMs of items in lane i (oldest item's start)
+  // A new item fits in lane i if: item._endMs + GAP_MS <= laneFloor[i]
+  items.sort((a, b) => b._startMs - a._startMs);
 
-  // Month axis
+  const laneFloor = [];
+  items.forEach(item => {
+    const checkEnd = item._endMs + GAP_MS;
+    let assigned = false;
+    for (let i = 0; i < laneFloor.length; i++) {
+      if (checkEnd <= laneFloor[i]) {
+        laneFloor[i] = item._startMs;
+        item._lane = i;
+        assigned = true;
+        break;
+      }
+    }
+    if (!assigned) {
+      item._lane = laneFloor.length;
+      laneFloor.push(item._startMs);
+    }
+  });
+
+  const numLanes = laneFloor.length;
+  const sceneW   = LABEL_W + numLanes * (LANE_W + LANE_GAP);
+
+  // ── Month markers ────────────────────────────────────────────────
   const months = [];
   let cur = new Date(minDate);
   while (cur <= maxDate) {
@@ -73,73 +127,55 @@ export function renderChrono(projets) {
     cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
   }
 
-  const axisHTML = months.map((m, i) => {
-    const next = months[i + 1] || maxDate;
-    const w = ((next - m) / totalMs * trackW).toFixed(1) + 'px';
+  const monthsHTML = months.map(m => {
+    const y   = toPy(m.getTime());
     const lbl = m.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
-    return `<div class="ch-month" style="width:${w}">${lbl}</div>`;
+    return `<div class="ch-v-month" style="top:${y}px">
+      <span class="ch-v-mlabel">${escH(lbl)}</span>
+      <div class="ch-v-mline"></div>
+    </div>`;
   }).join('');
 
-  const gridHTML = months.map(m => {
-    return `<div class="ch-grid-line" style="left:${toPx(m)}"></div>`;
-  }).join('');
+  // ── Bars ─────────────────────────────────────────────────────────
+  const barsHTML = items.map(item => {
+    const color = typeColor(item);
+    const top   = toPy(item._endMs);
+    const h     = barH(item._startMs, item._endMs);
+    const left  = LABEL_W + item._lane * (LANE_W + LANE_GAP);
+    const types = (item.type || []).join(', ') || '—';
+    const parts = (item.participants || []).join(', ') || '—';
+    const satStr = item.satisfaction > 0 ? `${item.satisfaction} ★` : '—';
 
-  // Rows
-  const rowsHTML = withDates.map(p => {
-    const color   = typeColor(p);
-    const oneShot = isOneShot(p);
-    const types   = (p.type || []).join(', ') || '—';
-    const format  = [p.irl && 'IRL', p.online && 'Online'].filter(Boolean).join(' + ') || '—';
-    const parts   = (p.participants || []).join(', ') || '—';
-    const satStr  = p.satisfaction > 0 ? `${p.satisfaction} ★` : '—';
-    const datesStr = p._dates.map(d => fmt(d)).join(', ');
-
-    let elements = '';
-
-    if (oneShot) {
-      // One dot per session date
-      elements = p._dates.map(d => {
-        const tip = `<strong>${escH(p.nom)}</strong><br>📅 ${escH(fmt(d))}<br>🎲 ${escH(types)}<br>👤 ${escH(parts)}`;
-        return `<div class="ch-dot" style="left:${toPx(d)};background:${color}"
-          data-tip="${escH(tip)}" data-id="${escH(p.id)}"></div>`;
-      }).join('');
+    let tip, sub;
+    if (item._oneshot) {
+      tip = `<strong>${escH(item.nom)}</strong><br>📅 ${escH(fmt(item._date))}<br>🎲 ${escH(types)}<br>👤 ${escH(parts)}`;
+      sub = escH(fmt(item._date));
     } else {
-      // Bar from first to last date
-      const left = toPx(p._dates[0]);
-      const w    = spanPx(p._dates[0], p._dates[p._dates.length - 1]);
-      const tip  = `<strong>${escH(p.nom)}</strong><br>🎲 ${escH(types)}<br>📅 ${escH(datesStr)}<br>👥 MJ : ${p.nb_seances_mj || '—'} séance(s)<br>👤 ${escH(parts)}<br>⭐ ${satStr}`;
-      elements = `<div class="ch-bar" style="left:${left};width:${w};background:${color}"
-        data-tip="${escH(tip)}" data-id="${escH(p.id)}">
-        <span class="ch-bar-label">${escH(p.nom)}</span>
-      </div>`;
+      const datesStr = item._dates.map(d => fmt(d)).join(', ');
+      tip = `<strong>${escH(item.nom)}</strong><br>🎲 ${escH(types)}<br>📅 ${escH(datesStr)}<br>⭐ ${satStr}<br>👤 ${escH(parts)}`;
+      sub = `${escH(fmt(item._start))} — ${escH(fmt(item._end))}`;
     }
 
-    return `<div class="ch-row">
-      <div class="ch-label" title="${escH(p.nom)}">${escH(p.nom)}</div>
-      <div class="ch-track" style="width:${trackW}px">
-        ${gridHTML}
-        ${elements}
-      </div>
+    return `<div class="ch-v-bar" style="top:${top}px;height:${h}px;left:${left}px;width:${LANE_W}px;background:${color}"
+      data-tip="${escH(tip)}" data-id="${escH(item.id)}">
+      <span class="ch-v-bar-name">${escH(item.nom)}</span>
+      <span class="ch-v-bar-date">${sub}</span>
     </div>`;
   }).join('');
 
   wrap.innerHTML = `
     <div id="ch-tooltip" class="ch-tooltip hidden"></div>
-    <div class="ch-outer">
-      <div class="ch-inner" style="min-width:${LABEL_W + trackW}px">
-        <div class="ch-head">
-          <div class="ch-label ch-label-head">Projet</div>
-          <div class="ch-axis" style="width:${trackW}px">${axisHTML}</div>
-        </div>
-        <div class="ch-rows">${rowsHTML}</div>
+    <div class="ch-v-wrap">
+      <div class="ch-v-scene" style="height:${totalH}px;width:${sceneW}px">
+        ${monthsHTML}
+        ${barsHTML}
       </div>
     </div>`;
 
-  // Tooltip logic
+  // ── Tooltip & click ───────────────────────────────────────────────
   const tt = wrap.querySelector('#ch-tooltip');
-
-  wrap.querySelectorAll('.ch-bar, .ch-dot').forEach(el => {
-    el.addEventListener('mouseenter', e => {
+  wrap.querySelectorAll('.ch-v-bar').forEach(el => {
+    el.addEventListener('mouseenter', () => {
       tt.innerHTML = el.dataset.tip || '';
       tt.classList.remove('hidden');
     });
@@ -149,10 +185,8 @@ export function renderChrono(projets) {
     });
     el.addEventListener('mouseleave', () => tt.classList.add('hidden'));
     el.addEventListener('click', () => {
-      if (el.dataset.id) {
-        // Dispatch custom event picked up by archives.js
+      if (el.dataset.id)
         document.dispatchEvent(new CustomEvent('chrono-open', { detail: { id: el.dataset.id } }));
-      }
     });
   });
 }
