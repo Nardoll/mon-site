@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jeux de rôle — Archives</title>
   <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -50,12 +51,17 @@
       <div class="view-btns">
         <button class="view-btn active" id="btn-view-cards">⊞ Cartes</button>
         <button class="view-btn" id="btn-view-table">☰ Tableau</button>
+        <button class="view-btn" id="btn-view-stats">📊 Statistiques</button>
+        <button class="view-btn" id="btn-view-chrono">📅 Chronologie</button>
       </div>
       <span class="proj-count" id="proj-count"></span>
     </div>
   </div>
 
   <div id="view-cards" class="proj-grid"></div>
+
+  <div id="view-stats"  class="hidden"></div>
+  <div id="view-chrono" class="hidden"></div>
 
   <div id="view-table" class="hidden">
     <table class="proj-table">
@@ -107,8 +113,12 @@
 
 <script type="module">
   import { requireAuth } from './js/auth.js';
-  import { initNav } from './js/nav.js';
+  import { initNav }     from './js/nav.js';
   import { initArchives } from './js/archives.js';
+  import { renderStats }  from './js/stats.js';
+  import { renderChrono } from './js/chrono.js';
+  window.__renderStats  = renderStats;
+  window.__renderChrono = renderChrono;
   requireAuth(() => {
     document.getElementById('main-content').style.display = '';
     initNav('archives');

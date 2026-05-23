@@ -130,9 +130,13 @@ function setupListeners() {
     render();
   });
 
-  document.getElementById('btn-view-cards').addEventListener('click', () => switchView('cards'));
-  document.getElementById('btn-view-table').addEventListener('click', () => switchView('table'));
+  document.getElementById('btn-view-cards').addEventListener('click',  () => switchView('cards'));
+  document.getElementById('btn-view-table').addEventListener('click',  () => switchView('table'));
+  document.getElementById('btn-view-stats').addEventListener('click',  () => switchView('stats'));
+  document.getElementById('btn-view-chrono').addEventListener('click', () => switchView('chrono'));
   document.getElementById('btn-add').addEventListener('click', () => openForm(null));
+
+  document.addEventListener('chrono-open', e => openDetail(e.detail.id));
 
   document.getElementById('detail-overlay').addEventListener('click', e => {
     if (e.target.id === 'detail-overlay') closeDetail();
@@ -155,12 +159,16 @@ function setupListeners() {
   });
 }
 
+const ALL_VIEWS = ['cards', 'table', 'stats', 'chrono'];
+
 function switchView(view) {
   currentView = view;
-  document.getElementById('btn-view-cards').classList.toggle('active', view === 'cards');
-  document.getElementById('btn-view-table').classList.toggle('active', view === 'table');
-  document.getElementById('view-cards').classList.toggle('hidden', view !== 'cards');
-  document.getElementById('view-table').classList.toggle('hidden', view !== 'table');
+  ALL_VIEWS.forEach(v => {
+    document.getElementById(`btn-view-${v}`)?.classList.toggle('active', v === view);
+    document.getElementById(`view-${v}`)?.classList.toggle('hidden', v !== view);
+  });
+  const dataViews = view === 'stats' || view === 'chrono';
+  document.querySelector('.filter-bar')?.classList.toggle('hidden', dataViews);
   render();
 }
 
@@ -209,9 +217,17 @@ function filteredSorted() {
 // ── Rendu ──────────────────────────────────────────────
 function render() {
   const list = filteredSorted();
-  document.getElementById('proj-count').textContent = `${list.length} projet${list.length !== 1 ? 's' : ''}`;
-  if (currentView === 'cards') renderCards(list);
-  else renderTable(list);
+  if (currentView === 'stats') {
+    document.getElementById('proj-count').textContent = `${allProjets.length} projet${allProjets.length !== 1 ? 's' : ''}`;
+    window.__renderStats?.(allProjets);
+  } else if (currentView === 'chrono') {
+    document.getElementById('proj-count').textContent = `${allProjets.length} projet${allProjets.length !== 1 ? 's' : ''}`;
+    window.__renderChrono?.(allProjets);
+  } else {
+    document.getElementById('proj-count').textContent = `${list.length} projet${list.length !== 1 ? 's' : ''}`;
+    if (currentView === 'cards') renderCards(list);
+    else renderTable(list);
+  }
 }
 
 function renderCards(list) {
