@@ -194,7 +194,7 @@ function buildSessionsChart(projets, mode) {
   const labels = buckets.map(b => {
     if (mode === 'month') {
       const [y, m] = b.key.split('-');
-      return new Date(+y, +m - 1, 1).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+      return new Date(+y, +m - 1, 1).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
     }
     return b.key;
   });
