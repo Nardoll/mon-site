@@ -290,8 +290,14 @@ function renderStatusList() {
   const unite = currentLivre?.progression_unite || "";
 
   const rank = { termine: 3, en_cours: 2, achete: 1, pas_commence: 0 };
+  const hasRealStatut = m => {
+    const s = statutByMembre[m.id];
+    if (!s) return false;
+    if (s.statut === "pas_commence" && !Number(s.page_actuelle)) return false;
+    return true;
+  };
   const withStatut = allMembres
-    .filter(m => statutByMembre[m.id])
+    .filter(hasRealStatut)
     .sort((a, b) => {
       const sa = statutByMembre[a.id], sb = statutByMembre[b.id];
       const ra = rank[sa.statut] ?? 0, rb = rank[sb.statut] ?? 0;
@@ -301,7 +307,7 @@ function renderStatusList() {
       return pctB - pctA;
     });
 
-  const missingMembres = allMembres.filter(m => !statutByMembre[m.id]);
+  const missingMembres = allMembres.filter(m => !hasRealStatut(m));
 
   list.innerHTML = withStatut.map(m => {
     const s = statutByMembre[m.id];
@@ -333,7 +339,7 @@ function renderStatusList() {
     list.insertAdjacentHTML("afterend", `
       <div class="status-add-row" id="status-add-row">
         <select id="select-add-membre" class="status-add-select">
-          <option value="">+ Ajouter un membre…</option>
+          <option value="">+ Ajouter un membre au suivi…</option>
           ${options}
         </select>
       </div>`);
