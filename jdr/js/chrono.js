@@ -67,32 +67,32 @@ function computeSessionsBuckets(projets, mode) {
         buckets[key] = (buckets[key] || 0) + 1;
       });
     } else {
-      const startMs = sessions[0].date.getTime();
-      const endMs   = sessions[sessions.length - 1].date.getTime();
       const nbSeances = p.nb_seances_mj || sessions.length;
-      const totalDuration = Math.max(endMs - startMs, 1);
+      const d0 = sessions[0].date;
+      const d1 = sessions[sessions.length - 1].date;
 
       if (mode === 'month') {
-        let cur = new Date(sessions[0].date.getFullYear(), sessions[0].date.getMonth(), 1);
-        while (cur.getTime() <= endMs) {
-          const next = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
-          const mStart = Math.max(cur.getTime(), startMs);
-          const mEnd   = Math.min(next.getTime(), endMs);
-          if (mEnd > mStart) {
-            const key = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`;
-            buckets[key] = (buckets[key] || 0) + ((mEnd - mStart) / totalDuration) * nbSeances;
-          }
-          cur = next;
+        // Snap to whole months so each month bucket represents the full 1st→last
+        const snapStart = new Date(d0.getFullYear(), d0.getMonth(), 1);
+        const snapEnd   = new Date(d1.getFullYear(), d1.getMonth(), 1);
+        let numMonths = 0;
+        let c = new Date(snapStart);
+        while (c <= snapEnd) { numMonths++; c = new Date(c.getFullYear(), c.getMonth() + 1, 1); }
+        const perMonth = nbSeances / numMonths;
+        c = new Date(snapStart);
+        while (c <= snapEnd) {
+          const key = `${c.getFullYear()}-${String(c.getMonth() + 1).padStart(2, '0')}`;
+          buckets[key] = (buckets[key] || 0) + perMonth;
+          c = new Date(c.getFullYear(), c.getMonth() + 1, 1);
         }
       } else {
-        const y0 = sessions[0].date.getFullYear();
-        const y1 = sessions[sessions.length - 1].date.getFullYear();
+        // Snap to whole years
+        const y0 = d0.getFullYear();
+        const y1 = d1.getFullYear();
+        const numYears = y1 - y0 + 1;
+        const perYear  = nbSeances / numYears;
         for (let y = y0; y <= y1; y++) {
-          const yStart = Math.max(new Date(y, 0, 1).getTime(), startMs);
-          const yEnd   = Math.min(new Date(y + 1, 0, 1).getTime(), endMs);
-          if (yEnd > yStart) {
-            buckets[String(y)] = (buckets[String(y)] || 0) + ((yEnd - yStart) / totalDuration) * nbSeances;
-          }
+          buckets[String(y)] = (buckets[String(y)] || 0) + perYear;
         }
       }
     }
