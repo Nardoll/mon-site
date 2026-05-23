@@ -122,8 +122,8 @@ function barOpts(c, horizontal = false, maxVal = null) {
       tooltip: tooltipCfg(c),
     },
     scales: {
-      x: { ...base, ...(maxVal && !horizontal ? { max: maxVal } : {}) },
-      y: { ...base, ...(maxVal &&  horizontal ? { max: maxVal } : {}) },
+      x: { ...base, ...(maxVal &&  horizontal ? { max: maxVal } : {}) },
+      y: { ...base, ...(maxVal && !horizontal ? { max: maxVal } : {}) },
     },
   };
 }
@@ -253,7 +253,7 @@ export function renderStats(projets) {
   const creatH    = Math.max(240, Math.max(cpE.length, csE.length) * 38);
   const partH     = Math.max(300, Math.max(psE.length, ppE.length) * 38);
   const projPartH = Math.max(260, projByPart.length   * 36);
-  const satH      = Math.max(160, topSat.length       * 40);
+  const satH      = Math.max(140, topSat.length       * 34);
 
   document.getElementById('view-stats').innerHTML = `
     <div class="stat-kpis">
