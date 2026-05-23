@@ -72,7 +72,7 @@ Mon Site/
 │
 ├── jdr/
 │   ├── index.html               Page d'accueil JDR (bienvenue + liens Archives/Outils)
-│   ├── archives.html            Base de données des projets JDR (filtres, tri, cartes/tableau)
+│   ├── archives.html            Base de données des projets JDR (filtres, tri, 4 vues : cartes/tableau/stats/chrono)
 │   ├── outils.html              Liste des outils MJ (3 outils intégrés)
 │   ├── firebase-config.js       Initialisation Firebase + export `db` (même projet mon-site-e253f)
 │   ├── css/
@@ -80,7 +80,9 @@ Mon Site/
 │   ├── js/
 │   │   ├── auth.js              Auth JDR (SHA-256, sessionStorage, SESSION_KEY "jdr_auth")
 │   │   ├── nav.js               Injection sidebar JDR + thème (localStorage "jdr_theme")
-│   │   └── archives.js          Logique page Archives (Firestore, multi-select, formulaire, détail)
+│   │   ├── archives.js          Logique page Archives (Firestore, multi-select, formulaire, détail, 4 vues)
+│   │   ├── stats.js             Vue Statistiques — Chart.js, KPIs, toggle charts, hauteurs dynamiques
+│   │   └── chrono.js            Vue Chronologie — frise verticale Gantt, lanes auto, noms sur barres
 │   └── Outils/
 │       ├── generateur-pnj-makryon_1.html     Générateur PNJ — Les Enfants de Makryon
 │       ├── tribunal-dragons-outils_1.html    Outils MJ — Le Tribunal des Dragons (3 onglets)
@@ -131,6 +133,7 @@ Mon Site/
    - **Configuration du suivi** (bouton "⚙️ Configurer le suivi") → modal pour définir l'unité (`pages`, `chapitres`, `parties`, etc.) et le total (ex: 300). Stocké sur le document livre dans Firestore, partagé entre tous les membres. La modale de statut adapte ses labels et pré-remplit le total automatiquement. La barre de progression affiche l'unité (ex: `50/300 pages`).
    - **Bouton "💬 Laisser un commentaire"** → modal directement depuis l'accueil pour ajouter un commentaire sur le livre du mois
    - **Bouton "📖 Voir les commentaires (N) · ⚠️ spoilers"** → lien vers `commentaires.html?livre=LIVRE_ID`
+   - **Suivi de lecture** — seuls les membres ayant un suivi réel s'affichent (les membres avec statut "Pas commencé" ET 0 avancement sont masqués). Triés du plus avancé au moins avancé. Bouton crayon ✏️ en fin de ligne (visible au hover) pour éditer. Select en bas de liste pour ajouter un membre au suivi. Boutons "Laisser un commentaire" / "Voir les commentaires" en style primaire.
 3. **Palmarès (Podium)** — affiche le top 3 des livres ayant la meilleure note finale (moyenne des notes données par les membres lors des réunions). Mise en page visuelle en podium : 2e à gauche, 1er au centre (plus grand), 3e à droite. Un 4e slot "🏅 Meilleur outsider" s'affiche sous le podium. **Seuls les livres ayant une réunion avec des notes finales** apparaissent ici. Chaque carte est cliquable → `bibliotheque.html?open=LIVRE_ID`.
 
 #### Bibliothèque (`bibliotheque.html` + `bibliotheque.js`)
@@ -139,6 +142,7 @@ Deux vues alternées :
 
 **Vue visuelle** (défaut, `#view-visual`) :
 - **Section "En proposition"** : grille de cards, une par livre proposé (titre, auteur, année, membre)
+  - **Bouton "📋 Copier la liste"** (`#btn-copy-props`) : copie dans le presse-papier la liste des propositions au format Discord, prêt à coller : `"Propositions de livres actuellement enregistrée :\n- Titre de Auteur (année) - depuis Mois\n..."`. Utilise `navigator.clipboard.writeText()`.
 - **Section "Livres élus"** : liste des livres lus par le club, avec deux boutons de tri :
   - **"📅 Chronologique"** (défaut) — du plus récent au plus ancien
   - **"⭐ Note finale"** — par note finale décroissante (moyenne des notes réunion)
@@ -294,16 +298,46 @@ Page dédiée aux commentaires de lecture pour un livre donné. URL : `commentai
 #### Accueil (`index.html`)
 Page de bienvenue avec deux cartes-liens vers Archives et Outils.
 
-#### Archives (`archives.html` + `archives.js`)
+#### Archives (`archives.html` + `archives.js` + `stats.js` + `chrono.js`)
 
 Base de données Notion-style des projets JDR. Collection Firestore : `jdr_projets`.
 
-**Fonctionnalités :**
-- **Deux vues** : Cartes (défaut) et Tableau
-- **Filtres** : recherche texte (nom, univers, créateur), avancement, type
-- **Tri** : récents, nom A→Z/Z→A, date de début, note
-- **Ajouter/modifier** : formulaire modal complet
-- **Supprimer** : bouton dans le formulaire d'édition uniquement
+**Quatre vues** (barre d'onglets en haut) :
+- **⊞ Cartes** (défaut) — grille de cartes projet
+- **☰ Tableau** — tableau filtrable et triable
+- **📊 Statistiques** — dashboard Chart.js
+- **📅 Chronologie** — frise verticale type Gantt
+
+**Filtres (cartes + tableau) :**
+- Recherche texte globale sur tous les champs (nom, univers, créateur, participants, etc.)
+- Filtre avancement, filtre type
+- Tri : récents, nom A→Z/Z→A, séance (récente/ancienne par date la plus ancienne des séances), note
+
+**Vue Tableau — colonnes :**
+Nom · Type · Avancement · Créateur · Univers · Séances MJ · Format (IRL/Online) · Participants (tronqué + popover au clic) · Dates séances (première date + popover au clic) · YT · Note
+
+**Vue Statistiques (`stats.js`) :**
+- **KPIs** : Projets total, Séances MJ total, Satisfaction moy., Sur YouTube
+- **Vue d'ensemble** : Type de projet (toggle Projets / Séances MJ), Avancement, Joués vs en préparation, Présence YouTube
+- **Séances & durée** : Tous les projets par durée en séances MJ, Part de chaque projet dans les séances MJ, Format des parties (toggle)
+- **Créateurs** : bar chart horizontal toggle Projets / Séances MJ, hauteur dynamique
+- **Participants** : bar chart horizontal toggle Séances jouées / Projets, très grand (hauteur dynamique) + projets triés par nombre de participants
+- **Systèmes & univers** : donuts toggle Projets / Séances MJ
+- **Satisfaction** : Distribution des notes + tous les projets notés par satisfaction
+- Tous les charts donuts/bars "toggle" utilisent le pattern `toggleStore` + `attachToggles()` — pas de légende sur les donuts (supprimée pour gagner de la place)
+- Hauteurs calculées dynamiquement : `Math.max(min, count * 36)` par ligne de bar chart
+
+**Vue Chronologie (`chrono.js`) :**
+- Axe vertical (haut = plus récent, bas = plus ancien)
+- **Lanes automatiques** : algo glouton (desc _startMs) — chaque projet occupe une colonne libre et la libère quand il se termine. Les lanes sont "induites" (invisibles), pas des colonnes marquées
+- **Campagnes / Mini Campagnes** : barres colorées de leur première à leur dernière date, nom du projet affiché sur la barre
+- **One shots** : petites chips à chaque date de séance individuelle
+- **Marqueurs de mois** : lignes pointillées horizontales sur fond `var(--bg)`, label de mois en petit à gauche
+- **Tooltip au hover** : type, dates, satisfaction, participants
+- **Clic** → dispatch `CustomEvent('chrono-open')` → `archives.js` ouvre la fiche détail du projet
+
+**Ajouter/modifier** : formulaire modal complet
+**Supprimer** : bouton dans le formulaire d'édition uniquement
 
 **Formulaire — champs :**
 - Nom (obligatoire)

@@ -458,4 +458,32 @@ document.getElementById("fiche-edit").addEventListener("click", () => {
   if (livre) showFicheEditForm(livre);
 });
 
+// ── Copier la liste des propositions ───────────────────────────────
+
+const MOIS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
+function tsToDate(ts) {
+  if (!ts) return null;
+  return ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000);
+}
+
+document.getElementById("btn-copy-props").addEventListener("click", () => {
+  const propositions = livres.filter(l => l.statut === "en_proposition");
+  if (!propositions.length) { showToast("Aucune proposition à copier.", "error"); return; }
+
+  const lines = propositions.map(l => {
+    let line = `- ${l.titre}`;
+    if (l.auteur) line += ` de ${l.auteur}`;
+    if (l.annee)  line += ` (${l.annee})`;
+    const d = tsToDate(l.date_proposition);
+    if (d) line += ` - depuis ${MOIS_FR[d.getMonth()]}`;
+    return line;
+  });
+
+  const text = `Propositions de livres actuellement enregistrée :\n${lines.join('\n')}`;
+  navigator.clipboard.writeText(text)
+    .then(() => showToast("Liste copiée dans le presse-papier !", "success"))
+    .catch(() => showToast("Impossible de copier.", "error"));
+});
+
 init().catch(console.error);
