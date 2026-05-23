@@ -215,6 +215,14 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 .status-list { list-style: none; }
 .status-row { display: flex; align-items: center; justify-content: space-between; padding: .55rem 0; border-bottom: 1px solid var(--border); }
 .status-row:last-child { border-bottom: none; }
+.status-right { display: flex; align-items: center; gap: .5rem; }
+.status-right .progress-wrap { margin-top: 0; }
+.btn-edit-statut { background: none; border: none; cursor: pointer; padding: .15rem .25rem; font-size: .82rem; color: var(--muted); opacity: 0; transition: opacity .15s; flex-shrink: 0; }
+.status-row:hover .btn-edit-statut { opacity: 1; }
+.status-add-row { padding: .6rem 0 0; }
+.status-add-select { background: var(--input-bg); border: 1px solid var(--border); color: var(--muted); border-radius: 4px; padding: .3rem .5rem; font-size: .82rem; cursor: pointer; width: 100%; }
+.status-add-select:focus { outline: none; border-color: var(--accent); color: var(--text); }
+.comment-actions { display: flex; gap: .75rem; flex-wrap: wrap; padding-top: 1rem; margin-top: .5rem; border-top: 2px solid var(--border); }
 
 .progress-wrap { display: flex; align-items: center; gap: .5rem; margin-top: .35rem; }
 .progress-bar { flex: 1; height: 4px; background: var(--border); border-radius: 2px; }

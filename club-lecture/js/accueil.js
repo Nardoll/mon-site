@@ -211,10 +211,9 @@ async function renderCurrentBook() {
         <button class="btn btn-ghost btn-sm" id="btn-progression-config">⚙️ Configurer le suivi</button>
       </div>
       <ul class="status-list" id="status-list"></ul>
-      <div style="height:1px;background:var(--border);margin:.85rem 0"></div>
-      <div style="display:flex;gap:.65rem;flex-wrap:wrap">
-        <button class="btn btn-secondary btn-sm" id="btn-laisser-commentaire">💬 Laisser un commentaire</button>
-        <a href="commentaires.html?livre=${currentLivreId}" class="btn btn-secondary btn-sm">
+      <div class="comment-actions">
+        <button class="btn btn-primary" id="btn-laisser-commentaire">💬 Laisser un commentaire</button>
+        <a href="commentaires.html?livre=${currentLivreId}" class="btn btn-secondary">
           📖 Voir les commentaires${commentaires.length > 0 ? ` (${commentaires.length})` : ""}${commentaires.length > 0 ? " · ⚠️ spoilers" : ""}
         </a>
       </div>
@@ -287,13 +286,29 @@ document.getElementById("comm-save").addEventListener("click", async () => {
 function renderStatusList() {
   const list = document.getElementById("status-list");
   if (!list) return;
+  document.getElementById("status-add-row")?.remove();
   const unite = currentLivre?.progression_unite || "";
-  list.innerHTML = allMembres.map(m => {
+
+  const rank = { termine: 3, en_cours: 2, achete: 1, pas_commence: 0 };
+  const withStatut = allMembres
+    .filter(m => statutByMembre[m.id])
+    .sort((a, b) => {
+      const sa = statutByMembre[a.id], sb = statutByMembre[b.id];
+      const ra = rank[sa.statut] ?? 0, rb = rank[sb.statut] ?? 0;
+      if (ra !== rb) return rb - ra;
+      const pctA = (sa.page_actuelle && sa.pages_totales) ? sa.page_actuelle / sa.pages_totales : 0;
+      const pctB = (sb.page_actuelle && sb.pages_totales) ? sb.page_actuelle / sb.pages_totales : 0;
+      return pctB - pctA;
+    });
+
+  const missingMembres = allMembres.filter(m => !statutByMembre[m.id]);
+
+  list.innerHTML = withStatut.map(m => {
     const s = statutByMembre[m.id];
-    const statut = s?.statut ?? "pas_commence";
+    const statut = s.statut ?? "pas_commence";
     const info = STATUTS_LECTURE[statut];
     let progress = "";
-    if (s?.page_actuelle && s?.pages_totales && s.pages_totales > 0) {
+    if (s.page_actuelle && s.pages_totales && s.pages_totales > 0) {
       const pct = Math.min(100, Math.round(s.page_actuelle / s.pages_totales * 100));
       progress = `<div class="progress-wrap">
         <div class="progress-circle" style="--pct:${pct}%">
@@ -305,17 +320,33 @@ function renderStatusList() {
     return `
       <li class="status-row">
         <span class="membre-link" data-id="${m.id}" style="font-size:.88rem;cursor:pointer">${m.nom}</span>
-        <div>
+        <div class="status-right">
           <span class="st-badge st-${info.css}" data-membre="${m.id}" data-statut="${statut}">${info.label}</span>
           ${progress}
+          <button class="btn-edit-statut" data-membre="${m.id}" data-statut="${statut}" title="Modifier le statut">✏️</button>
         </div>
       </li>`;
   }).join("");
+
+  if (missingMembres.length) {
+    const options = missingMembres.map(m => `<option value="${m.id}">${m.nom}</option>`).join("");
+    list.insertAdjacentHTML("afterend", `
+      <div class="status-add-row" id="status-add-row">
+        <select id="select-add-membre" class="status-add-select">
+          <option value="">+ Ajouter un membre…</option>
+          ${options}
+        </select>
+      </div>`);
+    document.getElementById("select-add-membre")?.addEventListener("change", e => {
+      if (e.target.value) { openStatutModal(e.target.value, "pas_commence"); e.target.value = ""; }
+    });
+  }
 
   list.querySelectorAll(".membre-link").forEach(el => {
     el.addEventListener("click", () => { window.location.href = `membres.html?open=${el.dataset.id}`; });
   });
   list.querySelectorAll(".st-badge").forEach(b => b.addEventListener("click", () => openStatutModal(b.dataset.membre, b.dataset.statut)));
+  list.querySelectorAll(".btn-edit-statut").forEach(b => b.addEventListener("click", () => openStatutModal(b.dataset.membre, b.dataset.statut)));
 }
 
 // ── Podium / Palmarès ──────────────────────────────────────────────
