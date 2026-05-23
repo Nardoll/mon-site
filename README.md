@@ -594,3 +594,8 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 - `jdr/css/style.css` : ajout des classes `.chrono-layout`, `.chrono-left`, `.chrono-right`, `.chrono-chart-panel`, `.chrono-chart-header`, `.chrono-chart-title`, `.chrono-chart-canvas`, `.chrono-trend-ind`, `.ch-v-bar-stats`, et toutes les classes `.recette-*`.
 - `jdr/archives.html` : bouton "✨ Recette magique", div `#view-recette`, import `recette.js`.
 - `jdr/js/archives.js` : `ALL_VIEWS` étendu à `'recette'`, listener `btn-view-recette`, `render()` et `switchView()` mis à jour.
+
+**JDR — Corrections graphique séances dans le temps**
+- `jdr/js/chrono.js` : distribution des campagnes snappée au mois entier (1er→dernier jour) au lieu de fractions jour-précises depuis la date exacte de début.
+- `jdr/js/chrono.js` : remplissage des mois vides avec 0 pour une frise temporelle continue (évite que les mois sans séances soient absents de l'axe X).
+- `jdr/js/chrono.js` : labels de l'axe X en année complète (`oct. 2022` au lieu de `oct. 22`) pour éviter la confusion avec un numéro de jour.
