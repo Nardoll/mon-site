@@ -9,6 +9,8 @@
 > **Ne jamais push sans confirmation explicite de Tom.**
 > Netlify a atteint sa limite mensuelle de déploiements en une seule journée. Le site est désormais hébergé sur **Cloudflare Pages** (fonctionnel, même repo GitHub). Pour économiser les déploiements : regrouper les modifications en packs avant de push, et **toujours attendre le feu vert de Tom** avant tout `git push`.
 
+> **Mettre à jour ce README à chaque modification significative.** À la fin de chaque session de développement, Claude doit documenter les changements effectués dans la section "Historique des modifications" ci-dessous. C'est une consigne permanente à appliquer sans que Tom ait besoin de le rappeler.
+
 ---
 
 ## Contexte général
@@ -330,11 +332,24 @@ Nom · Type · Avancement · Créateur · Univers · Séances MJ · Format (IRL/
 **Vue Chronologie (`chrono.js`) :**
 - Axe vertical (haut = plus récent, bas = plus ancien)
 - **Lanes automatiques** : algo glouton (desc _startMs) — chaque projet occupe une colonne libre et la libère quand il se termine. Les lanes sont "induites" (invisibles), pas des colonnes marquées
-- **Campagnes / Mini Campagnes** : barres colorées de leur première à leur dernière date, nom du projet affiché sur la barre
+- **Campagnes / Mini Campagnes** : barres colorées de leur première à leur dernière date, nom du projet affiché sur la barre. Si la hauteur le permet (≥ 50 px), affiche également `N séances · X/mois` (densité de jeu calculée comme `nb_seances_mj / durée_en_mois`)
 - **One shots** : petites chips à chaque date de séance individuelle
 - **Marqueurs de mois** : lignes pointillées horizontales sur fond `var(--bg)`, label de mois en petit à gauche
 - **Tooltip au hover** : type, dates, satisfaction, participants
 - **Clic** → dispatch `CustomEvent('chrono-open')` → `archives.js` ouvre la fiche détail du projet
+- **Layout deux colonnes** : frise à gauche (scrollable, `max-width: 680px`), panneau de graphiques à droite (`position: sticky`)
+  - **Graphique 1 — Séances dans le temps** : histogramme bar chart avec toggle par mois / par an. Pour les one-shots : 1 séance à chaque date. Pour les campagnes : `nb_seances_mj` réparties uniformément entre la première et la dernière date (fraction proportionnelle par période).
+  - **Graphique 2 — Satisfaction dans le temps** : scatter plot chronologique. Pour les one-shots : 1 point par séance à la satisfaction du projet. Pour les campagnes : `nb_seances_mj` points répartis uniformément. Une courbe de tendance (régression linéaire) est ajoutée en violet avec un indicateur ↗/↘/→ dans l'en-tête.
+
+**Vue Recette Magique (`recette.js`) :**
+- Nouvel onglet "✨ Recette magique" dans la barre de vues
+- **Analyse de corrélation** entre la satisfaction et tous les facteurs disponibles :
+  - Variables numériques (`nb_seances_mj`, `nb_seances_joueurs`, durée en mois) → **corrélation de Pearson**
+  - Variables booléennes (YouTube, IRL, Online) → **corrélation point-bisériale**
+  - Variables catégorielles (type, créateur, participants, univers, système) → **corrélation point-bisériale** par valeur (chaque valeur = variable binaire)
+- Seuls les facteurs avec |r| ≥ 0,1 et au moins 2 projets dans chaque groupe sont affichés
+- Affiche : résumé des top facteurs positifs/négatifs + tableau complet avec barres visuelles centré sur zéro + explication de la méthodologie
+- Nécessite au moins 4 projets notés pour s'afficher
 
 **Ajouter/modifier** : formulaire modal complet
 **Supprimer** : bouton dans le formulaire d'édition uniquement
@@ -565,3 +580,17 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 - **`editReunionId` vs `currentReunionId`** (réunions.js) — deux variables distinctes pour éviter les conflits entre la fiche détail ouverte (`currentReunionId`) et le formulaire d'édition (`editReunionId`). Après la sauvegarde d'une édition, la fiche détail est rouverte avec `currentReunionId`.
 - **Auth JDR autonome** — la section JDR n'utilise pas le fichier `auth.js` du club de lecture. L'authentification est du JS inline dans `jdr/index.html` : même mécanique SHA-256/sessionStorage mais indépendante, avec SESSION_KEY `"jdr_auth"` et hash propre.
 - **Liens croisés entre pages** — les fiches livre (bibliothèque), membre et réunion sont interconnectées : la fiche livre affiche un encart réunion avec lien vers la fiche réunion ; la fiche réunion rend le livre et les participants cliquables vers leurs fiches respectives ; la fiche membre liste les réunions avec lien vers chacune. Toutes les pages supportent l'auto-ouverture via `?open=ID`.
+- **Chrono JDR — layout deux colonnes** : `.chrono-left` (frise, max 680px, scrollable) + `.chrono-right` (sticky, deux graphiques Chart.js). Les charts sont détruits/recréés via `chronoCharts` à chaque appel de `renderChrono`. L'histogramme et le scatter partagent les fonctions `computeSessionsBuckets` et `computeSatPoints` qui distribuent les séances des campagnes de façon uniforme entre première et dernière date.
+- **Recette magique — `recette.js`** : analyse purement frontend, aucune donnée n'est envoyée. Les corrélations sont calculées à chaque affichage de l'onglet à partir des données Firestore déjà chargées dans `allProjets`.
+
+---
+
+## Historique des modifications
+
+### 2026-05-23
+**JDR — Vue Chronologie améliorée + Onglet Recette Magique**
+- `jdr/js/chrono.js` : réécriture complète. Densité de séances (`N séances · X/mois`) affichée sur les barres de campagne si hauteur ≥ 50 px. Layout deux colonnes (frise + panneau de graphiques sticky). Ajout de `computeSessionsBuckets`, `computeSatPoints`, `linearRegression`, `buildSessionsChart`, `buildSatChart`.
+- `jdr/js/recette.js` : nouveau fichier. Onglet "✨ Recette Magique" — analyse de corrélation Pearson + point-bisériale entre satisfaction et tous les champs du projet. Affiche top facteurs positifs/négatifs + tableau complet + explication méthodologique.
+- `jdr/css/style.css` : ajout des classes `.chrono-layout`, `.chrono-left`, `.chrono-right`, `.chrono-chart-panel`, `.chrono-chart-header`, `.chrono-chart-title`, `.chrono-chart-canvas`, `.chrono-trend-ind`, `.ch-v-bar-stats`, et toutes les classes `.recette-*`.
+- `jdr/archives.html` : bouton "✨ Recette magique", div `#view-recette`, import `recette.js`.
+- `jdr/js/archives.js` : `ALL_VIEWS` étendu à `'recette'`, listener `btn-view-recette`, `render()` et `switchView()` mis à jour.

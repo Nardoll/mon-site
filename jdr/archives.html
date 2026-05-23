@@ -53,6 +53,7 @@
         <button class="view-btn" id="btn-view-table">☰ Tableau</button>
         <button class="view-btn" id="btn-view-stats">📊 Statistiques</button>
         <button class="view-btn" id="btn-view-chrono">📅 Chronologie</button>
+        <button class="view-btn" id="btn-view-recette">✨ Recette magique</button>
       </div>
       <span class="proj-count" id="proj-count"></span>
     </div>
@@ -60,8 +61,9 @@
 
   <div id="view-cards" class="proj-grid"></div>
 
-  <div id="view-stats"  class="hidden"></div>
-  <div id="view-chrono" class="hidden"></div>
+  <div id="view-stats"   class="hidden"></div>
+  <div id="view-chrono"  class="hidden"></div>
+  <div id="view-recette" class="hidden"></div>
 
   <div id="view-table" class="hidden">
     <table class="proj-table">
@@ -115,10 +117,12 @@
   import { requireAuth } from './js/auth.js';
   import { initNav }     from './js/nav.js';
   import { initArchives } from './js/archives.js';
-  import { renderStats }  from './js/stats.js';
-  import { renderChrono } from './js/chrono.js';
-  window.__renderStats  = renderStats;
-  window.__renderChrono = renderChrono;
+  import { renderStats }   from './js/stats.js';
+  import { renderChrono }  from './js/chrono.js';
+  import { renderRecette } from './js/recette.js';
+  window.__renderStats   = renderStats;
+  window.__renderChrono  = renderChrono;
+  window.__renderRecette = renderRecette;
   requireAuth(() => {
     document.getElementById('main-content').style.display = '';
     initNav('archives');

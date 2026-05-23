@@ -146,10 +146,11 @@ function setupListeners() {
     render();
   });
 
-  document.getElementById('btn-view-cards').addEventListener('click',  () => switchView('cards'));
-  document.getElementById('btn-view-table').addEventListener('click',  () => switchView('table'));
-  document.getElementById('btn-view-stats').addEventListener('click',  () => switchView('stats'));
-  document.getElementById('btn-view-chrono').addEventListener('click', () => switchView('chrono'));
+  document.getElementById('btn-view-cards').addEventListener('click',   () => switchView('cards'));
+  document.getElementById('btn-view-table').addEventListener('click',   () => switchView('table'));
+  document.getElementById('btn-view-stats').addEventListener('click',   () => switchView('stats'));
+  document.getElementById('btn-view-chrono').addEventListener('click',  () => switchView('chrono'));
+  document.getElementById('btn-view-recette').addEventListener('click', () => switchView('recette'));
   document.getElementById('btn-add').addEventListener('click', () => openForm(null));
 
   document.addEventListener('chrono-open', e => openDetail(e.detail.id));
@@ -175,7 +176,7 @@ function setupListeners() {
   });
 }
 
-const ALL_VIEWS = ['cards', 'table', 'stats', 'chrono'];
+const ALL_VIEWS = ['cards', 'table', 'stats', 'chrono', 'recette'];
 
 function switchView(view) {
   currentView = view;
@@ -183,7 +184,7 @@ function switchView(view) {
     document.getElementById(`btn-view-${v}`)?.classList.toggle('active', v === view);
     document.getElementById(`view-${v}`)?.classList.toggle('hidden', v !== view);
   });
-  const dataViews = view === 'stats' || view === 'chrono';
+  const dataViews = view === 'stats' || view === 'chrono' || view === 'recette';
   document.querySelector('.filter-bar')?.classList.toggle('hidden', dataViews);
   render();
 }
@@ -244,6 +245,9 @@ function render() {
   } else if (currentView === 'chrono') {
     document.getElementById('proj-count').textContent = `${allProjets.length} projet${allProjets.length !== 1 ? 's' : ''}`;
     window.__renderChrono?.(allProjets);
+  } else if (currentView === 'recette') {
+    document.getElementById('proj-count').textContent = `${allProjets.length} projet${allProjets.length !== 1 ? 's' : ''}`;
+    window.__renderRecette?.(allProjets);
   } else {
     document.getElementById('proj-count').textContent = `${list.length} projet${list.length !== 1 ? 's' : ''}`;
     if (currentView === 'cards') renderCards(list);
