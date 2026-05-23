@@ -207,6 +207,11 @@ function filteredSorted() {
     if (field === 'nom') { va = (va || '').toLowerCase(); vb = (vb || '').toLowerCase(); }
     else if (field === 'date_debut' || field === 'cree_le') { va = va?.seconds || 0; vb = vb?.seconds || 0; }
     else if (field === 'satisfaction') { va = va ?? -1; vb = vb ?? -1; }
+    else if (field === 'nb_seances_mj') { va = va ?? -1; vb = vb ?? -1; }
+    else if (field === 'dates_seances') {
+      const minSec = p => { const ds = p.dates_seances || []; return ds.length ? Math.min(...ds.map(ts => ts?.seconds || 0)) : (dir === 'asc' ? Infinity : -1); };
+      va = minSec(a); vb = minSec(b);
+    }
     if (va < vb) return dir === 'asc' ? -1 : 1;
     if (va > vb) return dir === 'asc' ? 1 : -1;
     return 0;
