@@ -25,6 +25,18 @@ function isOneShot(p) {
   return !t.includes('Campagne') && !t.includes('Mini Campagne');
 }
 
+// Normalise une entrée dates_seances (ancien format Timestamp ou nouveau { date, participants })
+function normalizeSession(entry) {
+  if (!entry) return null;
+  if (typeof entry.seconds === 'number' || typeof entry.toDate === 'function') {
+    return { date: tsToDate(entry), participants: [] };
+  }
+  if (entry.date) {
+    return { date: tsToDate(entry.date), participants: entry.participants || [] };
+  }
+  return null;
+}
+
 const DAY_H      = 3;              // px per day (vertical axis)
 const LANE_W     = 164;            // px — width of each lane column
 const LANE_GAP   = 8;             // px — gap between lanes
@@ -39,24 +51,31 @@ export function renderChrono(projets) {
   // Build flat list of displayable items
   const items = [];
   projets.forEach(p => {
-    const dates = (p.dates_seances || [])
-      .map(ts => tsToDate(ts)).filter(Boolean)
-      .sort((a, b) => a - b);
-    if (!dates.length) return;
+    const sessions = (p.dates_seances || [])
+      .map(normalizeSession)
+      .filter(s => s?.date)
+      .sort((a, b) => a.date - b.date);
+    if (!sessions.length) return;
 
     if (isOneShot(p)) {
-      dates.forEach(d => items.push({
-        id: p.id, nom: p.nom, type: p.type,
-        satisfaction: p.satisfaction, participants: p.participants,
-        _start: d, _end: d, _oneshot: true, _date: d,
-      }));
+      sessions.forEach(s => {
+        // Per-session participants, fallback to project participants
+        const sp = s.participants.length ? s.participants : (p.participants || []);
+        items.push({
+          id: p.id, nom: p.nom, type: p.type,
+          satisfaction: p.satisfaction, participants: p.participants,
+          _start: s.date, _end: s.date, _oneshot: true, _date: s.date,
+          _session_participants: sp,
+        });
+      });
     } else {
       items.push({
         id: p.id, nom: p.nom, type: p.type,
         satisfaction: p.satisfaction, participants: p.participants,
         nb_seances_mj: p.nb_seances_mj,
-        _start: dates[0], _end: dates[dates.length - 1],
-        _oneshot: false, _dates: dates,
+        _start: sessions[0].date, _end: sessions[sessions.length - 1].date,
+        _oneshot: false, _dates: sessions.map(s => s.date),
+        _sessions: sessions,
       });
     }
   });
@@ -94,8 +113,6 @@ export function renderChrono(projets) {
   }
 
   // ── Lane assignment (greedy, desc _startMs) ──────────────────────
-  // laneFloor[i] = minimum _startMs of items in lane i (oldest item's start)
-  // A new item fits in lane i if: item._endMs + GAP_MS <= laneFloor[i]
   items.sort((a, b) => b._startMs - a._startMs);
 
   const laneFloor = [];
@@ -148,11 +165,23 @@ export function renderChrono(projets) {
 
     let tip, sub;
     if (item._oneshot) {
-      tip = `<strong>${escH(item.nom)}</strong><br>📅 ${escH(fmt(item._date))}<br>🎲 ${escH(types)}<br>👤 ${escH(parts)}`;
+      const sp = (item._session_participants || []).join(', ') || '—';
+      tip = `<strong>${escH(item.nom)}</strong><br>📅 ${escH(fmt(item._date))}<br>🎲 ${escH(types)}<br>👤 ${escH(sp)}`;
       sub = escH(fmt(item._date));
     } else {
-      const datesStr = item._dates.map(d => fmt(d)).join(', ');
-      tip = `<strong>${escH(item.nom)}</strong><br>🎲 ${escH(types)}<br>📅 ${escH(datesStr)}<br>⭐ ${satStr}<br>👤 ${escH(parts)}`;
+      const hasSessP = (item._sessions || []).some(s => s.participants.length);
+      let datesStr;
+      if (hasSessP) {
+        const lines = (item._sessions || []).slice(0, 5).map(s => {
+          const sp = s.participants.length ? escH(s.participants.join(', ')) : escH(parts);
+          return `• ${escH(fmt(s.date))}: ${sp}`;
+        });
+        if ((item._sessions || []).length > 5) lines.push(`…+${(item._sessions || []).length - 5} séances`);
+        datesStr = lines.join('<br>');
+      } else {
+        datesStr = escH(item._dates.map(d => fmt(d)).join(', '));
+      }
+      tip = `<strong>${escH(item.nom)}</strong><br>🎲 ${escH(types)}<br>📅 ${datesStr}<br>⭐ ${satStr}<br>👤 ${escH(parts)}`;
       sub = `${escH(fmt(item._start))} — ${escH(fmt(item._end))}`;
     }
 

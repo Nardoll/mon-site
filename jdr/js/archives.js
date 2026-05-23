@@ -36,7 +36,7 @@ let filterType   = '';
 let currentView  = 'cards';
 let editId       = null;
 let currentDetailId = null;
-let formDates    = [];
+let formDates    = []; // { date: string, participants: string[] }[]
 let msRefs       = {};
 
 // ── Utilitaires ────────────────────────────────────────
@@ -63,6 +63,22 @@ function dateInputToTs(val) {
   if (!val) return null;
   const [y, m, d] = val.split('-').map(Number);
   return Timestamp.fromDate(new Date(y, m - 1, d));
+}
+
+// Normalise une entrée dates_seances (ancien format Timestamp ou nouveau { date, participants })
+function normalizeDateEntry(entry) {
+  if (!entry) return null;
+  if (typeof entry.seconds === 'number' || typeof entry.toDate === 'function') {
+    return { date: entry, participants: [] };
+  }
+  if (entry.date) {
+    return { date: entry.date, participants: entry.participants || [] };
+  }
+  return null;
+}
+
+function sessionDates(p) {
+  return (p.dates_seances || []).map(normalizeDateEntry).filter(Boolean);
 }
 
 function starsHTML(n) {
@@ -192,7 +208,7 @@ function filteredSorted() {
         p.irl    ? 'présentiel' : '',
         p.online ? 'online' : '',
         p.nb_seances_mj != null ? String(p.nb_seances_mj) : '',
-        ...(p.dates_seances || []).map(ts => tsToStr(ts)),
+        ...sessionDates(p).map(s => tsToStr(s.date)),
         p.commentaires,
       ];
       return tokens.some(t => (t || '').toLowerCase().includes(q));
@@ -209,7 +225,7 @@ function filteredSorted() {
     else if (field === 'satisfaction') { va = va ?? -1; vb = vb ?? -1; }
     else if (field === 'nb_seances_mj') { va = va ?? -1; vb = vb ?? -1; }
     else if (field === 'dates_seances') {
-      const minSec = p => { const ds = p.dates_seances || []; return ds.length ? Math.min(...ds.map(ts => ts?.seconds || 0)) : (dir === 'asc' ? Infinity : -1); };
+      const minSec = p => { const ss = sessionDates(p); return ss.length ? Math.min(...ss.map(s => s.date?.seconds || 0)) : (dir === 'asc' ? Infinity : -1); };
       va = minSec(a); vb = minSec(b);
     }
     if (va < vb) return dir === 'asc' ? -1 : 1;
@@ -270,7 +286,8 @@ function projCardHTML(p) {
 }
 
 function datesCell(p) {
-  const dates = (p.dates_seances || []).map(ts => tsToStr(ts)).filter(Boolean);
+  const sessions = sessionDates(p);
+  const dates = sessions.map(s => tsToStr(s.date)).filter(Boolean);
   if (!dates.length) return '—';
   if (dates.length === 1) return escH(dates[0]);
   const rest = dates.slice(1);
@@ -381,8 +398,17 @@ function detailHTML(p) {
     html += row('Participants', chips(p.participants));
     const fmt = [p.irl && 'IRL', p.online && 'Online'].filter(Boolean).join(' + ');
     if (fmt) html += row('Format', escH(fmt));
-    if ((p.dates_seances || []).length) {
-      html += row('Dates des séances', p.dates_seances.map(d => tsToStr(d)).join('<br>'));
+
+    const sessions = sessionDates(p);
+    if (sessions.length) {
+      const sessionsHtml = sessions.map(s => {
+        const dateStr = escH(tsToStr(s.date));
+        const partsStr = s.participants.length
+          ? ` <span class="detail-sess-parts">— ${escH(s.participants.join(', '))}</span>`
+          : '';
+        return `${dateStr}${partsStr}`;
+      }).join('<br>');
+      html += row('Séances', sessionsHtml);
     }
     html += `</div>`;
   }
@@ -400,7 +426,12 @@ function detailHTML(p) {
 function openForm(id) {
   editId = id;
   const p = id ? allProjets.find(x => x.id === id) : null;
-  formDates = (p?.dates_seances || []).map(ts => tsToInput(ts));
+
+  // Parsing backward-compatible : ancien format Timestamp ou nouveau { date, participants }
+  formDates = (p?.dates_seances || []).map(entry => {
+    const n = normalizeDateEntry(entry);
+    return n ? { date: tsToInput(n.date), participants: n.participants } : { date: '', participants: [] };
+  });
 
   document.getElementById('form-title').textContent = id ? 'Modifier le projet' : 'Nouveau projet';
   document.getElementById('form-body').innerHTML = buildFormHTML(p);
@@ -413,7 +444,8 @@ function openForm(id) {
   initMs('ms-systeme',      discovered.systeme,      p?.systeme || []);
   initMs('ms-univers',      discovered.univers,      p?.univers || []);
   initMs('ms-emplacement',  discovered.emplacement,  p?.emplacement || []);
-  initMs('ms-participants', discovered.participants, p?.participants || []);
+  // onChange: re-render dates pour mettre à jour les cases participants
+  initMs('ms-participants', discovered.participants, p?.participants || [], renderDates);
 
   // Stars
   initStarInput(p?.satisfaction ?? 0);
@@ -427,7 +459,7 @@ function openForm(id) {
   });
 
   document.getElementById('f-add-date').addEventListener('click', () => {
-    formDates.push('');
+    formDates.push({ date: '', participants: [] });
     renderDates();
   });
 
@@ -608,7 +640,10 @@ async function handleSave() {
     data.participants        = msRefs['ms-participants']?.getValue() || [];
     data.irl                 = document.getElementById('f-irl').checked;
     data.online              = document.getElementById('f-online').checked;
-    data.dates_seances       = formDates.filter(d => d).map(d => dateInputToTs(d));
+    // Nouveau format : { date: Timestamp, participants: string[] }
+    data.dates_seances = formDates
+      .filter(e => e.date)
+      .map(e => ({ date: dateInputToTs(e.date), participants: e.participants || [] }));
   } else {
     data.satisfaction = null; data.nb_seances_mj = null;
     data.nb_seances_joueurs = null; data.participants = [];
@@ -621,10 +656,10 @@ async function handleSave() {
 }
 
 // ── Multi-select init helper ───────────────────────────
-function initMs(elId, opts, current) {
+function initMs(elId, opts, current, onChange) {
   const el = document.getElementById(elId);
   if (!el) return;
-  msRefs[elId] = MultiSelect(el, opts, current);
+  msRefs[elId] = MultiSelect(el, opts, current, onChange);
 }
 
 // ── Star input interactif ──────────────────────────────
@@ -657,25 +692,59 @@ function initStarInput(initialVal) {
   drawStars();
 }
 
-// ── Liste de dates dynamique ───────────────────────────
+// ── Liste de dates dynamique avec participants par séance ──
 function renderDates() {
   const list = document.getElementById('f-dates-list');
   if (!list) return;
+
+  const availParts = msRefs['ms-participants']?.getValue() || [];
   list.innerHTML = '';
-  formDates.forEach((d, i) => {
+
+  formDates.forEach((entry, i) => {
     const row = document.createElement('div');
     row.className = 'date-row';
+
+    // Cases à cocher participants pour cette séance
+    let partsHtml = '';
+    if (availParts.length) {
+      const boxes = availParts.map(name => {
+        const checked = entry.participants.includes(name) ? ' checked' : '';
+        return `<label class="dpart-label"><input type="checkbox" class="dpart-cb" data-name="${escH(name)}"${checked}> ${escH(name)}</label>`;
+      }).join('');
+      partsHtml = `<div class="date-row-parts">${boxes}</div>`;
+    }
+
     row.innerHTML = `
-      <input type="date" class="form-input date-input" value="${escH(d)}">
-      <button type="button" class="btn-rm-date">×</button>`;
-    row.querySelector('.date-input').addEventListener('change', e => { formDates[i] = e.target.value; });
-    row.querySelector('.btn-rm-date').addEventListener('click', () => { formDates.splice(i, 1); renderDates(); });
+      <div class="date-row-top">
+        <input type="date" class="form-input date-input" value="${escH(entry.date)}">
+        <button type="button" class="btn-rm-date">×</button>
+      </div>
+      ${partsHtml}`;
+
+    row.querySelector('.date-input').addEventListener('change', e => {
+      formDates[i].date = e.target.value;
+    });
+    row.querySelector('.btn-rm-date').addEventListener('click', () => {
+      formDates.splice(i, 1);
+      renderDates();
+    });
+    row.querySelectorAll('.dpart-cb').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const name = cb.dataset.name;
+        if (cb.checked) {
+          if (!formDates[i].participants.includes(name)) formDates[i].participants.push(name);
+        } else {
+          formDates[i].participants = formDates[i].participants.filter(n => n !== name);
+        }
+      });
+    });
+
     list.appendChild(row);
   });
 }
 
 // ── Composant MultiSelect ──────────────────────────────
-function MultiSelect(container, opts, current) {
+function MultiSelect(container, opts, current, onChange) {
   let selected = [...current];
   let options  = [...new Set(opts)];
   let open     = false;
@@ -701,6 +770,7 @@ function MultiSelect(container, opts, current) {
         e.preventDefault();
         selected = selected.filter(s => s !== btn.dataset.v);
         drawChips();
+        onChange?.();
       });
     });
   }
@@ -733,6 +803,7 @@ function MultiSelect(container, opts, current) {
         input.value = '';
         drawChips();
         drawDropdown();
+        onChange?.();
       });
     });
 
@@ -745,6 +816,7 @@ function MultiSelect(container, opts, current) {
         input.value = '';
         drawChips();
         drawDropdown();
+        onChange?.();
       });
     });
 
@@ -762,7 +834,7 @@ function MultiSelect(container, opts, current) {
   input.addEventListener('keydown', e => {
     const query = input.value;
     if (e.key === 'Backspace' && !query && selected.length) {
-      selected.pop(); drawChips(); return;
+      selected.pop(); drawChips(); onChange?.(); return;
     }
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -774,6 +846,7 @@ function MultiSelect(container, opts, current) {
       input.value = '';
       drawChips();
       drawDropdown();
+      onChange?.();
     }
   });
 
