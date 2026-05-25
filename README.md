@@ -380,13 +380,21 @@ Nom · Type · Avancement · Créateur · Univers · Séances MJ · Format (IRL/
 
 #### Outils (`outils.html`)
 
-Grille de 3 outils MJ, chacun s'ouvrant dans le même onglet :
+Grille de 4 outils MJ, chacun s'ouvrant dans le même onglet :
 
 | Outil | Campagne | Fichier |
 |-------|----------|---------|
 | Générateur de PNJ | Les Enfants de Makryon | `Outils/generateur-pnj-makryon_1.html` |
 | Outils du MJ (PNJ + chapeau + détective) | Le Tribunal des Dragons | `Outils/tribunal-dragons-outils_1.html` |
 | La Roue du Paradoxe | Chroniques d'Aria | `Outils/paradoxe_temporel_4.html` |
+| Roue Personnalisable | Tous univers | `Outils/roue-personnalisable_1.html` |
+
+**Roue Personnalisable — fonctionnement :**
+- Même mécanique que la Roue du Paradoxe (canvas, animation, pointeur, carte résultat)
+- Onglet **✏️ Personnaliser** : édition des paramètres (titre, sous-titre, campagne, texte bouton) et gestion complète des segments (ajout, modification, suppression, réordonnancement ↑↓)
+- Chaque segment : zone, titre, signe (+/-/~/?) → couleur auto, couleur manuelle, description, choix optionnels (label + indication secrète), secret MJ (caché, révélé au clic)
+- Données persistées en `localStorage` clé `roue_custom_v1`
+- Bouton "Réinitialiser" pour revenir aux données par défaut (4 segments exemples)
 
 ---
 
@@ -586,6 +594,11 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 ---
 
 ## Historique des modifications
+
+### 2026-05-25
+**JDR — Roue Personnalisable**
+- `jdr/Outils/roue-personnalisable_1.html` : nouvel outil. Roue interactive identique à la Roue du Paradoxe, avec un onglet ✏️ Personnaliser permettant de gérer les segments à la main (ajout, édition, suppression, réordonnancement), modifier le titre/sous-titre/campagne/bouton, et réinitialiser. Données stockées en `localStorage`.
+- `jdr/outils.html` : ajout de la carte "🎡 Roue Personnalisable" (4e outil).
 
 ### 2026-05-23
 **JDR — Vue Chronologie améliorée + Onglet Recette Magique**
