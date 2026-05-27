@@ -60,7 +60,7 @@ function buildEvents() {
   });
 
   allVotes.forEach(v => {
-    const d = new Date(v.annee, v.mois - 1, 15);
+    const d = v.date ? toDate(v.date) : new Date(v.annee, v.mois - 1, 15);
     events.push({ date: d, type: v.livre_elu ? "elu" : "vote", size: "lg", data: v });
   });
 

@@ -96,12 +96,13 @@ export async function getVoteById(id) {
   return d.exists() ? { id: d.id, ...d.data() } : null;
 }
 
-export async function addVote({ mois, annee, resultats, livre_elu }) {
+export async function addVote({ mois, annee, resultats, livre_elu, date }) {
   const ref = await addDoc(collection(db, "votes"), {
     mois: Number(mois),
     annee: Number(annee),
     resultats,
     livre_elu: livre_elu || null,
+    date: date ? Timestamp.fromDate(new Date(date)) : serverTimestamp(),
     cree_le: serverTimestamp()
   });
 
@@ -121,7 +122,9 @@ export async function addVote({ mois, annee, resultats, livre_elu }) {
 }
 
 export async function updateVote(id, data) {
-  return updateDoc(doc(db, "votes", id), data);
+  const d = { ...data };
+  if (typeof d.date === "string") d.date = d.date ? Timestamp.fromDate(new Date(d.date)) : null;
+  return updateDoc(doc(db, "votes", id), d);
 }
 
 // ── Notes de lecture ───────────────────────────────────────────────

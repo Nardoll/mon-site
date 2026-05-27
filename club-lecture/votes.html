@@ -39,7 +39,7 @@
       <div class="modal-header">
         <h2 id="detail-title">Vote</h2>
         <div style="display:flex;gap:.5rem;align-items:center">
-          <button class="btn btn-secondary btn-sm" id="detail-edit">✏️ Modifier le mois</button>
+          <button class="btn btn-secondary btn-sm" id="detail-edit">✏️ Modifier</button>
           <button class="modal-close" id="detail-close">✕</button>
         </div>
       </div>
@@ -47,11 +47,11 @@
     </div>
   </div>
 
-  <!-- Modal modifier mois -->
+  <!-- Modal modifier vote -->
   <div class="overlay hidden" id="edit-overlay">
     <div class="modal">
       <div class="modal-header">
-        <h2>Modifier le mois</h2>
+        <h2>Modifier le vote</h2>
         <button class="modal-close" id="edit-close">✕</button>
       </div>
       <div class="form-row">
@@ -70,6 +70,10 @@
           <label>Année</label>
           <input type="number" id="e-annee" min="2020" max="2099">
         </div>
+      </div>
+      <div class="form-group">
+        <label>Date du vote <span style="font-size:.75rem;color:var(--muted)">(pour la frise chronologique)</span></label>
+        <input type="date" id="e-date">
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="edit-cancel">Annuler</button>

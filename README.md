@@ -687,6 +687,13 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-05-27 (suite 3)
+**Votes — champ date pour la frise chronologique**
+- `club-lecture/js/db.js` : `addVote()` accepte maintenant un paramètre `date` — stocké en Timestamp si fourni, sinon `serverTimestamp()` (= date de clôture automatique). `updateVote()` convertit les strings `date` en Timestamp (même pattern que `updateReunion`).
+- `club-lecture/votes.html` : champ "Date du vote" (`#e-date`) ajouté dans la modale d'édition. Bouton renommé "✏️ Modifier".
+- `club-lecture/js/votes.js` : le handler `detail-edit` pré-remplit `e-date` depuis `vote.date`. Le handler `edit-save` envoie la date dans `updateVote`.
+- `club-lecture/js/accueil.js` : `buildEvents` utilise `v.date` en priorité pour positionner les votes dans la frise ; fallback = 15 du mois si le champ est absent (votes anciens).
+
 ### 2026-05-27 (suite 2)
 **Accueil — Frise chronologique : réunions**
 - `club-lecture/js/accueil.js` : les réunions sont maintenant affichées dans la frise. Passées (`statut === "passee"`) : icône 📝, point bleu (`#5b9cf6`), bordure bleue pleine, sous-titre = mois + nb de participants. À venir (`statut === "prevue"`) : icône 📅, point gris, bordure bleue en pointillés + opacité 80%, sous-titre = "À venir". Date utilisée : `reunion.date` si renseignée, sinon le 15 du mois. Clic → `reunions.html?open=ID`.

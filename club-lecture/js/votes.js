@@ -241,6 +241,12 @@ document.getElementById("detail-edit").addEventListener("click", () => {
   if (!vote) return;
   document.getElementById("e-mois").value = vote.mois;
   document.getElementById("e-annee").value = vote.annee;
+  if (vote.date) {
+    const d = vote.date.toDate ? vote.date.toDate() : new Date(vote.date.seconds * 1000);
+    document.getElementById("e-date").value = d.toISOString().split("T")[0];
+  } else {
+    document.getElementById("e-date").value = "";
+  }
   document.getElementById("edit-overlay").classList.remove("hidden");
 });
 ["edit-close", "edit-cancel"].forEach(id => {
@@ -250,9 +256,11 @@ document.getElementById("edit-save").addEventListener("click", async () => {
   if (!currentVoteId) return;
   const mois = Number(document.getElementById("e-mois").value);
   const annee = Number(document.getElementById("e-annee").value);
+  const dateVal = document.getElementById("e-date").value;
+  const updateData = { mois, annee, date: dateVal || null };
   try {
-    await updateVote(currentVoteId, { mois, annee });
-    showToast("Mois mis à jour !", "success");
+    await updateVote(currentVoteId, updateData);
+    showToast("Vote mis à jour !", "success");
     document.getElementById("edit-overlay").classList.add("hidden");
     votes = await getVotes();
     renderList();
