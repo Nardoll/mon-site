@@ -627,11 +627,15 @@ async function renderProgressionChart() {
 
   if (chartInstance) chartInstance.destroy();
 
+  const monthStart = new Date(currentVote.annee, currentVote.mois - 1, 1);
+  const monthEnd   = new Date(currentVote.annee, currentVote.mois, 0, 23, 59, 59);
+
   chartInstance = new Chart(canvas, {
     type: "line",
     data: { datasets },
     options: {
       responsive: true,
+      animation: { duration: 900, easing: "easeInOutQuart" },
       interaction: { mode: "index", intersect: false },
       plugins: {
         legend: { labels: { color: textClr, font: { size: 12 } } },
@@ -644,9 +648,11 @@ async function renderProgressionChart() {
       scales: {
         x: {
           type: "time",
+          min: monthStart,
+          max: monthEnd,
           time: {
-            tooltipFormat: "d MMM yyyy, HH:mm",
-            displayFormats: { hour: "d MMM HH:mm", day: "d MMM", week: "d MMM", month: "MMM yyyy" }
+            tooltipFormat: "d MMM, HH'h'",
+            displayFormats: { hour: "d MMM HH'h'", day: "d MMM", week: "d MMM", month: "MMM yyyy" }
           },
           grid: { color: borderClr },
           ticks: { color: mutedClr, maxTicksLimit: 8 }
