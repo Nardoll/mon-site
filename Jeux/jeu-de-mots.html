@@ -15,9 +15,7 @@
       --grey: #6c757d;
       --border: #dee2e6;
     }
-
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -27,7 +25,6 @@
       align-items: center;
       padding: 20px;
     }
-
     .top-bar {
       width: 100%;
       max-width: 600px;
@@ -35,7 +32,6 @@
       align-items: center;
       margin-bottom: 16px;
     }
-
     .back-link {
       color: rgba(255,255,255,.8);
       text-decoration: none;
@@ -46,7 +42,6 @@
       transition: color .15s;
     }
     .back-link:hover { color: #fff; }
-
     .container {
       background: white;
       border-radius: 20px;
@@ -54,30 +49,19 @@
       max-width: 600px;
       width: 100%;
       padding: 36px 40px;
-      max-height: 88vh;
+      max-height: 90vh;
       overflow-y: auto;
     }
-
-    h1 {
-      text-align: center;
-      color: var(--accent);
-      margin-bottom: 28px;
-      font-size: 1.9em;
-    }
-
-    /* ── Sections visibility ── */
-    .setup-section, .names-section, .difficulty-section,
-    .game-section, .history-section { display: none; }
-    .setup-section { display: block; }
+    h1 { text-align: center; color: var(--accent); margin-bottom: 28px; font-size: 1.9em; }
+    .section-h2 { text-align: center; color: #495057; margin-bottom: 16px; font-size: 1.15em; }
+    .section-desc { text-align: center; color: var(--grey); font-size: .88em; margin-bottom: 20px; line-height: 1.5; }
 
     /* ── Player count ── */
-    .player-count-selector { text-align: center; margin-bottom: 24px; }
-    .player-count-selector h2 { color: #495057; margin-bottom: 16px; font-size: 1.2em; }
     .player-count-buttons {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       gap: 8px;
-      margin-top: 16px;
+      margin: 16px 0 24px;
     }
     .player-count-btn {
       background: #f8f9fa;
@@ -85,28 +69,23 @@
       padding: 14px;
       border-radius: 10px;
       cursor: pointer;
-      transition: all .25s;
+      transition: all .2s;
       font-size: 1.15em;
       font-weight: bold;
       color: #495057;
+      text-align: center;
     }
     .player-count-btn:hover { border-color: var(--accent); transform: translateY(-1px); }
     .player-count-btn.selected { background: var(--accent); color: white; border-color: var(--accent); }
 
-    /* ── Names section ── */
+    /* ── Names ── */
     .names-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin-bottom: 24px;
     }
-    .name-input-wrap { position: relative; }
-    .name-label {
-      font-size: .76em;
-      color: #6c757d;
-      margin-bottom: 4px;
-      font-weight: 600;
-    }
+    .name-label { font-size: .76em; color: #6c757d; margin-bottom: 4px; font-weight: 600; }
     .name-input {
       width: 100%;
       padding: 9px 12px;
@@ -120,48 +99,20 @@
     .name-input:focus { outline: none; border-color: var(--accent); }
 
     /* ── Difficulty ── */
-    .difficulty-selector { display: flex; gap: 12px; margin-bottom: 24px; flex-direction: column; }
+    .difficulty-selector { display: flex; gap: 10px; flex-direction: column; margin-bottom: 24px; }
     .difficulty-btn {
       background: #f8f9fa;
       border: 3px solid var(--border);
-      padding: 18px;
+      padding: 16px 18px;
       border-radius: 14px;
       cursor: pointer;
-      transition: all .25s;
+      transition: all .2s;
       text-align: left;
     }
-    .difficulty-btn:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102,126,234,.3); }
+    .difficulty-btn:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102,126,234,.2); }
     .difficulty-btn.selected { background: var(--accent); color: white; border-color: var(--accent); }
-    .difficulty-title { font-size: 1.2em; font-weight: bold; margin-bottom: 6px; }
-    .difficulty-desc { font-size: .88em; opacity: .8; }
-
-    /* ── Player zone ── */
-    .player-zone {
-      background: #f8f9fa;
-      border-radius: 14px;
-      padding: 22px;
-      margin-bottom: 18px;
-      border: 3px solid var(--border);
-    }
-    .player-zone.active { border-color: var(--accent); box-shadow: 0 0 20px rgba(102,126,234,.3); }
-    .player-zone.completed { border-color: var(--green); opacity: .7; }
-    .player-title { font-size: 1.4em; font-weight: bold; margin-bottom: 12px; color: #495057; }
-
-    .word-display {
-      background: white;
-      border: 2px dashed var(--border);
-      border-radius: 10px;
-      padding: 28px;
-      margin: 12px 0;
-      min-height: 76px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.9em;
-      font-weight: bold;
-      color: var(--accent);
-    }
-    .word-hidden { color: #adb5bd; font-style: italic; }
+    .difficulty-title { font-size: 1.1em; font-weight: bold; margin-bottom: 4px; }
+    .difficulty-desc { font-size: .86em; opacity: .75; }
 
     /* ── Buttons ── */
     button {
@@ -172,59 +123,174 @@
       border-radius: 10px;
       font-size: 1em;
       cursor: pointer;
-      transition: all .25s;
+      transition: all .2s;
       width: 100%;
       margin-top: 8px;
       font-family: inherit;
     }
     button:hover { background: var(--accent-dark); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102,126,234,.4); }
     button:disabled { background: #adb5bd; cursor: not-allowed; transform: none; box-shadow: none; }
-    .btn-green { background: var(--green); } .btn-green:hover { background: #218838; }
-    .btn-orange { background: var(--orange); color: #000; } .btn-orange:hover { background: #e0a800; }
-    .btn-teal { background: var(--teal); } .btn-teal:hover { background: #138496; }
-    .btn-grey { background: var(--grey); } .btn-grey:hover { background: #5a6268; }
-
-    .nav-buttons { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-teal  { background: var(--teal); }  .btn-teal:hover  { background: #138496; }
+    .btn-orange{ background: var(--orange); color: #000; } .btn-orange:hover { background: #e0a800; }
+    .btn-grey  { background: var(--grey); }  .btn-grey:hover  { background: #5a6268; }
+    .nav-buttons { display: flex; gap: 10px; margin-top: 12px; }
     .nav-buttons button { flex: 1; }
 
-    /* ── Current game info ── */
-    .current-info { text-align: center; color: var(--grey); font-size: .88em; margin-bottom: 16px; }
-    .progress-bar { background: #e9ecef; border-radius: 10px; height: 10px; margin-bottom: 18px; overflow: hidden; }
-    .progress-fill { background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 100%; transition: width .3s; }
-
-    /* ── History ── */
-    .history-list { margin-top: 18px; }
-    .history-item {
-      background: #f8f9fa;
-      border-radius: 10px;
-      padding: 18px;
-      margin-bottom: 12px;
-      border-left: 5px solid var(--accent);
-    }
-    .history-item h3 { color: #495057; margin-bottom: 8px; font-size: .97em; }
-    .history-words {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    /* ── Party view ── */
+    .party-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       gap: 10px;
-      margin-top: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
     }
-    .history-word { background: white; padding: 12px; border-radius: 8px; text-align: center; }
-    .history-word-label { font-size: .82em; color: var(--grey); margin-bottom: 4px; }
-    .history-word-text { font-size: 1em; font-weight: bold; color: var(--accent); }
-    .no-history { text-align: center; color: var(--grey); padding: 36px; font-style: italic; }
-    .history-loading { text-align: center; color: var(--grey); padding: 24px; }
+    .btn-copy-link {
+      background: white;
+      color: var(--accent);
+      border: 2px solid var(--accent);
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: .84em;
+      cursor: pointer;
+      font-family: inherit;
+      width: auto;
+      margin-top: 0;
+      transition: all .2s;
+      white-space: nowrap;
+    }
+    .btn-copy-link:hover { background: var(--accent); color: white; transform: none; box-shadow: none; }
+    .party-player-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+      margin: 18px 0;
+    }
+    .party-player-card {
+      background: #f8f9fa;
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      text-align: center;
+    }
+    .party-player-name {
+      font-size: .95em;
+      font-weight: 700;
+      color: #495057;
+      margin-bottom: 10px;
+    }
+    .party-word-container {
+      position: relative;
+      background: white;
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 20px 10px;
+      cursor: pointer;
+      user-select: none;
+      min-height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color .2s;
+      overflow: hidden;
+    }
+    .party-word-container:hover { border-color: var(--accent); }
+    .party-word-text {
+      font-size: 1.3em;
+      font-weight: bold;
+      color: var(--accent);
+      filter: blur(7px);
+      transition: filter .3s;
+      word-break: break-word;
+    }
+    .party-word-text.revealed { filter: none; }
+    .party-word-hint {
+      position: absolute;
+      font-size: .78em;
+      color: #888;
+      pointer-events: none;
+      background: white;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .party-word-hint.gone { display: none; }
 
     /* ── Badges ── */
     .difficulty-badge {
-      display: inline-block; padding: 4px 12px; border-radius: 20px;
-      font-size: .75em; font-weight: bold; margin-left: 8px;
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: .82em;
+      font-weight: bold;
     }
-    .badge-facile { background: var(--green); color: white; }
-    .badge-difficile { background: var(--orange); color: #000; }
-    .badge-expert { background: var(--red); color: white; }
+    .badge-facile   { background: var(--green);  color: white; }
+    .badge-difficile{ background: var(--orange); color: #000; }
+    .badge-expert   { background: var(--red);    color: white; }
 
-    /* ── Section title ── */
-    .section-h2 { text-align: center; color: #495057; margin-bottom: 18px; font-size: 1.2em; }
+    /* ── History ── */
+    .history-list { margin-top: 14px; }
+    .history-item {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 12px;
+      border-left: 5px solid var(--accent);
+    }
+    .history-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 2px;
+    }
+    .history-item h3 { color: #495057; font-size: .95em; }
+    .history-link { font-size: .8em; color: var(--accent); text-decoration: none; white-space: nowrap; }
+    .history-link:hover { text-decoration: underline; }
+    .history-words {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .history-word { background: white; padding: 10px; border-radius: 8px; text-align: center; }
+    .history-word-label { font-size: .8em; color: var(--grey); margin-bottom: 4px; }
+    .history-word-text {
+      font-size: .97em;
+      font-weight: bold;
+      color: var(--accent);
+      filter: blur(5px);
+      cursor: pointer;
+      user-select: none;
+      transition: filter .25s;
+      word-break: break-word;
+    }
+    .history-word-text.revealed { filter: none; cursor: default; }
+    .history-word-hint { font-size: .7em; color: #bbb; margin-top: 2px; }
+    .no-history { text-align: center; color: var(--grey); padding: 36px; font-style: italic; }
+    .history-loading { text-align: center; color: var(--grey); padding: 24px; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: #333;
+      color: white;
+      padding: 10px 22px;
+      border-radius: 20px;
+      font-size: .9em;
+      opacity: 0;
+      transition: all .3s;
+      pointer-events: none;
+      z-index: 999;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Generic messages ── */
+    .load-msg   { text-align: center; color: var(--grey); padding: 3rem 1rem; }
+    .error-msg  { text-align: center; color: var(--red);  padding: 2rem 1rem; }
   </style>
 </head>
 <body>
@@ -232,69 +298,62 @@
   <div class="top-bar">
     <a href="/Jeux/" class="back-link">← Jeux</a>
   </div>
+  <div class="toast" id="toast"></div>
 
   <div class="container">
     <h1>🎯 Jeu de Mots</h1>
 
-    <!-- Étape 1 : nombre de joueurs -->
-    <div class="setup-section" id="setupSection">
-      <div class="player-count-selector">
-        <h2>Combien de joueurs ?</h2>
-        <div class="player-count-buttons" id="playerCountButtons"></div>
-      </div>
+    <!-- ── Setup ── -->
+    <div id="setupSection">
+      <h2 class="section-h2">Combien de joueurs ?</h2>
+      <div class="player-count-buttons" id="playerCountButtons"></div>
+
       <div id="namesWrapper" style="display:none">
-        <h2 class="section-h2" style="margin-top:20px">Prénoms des joueurs <span style="font-size:.75em;color:#adb5bd;font-weight:400">(optionnel)</span></h2>
+        <h2 class="section-h2">Prénoms des joueurs</h2>
         <div class="names-grid" id="namesGrid"></div>
-      </div>
-      <button id="nextToDifficultyBtn" disabled>Suivant ➡️</button>
-    </div>
 
-    <!-- Étape 2 : difficulté -->
-    <div class="difficulty-section" id="difficultySection">
-      <h2 class="section-h2">Choisissez la difficulté</h2>
-      <div class="difficulty-selector">
-        <div class="difficulty-btn" id="diff-facile">
-          <div class="difficulty-title">😊 Facile</div>
-          <div class="difficulty-desc">Mots courants, faciles à amener en conversation</div>
-        </div>
-        <div class="difficulty-btn" id="diff-difficile">
-          <div class="difficulty-title">🤔 Difficile</div>
-          <div class="difficulty-desc">Mots plus pointus et spécifiques</div>
-        </div>
-        <div class="difficulty-btn" id="diff-expert">
-          <div class="difficulty-title">🔥 Expert</div>
-          <div class="difficulty-desc">Mots très techniques et obscurs</div>
+        <h2 class="section-h2">Difficulté</h2>
+        <div class="difficulty-selector" id="difficultySelector">
+          <div class="difficulty-btn" data-diff="facile">
+            <div class="difficulty-title">😊 Facile</div>
+            <div class="difficulty-desc">Mots courants, faciles à amener en conversation</div>
+          </div>
+          <div class="difficulty-btn" data-diff="difficile">
+            <div class="difficulty-title">🤔 Difficile</div>
+            <div class="difficulty-desc">Mots plus pointus et spécifiques</div>
+          </div>
+          <div class="difficulty-btn" data-diff="expert">
+            <div class="difficulty-title">🔥 Expert</div>
+            <div class="difficulty-desc">Mots très techniques et obscurs</div>
+          </div>
         </div>
       </div>
-      <button id="startBtn" disabled>▶️ Commencer la partie</button>
-    </div>
 
-    <!-- Section de jeu -->
-    <div class="game-section" id="gameSection">
-      <div class="current-info" id="currentInfo"></div>
-      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-      <div id="playersContainer"></div>
-      <button class="btn-green" id="endGameBtn" disabled>✅ Terminer la partie</button>
+      <button id="createPartyBtn" disabled>🎲 Créer la partie</button>
       <div class="nav-buttons">
-        <button class="btn-teal" id="btnShowHistory">📜 Historique</button>
-        <button class="btn-orange" id="btnNewGame">🔄 Nouvelle partie</button>
+        <button class="btn-teal" id="btnShowHistorySetup">📜 Historique</button>
       </div>
     </div>
 
-    <!-- Historique -->
-    <div class="history-section" id="historySection">
+    <!-- ── Partie ── -->
+    <div id="partySection" style="display:none">
+      <div id="partySectionContent"></div>
+    </div>
+
+    <!-- ── Historique ── -->
+    <div id="historySection" style="display:none">
       <h2 class="section-h2">📜 Historique des parties</h2>
       <div class="history-list" id="historyList"></div>
-      <button class="btn-grey" id="btnBackToGame">← Retour au jeu</button>
+      <button class="btn-grey" id="btnBackFromHistory">← Retour</button>
     </div>
   </div>
 
   <script type="module">
-    import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit, serverTimestamp }
+    import { collection, addDoc, getDoc, getDocs, doc, query, orderBy, limit, serverTimestamp }
       from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { db } from "./firebase-config.js";
 
-    // ── Mots ──────────────────────────────────────────────────────────
+    // ── Mots ─────────────────────────────────────────────────────────────
     const WORDS = {
       facile: [
         "chat","chien","café","chocolat","vacances","film","musique","pizza",
@@ -402,30 +461,33 @@
       ]
     };
 
-    // ── État ──────────────────────────────────────────────────────────
-    let state = {
-      playerCount: 0,
-      playerNames: [],
-      difficulty: null,
-      players: [],
-      currentPlayerIndex: 0,
-    };
-    let selectedDifficulty = null;
-
     const BADGES = {
-      facile:   '<span class="difficulty-badge badge-facile">😊 Facile</span>',
-      difficile:'<span class="difficulty-badge badge-difficile">🤔 Difficile</span>',
-      expert:   '<span class="difficulty-badge badge-expert">🔥 Expert</span>',
+      facile:    '<span class="difficulty-badge badge-facile">😊 Facile</span>',
+      difficile: '<span class="difficulty-badge badge-difficile">🤔 Difficile</span>',
+      expert:    '<span class="difficulty-badge badge-expert">🔥 Expert</span>',
     };
 
-    // ── Sections ──────────────────────────────────────────────────────
+    // ── State ─────────────────────────────────────────────────────────────
+    let selectedCount = 0;
+    let selectedDiff  = null;
+    let historyFrom   = "setup";
+
+    // ── Init ─────────────────────────────────────────────────────────────
+    const partieId = new URLSearchParams(window.location.search).get("partie");
+    if (partieId) {
+      loadParty(partieId);
+    } else {
+      show("setupSection");
+    }
+
+    // ── Show section ──────────────────────────────────────────────────────
     function show(id) {
-      ["setupSection","difficultySection","gameSection","historySection"].forEach(s => {
+      ["setupSection","partySection","historySection"].forEach(s => {
         document.getElementById(s).style.display = s === id ? "block" : "none";
       });
     }
 
-    // ── Étape 1 : nombre de joueurs + prénoms ─────────────────────────
+    // ── Setup : player count ──────────────────────────────────────────────
     const countContainer = document.getElementById("playerCountButtons");
     for (let i = 1; i <= 10; i++) {
       const btn = document.createElement("div");
@@ -434,151 +496,154 @@
       btn.addEventListener("click", () => {
         document.querySelectorAll(".player-count-btn").forEach(b => b.classList.remove("selected"));
         btn.classList.add("selected");
-        state.playerCount = i;
-        document.getElementById("nextToDifficultyBtn").disabled = false;
+        selectedCount = i;
         buildNamesGrid(i);
+        checkReady();
       });
       countContainer.appendChild(btn);
     }
 
     function buildNamesGrid(count) {
       const wrapper = document.getElementById("namesWrapper");
-      const grid = document.getElementById("namesGrid");
+      const grid    = document.getElementById("namesGrid");
       wrapper.style.display = "block";
       grid.innerHTML = "";
       for (let i = 0; i < count; i++) {
         grid.innerHTML += `
-          <div class="name-input-wrap">
+          <div>
             <div class="name-label">Joueur ${i + 1}</div>
             <input class="name-input" type="text" placeholder="Prénom…" maxlength="24" id="name-${i}">
           </div>`;
       }
     }
 
-    document.getElementById("nextToDifficultyBtn").addEventListener("click", () => {
-      if (!state.playerCount) return;
-      state.playerNames = [];
-      for (let i = 0; i < state.playerCount; i++) {
-        const val = (document.getElementById(`name-${i}`)?.value || "").trim();
-        state.playerNames.push(val || `Joueur ${i + 1}`);
-      }
-      show("difficultySection");
-    });
-
-    // ── Étape 2 : difficulté ──────────────────────────────────────────
-    ["facile","difficile","expert"].forEach(d => {
-      document.getElementById(`diff-${d}`).addEventListener("click", () => {
-        document.querySelectorAll(".difficulty-btn").forEach(b => b.classList.remove("selected"));
-        document.getElementById(`diff-${d}`).classList.add("selected");
-        selectedDifficulty = d;
-        document.getElementById("startBtn").disabled = false;
-      });
-    });
-
-    document.getElementById("startBtn").addEventListener("click", () => {
-      if (!selectedDifficulty) return;
-      state.difficulty = selectedDifficulty;
-      initGame();
-      show("gameSection");
-    });
-
-    // ── Jeu ───────────────────────────────────────────────────────────
-    function initGame() {
-      state.players = [];
-      state.currentPlayerIndex = 0;
-      const words = [...WORDS[state.difficulty]].sort(() => Math.random() - .5);
-      for (let i = 0; i < state.playerCount; i++) {
-        state.players.push({ name: state.playerNames[i], word: words[i], revealed: false, hidden: false });
-      }
-      renderPlayers();
-      updateInfo();
-      document.getElementById("endGameBtn").disabled = true;
-    }
-
-    function renderPlayers() {
-      const container = document.getElementById("playersContainer");
-      container.innerHTML = "";
-      state.players.forEach((p, i) => {
-        const div = document.createElement("div");
-        div.className = "player-zone" + (i === 0 ? " active" : "");
-        div.id = `zone-${i}`;
-        div.innerHTML = `
-          <div class="player-title">👤 ${escHtml(p.name)}</div>
-          <div class="word-display" id="word-${i}">
-            <span class="word-hidden">${i === 0 ? "Appuyer pour révéler" : "En attente…"}</span>
-          </div>
-          <button id="reveal-${i}" ${i !== 0 ? "disabled" : ""}>🎲 Révéler mon mot</button>
-          <button id="hide-${i}" style="display:none;background:#6c757d">👁️ Cacher le mot</button>`;
-        container.appendChild(div);
-        document.getElementById(`reveal-${i}`).addEventListener("click", () => reveal(i));
-        document.getElementById(`hide-${i}`).addEventListener("click", () => hide(i));
-      });
-    }
-
-    function reveal(i) {
-      if (state.players[i].revealed) return;
-      state.players[i].revealed = true;
-      document.getElementById(`word-${i}`).innerHTML = `<span>${escHtml(state.players[i].word)}</span>`;
-      document.getElementById(`reveal-${i}`).style.display = "none";
-      document.getElementById(`hide-${i}`).style.display = "block";
-    }
-
-    function hide(i) {
-      state.players[i].hidden = true;
-      document.getElementById(`word-${i}`).innerHTML = '<span class="word-hidden">Mot caché</span>';
-      document.getElementById(`hide-${i}`).style.display = "none";
-      document.getElementById(`zone-${i}`).classList.remove("active");
-      document.getElementById(`zone-${i}`).classList.add("completed");
-      const next = i + 1;
-      if (next < state.playerCount) {
-        document.getElementById(`zone-${next}`).classList.add("active");
-        document.getElementById(`reveal-${next}`).disabled = false;
-        state.currentPlayerIndex = next;
-      } else {
-        document.getElementById("endGameBtn").disabled = false;
-      }
-      updateInfo();
-    }
-
-    function updateInfo() {
-      const done = state.players.filter(p => p.hidden).length;
-      const pct  = (done / state.playerCount) * 100;
-      document.getElementById("currentInfo").innerHTML =
-        `${state.playerCount} joueur${state.playerCount > 1 ? "s" : ""} ${BADGES[state.difficulty]}`;
-      document.getElementById("progressFill").style.width = pct + "%";
-    }
-
-    // ── Fin de partie ─────────────────────────────────────────────────
-    document.getElementById("endGameBtn").addEventListener("click", async () => {
-      if (!state.players.every(p => p.hidden)) return;
-      try {
-        await addDoc(collection(db, "jeu_mots_parties"), {
-          date: serverTimestamp(),
-          difficulte: state.difficulty,
-          joueurs: state.players.map(p => ({ nom: p.name, mot: p.word })),
-        });
-      } catch (e) { console.warn("Firebase save error:", e); }
-      alert("🎉 Partie terminée ! Résultats ajoutés à l'historique.");
-      newGame();
-    });
-
-    document.getElementById("btnNewGame").addEventListener("click", newGame);
-    document.getElementById("btnShowHistory").addEventListener("click", showHistory);
-    document.getElementById("btnBackToGame").addEventListener("click", () => show("gameSection"));
-
-    function newGame() {
-      state = { playerCount: 0, playerNames: [], difficulty: null, players: [], currentPlayerIndex: 0 };
-      document.querySelectorAll(".player-count-btn").forEach(b => b.classList.remove("selected"));
+    // ── Setup : difficulty ────────────────────────────────────────────────
+    document.getElementById("difficultySelector").addEventListener("click", e => {
+      const btn = e.target.closest(".difficulty-btn");
+      if (!btn) return;
       document.querySelectorAll(".difficulty-btn").forEach(b => b.classList.remove("selected"));
-      selectedDifficulty = null;
-      document.getElementById("nextToDifficultyBtn").disabled = true;
-      document.getElementById("startBtn").disabled = true;
-      document.getElementById("namesWrapper").style.display = "none";
-      show("setupSection");
+      btn.classList.add("selected");
+      selectedDiff = btn.dataset.diff;
+      checkReady();
+    });
+
+    function checkReady() {
+      document.getElementById("createPartyBtn").disabled = !(selectedCount > 0 && selectedDiff);
     }
 
-    // ── Historique (Firebase) ─────────────────────────────────────────
-    async function showHistory() {
+    // ── Create party ──────────────────────────────────────────────────────
+    document.getElementById("createPartyBtn").addEventListener("click", async () => {
+      if (!selectedCount || !selectedDiff) return;
+      const names = [];
+      for (let i = 0; i < selectedCount; i++) {
+        const val = (document.getElementById(`name-${i}`)?.value || "").trim();
+        names.push(val || `Joueur ${i + 1}`);
+      }
+      const wordPool = [...WORDS[selectedDiff]].sort(() => Math.random() - .5);
+      const joueurs  = names.map((nom, i) => ({ nom, mot: wordPool[i] }));
+
+      const btn = document.getElementById("createPartyBtn");
+      btn.disabled  = true;
+      btn.textContent = "Création…";
+      try {
+        const ref = await addDoc(collection(db, "jeu_mots_parties"), {
+          date: serverTimestamp(),
+          difficulte: selectedDiff,
+          joueurs,
+        });
+        window.location.href = `jeu-de-mots.html?partie=${ref.id}`;
+      } catch (e) {
+        console.error(e);
+        btn.disabled  = false;
+        btn.textContent = "🎲 Créer la partie";
+        showToast("Erreur lors de la création. Réessaie.");
+      }
+    });
+
+    // ── Load & render party ───────────────────────────────────────────────
+    async function loadParty(id) {
+      show("partySection");
+      document.getElementById("partySectionContent").innerHTML =
+        '<div class="load-msg">Chargement de la partie…</div>';
+      try {
+        const snap = await getDoc(doc(db, "jeu_mots_parties", id));
+        if (!snap.exists()) {
+          document.getElementById("partySectionContent").innerHTML =
+            '<div class="error-msg">Partie introuvable.</div>' +
+            '<button class="btn-grey" onclick="location.href=\'jeu-de-mots.html\'" style="margin-top:12px">← Nouvelle partie</button>';
+          return;
+        }
+        renderParty(snap.data());
+      } catch (e) {
+        document.getElementById("partySectionContent").innerHTML =
+          '<div class="error-msg">Erreur de chargement.</div>';
+        console.error(e);
+      }
+    }
+
+    function renderParty(data) {
+      const joueurs = data.joueurs || [];
+      const diff    = data.difficulte || "facile";
+      const cards   = joueurs.map((j, i) => `
+        <div class="party-player-card">
+          <div class="party-player-name">👤 ${escHtml(j.nom)}</div>
+          <div class="party-word-container" id="pwc-${i}" onclick="toggleWord(${i})">
+            <span class="party-word-text" id="pwt-${i}">${escHtml(j.mot)}</span>
+            <span class="party-word-hint" id="pwh-${i}">👁️ Révéler</span>
+          </div>
+        </div>`).join("");
+
+      document.getElementById("partySectionContent").innerHTML = `
+        <div class="party-header">
+          <div>${BADGES[diff] ?? ""}</div>
+          <button class="btn-copy-link" id="copyLinkBtn">🔗 Partager le lien</button>
+        </div>
+        <p class="section-desc">Chaque joueur clique sur sa case pour révéler son mot.<br>Partagez le lien pour jouer sur plusieurs appareils.</p>
+        <div class="party-player-grid">${cards}</div>
+        <div class="nav-buttons">
+          <button class="btn-teal" onclick="openHistoryFromParty()">📜 Historique</button>
+          <button class="btn-orange" onclick="location.href='jeu-de-mots.html'">🔄 Nouvelle partie</button>
+        </div>`;
+
+      document.getElementById("copyLinkBtn").addEventListener("click", () => {
+        const url = window.location.href;
+        navigator.clipboard.writeText(url)
+          .then(() => showToast("Lien copié !"))
+          .catch(() => prompt("Copie ce lien :", url));
+      });
+    }
+
+    window.toggleWord = function(i) {
+      const text = document.getElementById(`pwt-${i}`);
+      const hint = document.getElementById(`pwh-${i}`);
+      if (text.classList.contains("revealed")) {
+        text.classList.remove("revealed");
+        hint.classList.remove("gone");
+        hint.textContent = "👁️ Révéler";
+      } else {
+        text.classList.add("revealed");
+        hint.classList.add("gone");
+      }
+    };
+
+    // ── History ───────────────────────────────────────────────────────────
+    window.openHistoryFromParty = function() {
+      historyFrom = "party";
+      openHistory();
+    };
+    document.getElementById("btnShowHistorySetup").addEventListener("click", () => {
+      historyFrom = "setup";
+      openHistory();
+    });
+    document.getElementById("btnBackFromHistory").addEventListener("click", () => {
+      if (historyFrom === "party") {
+        show("partySection");
+      } else {
+        show("setupSection");
+      }
+    });
+
+    async function openHistory() {
       show("historySection");
       const list = document.getElementById("historyList");
       list.innerHTML = '<div class="history-loading">Chargement…</div>';
@@ -589,32 +654,52 @@
           limit(30)
         ));
         if (snap.empty) {
-          list.innerHTML = '<div class="no-history">Aucune partie enregistrée pour l\'instant.</div>';
+          list.innerHTML = '<div class="no-history">Aucune partie enregistrée.</div>';
           return;
         }
-        list.innerHTML = snap.docs.map((doc, idx) => {
-          const g = doc.data();
+        list.innerHTML = snap.docs.map((docSnap, idx) => {
+          const g  = docSnap.data();
+          const id = docSnap.id;
           const dateObj = g.date?.toDate ? g.date.toDate() : new Date();
-          const dateStr = dateObj.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-          const nbJoueurs = g.joueurs?.length ?? 0;
+          const dateStr = dateObj.toLocaleDateString("fr-FR", {
+            day: "2-digit", month: "long", year: "numeric",
+            hour: "2-digit", minute: "2-digit"
+          });
+          const nb = g.joueurs?.length ?? 0;
           const wordsHTML = (g.joueurs || []).map(j => `
             <div class="history-word">
               <div class="history-word-label">${escHtml(j.nom)}</div>
-              <div class="history-word-text">${escHtml(j.mot)}</div>
+              <div class="history-word-text" onclick="revealHistoryWord(this)">${escHtml(j.mot)}</div>
+              <div class="history-word-hint">cliquer pour voir</div>
             </div>`).join("");
           return `
             <div class="history-item">
-              <h3>Partie #${snap.docs.length - idx} — ${dateStr}</h3>
-              <p style="color:var(--grey);margin-top:4px;font-size:.88em">
-                ${nbJoueurs} joueur${nbJoueurs > 1 ? "s" : ""} ${BADGES[g.difficulte] ?? ""}
-              </p>
+              <div class="history-item-header">
+                <h3>${dateStr} ${BADGES[g.difficulte] ?? ""}</h3>
+                <a href="jeu-de-mots.html?partie=${id}" class="history-link">Ouvrir →</a>
+              </div>
+              <p style="color:var(--grey);font-size:.83em;margin-top:2px">${nb} joueur${nb > 1 ? "s" : ""}</p>
               <div class="history-words">${wordsHTML}</div>
             </div>`;
         }).join("");
       } catch (e) {
-        list.innerHTML = '<div class="no-history">Erreur de chargement de l\'historique.</div>';
+        list.innerHTML = '<div class="no-history">Erreur de chargement.</div>';
         console.error(e);
       }
+    }
+
+    window.revealHistoryWord = function(el) {
+      el.classList.add("revealed");
+      const hint = el.nextElementSibling;
+      if (hint) hint.style.display = "none";
+    };
+
+    // ── Utils ─────────────────────────────────────────────────────────────
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 2200);
     }
 
     function escHtml(s) {

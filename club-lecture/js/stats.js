@@ -107,11 +107,12 @@ async function computeStats() {
     ? Math.round(participationParMembre.reduce((s, m) => s + m.taux, 0) / participationParMembre.length)
     : 0;
 
-  // Évolution : livres lus par mois (cumulatif)
+  // Évolution : nombre de lecteurs ayant terminé le livre, par mois
   const parMois = {};
   elusVotes.sort((a, b) => a.annee !== b.annee ? a.annee - b.annee : a.mois - b.mois).forEach(v => {
+    if (!v.livre_elu) return;
     const key = `${v.annee}-${String(v.mois).padStart(2, "0")}`;
-    parMois[key] = (parMois[key] || 0) + 1;
+    parMois[key] = membersWhoFinishedBook(v.livre_elu, allStatuts, reunions).size;
   });
 
   return {
@@ -253,7 +254,7 @@ async function renderEvolution(s) {
     data: {
       labels,
       datasets: [{
-        label: "Livres lus",
+        label: "Lecteurs",
         data: values,
         backgroundColor: accentClr + "88",
         borderColor: accentClr,
@@ -266,7 +267,7 @@ async function renderEvolution(s) {
       animation: { duration: 800, easing: "easeInOutQuart" },
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} livre${ctx.parsed.y > 1 ? "s" : ""}` } }
+        tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} lecteur${ctx.parsed.y > 1 ? "s" : ""}` } }
       },
       scales: {
         x: { grid: { color: borderClr }, ticks: { color: mutedClr } },
