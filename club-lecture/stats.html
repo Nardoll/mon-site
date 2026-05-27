@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Statistiques — Club de lecture</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main class="main">
+    <div class="page-header">
+      <h1>Statistiques</h1>
+    </div>
+
+    <!-- KPIs -->
+    <div class="stats-kpi-grid" id="kpi-grid">
+      <div class="loading">Chargement…</div>
+    </div>
+
+    <!-- Ligne 2 : note moyenne + participation -->
+    <div class="stats-row-2" id="stats-row-2" style="display:none">
+
+      <div class="card">
+        <div class="card-title">⭐ Note moyenne du club</div>
+        <div id="note-moyenne-content"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🗳️ Participation aux votes</div>
+        <div id="participation-content"></div>
+      </div>
+
+    </div>
+
+    <!-- Membres actifs -->
+    <div class="card" id="card-membres-actifs" style="display:none;margin-bottom:1.5rem">
+      <div class="card-title">🏆 Membres les plus actifs</div>
+      <div id="membres-actifs-content"></div>
+    </div>
+
+    <!-- Évolution dans le temps -->
+    <div class="card" id="card-evolution" style="display:none;margin-bottom:2.5rem">
+      <div class="card-title">📅 Évolution du club dans le temps</div>
+      <canvas id="chart-evolution" style="max-height:220px"></canvas>
+    </div>
+
+  </main>
+
+  <script type="module" src="js/nav.js"></script>
+  <script type="module" src="js/stats.js"></script>
+</body>
+</html>

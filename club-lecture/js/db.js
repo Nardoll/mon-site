@@ -43,7 +43,7 @@ export async function getLivreById(id) {
   return d.exists() ? { id: d.id, ...d.data() } : null;
 }
 
-export async function addLivre({ titre, auteur, annee, propose_par, date_proposition, statut = "en_proposition" }) {
+export async function addLivre({ titre, auteur, annee, propose_par, date_proposition, statut = "en_proposition", nb_pages }) {
   return addDoc(collection(db, "livres"), {
     titre,
     auteur: auteur || "",
@@ -53,6 +53,7 @@ export async function addLivre({ titre, auteur, annee, propose_par, date_proposi
       ? Timestamp.fromDate(new Date(date_proposition))
       : serverTimestamp(),
     statut,
+    nb_pages: nb_pages ? Number(nb_pages) : null,
     cree_le: serverTimestamp()
   });
 }
@@ -61,13 +62,14 @@ export async function updateLivre(id, data) {
   return updateDoc(doc(db, "livres", id), data);
 }
 
-export async function updateLivreInfos(id, { titre, auteur, annee, propose_par, date_proposition }) {
+export async function updateLivreInfos(id, { titre, auteur, annee, propose_par, date_proposition, nb_pages }) {
   return updateDoc(doc(db, "livres", id), {
     titre,
     auteur: auteur || "",
     annee: annee ? Number(annee) : null,
     propose_par: propose_par || "",
     date_proposition: Timestamp.fromDate(new Date(date_proposition)),
+    nb_pages: nb_pages ? Number(nb_pages) : null,
   });
 }
 
@@ -271,6 +273,18 @@ export async function upsertStatutLecture({ membre_id, livre_id, statut, page_ac
     return updateDoc(doc(db, "statuts_lecture", existing.docs[0].id), data);
   }
   return addDoc(collection(db, "statuts_lecture"), { membre_id, livre_id, ...data });
+}
+
+// ── Stats — lectures globales ─────────────────────────────────────
+
+export async function getAllStatutsLecture() {
+  const s = await getDocs(collection(db, "statuts_lecture"));
+  return snap(s);
+}
+
+export async function getAllCommentaires() {
+  const s = await getDocs(collection(db, "commentaires_lecture"));
+  return snap(s);
 }
 
 // ── Progression de lecture (historique) ───────────────────────────

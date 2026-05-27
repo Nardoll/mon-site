@@ -261,10 +261,11 @@ document.getElementById("propose-save").addEventListener("click", async () => {
       annee: document.getElementById("p-annee").value,
       propose_par,
       date_proposition: document.getElementById("p-date").value,
+      nb_pages: document.getElementById("p-nb-pages").value,
     });
     showToast("Livre proposé !", "success");
     document.getElementById("propose-overlay").classList.add("hidden");
-    ["p-titre", "p-auteur", "p-annee"].forEach(id => document.getElementById(id).value = "");
+    ["p-titre", "p-auteur", "p-annee", "p-nb-pages"].forEach(id => document.getElementById(id).value = "");
     livres = await getLivres();
     if (viewMode === "table") renderTable(); else renderVisual();
   } catch (e) { showToast("Erreur : " + e.message, "error"); }
@@ -373,6 +374,7 @@ async function openFiche(id) {
       <dt>Proposé par</dt><dd>${nomMembre(livre.propose_par)}</dd>
       <dt>Date</dt><dd>${formatDate(livre.date_proposition)}</dd>
       <dt>Statut</dt><dd><span class="badge badge-${st.css}">${st.label}</span></dd>
+      <dt>Pages</dt><dd>${livre.nb_pages ? livre.nb_pages + " p." : "—"}</dd>
     </dl>
     ${avancementsHTML}
     <div class="divider"></div>
@@ -415,9 +417,15 @@ function showFicheEditForm(livre) {
       <label>Proposé par</label>
       <select id="edit-l-membre">${membresOptions}</select>
     </div>
-    <div class="form-group">
-      <label>Date de proposition</label>
-      <input type="date" id="edit-l-date">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Date de proposition</label>
+        <input type="date" id="edit-l-date">
+      </div>
+      <div class="form-group">
+        <label>Nb de pages</label>
+        <input type="number" id="edit-l-nb-pages" min="1" placeholder="optionnel">
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" id="edit-l-cancel">Annuler</button>
@@ -428,6 +436,7 @@ function showFicheEditForm(livre) {
   document.getElementById("edit-l-auteur").value = livre.auteur || "";
   document.getElementById("edit-l-annee").value = livre.annee || "";
   document.getElementById("edit-l-membre").value = livre.propose_par || "";
+  document.getElementById("edit-l-nb-pages").value = livre.nb_pages || "";
   if (livre.date_proposition) {
     document.getElementById("edit-l-date").value = new Date(livre.date_proposition.seconds * 1000).toISOString().split("T")[0];
   }
@@ -444,6 +453,7 @@ function showFicheEditForm(livre) {
         annee: document.getElementById("edit-l-annee").value,
         propose_par: document.getElementById("edit-l-membre").value,
         date_proposition: dateVal,
+        nb_pages: document.getElementById("edit-l-nb-pages").value,
       });
       showToast("Livre modifié !", "success");
       livres = await getLivres();

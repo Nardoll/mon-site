@@ -20,6 +20,7 @@ Site **personnel et privé** de Tom. Multi-sections indépendantes. La page d'ac
 **Sections existantes :**
 - `/club-lecture/` — Fonctionnel et en développement actif
 - `/jdr/` — Page d'accueil active, protégée par mot de passe, en cours de développement
+- `/Jeux/` — Section jeux en ligne, **accès libre** (pas de mot de passe)
 - `/recettes/` — Supprimée de l'accueil public (dossier conservé mais non lié)
 
 ---
@@ -46,7 +47,7 @@ Site **personnel et privé** de Tom. Multi-sections indépendantes. La page d'ac
 
 ```
 Mon Site/
-├── index.html                   Page d'accueil publique (hero + 2 cartes sections actives)
+├── index.html                   Page d'accueil publique (hero + 3 cartes sections actives)
 ├── netlify.toml                 Config redirections (héritage — Cloudflare Pages utilisé)
 ├── README.md                    Ce fichier
 │
@@ -57,6 +58,7 @@ Mon Site/
 │   ├── membres.html             Page Membres
 │   ├── commentaires.html        Page Commentaires de lecture (par livre)
 │   ├── reunions.html            Page Réunions
+│   ├── stats.html               Page Statistiques du club
 │   ├── firebase-config.js       Initialisation Firebase + export `db`
 │   ├── css/
 │   │   └── style.css            Tous les styles (dark theme, sidebar, composants)
@@ -70,7 +72,8 @@ Mon Site/
 │       ├── votes.js             Logique page Votes
 │       ├── membres.js           Logique page Membres
 │       ├── commentaires.js      Logique page Commentaires de lecture
-│       └── reunions.js          Logique page Réunions
+│       ├── reunions.js          Logique page Réunions
+│       └── stats.js             Logique page Statistiques
 │
 ├── jdr/
 │   ├── index.html               Page d'accueil JDR (bienvenue + liens Archives/Outils)
@@ -89,6 +92,14 @@ Mon Site/
 │       ├── generateur-pnj-makryon_1.html     Générateur PNJ — Les Enfants de Makryon
 │       ├── tribunal-dragons-outils_1.html    Outils MJ — Le Tribunal des Dragons (3 onglets)
 │       └── paradoxe_temporel_4.html          Roue du Paradoxe — Chroniques d'Aria
+├── Jeux/
+│   ├── index.html               Page d'accueil de la section Jeux (liste des jeux)
+│   ├── jeu-de-mots.html         Jeu de mots multijoueur (avec noms de joueurs + historique partagé)
+│   ├── firebase-config.js       Initialisation Firebase + export `db` (même projet mon-site-e253f)
+│   ├── css/
+│   │   └── style.css            Styles Jeux (thème indigo #667eea, header simple, cartes jeux)
+│   └── jeu_mots_multi_1.html    Version originale locale (conservée, non liée)
+│
 └── recettes/
     └── index.html               Placeholder non lié (retiré de l'accueil public)
 ```
@@ -100,9 +111,10 @@ Mon Site/
 **`index.html` (racine)** — Page visuelle de présentation du site.
 
 - **Hero** : pill "🔒 Accès privé", titre du site, courte description
-- **2 cartes sections** en grille (`repeat(2, 1fr)`, `max-width: 580px`) :
+- **3 cartes sections** en grille (`repeat(auto-fill, minmax(250px, 1fr))`, `max-width: 860px`) :
   - **Club de lecture** → lien `href="/club-lecture/"`, accent orange `#e8a44a`
   - **Jeux de rôle** → lien `href="/jdr/"`, accent rose `#cf6679`
+  - **Jeux** → lien `href="/Jeux/"`, accent indigo `#667eea`, badge "✨ Accès libre"
 - **Effets hover** sur les cartes : lift, glow coloré, ligne accent en haut, flèche `→` apparaît
 - Chaque carte a ses propres variables CSS `--card-accent` et `--card-glow`
 - Pas de JS, pas de mot de passe — page entièrement publique et statique
@@ -233,6 +245,24 @@ Page de gestion des réunions du club. Chaque réunion correspond à une séance
 - **Auto-remplissage du livre** : quand le mois/année change dans le formulaire, `updateLivreDisplay()` cherche le vote correspondant dans la collection `votes` et affiche le livre élu.
 - **Liens croisés** : dans la fiche détail, le titre du livre est cliquable → `bibliotheque.html?open=LIVRE_ID` ; les noms des participants (dans la dl *et* dans le tableau de notes finales) sont cliquables → `membres.html?open=MEMBRE_ID`.
 - **Auto-ouverture** : si l'URL contient `?open=REUNION_ID`, la fiche détail s'ouvre automatiquement au chargement.
+
+#### Statistiques (`stats.html` + `stats.js`)
+
+Dashboard de statistiques globales du club. Protégé par mot de passe (même mécanisme que les autres pages).
+
+**KPIs (4 cartes en grille) :**
+- **Livres lus par le club** — nombre de livres élus distincts (un vote avec `livre_elu`)
+- **Lectures cumulées des membres** — somme des membres ayant terminé chaque livre élu (statut `termine` dans `statuts_lecture` OU note > 0 dans `reunions.notes_finales`)
+- **Pages lues par le club** — somme des `nb_pages` des livres élus (affiche `—` si aucun `nb_pages` renseigné)
+- **Pages lues cumulées** — `nb_pages × nb_membres_ayant_terminé` pour chaque livre élu (affiche `—` si aucun `nb_pages`)
+
+**Section "Note moyenne du club"** — note moyenne de toutes les `notes_finales` de toutes les réunions, avec une distribution en barres horizontales pour les notes 1–10.
+
+**Section "Participation aux votes"** — barres horizontales par membre (nb votes participés / nb votes total, en %). Taux moyen affiché en en-tête.
+
+**Section "Membres les plus actifs"** — tableau classant les membres par score composite (`livres×3 + votes×2 + commentaires`). Podium 🥇🥈🥉 sur les 3 premiers.
+
+**Section "Évolution dans le temps"** — histogramme Chart.js (lazy-loaded) : barres mensuelles représentant le nombre de livres lus chaque mois.
 
 #### Commentaires de lecture (`commentaires.html` + `commentaires.js`)
 
@@ -399,6 +429,42 @@ Grille de 4 outils MJ, chacun s'ouvrant dans le même onglet :
 
 ---
 
+## Section Jeux (`/Jeux/`)
+
+### Accès / Sécurité
+
+**Pas de mot de passe.** Section entièrement publique, accessible depuis la page d'accueil.
+
+### Design
+
+- Thème sombre, accent indigo `#667eea`
+- Header simple (`<header class="jeux-header">`) avec titre + lien "← Accueil du site" — **pas de sidebar**
+- Grille de cartes jeux sur la page d'accueil
+
+### Pages
+
+#### Accueil Jeux (`index.html`)
+
+Page d'accueil listant les jeux disponibles sous forme de grille de cartes. Actuellement : une carte "Jeu de Mots".
+
+#### Jeu de Mots (`jeu-de-mots.html`)
+
+Jeu de déduction multijoueur (mots à faire deviner) avec historique partagé via Firebase.
+
+**Flux de jeu :**
+1. **Sélection du nombre de joueurs** (2–6) → champs de saisie des noms apparaissent
+2. **Saisie des noms** → bouton "Suivant →"
+3. **Choix de la difficulté** (Facile / Normal / Difficile / Expert) → la partie commence
+4. **Partie** : mots à deviner, scores, tours
+5. **Fin de partie** : résultats + sauvegarde automatique dans `jeu_mots_parties` avec noms des joueurs
+
+**Historique :**
+- Chargé depuis Firestore (`jeu_mots_parties`, 30 dernières parties, triées par date desc)
+- Commun à tous les appareils / tous les joueurs
+- Affiche : date, difficulté, noms + mots de chaque joueur
+
+---
+
 ## Firebase — Projet `mon-site-e253f`
 
 **Console :** `console.firebase.google.com` → projet `mon-site-e253f`  
@@ -425,9 +491,11 @@ Grille de 4 outils MJ, chacun s'ouvrant dans le même onglet :
 | `statut` | string | `en_proposition` · `elu` · `refuse` |
 | `progression_unite` | string \| null | Unité de suivi (ex: `pages`, `chapitres`) |
 | `progression_total` | number \| null | Total de l'unité (ex: `300`) |
+| `nb_pages` | number \| null | Nombre de pages du livre (optionnel, alimenté depuis la fiche ou le formulaire de proposition) |
 
 > **Attention :** dans l'UI, `refuse` s'affiche toujours "Éliminé" (jamais "Refusé").  
-> `progression_unite` et `progression_total` sont configurables depuis l'accueil (livre du mois) **et** depuis la page commentaires (livres avec statut `elu`).
+> `progression_unite` et `progression_total` sont configurables depuis l'accueil (livre du mois) **et** depuis la page commentaires (livres avec statut `elu`).  
+> `nb_pages` alimente les KPIs "pages lues" de la page Statistiques.
 
 #### `votes`
 | Champ | Type | Description |
@@ -512,6 +580,15 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 > Les valeurs multi-select sont des arrays de strings. Les nouvelles options créées par l'utilisateur dans le formulaire sont sauvegardées en base et réapparaissent automatiquement dans les futurs formulaires (discovery depuis Firestore + PRESETS).
 
+#### `jeu_mots_parties`
+| Champ | Type | Description |
+|-------|------|-------------|
+| `date` | Timestamp | Date et heure de la partie (serverTimestamp) |
+| `difficulte` | string | `facile` · `normal` · `difficile` · `expert` |
+| `joueurs` | array | `[{ nom: string, mot: string }, …]` — un objet par joueur |
+
+> Partagé entre tous les appareils. Utilisé par `Jeux/jeu-de-mots.html` pour afficher l'historique commun. Les 30 dernières parties sont chargées (`orderBy("date", "desc"), limit(30)`).
+
 #### `progression_lecture`
 | Champ | Type | Description |
 |-------|------|-------------|
@@ -568,12 +645,15 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 | Club de lecture — Membres | `/club-lecture/membres.html` |
 | Club de lecture — Commentaires | `/club-lecture/commentaires.html?livre=LIVRE_ID` |
 | Club de lecture — Réunions | `/club-lecture/reunions.html` |
+| Club de lecture — Statistiques | `/club-lecture/stats.html` |
 | JDR — Accueil | `/jdr/` |
 | JDR — Archives | `/jdr/archives.html` |
 | JDR — Outils | `/jdr/outils.html` |
 | JDR — Outil Makryon | `/jdr/Outils/generateur-pnj-makryon_1.html` |
 | JDR — Outil Tribunal | `/jdr/Outils/tribunal-dragons-outils_1.html` |
 | JDR — Outil Aria | `/jdr/Outils/paradoxe_temporel_4.html` |
+| Jeux — Accueil | `/Jeux/` |
+| Jeux — Jeu de Mots | `/Jeux/jeu-de-mots.html` |
 
 ---
 
@@ -608,6 +688,20 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 ## Historique des modifications
 
 ### 2026-05-27
+**Nouvelle section Jeux + Club de lecture Stats + nb_pages**
+- `index.html` : ajout de la 3e carte "Jeux" (accent indigo `#667eea`, badge "✨ Accès libre"). Grille passée de `repeat(2, 1fr)` à `repeat(auto-fill, minmax(250px, 1fr))` avec `max-width: 860px`.
+- `Jeux/firebase-config.js` : nouveau fichier, même projet Firebase `mon-site-e253f`.
+- `Jeux/css/style.css` : nouveau fichier, thème indigo, header simple, cartes jeux.
+- `Jeux/index.html` : page d'accueil Jeux, une carte "Jeu de Mots".
+- `Jeux/jeu-de-mots.html` : jeu multijoueur adapté — saisie des noms de joueurs avant la partie, sauvegarde automatique dans Firestore (`jeu_mots_parties`) avec noms + mots, historique partagé chargé depuis Firebase.
+- `club-lecture/js/db.js` : ajout `nb_pages` dans `addLivre()` et `updateLivreInfos()`. Nouvelles fonctions `getAllStatutsLecture()` et `getAllCommentaires()` pour la page stats.
+- `club-lecture/js/nav.js` : ajout du lien "📊 Statistiques" dans la sidebar.
+- `club-lecture/bibliotheque.html` : champ "Nb de pages" (optionnel) dans le modal de proposition et dans le formulaire d'édition.
+- `club-lecture/js/bibliotheque.js` : lecture/écriture de `nb_pages` dans toutes les formes (proposition, édition, fiche détail).
+- `club-lecture/stats.html` : nouvelle page Statistiques (KPIs, note moyenne, participation, membres actifs, évolution).
+- `club-lecture/js/stats.js` : logique complète — `computeStats()` charge tout en parallèle, `renderKpis()`, `renderNoteMoyenne()`, `renderParticipation()`, `renderMembresActifs()`, `renderEvolution()` (Chart.js lazy).
+- `club-lecture/css/style.css` : ajout des classes `.stats-kpi-grid`, `.stats-row-2`, `.stats-note-*`, `.stats-membres-*`.
+
 **Club de lecture — Graphique d'évolution des lectures**
 - `club-lecture/js/db.js` : nouvelles fonctions `addProgressionPoint()` et `getProgressionForLivre()`. Nouvelle collection Firestore `progression_lecture` — stocke un point horodaté à chaque mise à jour d'avancement (ne remplace pas `statuts_lecture`, s'ajoute en parallèle).
 - `club-lecture/js/accueil.js` : bouton "📈 Graphique" en bas de la carte Lecture du mois (toggle show/hide). Graphique Chart.js lignes par membre, X = date, Y = % (si total configuré) ou valeur absolue. Chargement lazy de Chart.js + `chartjs-adapter-date-fns`. Enregistrement automatique d'un point dans `progression_lecture` à chaque sauvegarde de statut (si avancement > 0 ou "Terminé").

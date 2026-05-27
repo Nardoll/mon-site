@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu de Mots - Multi-joueurs</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .setup-section {
+            display: block;
+        }
+
+        .difficulty-section {
+            display: none;
+        }
+
+        .game-section {
+            display: none;
+        }
+
+        .history-section {
+            display: none;
+        }
+
+        /* Setup des joueurs */
+        .player-count-selector {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .player-count-selector h2 {
+            color: #495057;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+
+        .player-count-buttons {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .player-count-btn {
+            background: #f8f9fa;
+            border: 3px solid #e9ecef;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .player-count-btn:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .player-count-btn.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* Difficulté */
+        .difficulty-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-direction: column;
+        }
+
+        .difficulty-btn {
+            background: #f8f9fa;
+            border: 3px solid #e9ecef;
+            padding: 20px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+        }
+
+        .difficulty-btn:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .difficulty-btn.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .difficulty-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .difficulty-desc {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        /* Zone joueur */
+        .player-zone {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 3px solid #e9ecef;
+        }
+
+        .player-zone.active {
+            border-color: #667eea;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .player-zone.completed {
+            border-color: #28a745;
+            opacity: 0.7;
+        }
+
+        .player-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #495057;
+        }
+
+        .word-display {
+            background: white;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 30px;
+            margin: 15px 0;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .word-hidden {
+            color: #adb5bd;
+            font-style: italic;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #adb5bd;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .end-game-btn {
+            background: #28a745;
+            margin-top: 30px;
+        }
+
+        .end-game-btn:hover {
+            background: #218838;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .nav-buttons button {
+            flex: 1;
+        }
+
+        .history-list {
+            margin-top: 20px;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 5px solid #667eea;
+        }
+
+        .history-item h3 {
+            color: #495057;
+            margin-bottom: 10px;
+        }
+
+        .history-words {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .history-word {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .history-word-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .history-word-text {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .no-history {
+            text-align: center;
+            color: #6c757d;
+            padding: 40px;
+            font-style: italic;
+        }
+
+        .difficulty-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .badge-facile {
+            background: #28a745;
+            color: white;
+        }
+
+        .badge-difficile {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .badge-expert {
+            background: #dc3545;
+            color: white;
+        }
+
+        .current-info {
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Jeu de Mots</h1>
+
+        <!-- Section Setup : Nombre de joueurs -->
+        <div class="setup-section" id="setupSection">
+            <div class="player-count-selector">
+                <h2>Combien de joueurs ?</h2>
+                <div class="player-count-buttons" id="playerCountButtons"></div>
+            </div>
+            <button onclick="goToDifficulty()" id="nextToDifficultyBtn" disabled>Suivant ➡️</button>
+        </div>
+
+        <!-- Section Choix de Difficulté -->
+        <div class="difficulty-section" id="difficultySection">
+            <h2 style="text-align: center; color: #495057; margin-bottom: 20px;">Choisissez la difficulté</h2>
+            
+            <div class="difficulty-selector">
+                <div class="difficulty-btn" onclick="selectDifficulty('facile')">
+                    <div class="difficulty-title">😊 Facile</div>
+                    <div class="difficulty-desc">Mots courants faciles à amener en conversation</div>
+                </div>
+                
+                <div class="difficulty-btn" onclick="selectDifficulty('difficile')">
+                    <div class="difficulty-title">🤔 Difficile</div>
+                    <div class="difficulty-desc">Mots plus pointus et spécifiques</div>
+                </div>
+                
+                <div class="difficulty-btn" onclick="selectDifficulty('expert')">
+                    <div class="difficulty-title">🔥 Expert</div>
+                    <div class="difficulty-desc">Mots très techniques et obscurs</div>
+                </div>
+            </div>
+
+            <button onclick="startGameWithDifficulty()" id="startBtn" disabled>▶️ Commencer la partie</button>
+        </div>
+
+        <!-- Section de Jeu -->
+        <div class="game-section" id="gameSection">
+            <div class="current-info" id="currentInfo"></div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            
+            <div id="playersContainer"></div>
+
+            <button class="end-game-btn" id="endGameBtn" onclick="endGame()" disabled>✅ Terminer la partie</button>
+
+            <div class="nav-buttons">
+                <button onclick="showHistory()" style="background: #17a2b8;">📜 Voir l'historique</button>
+                <button onclick="newGame()" style="background: #ffc107; color: #000;">🔄 Nouvelle partie</button>
+            </div>
+        </div>
+
+        <!-- Section Historique -->
+        <div class="history-section" id="historySection">
+            <h2 style="text-align: center; color: #495057; margin-bottom: 20px;">📜 Historique des parties</h2>
+            <div class="history-list" id="historyList"></div>
+            <button onclick="showGame()" style="background: #6c757d;">← Retour au jeu</button>
+        </div>
+    </div>
+
+    <script>
+        // Base de données de mots par difficulté
+        const wordsByDifficulty = {
+            facile: [
+                "chat", "chien", "café", "chocolat", "vacances", "film", "musique", "pizza",
+                "téléphone", "voiture", "jardin", "plage", "montagne", "restaurant", "livre",
+                "sport", "famille", "ami", "maison", "travail", "école", "enfant", "été",
+                "hiver", "pluie", "soleil", "pain", "fromage", "vin", "bière", "eau",
+                "ordinateur", "internet", "photo", "voyage", "train", "avion", "vélo",
+                "shopping", "fête", "cadeau", "anniversaire", "Noël", "weekend", "lundi",
+                "matin", "soir", "nuit", "jour", "heure", "minute", "rouge", "bleu",
+                "vert", "noir", "blanc", "grand", "petit", "chaud", "froid", "nouveau",
+                "vieux", "bon", "mauvais", "beau", "laid", "riche", "pauvre", "rapide",
+                "lent", "facile", "difficile", "content", "triste", "heureux", "amour",
+                "chanson", "danse", "cuisine", "recette", "gâteau", "salade", "viande",
+                "poisson", "légume", "fruit", "pomme", "orange", "banane", "tomate",
+                "table", "chaise", "lit", "porte", "fenêtre", "mur", "toit", "clé",
+                "sac", "chapeau", "chaussure", "pantalon", "veste", "chemise", "robe",
+                "fleur", "arbre", "herbe", "feuille", "branche", "racine", "graine", "forêt",
+                "rivière", "lac", "océan", "mer", "vague", "île", "pont", "route",
+                "ville", "campagne", "village", "rue", "boulevard", "avenue", "place", "parc",
+                "supermarché", "boulangerie", "pharmacie", "banque", "poste", "gare", "aéroport",
+                "hôpital", "église", "musée", "théâtre", "cinéma", "bibliothèque", "université",
+                "bureau", "usine", "magasin", "boutique", "marché", "camping", "hôtel",
+                "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche", "janvier",
+                "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre",
+                "octobre", "novembre", "décembre", "printemps", "automne", "neige", "gel",
+                "vent", "nuage", "brouillard", "orage", "arc-en-ciel", "étoile", "lune",
+                "assiette", "verre", "couteau", "fourchette", "cuillère", "casserole", "poêle",
+                "four", "frigo", "micro-ondes", "évier", "robinet", "douche", "baignoire",
+                "savon", "shampooing", "brosse", "peigne", "dentifrice", "serviette", "miroir",
+                "lampe", "bougie", "interrupteur", "prise", "radiateur", "ventilateur", "horloge",
+                "calendrier", "stylo", "crayon", "cahier", "papier", "enveloppe", "timbre",
+                "journal", "magazine", "lettre", "carte", "télégramme", "email", "message",
+                "appel", "sonnerie", "vibreur", "écran", "clavier", "souris", "imprimante",
+                "scanner", "webcam", "haut-parleur", "casque", "microphone", "USB", "disque",
+                "moteur", "roue", "volant", "frein", "pédale", "siège", "ceinture", "phare",
+                "rétroviseur", "pare-brise", "capot", "coffre", "plaque", "essence", "diesel",
+                "parking", "garage", "autoroute", "péage", "rond-point", "feu", "stop",
+                "ballon", "raquette", "filet", "terrain", "stade", "piscine", "gymnase",
+                "course", "saut", "lancer", "équipe", "joueur", "arbitre", "but", "point",
+                "victoire", "défaite", "match", "tournoi", "médaille", "trophée", "champion",
+                "guitare", "piano", "violon", "flûte", "trompette", "batterie", "micro",
+                "concert", "scène", "public", "applaudissement", "bis", "partition", "note",
+                "maladie", "fièvre", "toux", "rhume", "grippe", "douleur", "blessure",
+                "pansement", "médicament", "comprimé", "sirop", "piqûre", "vaccin", "rendez-vous",
+                "docteur", "infirmier", "patient", "chambre", "urgence", "opération", "radiographie",
+                "lunettes", "lentilles", "montre", "bracelet", "collier", "boucle", "bague",
+                "portefeuille", "carte", "billet", "pièce", "monnaie", "euro", "dollar",
+                "prix", "solde", "promotion", "caisse", "ticket", "facture", "reçu",
+                "jeu", "jouet", "poupée", "puzzle", "ballon", "robot", "console", "manette",
+                "ordinateur", "tablette", "smartphone", "application", "logiciel", "fichier",
+                "dossier", "mot de passe", "code", "menu", "icône", "bouton", "lien",
+                "recherche", "téléchargement", "installation", "mise à jour", "bug", "virus",
+                "antivirus", "sauvegarde", "corbeille", "bureau", "fenêtre", "onglet"
+            ],
+            difficile: [
+                "photosynthèse", "algorithme", "renaissance", "stalagmite", "palindrome",
+                "métaphore", "hypothèse", "archéologie", "philosophie", "démocratie",
+                "capitalisme", "évolution", "gravitation", "électromagnétisme", "chromosome",
+                "mitochondrie", "bactérie", "antibiotique", "vaccination", "pandémie",
+                "réchauffement", "biodiversité", "écosystème", "prototype", "innovation",
+                "cryptographie", "hologramme", "satellite", "astronaute", "constellation",
+                "galaxie", "molécule", "atome", "proton", "neutron", "isotope",
+                "catalyseur", "synthèse", "polymère", "distillation", "fermentation",
+                "logarithme", "équation", "tangente", "asymptote", "probabilité",
+                "statistique", "moyenne", "variance", "corrélation", "régression",
+                "impressionnisme", "cubisme", "surréalisme", "baroque", "romantisme",
+                "symphonie", "concerto", "fugue", "crescendo", "allegro", "staccato",
+                "calligraphie", "enluminure", "fresque", "mosaïque", "sculpture",
+                "architecture", "gothique", "roman", "néoclassique", "minimalisme",
+                "existentialisme", "stoïcisme", "empirisme", "rationalisme", "dialectique",
+                "paradoxe", "sophisme", "rhétorique", "syllogisme", "tautologie",
+                "métabolisme", "enzyme", "hormone", "synapse", "neurone", "cortex",
+                "équilibre", "inertie", "friction", "oscillation", "résonance", "amplitude",
+                "absolu", "relatif", "abstrait", "concret", "analogie", "antithèse",
+                "apogée", "archétype", "axiome", "causalité", "contingent", "déduction",
+                "dichotomie", "dogme", "dualisme", "empirique", "entropie", "épopée",
+                "éthique", "euphémisme", "hégémonie", "idéologie", "induction", "ironie",
+                "légitime", "métonymie", "nihilisme", "objectif", "paradigme", "postulat",
+                "pragmatique", "prédicat", "réfutation", "scepticisme", "subjectif", "synthèse",
+                "transcendant", "utopie", "véracité", "alchimie", "astrologie", "cosmologie",
+                "géométrie", "trigonométrie", "binaire", "décimal", "exponentiel", "factoriel",
+                "fraction", "intégrale", "dérivée", "limite", "série", "somme", "produit",
+                "quotient", "reste", "racine", "puissance", "coefficient", "constante",
+                "variable", "fonction", "graphique", "courbe", "droite", "segment", "angle",
+                "cercle", "ellipse", "parabole", "hyperbole", "polygone", "triangle",
+                "carré", "rectangle", "losange", "trapèze", "parallélogramme", "pentagone",
+                "hexagone", "octogone", "sphère", "cylindre", "cône", "pyramide", "prisme",
+                "tétraèdre", "cube", "dodécaèdre", "icosaèdre", "volume", "surface", "périmètre",
+                "diamètre", "rayon", "circonférence", "tangente", "sécante", "bissectrice",
+                "médiane", "hauteur", "perpendiculaire", "parallèle", "symétrie", "translation",
+                "rotation", "homothétie", "réflexion", "congruence", "similitude", "proportion",
+                "échelle", "perspective", "projection", "coordonnées", "vecteur", "matrice",
+                "déterminant", "norme", "scalaire", "tenseur", "gradient", "divergence",
+                "laplacien", "hamiltonien", "jacobien", "opérateur", "transformée", "convolution",
+                "fréquence", "période", "phase", "amplitude", "longueur d'onde", "spectre",
+                "diffraction", "interférence", "polarisation", "réfraction", "réflexion", "absorption",
+                "émission", "transmission", "dispersion", "cohérence", "quantum", "photon",
+                "électron", "positron", "quark", "lepton", "boson", "fermion", "hadron",
+                "baryon", "méson", "nucléon", "noyau", "orbite", "orbital", "spin",
+                "charge", "masse", "énergie", "impulsion", "moment", "force", "champ",
+                "potentiel", "tension", "courant", "résistance", "capacité", "inductance",
+                "impédance", "réactance", "conductance", "susceptance", "admittance", "résonance",
+                "oscillateur", "amplificateur", "transistor", "diode", "condensateur", "résistance",
+                "bobine", "transformateur", "générateur", "moteur", "alternateur", "dynamo",
+                "circuit", "schéma", "diagramme", "montage", "câblage", "soudure", "connecteur",
+                "fusible", "disjoncteur", "interrupteur", "relais", "contacteur", "temporisateur"
+            ],
+            expert: [
+                "péristaltisme", "xénomorphe", "quinconce", "théodicée", "apophénie",
+                "pareidolie", "synesthésie", "prosopagnosie", "akathisie", "dyskinésie",
+                "épistémologie", "phénoménologie", "herméneutique", "téléologie", "ontologie",
+                "axiomatique", "heuristique", "stochastique", "déterministe", "autopoïétique",
+                "catabolisme", "anabolisme", "homéostasie", "osmorégulation", "gluconéogenèse",
+                "phosphorylation", "transduction", "endocytose", "exocytose", "apoptose",
+                "nécroptose", "autophagie", "ubiquitination", "méthylation", "acétylation",
+                "épigénétique", "transcriptome", "protéome", "métabolome", "interactome",
+                "phylogénétique", "cladistique", "paraphylétique", "monophylétique", "sympatrique",
+                "allopatrique", "parapatrique", "spéciation", "hybridation", "introgression",
+                "tautochrone", "brachistochrone", "cycloïde", "caténaire", "cardioïde",
+                "lemniscate", "spirale", "hyperbolique", "elliptique", "parabolique",
+                "asymptotique", "singularité", "bifurcation", "attracteur", "fractal",
+                "homomorphisme", "isomorphisme", "endomorphisme", "automorphisme", "épimorphisme",
+                "quintessence", "palingénésie", "apocatastase", "eschatologie", "sotériologie",
+                "pneumatologie", "christologie", "mariologie", "ecclésiologie", "hagiographie",
+                "noumène", "phénomène", "hypostase", "ousia", "parousia", "kenosis",
+                "anamnèse", "prolepse", "analepse", "ellipse", "zeugma", "chiasme",
+                "anadiplose", "anaphore", "antanaclase", "antithèse", "asyndète", "catachrèse",
+                "hypallage", "hyperbate", "litote", "métonymie", "oxymore", "parataxe",
+                "périphrase", "polysyndète", "prosopopée", "synecdoque", "tmèse", "anacoluthe",
+                "enthymème", "épichérème", "épitrope", "hystéron protéron", "polyptote", "syllepse",
+                "synchise", "zeugme", "adynaton", "apodose", "prétérition", "prolepse",
+                "acatalepsie", "acosmisme", "adiaphorie", "advaita", "agnosticisme", "anachorète",
+                "anagogique", "analogique", "anhypothétique", "anomie", "antinomie", "apocatastase",
+                "apophatique", "aporistique", "aporétique", "archéologie", "asceticisme", "ataraxie",
+                "athéisme", "autotélie", "béatitude", "casuistique", "catharsis", "conatus",
+                "deontologie", "dharma", "dianoia", "doxologie", "dunamis", "eidos",
+                "élan vital", "entelechie", "épochè", "ergon", "eschaton", "eudémonisme",
+                "gnose", "haeccéité", "henologie", "holisme", "hylemorphisme", "hypostase",
+                "idéalisme", "immanence", "ineffable", "ipséité", "karma", "kathekon",
+                "lekton", "logique", "maieutique", "manichéisme", "méontologie", "métensomatose",
+                "mimesis", "monade", "monisme", "noèse", "noologie", "noumène", "ousie",
+                "panentheisme", "panpsychisme", "parousia", "périagogé", "phronèsis", "pneuma",
+                "poiesis", "praxis", "protension", "psychisme", "quiddité", "ratiocination",
+                "réification", "rétention", "samsara", "scholastique", "scolastique", "sémiotique",
+                "sophrosyne", "substantialisme", "subsomption", "symbole", "syncrétisme", "synergie",
+                "tabula rasa", "tautologie", "techné", "téléologie", "temporalité", "théurgie",
+                "thomisme", "topos", "transcendance", "transsubstantiation", "univocité", "voluntarisme",
+                "acatalectique", "adoxographie", "anamorphose", "antéposition", "apocope", "apophonie",
+                "assonance", "cadence", "césure", "dactyle", "diérèse", "distique", "enjambement",
+                "hémistiche", "hendécasyllabe", "hiatus", "hypermètre", "iambe", "isocolon",
+                "monostiche", "octosyllabe", "onomatopée", "paréchèse", "paronomase", "pentamètre",
+                "quaternaire", "quintil", "rime", "rythme", "scansion", "sizain", "spondée",
+                "strophe", "synalèphe", "syncope", "synérèse", "tercet", "tétramètre", "trimètre",
+                "trochée", "vers", "versification", "anapeste", "antibacchée", "antispaste", "bacchée",
+                "choriambe", "crétique", "ditrochée", "épitrite", "ionique", "péon", "procéleusmatique",
+                "pyrrhique", "tribraque", "acéphalité", "acrologie", "amphigouri", "amphimacre", "anacyclique"
+            ]
+        };
+
+        let currentGame = {
+            playerCount: 0,
+            players: [],
+            difficulty: null,
+            currentPlayerIndex: 0
+        };
+
+        let gameHistory = JSON.parse(localStorage.getItem('gameHistory')) || [];
+        let selectedDifficulty = null;
+
+        // Initialisation des boutons de nombre de joueurs
+        function initPlayerCountButtons() {
+            const container = document.getElementById('playerCountButtons');
+            for (let i = 1; i <= 10; i++) {
+                const btn = document.createElement('div');
+                btn.className = 'player-count-btn';
+                btn.textContent = i;
+                btn.onclick = () => selectPlayerCount(i);
+                container.appendChild(btn);
+            }
+        }
+
+        function selectPlayerCount(count) {
+            document.querySelectorAll('.player-count-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            event.target.classList.add('selected');
+            currentGame.playerCount = count;
+            document.getElementById('nextToDifficultyBtn').disabled = false;
+        }
+
+        function goToDifficulty() {
+            if (currentGame.playerCount === 0) return;
+            document.getElementById('setupSection').style.display = 'none';
+            document.getElementById('difficultySection').style.display = 'block';
+        }
+
+        function selectDifficulty(difficulty) {
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            event.target.closest('.difficulty-btn').classList.add('selected');
+            selectedDifficulty = difficulty;
+            document.getElementById('startBtn').disabled = false;
+        }
+
+        function startGameWithDifficulty() {
+            if (!selectedDifficulty) return;
+            
+            document.getElementById('difficultySection').style.display = 'none';
+            document.getElementById('gameSection').style.display = 'block';
+            
+            initializeGame();
+            createPlayerZones();
+            updateGameInfo();
+        }
+
+        function initializeGame() {
+            currentGame.difficulty = selectedDifficulty;
+            currentGame.players = [];
+            currentGame.currentPlayerIndex = 0;
+            
+            // Générer un mot unique pour chaque joueur
+            const words = wordsByDifficulty[selectedDifficulty];
+            const shuffled = [...words].sort(() => Math.random() - 0.5);
+            
+            for (let i = 0; i < currentGame.playerCount; i++) {
+                currentGame.players.push({
+                    number: i + 1,
+                    word: shuffled[i],
+                    revealed: false,
+                    hidden: false
+                });
+            }
+        }
+
+        function createPlayerZones() {
+            const container = document.getElementById('playersContainer');
+            container.innerHTML = '';
+            
+            currentGame.players.forEach((player, index) => {
+                const zone = document.createElement('div');
+                zone.className = 'player-zone' + (index === 0 ? ' active' : '');
+                zone.id = `player${index}Zone`;
+                
+                zone.innerHTML = `
+                    <div class="player-title">👤 Joueur ${player.number}</div>
+                    <div class="word-display" id="word${index}Display">
+                        <span class="word-hidden">${index === 0 ? 'Appuyez pour révéler' : 'En attente...'}</span>
+                    </div>
+                    <button id="revealBtn${index}" onclick="revealWord(${index})" ${index !== 0 ? 'disabled' : ''}>
+                        🎲 Révéler mon mot
+                    </button>
+                    <button id="hideBtn${index}" onclick="hideWord(${index})" style="display: none; background: #6c757d;">
+                        👁️ Cacher le mot
+                    </button>
+                `;
+                
+                container.appendChild(zone);
+            });
+        }
+
+        function updateGameInfo() {
+            const badges = {
+                facile: '<span class="difficulty-badge badge-facile">😊 Facile</span>',
+                difficile: '<span class="difficulty-badge badge-difficile">🤔 Difficile</span>',
+                expert: '<span class="difficulty-badge badge-expert">🔥 Expert</span>'
+            };
+            
+            const completedCount = currentGame.players.filter(p => p.hidden).length;
+            const progress = (completedCount / currentGame.playerCount) * 100;
+            
+            document.getElementById('currentInfo').innerHTML = 
+                `${currentGame.playerCount} joueurs ${badges[currentGame.difficulty]}`;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        function revealWord(index) {
+            const player = currentGame.players[index];
+            if (player.revealed) return;
+            
+            document.getElementById(`word${index}Display`).innerHTML = `<span>${player.word}</span>`;
+            document.getElementById(`revealBtn${index}`).style.display = 'none';
+            document.getElementById(`hideBtn${index}`).style.display = 'block';
+            player.revealed = true;
+        }
+
+        function hideWord(index) {
+            const player = currentGame.players[index];
+            
+            document.getElementById(`word${index}Display`).innerHTML = '<span class="word-hidden">Mot caché</span>';
+            document.getElementById(`hideBtn${index}`).style.display = 'none';
+            document.getElementById(`player${index}Zone`).classList.remove('active');
+            document.getElementById(`player${index}Zone`).classList.add('completed');
+            player.hidden = true;
+            
+            // Activer le joueur suivant
+            const nextIndex = index + 1;
+            if (nextIndex < currentGame.playerCount) {
+                document.getElementById(`player${nextIndex}Zone`).classList.add('active');
+                document.getElementById(`revealBtn${nextIndex}`).disabled = false;
+                currentGame.currentPlayerIndex = nextIndex;
+            } else {
+                // Tous les joueurs ont joué
+                document.getElementById('endGameBtn').disabled = false;
+            }
+            
+            updateGameInfo();
+        }
+
+        function endGame() {
+            const allHidden = currentGame.players.every(p => p.hidden);
+            if (!allHidden) return;
+            
+            const gameRecord = {
+                id: Date.now(),
+                date: new Date().toLocaleString('fr-FR'),
+                playerCount: currentGame.playerCount,
+                difficulty: currentGame.difficulty,
+                words: currentGame.players.map(p => ({ player: p.number, word: p.word }))
+            };
+            
+            gameHistory.unshift(gameRecord);
+            localStorage.setItem('gameHistory', JSON.stringify(gameHistory));
+            
+            alert('🎉 Partie terminée ! Ajoutée à l\'historique.');
+            newGame();
+        }
+
+        function newGame() {
+            // Retour au setup
+            document.getElementById('gameSection').style.display = 'none';
+            document.getElementById('setupSection').style.display = 'block';
+            
+            currentGame = {
+                playerCount: 0,
+                players: [],
+                difficulty: null,
+                currentPlayerIndex: 0
+            };
+            
+            // Réinitialiser les sélections
+            document.querySelectorAll('.player-count-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            selectedDifficulty = null;
+            document.getElementById('nextToDifficultyBtn').disabled = true;
+            document.getElementById('startBtn').disabled = true;
+        }
+
+        function showHistory() {
+            document.getElementById('gameSection').style.display = 'none';
+            document.getElementById('historySection').style.display = 'block';
+            
+            const historyList = document.getElementById('historyList');
+            
+            if (gameHistory.length === 0) {
+                historyList.innerHTML = '<div class="no-history">Aucune partie jouée pour le moment</div>';
+            } else {
+                const badges = {
+                    facile: '<span class="difficulty-badge badge-facile">😊 Facile</span>',
+                    difficile: '<span class="difficulty-badge badge-difficile">🤔 Difficile</span>',
+                    expert: '<span class="difficulty-badge badge-expert">🔥 Expert</span>'
+                };
+                
+                historyList.innerHTML = gameHistory.map((game, index) => `
+                    <div class="history-item">
+                        <h3>Partie ${gameHistory.length - index} - ${game.date}</h3>
+                        <p style="color: #6c757d; margin-top: 5px;">
+                            ${game.playerCount} joueur${game.playerCount > 1 ? 's' : ''} ${badges[game.difficulty]}
+                        </p>
+                        <div class="history-words">
+                            ${game.words.map(w => `
+                                <div class="history-word">
+                                    <div class="history-word-label">Joueur ${w.player}</div>
+                                    <div class="history-word-text">${w.word}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function showGame() {
+            document.getElementById('gameSection').style.display = 'block';
+            document.getElementById('historySection').style.display = 'none';
+        }
+
+        // Initialisation
+        initPlayerCountButtons();
+    </script>
+</body>
+</html>

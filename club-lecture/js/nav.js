@@ -12,6 +12,7 @@ export function initNav(active) {
     { id: "votes",        href: "/club-lecture/votes.html",        icon: "🗳️",  label: "Votes" },
     { id: "membres",      href: "/club-lecture/membres.html",      icon: "👥", label: "Membres" },
     { id: "reunions",     href: "/club-lecture/reunions.html",     icon: "📝", label: "Réunions" },
+    { id: "stats",        href: "/club-lecture/stats.html",        icon: "📊", label: "Statistiques" },
   ];
 
   const isLight = document.documentElement.dataset.theme === "light";

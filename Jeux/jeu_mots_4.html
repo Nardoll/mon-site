@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu de Mots - 2 Joueurs</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .difficulty-section {
+            display: block;
+        }
+
+        .game-section {
+            display: none;
+        }
+
+        .history-section {
+            display: none;
+        }
+
+        .difficulty-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-direction: column;
+        }
+
+        .difficulty-btn {
+            background: #f8f9fa;
+            border: 3px solid #e9ecef;
+            padding: 20px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+        }
+
+        .difficulty-btn:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .difficulty-btn.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .difficulty-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .difficulty-desc {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .player-zone {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 3px solid #e9ecef;
+        }
+
+        .player-zone.active {
+            border-color: #667eea;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .player-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #495057;
+        }
+
+        .word-display {
+            background: white;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 30px;
+            margin: 15px 0;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .word-hidden {
+            color: #adb5bd;
+            font-style: italic;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #adb5bd;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .end-game-btn {
+            background: #28a745;
+            margin-top: 30px;
+        }
+
+        .end-game-btn:hover {
+            background: #218838;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .nav-buttons button {
+            flex: 1;
+        }
+
+        .history-list {
+            margin-top: 20px;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 5px solid #667eea;
+        }
+
+        .history-item h3 {
+            color: #495057;
+            margin-bottom: 10px;
+        }
+
+        .history-words {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .history-word {
+            flex: 1;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .history-word-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .history-word-text {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .no-history {
+            text-align: center;
+            color: #6c757d;
+            padding: 40px;
+            font-style: italic;
+        }
+
+        .difficulty-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .badge-facile {
+            background: #28a745;
+            color: white;
+        }
+
+        .badge-difficile {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .badge-expert {
+            background: #dc3545;
+            color: white;
+        }
+
+        .current-difficulty {
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Jeu de Mots</h1>
+
+        <!-- Section Choix de Difficulté -->
+        <div class="difficulty-section" id="difficultySection">
+            <h2 style="text-align: center; color: #495057; margin-bottom: 20px;">Choisissez la difficulté</h2>
+            
+            <div class="difficulty-selector">
+                <div class="difficulty-btn" onclick="selectDifficulty('facile')">
+                    <div class="difficulty-title">😊 Facile</div>
+                    <div class="difficulty-desc">Mots courants faciles à amener en conversation</div>
+                </div>
+                
+                <div class="difficulty-btn" onclick="selectDifficulty('difficile')">
+                    <div class="difficulty-title">🤔 Difficile</div>
+                    <div class="difficulty-desc">Mots plus pointus et spécifiques</div>
+                </div>
+                
+                <div class="difficulty-btn" onclick="selectDifficulty('expert')">
+                    <div class="difficulty-title">🔥 Expert</div>
+                    <div class="difficulty-desc">Mots très techniques et obscurs</div>
+                </div>
+            </div>
+
+            <button onclick="startGameWithDifficulty()" id="startBtn" disabled>▶️ Commencer la partie</button>
+        </div>
+
+        <!-- Section de Jeu -->
+        <div class="game-section" id="gameSection">
+            <div class="current-difficulty" id="currentDifficulty"></div>
+
+            <!-- Zone Joueur 1 -->
+            <div class="player-zone active" id="player1Zone">
+                <div class="player-title">👤 Joueur 1</div>
+                <div class="word-display" id="word1Display">
+                    <span class="word-hidden">Appuyez pour révéler</span>
+                </div>
+                <button id="revealBtn1" onclick="revealWord(1)">🎲 Révéler mon mot</button>
+                <button id="hideBtn1" onclick="hideWord(1)" style="display: none; background: #6c757d;">👁️ Cacher le mot</button>
+            </div>
+
+            <!-- Zone Joueur 2 -->
+            <div class="player-zone" id="player2Zone">
+                <div class="player-title">👤 Joueur 2</div>
+                <div class="word-display" id="word2Display">
+                    <span class="word-hidden">En attente...</span>
+                </div>
+                <button id="revealBtn2" onclick="revealWord(2)" disabled>🎲 Révéler mon mot</button>
+                <button id="hideBtn2" onclick="hideWord(2)" style="display: none; background: #6c757d;">👁️ Cacher le mot</button>
+            </div>
+
+            <button class="end-game-btn" id="endGameBtn" onclick="endGame()" disabled>✅ Terminer la partie</button>
+
+            <div class="nav-buttons">
+                <button onclick="showHistory()" style="background: #17a2b8;">📜 Voir l'historique</button>
+                <button onclick="newGame()" style="background: #ffc107; color: #000;">🔄 Nouvelle partie</button>
+            </div>
+        </div>
+
+        <!-- Section Historique -->
+        <div class="history-section" id="historySection">
+            <h2 style="text-align: center; color: #495057; margin-bottom: 20px;">📜 Historique des parties</h2>
+            <div class="history-list" id="historyList"></div>
+            <button onclick="showGame()" style="background: #6c757d;">← Retour au jeu</button>
+        </div>
+    </div>
+
+    <script>
+        // Base de données de mots par difficulté
+        const wordsByDifficulty = {
+            facile: [
+                "chat", "chien", "café", "chocolat", "vacances", "film", "musique", "pizza",
+                "téléphone", "voiture", "jardin", "plage", "montagne", "restaurant", "livre",
+                "sport", "famille", "ami", "maison", "travail", "école", "enfant", "été",
+                "hiver", "pluie", "soleil", "pain", "fromage", "vin", "bière", "eau",
+                "ordinateur", "internet", "photo", "voyage", "train", "avion", "vélo",
+                "shopping", "fête", "cadeau", "anniversaire", "Noël", "weekend", "lundi",
+                "matin", "soir", "nuit", "jour", "heure", "minute", "rouge", "bleu",
+                "vert", "noir", "blanc", "grand", "petit", "chaud", "froid", "nouveau",
+                "vieux", "bon", "mauvais", "beau", "laid", "riche", "pauvre", "rapide",
+                "lent", "facile", "difficile", "content", "triste", "heureux", "amour",
+                "chanson", "danse", "cuisine", "recette", "gâteau", "salade", "viande",
+                "poisson", "légume", "fruit", "pomme", "orange", "banane", "tomate",
+                "table", "chaise", "lit", "porte", "fenêtre", "mur", "toit", "clé"
+            ],
+            difficile: [
+                "photosynthèse", "algorithme", "renaissance", "stalagmite", "palindrome",
+                "métaphore", "hypothèse", "archéologie", "philosophie", "démocratie",
+                "capitalisme", "évolution", "gravitation", "électromagnétisme", "chromosome",
+                "mitochondrie", "bactérie", "antibiotique", "vaccination", "pandémie",
+                "réchauffement", "biodiversité", "écosystème", "prototype", "innovation",
+                "cryptographie", "hologramme", "satellite", "astronaute", "constellation",
+                "galaxie", "molécule", "atome", "proton", "neutron", "isotope",
+                "catalyseur", "synthèse", "polymère", "distillation", "fermentation",
+                "logarithme", "équation", "tangente", "asymptote", "probabilité",
+                "statistique", "moyenne", "variance", "corrélation", "régression",
+                "impressionnisme", "cubisme", "surréalisme", "baroque", "romantisme",
+                "symphonie", "concerto", "fugue", "crescendo", "allegro", "staccato",
+                "calligraphie", "enluminure", "fresque", "mosaïque", "sculpture",
+                "architecture", "gothique", "roman", "néoclassique", "minimalisme",
+                "existentialisme", "stoïcisme", "empirisme", "rationalisme", "dialectique",
+                "paradoxe", "sophisme", "rhétorique", "syllogisme", "tautologie",
+                "métabolisme", "enzyme", "hormone", "synapse", "neurone", "cortex"
+            ],
+            expert: [
+                "péristaltisme", "xénomorphe", "quinconce", "théodicée", "apophénie",
+                "pareidolie", "synesthésie", "prosopagnosie", "akathisie", "dyskinésie",
+                "épistémologie", "phénoménologie", "herméneutique", "téléologie", "ontologie",
+                "axiomatique", "heuristique", "stochastique", "déterministe", "autopoïétique",
+                "catabolisme", "anabolisme", "homéostasie", "osmorégulation", "gluconéogenèse",
+                "phosphorylation", "transduction", "endocytose", "exocytose", "apoptose",
+                "nécroptose", "autophagie", "ubiquitination", "méthylation", "acétylation",
+                "épigénétique", "transcriptome", "protéome", "métabolome", "interactome",
+                "phylogénétique", "cladistique", "paraphylétique", "monophylétique", "sympatrique",
+                "allopatrique", "parapatrique", "spéciation", "hybridation", "introgression",
+                "tautochrone", "brachistochrone", "cycloïde", "caténaire", "cardioïde",
+                "lemniscate", "spirale", "hyperbolique", "elliptique", "parabolique",
+                "asymptotique", "singularité", "bifurcation", "attracteur", "fractal",
+                "homomorphisme", "isomorphisme", "endomorphisme", "automorphisme", "épimorphisme",
+                "quintessence", "palingénésie", "apocatastase", "eschatologie", "sotériologie",
+                "pneumatologie", "christologie", "mariologie", "ecclésiologie", "hagiographie",
+                "noumène", "phénomène", "hypostase", "ousia", "parousia", "kenosis"
+            ]
+        };
+
+        let currentGame = {
+            word1: null,
+            word2: null,
+            difficulty: null,
+            revealed1: false,
+            revealed2: false
+        };
+
+        let gameHistory = JSON.parse(localStorage.getItem('gameHistory')) || [];
+        let selectedDifficulty = null;
+
+        function selectDifficulty(difficulty) {
+            // Retirer la sélection précédente
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // Sélectionner la nouvelle difficulté
+            event.target.closest('.difficulty-btn').classList.add('selected');
+            selectedDifficulty = difficulty;
+            document.getElementById('startBtn').disabled = false;
+        }
+
+        function startGameWithDifficulty() {
+            if (!selectedDifficulty) return;
+            
+            document.getElementById('difficultySection').style.display = 'none';
+            document.getElementById('gameSection').style.display = 'block';
+            
+            initializeGame();
+            updateDifficultyDisplay();
+        }
+
+        function updateDifficultyDisplay() {
+            const badges = {
+                facile: '<span class="difficulty-badge badge-facile">😊 Facile</span>',
+                difficile: '<span class="difficulty-badge badge-difficile">🤔 Difficile</span>',
+                expert: '<span class="difficulty-badge badge-expert">🔥 Expert</span>'
+            };
+            
+            document.getElementById('currentDifficulty').innerHTML = 
+                'Difficulté : ' + badges[selectedDifficulty];
+        }
+
+        function initializeGame() {
+            // On sélectionne deux mots DIFFÉRENTS et INDÉPENDANTS selon la difficulté
+            const words = wordsByDifficulty[selectedDifficulty];
+            const shuffled = [...words].sort(() => Math.random() - 0.5);
+            
+            currentGame.word1 = shuffled[0];
+            currentGame.word2 = shuffled[1];
+            currentGame.difficulty = selectedDifficulty;
+        }
+
+        function revealWord(player) {
+            if (player === 1 && !currentGame.revealed1) {
+                document.getElementById('word1Display').innerHTML = `<span>${currentGame.word1}</span>`;
+                document.getElementById('revealBtn1').style.display = 'none';
+                document.getElementById('hideBtn1').style.display = 'block';
+                currentGame.revealed1 = true;
+            } else if (player === 2 && !currentGame.revealed2) {
+                document.getElementById('word2Display').innerHTML = `<span>${currentGame.word2}</span>`;
+                document.getElementById('revealBtn2').style.display = 'none';
+                document.getElementById('hideBtn2').style.display = 'block';
+                currentGame.revealed2 = true;
+                
+                document.getElementById('endGameBtn').disabled = false;
+            }
+        }
+
+        function hideWord(player) {
+            if (player === 1) {
+                document.getElementById('word1Display').innerHTML = '<span class="word-hidden">Mot caché</span>';
+                document.getElementById('hideBtn1').style.display = 'none';
+                
+                document.getElementById('player1Zone').classList.remove('active');
+                document.getElementById('player2Zone').classList.add('active');
+                document.getElementById('revealBtn2').disabled = false;
+            } else if (player === 2) {
+                document.getElementById('word2Display').innerHTML = '<span class="word-hidden">Mot caché</span>';
+                document.getElementById('hideBtn2').style.display = 'none';
+                
+                document.getElementById('player2Zone').classList.remove('active');
+            }
+        }
+
+        function endGame() {
+            if (currentGame.revealed1 && currentGame.revealed2) {
+                const gameRecord = {
+                    id: Date.now(),
+                    date: new Date().toLocaleString('fr-FR'),
+                    word1: currentGame.word1,
+                    word2: currentGame.word2,
+                    difficulty: currentGame.difficulty
+                };
+                
+                gameHistory.unshift(gameRecord);
+                localStorage.setItem('gameHistory', JSON.stringify(gameHistory));
+                
+                alert('🎉 Partie terminée ! Ajoutée à l\'historique.');
+                newGame();
+            }
+        }
+
+        function newGame() {
+            // Retour à la sélection de difficulté
+            document.getElementById('gameSection').style.display = 'none';
+            document.getElementById('difficultySection').style.display = 'block';
+            
+            currentGame = {
+                word1: null,
+                word2: null,
+                difficulty: null,
+                revealed1: false,
+                revealed2: false
+            };
+            
+            document.getElementById('word1Display').innerHTML = '<span class="word-hidden">Appuyez pour révéler</span>';
+            document.getElementById('word2Display').innerHTML = '<span class="word-hidden">En attente...</span>';
+            
+            document.getElementById('revealBtn1').style.display = 'block';
+            document.getElementById('hideBtn1').style.display = 'none';
+            document.getElementById('revealBtn2').style.display = 'block';
+            document.getElementById('hideBtn2').style.display = 'none';
+            
+            document.getElementById('revealBtn2').disabled = true;
+            document.getElementById('endGameBtn').disabled = true;
+            
+            document.getElementById('player1Zone').classList.add('active');
+            document.getElementById('player2Zone').classList.remove('active');
+            
+            // Réinitialiser la sélection de difficulté
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            selectedDifficulty = null;
+            document.getElementById('startBtn').disabled = true;
+        }
+
+        function showHistory() {
+            document.getElementById('gameSection').style.display = 'none';
+            document.getElementById('historySection').style.display = 'block';
+            
+            const historyList = document.getElementById('historyList');
+            
+            if (gameHistory.length === 0) {
+                historyList.innerHTML = '<div class="no-history">Aucune partie jouée pour le moment</div>';
+            } else {
+                const badges = {
+                    facile: '<span class="difficulty-badge badge-facile">😊 Facile</span>',
+                    difficile: '<span class="difficulty-badge badge-difficile">🤔 Difficile</span>',
+                    expert: '<span class="difficulty-badge badge-expert">🔥 Expert</span>'
+                };
+                
+                historyList.innerHTML = gameHistory.map((game, index) => `
+                    <div class="history-item">
+                        <h3>Partie ${gameHistory.length - index} - ${game.date} ${badges[game.difficulty]}</h3>
+                        <div class="history-words">
+                            <div class="history-word">
+                                <div class="history-word-label">Joueur 1</div>
+                                <div class="history-word-text">${game.word1}</div>
+                            </div>
+                            <div class="history-word">
+                                <div class="history-word-label">Joueur 2</div>
+                                <div class="history-word-text">${game.word2}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function showGame() {
+            document.getElementById('gameSection').style.display = 'block';
+            document.getElementById('historySection').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
