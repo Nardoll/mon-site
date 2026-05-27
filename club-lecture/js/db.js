@@ -43,7 +43,7 @@ export async function getLivreById(id) {
   return d.exists() ? { id: d.id, ...d.data() } : null;
 }
 
-export async function addLivre({ titre, auteur, annee, propose_par, date_proposition, statut = "en_proposition", nb_pages }) {
+export async function addLivre({ titre, auteur, annee, propose_par, date_proposition, statut = "en_proposition", nb_pages, genre, description_3_mots }) {
   return addDoc(collection(db, "livres"), {
     titre,
     auteur: auteur || "",
@@ -54,6 +54,8 @@ export async function addLivre({ titre, auteur, annee, propose_par, date_proposi
       : serverTimestamp(),
     statut,
     nb_pages: nb_pages ? Number(nb_pages) : null,
+    genre: genre || null,
+    description_3_mots: description_3_mots || null,
     cree_le: serverTimestamp()
   });
 }
@@ -62,7 +64,7 @@ export async function updateLivre(id, data) {
   return updateDoc(doc(db, "livres", id), data);
 }
 
-export async function updateLivreInfos(id, { titre, auteur, annee, propose_par, date_proposition, nb_pages }) {
+export async function updateLivreInfos(id, { titre, auteur, annee, propose_par, date_proposition, nb_pages, genre, description_3_mots }) {
   return updateDoc(doc(db, "livres", id), {
     titre,
     auteur: auteur || "",
@@ -70,6 +72,8 @@ export async function updateLivreInfos(id, { titre, auteur, annee, propose_par, 
     propose_par: propose_par || "",
     date_proposition: Timestamp.fromDate(new Date(date_proposition)),
     nb_pages: nb_pages ? Number(nb_pages) : null,
+    genre: genre || null,
+    description_3_mots: description_3_mots || null,
   });
 }
 

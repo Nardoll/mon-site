@@ -262,10 +262,12 @@ document.getElementById("propose-save").addEventListener("click", async () => {
       propose_par,
       date_proposition: document.getElementById("p-date").value,
       nb_pages: document.getElementById("p-nb-pages").value,
+      genre: document.getElementById("p-genre").value.trim(),
+      description_3_mots: document.getElementById("p-desc3").value.trim(),
     });
     showToast("Livre proposé !", "success");
     document.getElementById("propose-overlay").classList.add("hidden");
-    ["p-titre", "p-auteur", "p-annee", "p-nb-pages"].forEach(id => document.getElementById(id).value = "");
+    ["p-titre", "p-auteur", "p-annee", "p-nb-pages", "p-genre", "p-desc3"].forEach(id => document.getElementById(id).value = "");
     livres = await getLivres();
     if (viewMode === "table") renderTable(); else renderVisual();
   } catch (e) { showToast("Erreur : " + e.message, "error"); }
@@ -375,7 +377,10 @@ async function openFiche(id) {
       <dt>Date</dt><dd>${formatDate(livre.date_proposition)}</dd>
       <dt>Statut</dt><dd><span class="badge badge-${st.css}">${st.label}</span></dd>
       <dt>Pages</dt><dd>${livre.nb_pages ? livre.nb_pages + " p." : "—"}</dd>
+      <dt>Genre</dt><dd>${livre.genre || "—"}</dd>
+      <dt>En 3 mots</dt><dd>${livre.description_3_mots || "—"}</dd>
     </dl>
+    <div style="font-size:.75rem;color:var(--muted);margin-bottom:1.25rem">⚠️ Pages, genre et description fournis par IA — à vérifier</div>
     ${avancementsHTML}
     <div class="divider"></div>
     <div class="card-title mb-2">Historique</div>
@@ -417,14 +422,25 @@ function showFicheEditForm(livre) {
       <label>Proposé par</label>
       <select id="edit-l-membre">${membresOptions}</select>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Date de proposition</label>
-        <input type="date" id="edit-l-date">
+    <div class="form-group">
+      <label>Date de proposition</label>
+      <input type="date" id="edit-l-date">
+    </div>
+    <div style="margin-top:.75rem;padding:.85rem;background:var(--bg-alt,#f5f5f5);border-radius:8px;border:1px solid var(--border)">
+      <div style="font-size:.77rem;color:var(--muted);margin-bottom:.75rem;line-height:1.4">⚠️ Infos générées par IA — à vérifier, surtout le nombre de pages au moment où le livre est élu.</div>
+      <div class="form-row" style="margin-bottom:.75rem">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Nb de pages</label>
+          <input type="number" id="edit-l-nb-pages" min="1" placeholder="optionnel">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label>Genre littéraire</label>
+          <input type="text" id="edit-l-genre" placeholder="ex : Roman historique">
+        </div>
       </div>
-      <div class="form-group">
-        <label>Nb de pages</label>
-        <input type="number" id="edit-l-nb-pages" min="1" placeholder="optionnel">
+      <div class="form-group" style="margin-bottom:0">
+        <label>Description en 3 mots</label>
+        <input type="text" id="edit-l-desc3" maxlength="60" placeholder="ex : amour, guerre, trahison">
       </div>
     </div>
     <div class="modal-footer">
@@ -437,6 +453,8 @@ function showFicheEditForm(livre) {
   document.getElementById("edit-l-annee").value = livre.annee || "";
   document.getElementById("edit-l-membre").value = livre.propose_par || "";
   document.getElementById("edit-l-nb-pages").value = livre.nb_pages || "";
+  document.getElementById("edit-l-genre").value = livre.genre || "";
+  document.getElementById("edit-l-desc3").value = livre.description_3_mots || "";
   if (livre.date_proposition) {
     document.getElementById("edit-l-date").value = new Date(livre.date_proposition.seconds * 1000).toISOString().split("T")[0];
   }
@@ -454,6 +472,8 @@ function showFicheEditForm(livre) {
         propose_par: document.getElementById("edit-l-membre").value,
         date_proposition: dateVal,
         nb_pages: document.getElementById("edit-l-nb-pages").value,
+        genre: document.getElementById("edit-l-genre").value.trim(),
+        description_3_mots: document.getElementById("edit-l-desc3").value.trim(),
       });
       showToast("Livre modifié !", "success");
       livres = await getLivres();

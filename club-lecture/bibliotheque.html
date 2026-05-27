@@ -122,14 +122,25 @@
         <label>Proposé par <span style="color:var(--red)">*</span></label>
         <select id="p-membre"></select>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Date de proposition</label>
-          <input type="date" id="p-date">
+      <div class="form-group">
+        <label>Date de proposition</label>
+        <input type="date" id="p-date">
+      </div>
+      <div style="margin-top:.75rem;padding:.85rem;background:var(--bg-alt,#f5f5f5);border-radius:8px;border:1px solid var(--border)">
+        <div style="font-size:.77rem;color:var(--muted);margin-bottom:.75rem;line-height:1.4">⚠️ Infos optionnelles — généralement demandées à une IA. À vérifier, surtout le nombre de pages au moment où le livre est élu.</div>
+        <div class="form-row" style="margin-bottom:.75rem">
+          <div class="form-group" style="margin-bottom:0">
+            <label>Nb de pages</label>
+            <input type="number" id="p-nb-pages" min="1" placeholder="ex : 352">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Genre littéraire</label>
+            <input type="text" id="p-genre" placeholder="ex : Roman historique">
+          </div>
         </div>
-        <div class="form-group">
-          <label>Nb de pages <span style="color:var(--muted);font-weight:400">(optionnel)</span></label>
-          <input type="number" id="p-nb-pages" min="1" placeholder="ex : 352">
+        <div class="form-group" style="margin-bottom:0">
+          <label>Description en 3 mots</label>
+          <input type="text" id="p-desc3" maxlength="60" placeholder="ex : amour, guerre, trahison">
         </div>
       </div>
       <div class="modal-footer">
