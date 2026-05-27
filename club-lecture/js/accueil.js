@@ -64,6 +64,13 @@ function buildEvents() {
     events.push({ date: d, type: v.livre_elu ? "elu" : "vote", size: "lg", data: v });
   });
 
+  allReunions.forEach(r => {
+    const d = r.date ? toDate(r.date) : new Date(r.annee, r.mois - 1, 15);
+    if (!d) return;
+    const type = r.statut === "prevue" ? "reunion_prevue" : "reunion";
+    events.push({ date: d, type, size: "md", data: r });
+  });
+
   return events.sort((a, b) => a.date - b.date);
 }
 
@@ -78,7 +85,7 @@ function renderFrise() {
   const cols = events.map((ev, i) => {
     const isTop = i % 2 === 0;
     const w = WIDTHS[ev.size] || 148;
-    const dotBg = { membre: "var(--muted)", livre: "var(--accent)", vote: "var(--purple)", elu: "var(--green)" }[ev.type] || "var(--muted)";
+    const dotBg = { membre: "var(--muted)", livre: "var(--accent)", vote: "var(--purple)", elu: "var(--green)", reunion: "#5b9cf6", reunion_prevue: "var(--muted)" }[ev.type] || "var(--muted)";
     const dotSize = { sm: 10, md: 12, lg: 16 }[ev.size] || 12;
     const dotY = AXIS - dotSize / 2;
     const stemTop = isTop ? AXIS - STEM - dotSize / 2 : AXIS + dotSize / 2;
@@ -104,15 +111,23 @@ function renderFrise() {
       const t = r?.titre ?? "Livre élu";
       title = t.length > 22 ? t.slice(0, 20) + "…" : t;
       sub = formatMois(ev.data.mois, ev.data.annee);
+    } else if (ev.type === "reunion" || ev.type === "reunion_prevue") {
+      icon = ev.type === "reunion_prevue" ? "📅" : "📝";
+      const livreR = allLivres.find(l => l.id === ev.data.livre_id);
+      const t = livreR?.titre ?? "Réunion";
+      title = t.length > 22 ? t.slice(0, 20) + "…" : t;
+      sub = ev.type === "reunion_prevue"
+        ? `${formatMois(ev.data.mois, ev.data.annee)}<br>À venir`
+        : `${formatMois(ev.data.mois, ev.data.annee)}<br>${(ev.data.participant_ids || []).length} participant${(ev.data.participant_ids || []).length > 1 ? "s" : ""}`;
     }
 
-    const borderColor = { membre: "var(--frise-membre-border)", livre: "var(--frise-livre-border)", vote: "var(--frise-vote-border)", elu: "var(--frise-elu-border)" }[ev.type];
+    const borderColor = { membre: "var(--frise-membre-border)", livre: "var(--frise-livre-border)", vote: "var(--frise-vote-border)", elu: "var(--frise-elu-border)", reunion: "var(--frise-reunion-border)", reunion_prevue: "var(--frise-reunion-prevue-border)" }[ev.type];
 
     return `
       <div class="frise-ev-col" data-type="${ev.type}" data-id="${ev.data.id}" style="position:relative;flex-shrink:0;width:${w}px;height:${H}px;cursor:pointer">
         <div style="position:absolute;top:${dotY}px;left:calc(50% - ${dotSize/2}px);width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:${dotBg};border:2.5px solid var(--bg);z-index:2"></div>
         <div style="position:absolute;left:calc(50% - 1px);top:${stemTop}px;width:2px;height:${STEM}px;background:var(--border)"></div>
-        <div style="position:absolute;top:${cardTop};bottom:${cardBottom};left:5%;width:90%;background:var(--surface);border:1px solid ${borderColor};border-radius:6px;padding:.45rem .55rem;text-align:center">
+        <div style="position:absolute;top:${cardTop};bottom:${cardBottom};left:5%;width:90%;background:var(--surface);border:${ev.type === "reunion_prevue" ? `1.5px dashed ${borderColor}` : `1px solid ${borderColor}`};border-radius:6px;padding:.45rem .55rem;text-align:center;${ev.type === "reunion_prevue" ? "opacity:.8" : ""}">
           <span style="font-size:${ev.size === "lg" ? "1.15rem" : ev.size === "sm" ? ".85rem" : "1rem"};display:block;margin-bottom:.15rem">${icon}</span>
           <div style="font-size:.72rem;font-weight:700;line-height:1.25;color:var(--text)">${title}</div>
           <div style="font-size:.65rem;color:var(--muted);margin-top:.15rem;line-height:1.3">${sub}</div>
@@ -141,6 +156,7 @@ function renderFrise() {
       if (type === "membre") window.location.href = `membres.html?open=${id}`;
       else if (type === "livre") window.location.href = `bibliotheque.html?open=${id}`;
       else if (type === "vote" || type === "elu") window.location.href = `votes.html?open=${id}`;
+      else if (type === "reunion" || type === "reunion_prevue") window.location.href = `reunions.html?open=${id}`;
     });
   });
 }

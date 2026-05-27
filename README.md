@@ -687,6 +687,28 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-05-27 (suite 2)
+**Accueil — Frise chronologique : réunions**
+- `club-lecture/js/accueil.js` : les réunions sont maintenant affichées dans la frise. Passées (`statut === "passee"`) : icône 📝, point bleu (`#5b9cf6`), bordure bleue pleine, sous-titre = mois + nb de participants. À venir (`statut === "prevue"`) : icône 📅, point gris, bordure bleue en pointillés + opacité 80%, sous-titre = "À venir". Date utilisée : `reunion.date` si renseignée, sinon le 15 du mois. Clic → `reunions.html?open=ID`.
+- `club-lecture/css/style.css` : ajout de `--frise-reunion-border` et `--frise-reunion-prevue-border` dans les thèmes sombre et clair.
+
+### 2026-05-27 (suite)
+**Club de lecture — Bibliothèque : infos IA, toggle, spoiler fiche + tri pages**
+- `club-lecture/js/bibliotheque.js` : ajout de `BADGE_PALETTE` (6 couleurs) et `descBadge()` — badge coloré (hash de la description) affiché sur les cards proposition, éliminé et élu. Filtre genre dans `filteredLivres()`, recherche étendue à `genre` et `description_3_mots`. Tri `nb_pages` dans la vue tableau. Nombre de pages, genre et badge visibles sur les cards Élus (IIFE inline). Filtre genre peuplé dynamiquement depuis les livres (`populateGenreFilter()`). Dans `openFiche` : champs Pages/Genre/En 3 mots déplacés dans un bloc spoiler collapsible (`.fiche-ai-spoiler`) — caché par défaut, révélé au clic avec flèche ▶/▼.
+- `club-lecture/bibliotheque.html` : champs `p-genre` et `p-desc3` dans le modal "Proposer un livre" (groupe "Infos IA" avec avertissement). Colonne Genre et colonne Pages dans la vue tableau (thead). Bouton toggle `#ai-infos-toggle` dans `.ai-toggle-bar` en haut de la vue visuelle.
+- `club-lecture/css/style.css` : `.prop-card-genre`, `.prop-card-pages`, `.bib-elu-genre`, `.desc-badge` cachés par défaut — visibles avec `.ai-infos-visible` sur `body`. Styles du toggle (`.ai-toggle-bar`, `.toggle-switch`, `.toggle-slider`). Styles du spoiler fiche (`.fiche-ai-spoiler`, `.fiche-ai-trigger`, `.fiche-ai-arrow`, `.fiche-ai-body`, `.fiche-ai-disclaimer`).
+
+**Club de lecture — Stats : graphique lecteurs par mois**
+- `club-lecture/js/stats.js` : correction du graphique d'évolution — Y-axis = nb de membres ayant terminé le livre ce mois, pas nb de livres lus (toujours 1). Utilise `membersWhoFinishedBook()`.
+- `club-lecture/stats.html` : titre du graphique mis à jour ("Lecteurs ayant terminé le livre, par mois").
+
+**Jeux — Jeu de Mots : parties partageables**
+- `Jeux/jeu-de-mots.html` : réécriture complète. Nouveau flux : saisie nb joueurs → noms → difficulté → création d'une partie Firebase (`jeu_mots_parties`) → redirection vers `?partie=ID`. Vue partie : tous les mots floutés par défaut, clic pour révéler (`.revealed`). Chaque joueur voit son mot depuis son propre appareil. Historique partagé : mots floutés, clic pour révéler, lien "Ouvrir →". Import `getDoc` + `doc` pour charger une partie par ID.
+
+**Décisions de conception ajoutées :**
+- Toggle AI infos persisté en `localStorage` (clé `cl_bib_ai_infos`), OFF par défaut.
+- AI infos (pages, genre, description) masquées dans la fiche livre derrière un spoiler cliquable — indépendant du toggle de la vue bibliothèque.
+
 ### 2026-05-27
 **Nouvelle section Jeux + Club de lecture Stats + nb_pages**
 - `index.html` : ajout de la 3e carte "Jeux" (accent indigo `#667eea`, badge "✨ Accès libre"). Grille passée de `repeat(2, 1fr)` à `repeat(auto-fill, minmax(250px, 1fr))` avec `max-width: 860px`.

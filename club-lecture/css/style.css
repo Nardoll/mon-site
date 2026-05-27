@@ -25,6 +25,8 @@
   --frise-livre-border: rgba(232,164,74,.45);
   --frise-vote-border: rgba(122,106,240,.45);
   --frise-elu-border: rgba(106,191,105,.45);
+  --frise-reunion-border: rgba(91,156,246,.5);
+  --frise-reunion-prevue-border: rgba(91,156,246,.3);
   --elim: #555;
 }
 
@@ -51,6 +53,8 @@
   --frise-livre-border: rgba(200,120,0,.4);
   --frise-vote-border: rgba(104,64,216,.4);
   --frise-elu-border: rgba(26,158,106,.4);
+  --frise-reunion-border: rgba(37,99,235,.45);
+  --frise-reunion-prevue-border: rgba(37,99,235,.28);
   --elim: #9080b8;
 }
 
@@ -424,7 +428,7 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 .prop-card-footer { margin-top: auto; padding-top: .5rem; }
 .prop-card-genre  { font-size: .77rem; font-style: italic; color: var(--muted); margin-bottom: .2rem; display: none; }
 .prop-card-pages  { font-size: .72rem; color: var(--muted); margin-bottom: .35rem; display: none; }
-.desc-badge       { display: none; padding: 2px 9px; border-radius: 20px; font-size: .71rem; font-weight: 500; margin-bottom: .4rem; white-space: nowrap; }
+.desc-badge       { display: none; padding: 2px 9px; border-radius: 20px; font-size: .71rem; font-weight: 500; margin-bottom: .4rem; word-break: break-word; overflow-wrap: anywhere; }
 .bib-elu-genre    { font-size: .74rem; font-style: italic; color: var(--muted); display: none; }
 .bib-elu-info .desc-badge { margin-top: .3rem; }
 .ai-infos-visible .prop-card-genre,
@@ -455,6 +459,20 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 }
 .toggle-switch input:checked + .toggle-slider { background: var(--accent); }
 .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+/* ── Spoiler infos IA (fiche livre) ─────── */
+.fiche-ai-spoiler { margin-bottom: 1.25rem; }
+.fiche-ai-trigger {
+  width: 100%; display: flex; align-items: center; gap: .5rem;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  padding: .55rem .85rem; cursor: pointer; text-align: left;
+  font-size: .84rem; font-weight: 600; color: var(--muted); font-family: inherit;
+  transition: color .15s, background .15s; user-select: none;
+}
+.fiche-ai-trigger:hover { color: var(--text); background: var(--surface2); }
+.fiche-ai-arrow { font-size: .68rem; flex-shrink: 0; }
+.fiche-ai-body { padding: .6rem 0 .25rem; }
+.fiche-ai-disclaimer { font-size: .74rem; color: var(--muted); margin-top: .4rem; }
 
 /* ── Comments page ───────────────────────── */
 .comment-list { display: flex; flex-direction: column; gap: .6rem; }

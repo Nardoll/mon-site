@@ -199,7 +199,8 @@ function renderElusList() {
         ${r?.auteur ? `<div class="bib-elu-author">${r.auteur}</div>` : ""}
         ${(() => {
           const l = livres.find(x => x.id === v.livre_elu);
-          return (l?.genre ? `<div class="bib-elu-genre">${l.genre}</div>` : "")
+          return (l?.nb_pages ? `<div class="prop-card-pages">${l.nb_pages} p.</div>` : "")
+               + (l?.genre ? `<div class="bib-elu-genre">${l.genre}</div>` : "")
                + descBadge(l?.description_3_mots);
         })()}
       </div>
@@ -240,7 +241,7 @@ function filteredLivres() {
   }).sort((a, b) => {
     let va = a[sortCol], vb = b[sortCol];
     if (sortCol === "date_proposition") { va = va?.seconds ?? 0; vb = vb?.seconds ?? 0; }
-    else if (sortCol === "annee") { va = va ?? 0; vb = vb ?? 0; }
+    else if (sortCol === "annee" || sortCol === "nb_pages") { va = va ?? 0; vb = vb ?? 0; }
     else { va = (va ?? "").toString().toLowerCase(); vb = (vb ?? "").toString().toLowerCase(); }
     if (va < vb) return sortDir === "asc" ? -1 : 1;
     if (va > vb) return sortDir === "asc" ? 1 : -1;
@@ -256,7 +257,7 @@ function renderTable() {
     if (th.dataset.col === sortCol) th.classList.add(`sort-${sortDir}`);
   });
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="6" class="empty-state">Aucun livre trouvé.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state">Aucun livre trouvé.</td></tr>`;
     return;
   }
   tbody.innerHTML = list.map(l => {
@@ -266,6 +267,7 @@ function renderTable() {
       <td>${l.auteur || "—"}</td>
       <td>${l.annee || "—"}</td>
       <td>${l.genre ? `<span style="font-style:italic;font-size:.85em">${l.genre}</span>` : "—"}</td>
+      <td>${l.nb_pages ? l.nb_pages + " p." : "—"}</td>
       <td>${nomMembre(l.propose_par)}</td>
       <td>${formatDate(l.date_proposition)}</td>
       <td><span class="badge badge-${st.css}">${st.label}</span></td>
@@ -426,6 +428,23 @@ async function openFiche(id) {
       </div>`;
   }
 
+  const hasAI = livre.nb_pages || livre.genre || livre.description_3_mots;
+  const aiSpoilerHTML = hasAI ? `
+    <div class="fiche-ai-spoiler">
+      <button class="fiche-ai-trigger" id="fiche-ai-trigger">
+        <span class="fiche-ai-arrow" id="fiche-ai-arrow">▶</span>
+        <span>✨ Infos complémentaires (IA)</span>
+      </button>
+      <div class="fiche-ai-body hidden" id="fiche-ai-body">
+        <dl class="book-detail-meta">
+          ${livre.nb_pages ? `<dt>Pages</dt><dd>${livre.nb_pages} p.</dd>` : ""}
+          ${livre.genre ? `<dt>Genre</dt><dd>${livre.genre}</dd>` : ""}
+          ${livre.description_3_mots ? `<dt>En 3 mots</dt><dd>${livre.description_3_mots}</dd>` : ""}
+        </dl>
+        <div class="fiche-ai-disclaimer">⚠️ Pages, genre et description fournis par IA — à vérifier</div>
+      </div>
+    </div>` : "";
+
   document.getElementById("fiche-content").innerHTML = `
     <dl class="book-detail-meta">
       <dt>Auteur</dt><dd>${livre.auteur || "—"}</dd>
@@ -433,11 +452,8 @@ async function openFiche(id) {
       <dt>Proposé par</dt><dd>${nomMembre(livre.propose_par)}</dd>
       <dt>Date</dt><dd>${formatDate(livre.date_proposition)}</dd>
       <dt>Statut</dt><dd><span class="badge badge-${st.css}">${st.label}</span></dd>
-      <dt>Pages</dt><dd>${livre.nb_pages ? livre.nb_pages + " p." : "—"}</dd>
-      <dt>Genre</dt><dd>${livre.genre || "—"}</dd>
-      <dt>En 3 mots</dt><dd>${livre.description_3_mots || "—"}</dd>
     </dl>
-    <div style="font-size:.75rem;color:var(--muted);margin-bottom:1.25rem">⚠️ Pages, genre et description fournis par IA — à vérifier</div>
+    ${aiSpoilerHTML}
     ${avancementsHTML}
     <div class="divider"></div>
     <div class="card-title mb-2">Historique</div>
@@ -448,6 +464,15 @@ async function openFiche(id) {
       <a href="commentaires.html?livre=${id}" class="btn btn-secondary btn-sm">💬 Commentaires de lecture</a>
     </div>
   `;
+
+  if (hasAI) {
+    document.getElementById("fiche-ai-trigger").addEventListener("click", () => {
+      const body = document.getElementById("fiche-ai-body");
+      const arrow = document.getElementById("fiche-ai-arrow");
+      body.classList.toggle("hidden");
+      arrow.textContent = body.classList.contains("hidden") ? "▶" : "▼";
+    });
+  }
 }
 
 document.getElementById("fiche-close").addEventListener("click", () => document.getElementById("fiche-overlay").classList.add("hidden"));
