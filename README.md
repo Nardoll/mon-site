@@ -136,7 +136,8 @@ Mon Site/
    - **Bouton "💬 Laisser un commentaire"** → modal directement depuis l'accueil pour ajouter un commentaire sur le livre du mois
    - **Bouton "📖 Voir les commentaires (N) · ⚠️ spoilers"** → lien vers `commentaires.html?livre=LIVRE_ID`
    - **Suivi de lecture** — seuls les membres ayant un suivi réel s'affichent (les membres avec statut "Pas commencé" ET 0 avancement sont masqués). Triés du plus avancé au moins avancé. Bouton crayon ✏️ en fin de ligne (visible au hover) pour éditer. Select en bas de liste pour ajouter un membre au suivi. Boutons "Laisser un commentaire" / "Voir les commentaires" en style primaire.
-3. **Palmarès (Podium)** — affiche le top 3 des livres ayant la meilleure note finale (moyenne des notes données par les membres lors des réunions). Mise en page visuelle en podium : 2e à gauche, 1er au centre (plus grand), 3e à droite. Un 4e slot "🏅 Meilleur outsider" s'affiche sous le podium. **Seuls les livres ayant une réunion avec des notes finales** apparaissent ici. Chaque carte est cliquable → `bibliotheque.html?open=LIVRE_ID`.
+3. **Graphique d'évolution des lectures** — bouton "📈 Graphique" en bas du cadre Lecture du mois. Au clic, affiche (ou masque) un second cadre en dessous avec un graphique en courbes Chart.js. Une ligne par membre, axe X = date/heure des mises à jour, axe Y = % d'avancement (si total configuré) ou valeur absolue. Les données sont issues de la collection `progression_lecture` : à chaque mise à jour du statut de lecture (via le modal statut), un point horodaté est enregistré si `page_actuelle > 0` ou si le statut passe à "Terminé". Non rétrospectif — seules les mises à jour effectuées après l'implémentation apparaissent. Chart.js + adapter date-fns chargés en lazy au premier clic.
+4. **Palmarès (Podium)** — affiche le top 3 des livres ayant la meilleure note finale (moyenne des notes données par les membres lors des réunions). Mise en page visuelle en podium : 2e à gauche, 1er au centre (plus grand), 3e à droite. Un 4e slot "🏅 Meilleur outsider" s'affiche sous le podium. **Seuls les livres ayant une réunion avec des notes finales** apparaissent ici. Chaque carte est cliquable → `bibliotheque.html?open=LIVRE_ID`.
 
 #### Bibliothèque (`bibliotheque.html` + `bibliotheque.js`)
 
@@ -511,6 +512,17 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 > Les valeurs multi-select sont des arrays de strings. Les nouvelles options créées par l'utilisateur dans le formulaire sont sauvegardées en base et réapparaissent automatiquement dans les futurs formulaires (discovery depuis Firestore + PRESETS).
 
+#### `progression_lecture`
+| Champ | Type | Description |
+|-------|------|-------------|
+| `livre_id` | string | ID du livre |
+| `membre_id` | string | ID du membre |
+| `page_actuelle` | number \| null | Avancement enregistré au moment du point |
+| `pages_totales` | number \| null | Total connu au moment du point |
+| `horodatage` | Timestamp | Date et heure exacte de la mise à jour |
+
+> Chaque fois qu'un membre met à jour son avancement (page_actuelle > 0, ou statut "Terminé" avec un total connu), un nouveau document est ajouté — sans écraser le précédent. C'est un historique immuable qui alimente le graphique d'évolution.
+
 #### `notes_lecture`
 | Champ | Type | Description |
 |-------|------|-------------|
@@ -594,6 +606,11 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 ---
 
 ## Historique des modifications
+
+### 2026-05-27
+**Club de lecture — Graphique d'évolution des lectures**
+- `club-lecture/js/db.js` : nouvelles fonctions `addProgressionPoint()` et `getProgressionForLivre()`. Nouvelle collection Firestore `progression_lecture` — stocke un point horodaté à chaque mise à jour d'avancement (ne remplace pas `statuts_lecture`, s'ajoute en parallèle).
+- `club-lecture/js/accueil.js` : bouton "📈 Graphique" en bas de la carte Lecture du mois (toggle show/hide). Graphique Chart.js lignes par membre, X = date, Y = % (si total configuré) ou valeur absolue. Chargement lazy de Chart.js + `chartjs-adapter-date-fns`. Enregistrement automatique d'un point dans `progression_lecture` à chaque sauvegarde de statut (si avancement > 0 ou "Terminé").
 
 ### 2026-05-25
 **JDR — Roue Personnalisable**

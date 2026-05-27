@@ -272,3 +272,20 @@ export async function upsertStatutLecture({ membre_id, livre_id, statut, page_ac
   }
   return addDoc(collection(db, "statuts_lecture"), { membre_id, livre_id, ...data });
 }
+
+// ── Progression de lecture (historique) ───────────────────────────
+
+export async function addProgressionPoint({ livre_id, membre_id, page_actuelle, pages_totales }) {
+  return addDoc(collection(db, "progression_lecture"), {
+    livre_id,
+    membre_id,
+    page_actuelle: page_actuelle !== null && page_actuelle !== undefined ? Number(page_actuelle) : null,
+    pages_totales: pages_totales !== null && pages_totales !== undefined ? Number(pages_totales) : null,
+    horodatage: serverTimestamp(),
+  });
+}
+
+export async function getProgressionForLivre(livre_id) {
+  const s = await getDocs(query(collection(db, "progression_lecture"), where("livre_id", "==", livre_id)));
+  return snap(s).sort((a, b) => (a.horodatage?.seconds ?? 0) - (b.horodatage?.seconds ?? 0));
+}

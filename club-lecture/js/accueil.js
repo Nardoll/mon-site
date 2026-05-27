@@ -1,6 +1,6 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getMembres, getLivres, getVotes, getStatutsForLivre, upsertStatutLecture, getLivreById, updateLivre, addCommentaire, getCommentairesForLivre, getReunions } from "./db.js";
+import { getMembres, getLivres, getVotes, getStatutsForLivre, upsertStatutLecture, getLivreById, updateLivre, addCommentaire, getCommentairesForLivre, getReunions, addProgressionPoint, getProgressionForLivre } from "./db.js";
 import { formatMois, formatDate, STATUTS_LECTURE, initiales, showToast } from "./utils.js";
 
 await requireAuth();
@@ -9,6 +9,7 @@ initNav("accueil");
 let allVotes = [], allMembres = [], allLivres = [], allReunions = [];
 let currentLivreId = null, currentVote = null, editMembreId = null;
 let currentLivre = null, statutByMembre = {};
+let chartInstance = null, chartVisible = false;
 
 async function init() {
   [allVotes, allMembres, allLivres, allReunions] = await Promise.all([getVotes(), getMembres(), getLivres(), getReunions()]);
@@ -217,6 +218,18 @@ async function renderCurrentBook() {
           📖 Voir les commentaires${commentaires.length > 0 ? ` (${commentaires.length})` : ""}${commentaires.length > 0 ? " · ⚠️ spoilers" : ""}
         </a>
       </div>
+      <div style="border-top:1px solid var(--border);margin-top:.75rem;padding-top:.75rem">
+        <button class="btn btn-ghost btn-sm" id="btn-toggle-chart">📈 Graphique</button>
+      </div>
+    </div>
+    <div id="progression-chart-wrap" class="hidden" style="margin-top:.75rem">
+      <div class="card" style="padding:1.25rem">
+        <div style="font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.85rem">Évolution des lectures</div>
+        <div id="progression-chart-empty" class="hidden" style="text-align:center;padding:2rem 1rem;color:var(--muted);font-size:.83rem">
+          Aucune donnée pour l'instant.<br>Mettez à jour votre avancement pour que les points apparaissent ici.
+        </div>
+        <canvas id="progression-chart" style="max-height:280px"></canvas>
+      </div>
     </div>`;
 
   section.querySelector(".titre-livre-link").addEventListener("click", () => {
@@ -224,6 +237,19 @@ async function renderCurrentBook() {
   });
   document.getElementById("btn-progression-config").addEventListener("click", openProgressionModal);
   document.getElementById("btn-laisser-commentaire").addEventListener("click", () => openCommentaireModal(livre));
+  document.getElementById("btn-toggle-chart").addEventListener("click", async () => {
+    chartVisible = !chartVisible;
+    const wrap = document.getElementById("progression-chart-wrap");
+    const btn = document.getElementById("btn-toggle-chart");
+    if (chartVisible) {
+      wrap.classList.remove("hidden");
+      btn.textContent = "📈 Masquer le graphique";
+      await renderProgressionChart();
+    } else {
+      wrap.classList.add("hidden");
+      btn.textContent = "📈 Graphique";
+    }
+  });
 
   renderStatusList();
 }
@@ -469,6 +495,15 @@ document.getElementById("statut-modal-save").addEventListener("click", async () 
     await upsertStatutLecture({ membre_id: editMembreId, livre_id: currentLivreId, statut, page_actuelle, pages_totales });
     showToast("Statut mis à jour", "success");
     document.getElementById("statut-overlay").classList.add("hidden");
+
+    const pa = page_actuelle !== "" ? Number(page_actuelle) : null;
+    const pt = pages_totales !== "" ? Number(pages_totales) : (currentLivre?.progression_total ?? null);
+    const effectivePa = (statut === "termine" && (!pa || pa === 0) && pt) ? pt : pa;
+    if (effectivePa !== null && effectivePa > 0) {
+      await addProgressionPoint({ livre_id: currentLivreId, membre_id: editMembreId, page_actuelle: effectivePa, pages_totales: pt });
+      if (chartVisible) await renderProgressionChart();
+    }
+
     editMembreId = null;
     const statuts = await getStatutsForLivre(currentLivreId);
     statutByMembre = {};
@@ -516,5 +551,118 @@ document.getElementById("progression-save").addEventListener("click", async () =
     showToast("Erreur : " + e.message, "error");
   }
 });
+
+// ── Graphique progression ─────────────────────────────────────────
+
+async function loadChartJs() {
+  if (window.Chart) return;
+  await new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js";
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+  await new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js";
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+async function renderProgressionChart() {
+  await loadChartJs();
+
+  const canvas = document.getElementById("progression-chart");
+  const emptyEl = document.getElementById("progression-chart-empty");
+  if (!canvas || !currentLivreId) return;
+
+  const points = await getProgressionForLivre(currentLivreId);
+
+  if (!points.length) {
+    canvas.classList.add("hidden");
+    emptyEl?.classList.remove("hidden");
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+    return;
+  }
+  canvas.classList.remove("hidden");
+  emptyEl?.classList.add("hidden");
+
+  const totalConf = currentLivre?.progression_total ?? null;
+  const unite = currentLivre?.progression_unite || "";
+  const usePercent = !!totalConf;
+
+  const byMembre = {};
+  points.forEach(p => {
+    (byMembre[p.membre_id] ??= []).push(p);
+  });
+
+  const COLORS = ["#e8a44a", "#6abf69", "#7a6af0", "#cf6679", "#4ecdc4", "#5b9cf6"];
+
+  const datasets = Object.entries(byMembre).map(([membreId, pts], i) => {
+    const color = COLORS[i % COLORS.length];
+    const data = pts.map(p => {
+      const date = p.horodatage?.toDate ? p.horodatage.toDate() : new Date(p.horodatage * 1000);
+      const total = totalConf || p.pages_totales || null;
+      const val = usePercent && total ? Math.min(100, Math.round(p.page_actuelle / total * 100)) : (p.page_actuelle ?? 0);
+      return { x: date, y: val };
+    });
+    return {
+      label: nomMembre(membreId),
+      data,
+      borderColor: color,
+      backgroundColor: color + "33",
+      pointBackgroundColor: color,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      tension: 0.3,
+      fill: false,
+    };
+  });
+
+  const style = getComputedStyle(document.documentElement);
+  const borderClr = style.getPropertyValue("--border").trim() || "#2a2a2a";
+  const mutedClr  = style.getPropertyValue("--muted").trim()  || "#888";
+  const textClr   = style.getPropertyValue("--text").trim()   || "#e0e0e0";
+
+  if (chartInstance) chartInstance.destroy();
+
+  chartInstance = new Chart(canvas, {
+    type: "line",
+    data: { datasets },
+    options: {
+      responsive: true,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { labels: { color: textClr, font: { size: 12 } } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label} : ${ctx.parsed.y}${usePercent ? "%" : (unite ? " " + unite : "")}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: "time",
+          time: {
+            tooltipFormat: "d MMM yyyy, HH:mm",
+            displayFormats: { hour: "d MMM HH:mm", day: "d MMM", week: "d MMM", month: "MMM yyyy" }
+          },
+          grid: { color: borderClr },
+          ticks: { color: mutedClr, maxTicksLimit: 8 }
+        },
+        y: {
+          min: 0,
+          max: usePercent ? 100 : undefined,
+          grid: { color: borderClr },
+          ticks: {
+            color: mutedClr,
+            callback: v => usePercent ? v + "%" : (unite ? v + " " + unite : v)
+          }
+        }
+      }
+    }
+  });
+}
 
 init().catch(console.error);
