@@ -419,6 +419,14 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 .elim-card-footer { display: flex; align-items: center; justify-content: space-between; font-size: .73rem; color: var(--muted); }
 .elim-score { color: var(--red); font-weight: 700; }
 
+/* ── Infos enrichies bibliothèque ────────── */
+.prop-card { display: flex; flex-direction: column; }
+.prop-card-footer { margin-top: auto; padding-top: .5rem; }
+.prop-card-genre  { font-size: .77rem; font-style: italic; color: var(--muted); margin-bottom: .2rem; }
+.prop-card-pages  { font-size: .72rem; color: var(--muted); margin-bottom: .35rem; }
+.desc-badge       { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: .71rem; font-weight: 500; margin-bottom: .4rem; white-space: nowrap; }
+.bib-elu-genre    { font-size: .74rem; font-style: italic; color: var(--muted); }
+
 /* ── Comments page ───────────────────────── */
 .comment-list { display: flex; flex-direction: column; gap: .6rem; }
 .comment-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }

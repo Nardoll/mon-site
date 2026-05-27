@@ -14,13 +14,31 @@ document.getElementById("view-table").classList.toggle("hidden", viewMode !== "t
 
 let livres = [], membres = [], votes = [], reunions = [];
 let sortCol = "date_proposition", sortDir = "desc";
-let filters = { search: "", statut: "", propose: "" };
+let filters = { search: "", statut: "", genre: "", propose: "" };
+
+const BADGE_PALETTE = [
+  { bg: "#dcfce7", fg: "#166534" },
+  { bg: "#dbeafe", fg: "#1e40af" },
+  { bg: "#f3e8ff", fg: "#6b21a8" },
+  { bg: "#ffedd5", fg: "#9a3412" },
+  { bg: "#ccfbf1", fg: "#115e59" },
+  { bg: "#fee2e2", fg: "#991b1b" },
+];
+
+function descBadge(desc) {
+  if (!desc) return "";
+  let h = 0;
+  for (const c of desc) h = (h * 31 + c.charCodeAt(0)) | 0;
+  const { bg, fg } = BADGE_PALETTE[Math.abs(h) % BADGE_PALETTE.length];
+  return `<span class="desc-badge" style="background:${bg};color:${fg}">${desc}</span>`;
+}
 let currentFicheId = null;
 let eluSortMode = "chron";
 
 async function init() {
   [livres, membres, votes, reunions] = await Promise.all([getLivres(), getMembres(), getVotes(), getReunions()]);
   populateMembresFilter();
+  populateGenreFilter();
   populateMembresPropose();
   if (viewMode === "table") renderTable();
   else renderVisual();
@@ -51,6 +69,16 @@ function populateMembresFilter() {
   });
 }
 
+function populateGenreFilter() {
+  const sel = document.getElementById("filter-genre");
+  const genres = [...new Set(livres.map(l => l.genre).filter(Boolean))].sort();
+  genres.forEach(g => {
+    const opt = document.createElement("option");
+    opt.value = g; opt.textContent = g;
+    sel.appendChild(opt);
+  });
+}
+
 function populateMembresPropose() {
   const sel = document.getElementById("p-membre");
   sel.innerHTML = '<option value="">— Choisir —</option>';
@@ -74,6 +102,9 @@ function renderVisual() {
       <div class="prop-card" data-id="${l.id}">
         <div class="prop-card-title">${l.titre}</div>
         <div class="prop-card-author">${l.auteur || ""}</div>
+        ${l.genre ? `<div class="prop-card-genre">${l.genre}</div>` : ""}
+        ${l.nb_pages ? `<div class="prop-card-pages">${l.nb_pages} p.</div>` : ""}
+        ${descBadge(l.description_3_mots)}
         <div class="prop-card-footer">
           <span>${nomMembre(l.propose_par)}</span>
           <span>${formatDate(l.date_proposition)}</span>
@@ -98,6 +129,8 @@ function renderVisual() {
       return `<div class="elim-card" data-id="${l.id}">
         <div class="elim-card-title">${l.titre}</div>
         <div class="elim-card-author">${l.auteur || ""}</div>
+        ${l.genre ? `<div class="prop-card-genre" style="margin-bottom:.2rem">${l.genre}</div>` : ""}
+        ${descBadge(l.description_3_mots)}
         <div class="elim-card-footer">
           <span>${v ? formatMois(v.mois, v.annee) : "—"}</span>
           ${moy !== null ? `<span class="elim-score">${Number(moy).toFixed(1)}/${scale}</span>` : ""}
@@ -151,6 +184,7 @@ function renderElusList() {
       <div class="bib-elu-info">
         <div class="bib-elu-title">${r?.titre ?? v.livre_elu}</div>
         ${r?.auteur ? `<div class="bib-elu-author">${r.auteur}</div>` : ""}
+        ${(() => { const l = livres.find(x => x.id === v.livre_elu); return l?.genre ? `<div class="bib-elu-genre">${l.genre}</div>` : ""; })()}
       </div>
       <div class="bib-elu-scores">
         ${nf !== null
@@ -177,9 +211,13 @@ function filteredLivres() {
   return livres.filter(l => {
     if (filters.search) {
       const q = filters.search.toLowerCase();
-      if (!l.titre?.toLowerCase().includes(q) && !l.auteur?.toLowerCase().includes(q)) return false;
+      if (!l.titre?.toLowerCase().includes(q)
+        && !l.auteur?.toLowerCase().includes(q)
+        && !l.genre?.toLowerCase().includes(q)
+        && !l.description_3_mots?.toLowerCase().includes(q)) return false;
     }
     if (filters.statut && l.statut !== filters.statut) return false;
+    if (filters.genre && l.genre !== filters.genre) return false;
     if (filters.propose && l.propose_par !== filters.propose) return false;
     return true;
   }).sort((a, b) => {
@@ -210,6 +248,7 @@ function renderTable() {
       <td><strong>${l.titre}</strong></td>
       <td>${l.auteur || "—"}</td>
       <td>${l.annee || "—"}</td>
+      <td>${l.genre ? `<span style="font-style:italic;font-size:.85em">${l.genre}</span>` : "—"}</td>
       <td>${nomMembre(l.propose_par)}</td>
       <td>${formatDate(l.date_proposition)}</td>
       <td><span class="badge badge-${st.css}">${st.label}</span></td>
@@ -229,6 +268,7 @@ document.querySelectorAll("#livres-table th").forEach(th => {
 
 document.getElementById("filter-search").addEventListener("input", e => { filters.search = e.target.value; renderTable(); });
 document.getElementById("filter-statut").addEventListener("change", e => { filters.statut = e.target.value; renderTable(); });
+document.getElementById("filter-genre").addEventListener("change", e => { filters.genre = e.target.value; renderTable(); });
 document.getElementById("filter-propose").addEventListener("change", e => { filters.propose = e.target.value; renderTable(); });
 
 // ── Proposer un livre ──────────────────────────────────────────────
