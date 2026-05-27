@@ -422,10 +422,39 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 /* ── Infos enrichies bibliothèque ────────── */
 .prop-card { display: flex; flex-direction: column; }
 .prop-card-footer { margin-top: auto; padding-top: .5rem; }
-.prop-card-genre  { font-size: .77rem; font-style: italic; color: var(--muted); margin-bottom: .2rem; }
-.prop-card-pages  { font-size: .72rem; color: var(--muted); margin-bottom: .35rem; }
-.desc-badge       { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: .71rem; font-weight: 500; margin-bottom: .4rem; white-space: nowrap; }
-.bib-elu-genre    { font-size: .74rem; font-style: italic; color: var(--muted); }
+.prop-card-genre  { font-size: .77rem; font-style: italic; color: var(--muted); margin-bottom: .2rem; display: none; }
+.prop-card-pages  { font-size: .72rem; color: var(--muted); margin-bottom: .35rem; display: none; }
+.desc-badge       { display: none; padding: 2px 9px; border-radius: 20px; font-size: .71rem; font-weight: 500; margin-bottom: .4rem; white-space: nowrap; }
+.bib-elu-genre    { font-size: .74rem; font-style: italic; color: var(--muted); display: none; }
+.bib-elu-info .desc-badge { margin-top: .3rem; }
+.ai-infos-visible .prop-card-genre,
+.ai-infos-visible .prop-card-pages,
+.ai-infos-visible .bib-elu-genre  { display: block; }
+.ai-infos-visible .desc-badge     { display: inline-block; }
+
+/* ── Toggle infos IA ─────────────────────── */
+.ai-toggle-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+  padding: .75rem 1rem; margin-bottom: 1.5rem;
+}
+.ai-toggle-info { display: flex; flex-direction: column; gap: .25rem; min-width: 0; }
+.ai-toggle-label { font-size: .88rem; font-weight: 600; }
+.ai-toggle-desc  { font-size: .76rem; color: var(--muted); line-height: 1.4; }
+.toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-slider {
+  position: absolute; cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--border); border-radius: 24px; transition: background .2s;
+}
+.toggle-slider::before {
+  content: ""; position: absolute;
+  width: 18px; height: 18px; left: 3px; bottom: 3px;
+  background: white; border-radius: 50%; transition: transform .2s;
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
 
 /* ── Comments page ───────────────────────── */
 .comment-list { display: flex; flex-direction: column; gap: .6rem; }

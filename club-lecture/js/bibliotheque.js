@@ -16,6 +16,19 @@ let livres = [], membres = [], votes = [], reunions = [];
 let sortCol = "date_proposition", sortDir = "desc";
 let filters = { search: "", statut: "", genre: "", propose: "" };
 
+// ── Toggle infos IA ───────────────────────────────────────────────
+const AI_KEY = "cl_bib_ai_infos";
+const aiToggle = document.getElementById("ai-infos-toggle");
+if (localStorage.getItem(AI_KEY) === "1") {
+  aiToggle.checked = true;
+  document.body.classList.add("ai-infos-visible");
+}
+aiToggle.addEventListener("change", () => {
+  const on = aiToggle.checked;
+  localStorage.setItem(AI_KEY, on ? "1" : "0");
+  document.body.classList.toggle("ai-infos-visible", on);
+});
+
 const BADGE_PALETTE = [
   { bg: "#dcfce7", fg: "#166534" },
   { bg: "#dbeafe", fg: "#1e40af" },
@@ -184,7 +197,11 @@ function renderElusList() {
       <div class="bib-elu-info">
         <div class="bib-elu-title">${r?.titre ?? v.livre_elu}</div>
         ${r?.auteur ? `<div class="bib-elu-author">${r.auteur}</div>` : ""}
-        ${(() => { const l = livres.find(x => x.id === v.livre_elu); return l?.genre ? `<div class="bib-elu-genre">${l.genre}</div>` : ""; })()}
+        ${(() => {
+          const l = livres.find(x => x.id === v.livre_elu);
+          return (l?.genre ? `<div class="bib-elu-genre">${l.genre}</div>` : "")
+               + descBadge(l?.description_3_mots);
+        })()}
       </div>
       <div class="bib-elu-scores">
         ${nf !== null
