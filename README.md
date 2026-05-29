@@ -705,6 +705,11 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 - Le vote se lance automatiquement côté client : le premier visiteur de `vote.html` ou `votes.html` le 1er du mois crée le vote dans Firestore (tous les livres `en_proposition`, tous les membres, expiration 23h59 fixe — pas un timer relatif de 24h).
 - La page `vote.html` ne demande pas de mot de passe — accessible directement par lien partagé. L'identification se fait par sélection du nom dans une liste.
 
+### 2026-05-29 (suite)
+**Vote public — corrections UI**
+- `club-lecture/vote.html` + `club-lecture/js/vote.js` : ajout d'un bouton bascule thème clair/sombre en haut à gauche du header (style pill arrondi). Partage la clé `localStorage` `cl_theme` avec le reste du club.
+- `club-lecture/css/style.css` : correction de l'aperçu grisé — remplacement de l'overlay `::after` coloré (illisible en mode clair) par une simple `opacity:0.4` sur le wrapper.
+
 ### 2026-05-27 (suite 3)
 **Votes — champ date pour la frise chronologique**
 - `club-lecture/js/db.js` : `addVote()` accepte maintenant un paramètre `date` — stocké en Timestamp si fourni, sinon `serverTimestamp()` (= date de clôture automatique). `updateVote()` convertit les strings `date` en Timestamp (même pattern que `updateReunion`).
