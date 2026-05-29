@@ -693,6 +693,18 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-05-29
+**Votes — lancement automatique + page vote publique**
+- `club-lecture/votes.html` : suppression du bouton "Lancer un vote" et de tous ses modals (lancer, confirmer, soumettre). Remplacement par un encart `#vote-status-card` au-dessus de l'historique.
+- `club-lecture/js/votes.js` : suppression de toute la logique de lancement manuel. Ajout de `autoLancerSiNecessaire()` (déclenche le vote le 1er du mois si aucun vote actif, expiration à 23h59 fixe) et `renderStatusCard()` (affiche countdown + lien vers `vote.html` ou compte à rebours du prochain vote). Boutons Clôturer / Annuler conservés pour l'admin.
+- `club-lecture/vote.html` : **nouvelle page publique sans mot de passe**, partageable directement aux membres. Header minimal avec lien retour vers `votes.html`. Pas de sidebar.
+- `club-lecture/js/vote.js` : logique de la page publique — 3 états : (1) pas de vote : liste livres + aperçu grisé ; (2) vote en cours, non identifié : sélection du nom + confirmation + gestion doublon ; (3) vote en cours, identifié : tableau radio 1–5 par livre + soumission. Toggle infos livres non persisté (toujours OFF à l'ouverture). Tooltip au survol des titres dans le tableau (visible si toggle ON). Auto-close si le vote expire pendant la navigation.
+- `club-lecture/css/style.css` : nouveaux styles `.vsc-*` (encart votes.html) et `.vote-*` / `.vt-*` (page vote.html).
+
+**Décisions de conception :**
+- Le vote se lance automatiquement côté client : le premier visiteur de `vote.html` ou `votes.html` le 1er du mois crée le vote dans Firestore (tous les livres `en_proposition`, tous les membres, expiration 23h59 fixe — pas un timer relatif de 24h).
+- La page `vote.html` ne demande pas de mot de passe — accessible directement par lien partagé. L'identification se fait par sélection du nom dans une liste.
+
 ### 2026-05-27 (suite 3)
 **Votes — champ date pour la frise chronologique**
 - `club-lecture/js/db.js` : `addVote()` accepte maintenant un paramètre `date` — stocké en Timestamp si fourni, sinon `serverTimestamp()` (= date de clôture automatique). `updateVote()` convertit les strings `date` en Timestamp (même pattern que `updateReunion`).
