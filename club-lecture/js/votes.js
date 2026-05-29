@@ -10,6 +10,7 @@ let votes = [], membres = [], livres = [];
 let currentVoteId = null;
 let voteActif = null;
 let countdownInterval = null;
+let nextCountdownInterval = null;
 
 // ── Auto-lancement le 1er du mois ─────────────────────────────────
 
@@ -94,6 +95,7 @@ async function closeExpiredVote(va) {
 function renderStatusCard() {
   const card = document.getElementById("vote-status-card");
   if (!card) return;
+  if (nextCountdownInterval) { clearInterval(nextCountdownInterval); nextCountdownInterval = null; }
 
   if (voteActif) {
     const nbVotants = Object.keys(voteActif.bulletins || {}).length;
@@ -139,10 +141,7 @@ function renderStatusCard() {
     const now = new Date();
     const livresPropo = livres.filter(l => l.statut === "en_proposition");
     const nextVote = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const diff = nextVote - now;
-    const jours = Math.ceil(diff / 86400000);
     const moisStr = MOIS_NOMS[nextVote.getMonth()] + " " + nextVote.getFullYear();
-    const jourstxt = jours <= 1 ? "Dans 1 jour" : `Dans ${jours} jours`;
 
     card.innerHTML = `
       <a href="vote.html" class="vsc-next-link">
@@ -150,12 +149,14 @@ function renderStatusCard() {
           <div class="vsc-icon">📅</div>
           <div class="vsc-next-body">
             <div class="vsc-title">Prochain vote — ${moisStr}</div>
-            <div class="vsc-meta">${livresPropo.length} livre${livresPropo.length !== 1 ? "s" : ""} en compétition · Vote le 1er du mois</div>
-            <div class="vsc-countdown-label">${jourstxt}</div>
+            <div class="vsc-meta">${livresPropo.length} livre${livresPropo.length !== 1 ? "s" : ""} en compétition · Ouverture le 1er du mois</div>
+            <div class="vsc-countdown-label" id="vsc-next-countdown"></div>
           </div>
           <div class="vsc-arrow">›</div>
         </div>
       </a>`;
+
+    startNextCountdown(nextVote);
   }
 }
 
@@ -186,6 +187,29 @@ function updateCountdown() {
   if (m > 0 || h > 0) parts.push(`${m}min`);
   parts.push(`${s}s`);
   el.textContent = `Se termine dans ${parts.join(" ")}`;
+}
+
+function startNextCountdown(target) {
+  if (nextCountdownInterval) clearInterval(nextCountdownInterval);
+  updateNextCountdown(target);
+  nextCountdownInterval = setInterval(() => updateNextCountdown(target), 1000);
+}
+
+function updateNextCountdown(target) {
+  const el = document.getElementById("vsc-next-countdown");
+  if (!el) { clearInterval(nextCountdownInterval); return; }
+  const ms = target - Date.now();
+  if (ms <= 0) { el.textContent = "C'est aujourd'hui !"; clearInterval(nextCountdownInterval); return; }
+  const j = Math.floor(ms / 86400000);
+  const h = Math.floor((ms % 86400000) / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  const parts = [];
+  if (j > 0) parts.push(`${j}j`);
+  parts.push(`${String(h).padStart(2, "0")}h`);
+  parts.push(`${String(m).padStart(2, "0")}min`);
+  parts.push(`${String(s).padStart(2, "0")}s`);
+  el.textContent = parts.join(" ");
 }
 
 // ── Liste des votes ────────────────────────────────────────────────
