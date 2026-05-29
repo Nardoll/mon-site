@@ -1,7 +1,7 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getVotes, getMembres, getLivres, addVote, updateVote, getVoteActif, lancerVote, soumettreVote, cloturerVoteActif, annulerVoteActif } from "./db.js";
-import { formatMois, moyenne, showToast } from "./utils.js";
+import { getVotes, getMembres, getLivres, addVote, updateVote, getVoteActif, lancerVote, cloturerVoteActif, annulerVoteActif } from "./db.js";
+import { formatMois, MOIS_NOMS, moyenne, showToast } from "./utils.js";
 
 await requireAuth();
 initNav("votes");
@@ -9,8 +9,35 @@ initNav("votes");
 let votes = [], membres = [], livres = [];
 let currentVoteId = null;
 let voteActif = null;
-let pendingVoteData = null;
 let countdownInterval = null;
+
+// ── Auto-lancement le 1er du mois ─────────────────────────────────
+
+async function autoLancerSiNecessaire() {
+  const today = new Date();
+  if (today.getDate() !== 1) return;
+  if (voteActif) return;
+
+  const livresPropo = livres.filter(l => l.statut === "en_proposition");
+  if (!livresPropo.length) return;
+
+  const expires = new Date(today.getFullYear(), today.getMonth(), 1, 23, 59, 59, 0);
+
+  try {
+    await lancerVote({
+      mois: today.getMonth() + 1,
+      annee: today.getFullYear(),
+      livre_ids: livresPropo.map(l => l.id),
+      membre_ids: membres.map(m => m.id),
+      echelle: 5,
+      expires_at: expires,
+    });
+    voteActif = await getVoteActif();
+    showToast("Vote du mois lancé automatiquement !", "success");
+  } catch (e) { console.error("Auto-lancement vote :", e); }
+}
+
+// ── Init ───────────────────────────────────────────────────────────
 
 async function init() {
   [votes, membres, livres] = await Promise.all([getVotes(), getMembres(), getLivres()]);
@@ -21,8 +48,10 @@ async function init() {
     voteActif = null;
   }
 
+  await autoLancerSiNecessaire();
+
   renderList();
-  renderActiveVoteBanner();
+  renderStatusCard();
   if (voteActif) startCountdown();
 
   const openId = new URLSearchParams(window.location.search).get("open");
@@ -60,15 +89,74 @@ async function closeExpiredVote(va) {
   renderList();
 }
 
-// ── Bannière vote actif ────────────────────────────────────────────
+// ── Encart statut vote ─────────────────────────────────────────────
 
-function renderActiveVoteBanner() {
-  const banner = document.getElementById("vote-actif-banner");
-  if (!voteActif) { banner.classList.add("hidden"); return; }
-  banner.classList.remove("hidden");
-  document.getElementById("vote-actif-title").textContent =
-    `🗳️ Vote en cours — ${formatMois(voteActif.mois, voteActif.annee)}`;
-  updateCountdown();
+function renderStatusCard() {
+  const card = document.getElementById("vote-status-card");
+  if (!card) return;
+
+  if (voteActif) {
+    const nbVotants = Object.keys(voteActif.bulletins || {}).length;
+    const nbMembres = (voteActif.membre_ids || []).length;
+    card.innerHTML = `
+      <div class="vsc-active">
+        <div class="vsc-left">
+          <div class="vsc-icon">🗳️</div>
+          <div>
+            <div class="vsc-title">Vote en cours — ${formatMois(voteActif.mois, voteActif.annee)}</div>
+            <div class="vsc-meta">${(voteActif.livre_ids || []).length} livres · ${nbVotants}/${nbMembres} votes reçus</div>
+            <div class="vsc-countdown" id="vsc-countdown"></div>
+          </div>
+        </div>
+        <div class="vsc-right">
+          <a href="vote.html" class="btn btn-primary">🗳️ Accéder au vote →</a>
+          <button class="btn btn-secondary btn-sm" id="vsc-btn-cloturer">Clôturer</button>
+          <button class="btn btn-ghost btn-sm" id="vsc-btn-annuler" style="color:var(--red)">🗑️ Annuler</button>
+        </div>
+      </div>`;
+
+    document.getElementById("vsc-btn-cloturer").addEventListener("click", async () => {
+      if (!confirm("Clôturer le vote maintenant et calculer les résultats ?")) return;
+      if (countdownInterval) clearInterval(countdownInterval);
+      await closeExpiredVote(voteActif);
+      voteActif = null;
+      renderStatusCard();
+    });
+
+    document.getElementById("vsc-btn-annuler").addEventListener("click", async () => {
+      if (!confirm("Annuler le vote sans calculer les résultats ? Les statuts des livres ne seront pas modifiés.")) return;
+      if (countdownInterval) clearInterval(countdownInterval);
+      try {
+        await annulerVoteActif(voteActif.id);
+        voteActif = null;
+        renderStatusCard();
+        showToast("Vote annulé.", "success");
+      } catch (e) { showToast("Erreur : " + e.message, "error"); }
+    });
+
+    updateCountdown();
+  } else {
+    const now = new Date();
+    const livresPropo = livres.filter(l => l.statut === "en_proposition");
+    const nextVote = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const diff = nextVote - now;
+    const jours = Math.ceil(diff / 86400000);
+    const moisStr = MOIS_NOMS[nextVote.getMonth()] + " " + nextVote.getFullYear();
+    const jourstxt = jours <= 1 ? "Dans 1 jour" : `Dans ${jours} jours`;
+
+    card.innerHTML = `
+      <a href="vote.html" class="vsc-next-link">
+        <div class="vsc-next">
+          <div class="vsc-icon">📅</div>
+          <div class="vsc-next-body">
+            <div class="vsc-title">Prochain vote — ${moisStr}</div>
+            <div class="vsc-meta">${livresPropo.length} livre${livresPropo.length !== 1 ? "s" : ""} en compétition · Vote le 1er du mois</div>
+            <div class="vsc-countdown-label">${jourstxt}</div>
+          </div>
+          <div class="vsc-arrow">›</div>
+        </div>
+      </a>`;
+  }
 }
 
 function startCountdown() {
@@ -78,7 +166,7 @@ function startCountdown() {
     if (!voteActif) { clearInterval(countdownInterval); return; }
     if (voteActif.expires_at.toMillis() <= Date.now()) {
       clearInterval(countdownInterval);
-      closeExpiredVote(voteActif).then(() => { voteActif = null; renderActiveVoteBanner(); });
+      closeExpiredVote(voteActif).then(() => { voteActif = null; renderStatusCard(); });
       return;
     }
     updateCountdown();
@@ -86,7 +174,7 @@ function startCountdown() {
 }
 
 function updateCountdown() {
-  const el = document.getElementById("vote-actif-countdown");
+  const el = document.getElementById("vsc-countdown");
   if (!el || !voteActif) return;
   const ms = voteActif.expires_at.toMillis() - Date.now();
   if (ms <= 0) { el.textContent = "Vote expiré — clôture en cours…"; return; }
@@ -234,7 +322,7 @@ document.getElementById("detail-overlay").addEventListener("click", e => {
   if (e.target === e.currentTarget) { document.getElementById("detail-overlay").classList.add("hidden"); currentVoteId = null; }
 });
 
-// ── Modifier mois ──────────────────────────────────────────────────
+// ── Modifier vote ──────────────────────────────────────────────────
 
 document.getElementById("detail-edit").addEventListener("click", () => {
   const vote = votes.find(v => v.id === currentVoteId);
@@ -257,9 +345,8 @@ document.getElementById("edit-save").addEventListener("click", async () => {
   const mois = Number(document.getElementById("e-mois").value);
   const annee = Number(document.getElementById("e-annee").value);
   const dateVal = document.getElementById("e-date").value;
-  const updateData = { mois, annee, date: dateVal || null };
   try {
-    await updateVote(currentVoteId, updateData);
+    await updateVote(currentVoteId, { mois, annee, date: dateVal || null });
     showToast("Vote mis à jour !", "success");
     document.getElementById("edit-overlay").classList.add("hidden");
     votes = await getVotes();
@@ -267,238 +354,5 @@ document.getElementById("edit-save").addEventListener("click", async () => {
     document.getElementById("detail-title").textContent = `Vote — ${formatMois(mois, annee)}`;
   } catch (e) { showToast("Erreur : " + e.message, "error"); }
 });
-
-// ── Lancer un vote ─────────────────────────────────────────────────
-
-function parseDuree(text) {
-  const s = text.toLowerCase().trim();
-  let ms = 0;
-  const matchH = s.match(/(\d+(?:[.,]\d+)?)\s*h/);
-  const matchM = s.match(/(\d+)\s*min/);
-  if (matchH) ms += parseFloat(matchH[1].replace(",", ".")) * 3600000;
-  if (matchM) ms += parseInt(matchM[1]) * 60000;
-  if (!matchH && !matchM) {
-    const n = parseFloat(s.replace(",", "."));
-    if (!isNaN(n) && n > 0) ms = n * 3600000;
-  }
-  return ms || null;
-}
-
-function openLancerVoteModal() {
-  if (voteActif) { showToast("Un vote est déjà en cours.", "error"); return; }
-  const now = new Date();
-  document.getElementById("l-annee").value = now.getFullYear();
-  document.getElementById("l-mois").value = now.getMonth() + 1;
-  document.getElementById("l-duree").value = "";
-
-  const livresList = document.getElementById("l-livres-list");
-  livresList.innerHTML = livres.map(l => {
-    const actif = l.statut === "en_proposition";
-    const label = l.statut !== "en_proposition"
-      ? ` <span style="font-size:.72rem;color:var(--muted)">(${l.statut === "elu" ? "élu" : "éliminé"})</span>`
-      : "";
-    return `<label class="check-item${actif ? "" : " check-item-disabled"}">
-      <input type="checkbox" name="l-livre" value="${l.id}" ${actif ? "checked" : ""} ${actif ? "" : "disabled"}>
-      ${l.titre}${label}
-    </label>`;
-  }).join("") || `<div style="font-size:.85rem;color:var(--muted)">Aucun livre disponible.</div>`;
-
-  const membresList = document.getElementById("l-membres-list");
-  membresList.innerHTML = membres.map(m => `
-    <label class="check-item">
-      <input type="checkbox" name="l-membre" value="${m.id}" checked>
-      ${m.nom}
-    </label>`).join("");
-
-  document.getElementById("lancer-overlay").classList.remove("hidden");
-}
-
-document.getElementById("btn-lancer-vote").addEventListener("click", openLancerVoteModal);
-["lancer-close", "lancer-cancel"].forEach(id => {
-  document.getElementById(id).addEventListener("click", () => document.getElementById("lancer-overlay").classList.add("hidden"));
-});
-document.getElementById("lancer-overlay").addEventListener("click", e => {
-  if (e.target === e.currentTarget) document.getElementById("lancer-overlay").classList.add("hidden");
-});
-
-document.getElementById("lancer-confirm").addEventListener("click", () => {
-  const mois = Number(document.getElementById("l-mois").value);
-  const annee = Number(document.getElementById("l-annee").value);
-  const dureeText = document.getElementById("l-duree").value.trim();
-  const echelle = 5;
-
-  const dureeMs = parseDuree(dureeText);
-  if (!dureeMs) { showToast("Durée invalide. Ex : 24h, 1h30, 15min", "error"); return; }
-
-  const selectedLivreIds = [...document.querySelectorAll("input[name='l-livre']:checked")].map(el => el.value);
-  const selectedMembreIds = [...document.querySelectorAll("input[name='l-membre']:checked")].map(el => el.value);
-  if (!selectedLivreIds.length) { showToast("Sélectionnez au moins un livre.", "error"); return; }
-  if (!selectedMembreIds.length) { showToast("Sélectionnez au moins un membre.", "error"); return; }
-
-  const expiresAt = new Date(Date.now() + dureeMs);
-  pendingVoteData = { mois, annee, echelle, livre_ids: selectedLivreIds, membre_ids: selectedMembreIds, expires_at: expiresAt };
-
-  const livreNames = selectedLivreIds.map(id => livres.find(l => l.id === id)?.titre ?? id);
-  const membreNames = selectedMembreIds.map(id => membres.find(m => m.id === id)?.nom ?? id);
-
-  document.getElementById("confirm-content").innerHTML = `
-    <dl class="book-detail-meta">
-      <dt>Mois</dt><dd>${formatMois(mois, annee)}</dd>
-      <dt>Se termine le</dt><dd>${expiresAt.toLocaleString("fr-FR", { day:"2-digit", month:"long", year:"numeric", hour:"2-digit", minute:"2-digit" })}</dd>
-      <dt>Livres (${selectedLivreIds.length})</dt><dd>${livreNames.join(", ")}</dd>
-      <dt>Membres (${selectedMembreIds.length})</dt><dd>${membreNames.join(", ")}</dd>
-    </dl>`;
-
-  document.getElementById("lancer-overlay").classList.add("hidden");
-  document.getElementById("confirm-overlay").classList.remove("hidden");
-});
-
-["confirm-close"].forEach(id => {
-  document.getElementById(id).addEventListener("click", () => document.getElementById("confirm-overlay").classList.add("hidden"));
-});
-document.getElementById("confirm-back").addEventListener("click", () => {
-  document.getElementById("confirm-overlay").classList.add("hidden");
-  document.getElementById("lancer-overlay").classList.remove("hidden");
-});
-
-document.getElementById("confirm-launch").addEventListener("click", async () => {
-  if (!pendingVoteData) return;
-  try {
-    await lancerVote(pendingVoteData);
-    voteActif = await getVoteActif();
-    showToast("Vote lancé !", "success");
-    document.getElementById("confirm-overlay").classList.add("hidden");
-    pendingVoteData = null;
-    renderActiveVoteBanner();
-    startCountdown();
-  } catch (e) { showToast("Erreur : " + e.message, "error"); }
-});
-
-// ── Soumettre son vote ─────────────────────────────────────────────
-
-function openSoumettreModal() {
-  if (!voteActif) return;
-  const sel = document.getElementById("s-membre");
-  sel.innerHTML = '<option value="">— Choisir —</option>';
-  (voteActif.membre_ids || []).forEach(id => {
-    const opt = document.createElement("option");
-    opt.value = id;
-    opt.textContent = membres.find(m => m.id === id)?.nom ?? id;
-    sel.appendChild(opt);
-  });
-  document.getElementById("s-step-identity").classList.remove("hidden");
-  document.getElementById("s-step-notes").classList.add("hidden");
-  document.getElementById("soumettre-overlay").classList.remove("hidden");
-}
-
-function renderNotesForm() {
-  const container = document.getElementById("s-notes-list");
-  if (!voteActif) return;
-  const ratings = [1, 2, 3, 4, 5];
-  const headers = ratings.map(n => `<th style="text-align:center;min-width:52px;font-weight:600;font-size:.82rem">${n}/5</th>`).join("");
-  const rows = (voteActif.livre_ids || []).map(livre_id => {
-    const livre = livres.find(l => l.id === livre_id);
-    const dp = livre?.date_proposition?.seconds;
-    const moisPropo = dp
-      ? new Date(dp * 1000).toLocaleDateString("fr-FR", { month: "long" })
-      : null;
-    const moisStr = moisPropo ? ` — depuis ${moisPropo.charAt(0).toUpperCase() + moisPropo.slice(1)}` : "";
-    const label = [livre?.titre, livre?.auteur ? `de ${livre.auteur}` : null, livre?.annee ? `(${livre.annee})` : null].filter(Boolean).join(" ") + moisStr;
-    const radios = ratings.map(n =>
-      `<td style="text-align:center;vertical-align:middle">
-        <input type="radio" name="vote-livre-${livre_id}" value="${n}" style="cursor:pointer;width:18px;height:18px">
-      </td>`
-    ).join("");
-    return `<tr style="border-top:1px solid var(--border)">
-      <td style="padding:.55rem .5rem .55rem 0;vertical-align:middle;font-size:.82rem;line-height:1.35;color:var(--accent);min-width:130px">${label}</td>
-      ${radios}
-    </tr>`;
-  }).join("");
-
-  container.innerHTML = `
-    <div style="overflow-x:auto;margin-bottom:.5rem">
-      <table style="width:100%;border-collapse:collapse">
-        <thead><tr>
-          <th style="text-align:left;padding-bottom:.4rem"></th>
-          ${headers}
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-    <div style="font-size:.73rem;color:var(--muted);margin-top:.25rem">* Une note par livre est requise pour soumettre.</div>`;
-}
-
-document.getElementById("s-confirm-identity").addEventListener("click", () => {
-  const membreId = document.getElementById("s-membre").value;
-  if (!membreId) { showToast("Choisissez votre nom dans la liste.", "error"); return; }
-  const nom = membres.find(m => m.id === membreId)?.nom ?? membreId;
-
-  if (!confirm(`Vous êtes bien ${nom} ?`)) return;
-
-  const aDejaVote = voteActif.bulletins?.[membreId];
-  if (aDejaVote && Object.keys(aDejaVote).length > 0) {
-    if (!confirm(`${nom} a déjà soumis un vote. Voulez-vous le modifier et écraser le vote précédent ?`)) return;
-  }
-
-  document.getElementById("s-voter-label").textContent = `Vote de ${nom}`;
-  renderNotesForm();
-  document.getElementById("s-step-identity").classList.add("hidden");
-  document.getElementById("s-step-notes").classList.remove("hidden");
-});
-
-document.getElementById("s-back-identity").addEventListener("click", () => {
-  document.getElementById("s-step-notes").classList.add("hidden");
-  document.getElementById("s-step-identity").classList.remove("hidden");
-});
-
-document.getElementById("btn-soumettre-vote").addEventListener("click", openSoumettreModal);
-["soumettre-close", "soumettre-cancel"].forEach(id => {
-  document.getElementById(id).addEventListener("click", () => document.getElementById("soumettre-overlay").classList.add("hidden"));
-});
-document.getElementById("soumettre-overlay").addEventListener("click", e => {
-  if (e.target === e.currentTarget) document.getElementById("soumettre-overlay").classList.add("hidden");
-});
-
-document.getElementById("soumettre-save").addEventListener("click", async () => {
-  if (!voteActif) return;
-  const membreId = document.getElementById("s-membre").value;
-  if (!membreId) { showToast("Identité non confirmée.", "error"); return; }
-  const notes = {};
-  (voteActif.livre_ids || []).forEach(livre_id => {
-    const checked = document.querySelector(`input[name="vote-livre-${livre_id}"]:checked`);
-    if (checked) notes[livre_id] = Number(checked.value);
-  });
-  if (!Object.keys(notes).length) { showToast("Cochez au moins une note par livre.", "error"); return; }
-  try {
-    await soumettreVote(voteActif.id, membreId, notes);
-    voteActif.bulletins = { ...(voteActif.bulletins || {}), [membreId]: notes };
-    showToast("Vote soumis !", "success");
-    document.getElementById("soumettre-overlay").classList.add("hidden");
-  } catch (e) { showToast("Erreur : " + e.message, "error"); }
-});
-
-// ── Clôturer manuellement ──────────────────────────────────────────
-
-document.getElementById("btn-cloturer-vote").addEventListener("click", async () => {
-  if (!voteActif) return;
-  if (!confirm("Clôturer le vote maintenant et calculer les résultats ?")) return;
-  if (countdownInterval) clearInterval(countdownInterval);
-  await closeExpiredVote(voteActif);
-  voteActif = null;
-  renderActiveVoteBanner();
-});
-
-document.getElementById("btn-annuler-vote").addEventListener("click", async () => {
-  if (!voteActif) return;
-  if (!confirm("Annuler le vote sans calculer les résultats ? Les statuts des livres ne seront pas modifiés.")) return;
-  if (countdownInterval) clearInterval(countdownInterval);
-  try {
-    await annulerVoteActif(voteActif.id);
-    voteActif = null;
-    renderActiveVoteBanner();
-    showToast("Vote annulé.", "success");
-  } catch (e) { showToast("Erreur : " + e.message, "error"); }
-});
-
 
 init().catch(console.error);

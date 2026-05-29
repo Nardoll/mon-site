@@ -12,22 +12,14 @@
   <main class="main">
     <div class="page-header">
       <h1>Votes</h1>
-      <button class="btn btn-primary" id="btn-lancer-vote">🗳️ Lancer un vote</button>
     </div>
 
-    <!-- Bannière vote en cours -->
-    <div class="vote-actif-banner hidden" id="vote-actif-banner">
-      <div class="vote-actif-info">
-        <div class="vote-actif-title" id="vote-actif-title">Vote en cours</div>
-        <div class="vote-actif-countdown" id="vote-actif-countdown"></div>
-      </div>
-      <div class="vote-actif-actions">
-        <button class="btn btn-primary btn-sm" id="btn-soumettre-vote">🗳️ Voter</button>
-        <button class="btn btn-secondary btn-sm" id="btn-cloturer-vote">Clôturer</button>
-        <button class="btn btn-ghost btn-sm" id="btn-annuler-vote" style="color:var(--red)">🗑️ Annuler</button>
-      </div>
+    <!-- Encart prochain vote / vote en cours -->
+    <div id="vote-status-card" class="vote-status-card">
+      <div class="loading">Chargement…</div>
     </div>
 
+    <!-- Historique des votes -->
     <div id="votes-list">
       <div class="loading">Chargement…</div>
     </div>
@@ -78,103 +70,6 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="edit-cancel">Annuler</button>
         <button class="btn btn-primary" id="edit-save">Enregistrer</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal lancer un vote (formulaire) -->
-  <div class="overlay hidden" id="lancer-overlay">
-    <div class="modal modal-lg">
-      <div class="modal-header">
-        <h2>Lancer un vote</h2>
-        <button class="modal-close" id="lancer-close">✕</button>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>Mois du vote</label>
-          <select id="l-mois">
-            <option value="1">Janvier</option><option value="2">Février</option>
-            <option value="3">Mars</option><option value="4">Avril</option>
-            <option value="5">Mai</option><option value="6">Juin</option>
-            <option value="7">Juillet</option><option value="8">Août</option>
-            <option value="9">Septembre</option><option value="10">Octobre</option>
-            <option value="11">Novembre</option><option value="12">Décembre</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Année</label>
-          <input type="number" id="l-annee" min="2020" max="2099">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>Durée du vote</label>
-        <input type="text" id="l-duree" placeholder="ex : 24h, 1h30, 15min">
-        <div style="font-size:.73rem;color:var(--muted);margin-top:.3rem">
-          Formats acceptés : <code>24h</code>, <code>1h30</code>, <code>15min</code>, <code>2 heures</code>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label>Livres à inclure</label>
-          <div class="check-list" id="l-livres-list"></div>
-        </div>
-        <div class="form-group">
-          <label>Membres votants</label>
-          <div class="check-list" id="l-membres-list"></div>
-        </div>
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn btn-secondary" id="lancer-cancel">Annuler</button>
-        <button class="btn btn-primary" id="lancer-confirm">Confirmer →</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal confirmation vote -->
-  <div class="overlay hidden" id="confirm-overlay">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>Confirmer le lancement</h2>
-        <button class="modal-close" id="confirm-close">✕</button>
-      </div>
-      <div id="confirm-content"></div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" id="confirm-back">← Retour</button>
-        <button class="btn btn-primary" id="confirm-launch">🗳️ Lancer le vote</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal soumettre son vote -->
-  <div class="overlay hidden" id="soumettre-overlay">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>Soumettre mon vote</h2>
-        <button class="modal-close" id="soumettre-close">✕</button>
-      </div>
-      <!-- Étape 1 : identification -->
-      <div id="s-step-identity">
-        <div class="form-group">
-          <label>Qui êtes-vous ?</label>
-          <select id="s-membre"></select>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" id="soumettre-cancel">Annuler</button>
-          <button class="btn btn-primary" id="s-confirm-identity">Continuer →</button>
-        </div>
-      </div>
-      <!-- Étape 2 : saisie des notes -->
-      <div id="s-step-notes" class="hidden">
-        <div id="s-voter-label" style="font-size:.88rem;font-weight:600;color:var(--accent);margin-bottom:1rem;padding:.5rem .75rem;background:var(--surface-2);border-radius:6px"></div>
-        <div id="s-notes-list"></div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" id="s-back-identity">← Changer</button>
-          <button class="btn btn-primary" id="soumettre-save">Soumettre</button>
-        </div>
       </div>
     </div>
   </div>

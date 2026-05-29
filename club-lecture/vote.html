@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vote — Club de lecture</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Header simple, sans sidebar -->
+  <header class="vote-page-header">
+    <a href="votes.html" class="vote-back-link">← Retour</a>
+    <div class="vote-page-title">🗳️ Vote du Club de lecture</div>
+    <div style="width:80px"></div>
+  </header>
+
+  <main class="vote-page-main">
+
+    <!-- Bannière statut (vote en cours / prochain) -->
+    <div id="vote-banner" class="vote-banner vote-banner-waiting">
+      <div class="vote-banner-icon">⏳</div>
+      <div class="vote-banner-body">
+        <div class="vote-banner-title">Chargement…</div>
+      </div>
+    </div>
+
+    <!-- Toggle infos livres -->
+    <div class="vote-toggle-bar">
+      <label class="toggle-switch" style="margin:0">
+        <input type="checkbox" id="vote-ai-toggle">
+        <span class="toggle-slider"></span>
+      </label>
+      <span>Afficher les infos des livres</span>
+      <span style="color:var(--muted);font-size:.75rem">(genre, pages, description — données IA, à vérifier)</span>
+    </div>
+
+    <!-- Livres en compétition -->
+    <div class="vote-books-section">
+      <div class="vote-books-title">Livres en compétition</div>
+      <div id="vote-books-grid" class="vote-book-grid">
+        <div class="loading">Chargement…</div>
+      </div>
+    </div>
+
+    <!-- Section vote -->
+    <div class="vote-section">
+      <div class="vote-section-title">Voter</div>
+      <div id="vote-section-content">
+        <div class="loading">Chargement…</div>
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="js/vote.js"></script>
+</body>
+</html>

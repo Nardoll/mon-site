@@ -613,3 +613,143 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 .stats-membres-name { font-weight:500; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .stats-membres-col { text-align:center; color:var(--muted); font-size:.83rem; }
 .stats-membres-row .stats-membres-col { color:var(--text); font-weight:600; }
+
+/* ── Vote status card (votes.html) ──────────────────────────────── */
+.vote-status-card { margin-bottom:1.75rem; }
+
+.vsc-active {
+  display:flex; align-items:center; justify-content:space-between;
+  gap:1rem; flex-wrap:wrap;
+  background:var(--surface); border:1.5px solid var(--accent);
+  border-radius:var(--r); padding:1.25rem 1.75rem;
+}
+.vsc-next-link { display:block; text-decoration:none; color:inherit; }
+.vsc-next {
+  display:flex; align-items:center; gap:1.25rem;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r); padding:1.25rem 1.75rem;
+  transition:border-color .2s, background .2s; cursor:pointer;
+}
+.vsc-next:hover { border-color:var(--accent); background:var(--surface2); }
+.vsc-left { display:flex; align-items:center; gap:1.25rem; }
+.vsc-right { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
+.vsc-next-body { flex:1; }
+.vsc-icon { font-size:2rem; line-height:1; }
+.vsc-title { font-size:1rem; font-weight:700; color:var(--text); margin-bottom:.2rem; }
+.vsc-meta { font-size:.81rem; color:var(--muted); }
+.vsc-countdown { font-size:.88rem; color:var(--accent); font-weight:600; margin-top:.2rem; }
+.vsc-countdown-label { font-size:.95rem; font-weight:700; color:var(--accent); margin-top:.2rem; }
+.vsc-arrow { font-size:1.4rem; color:var(--muted); margin-left:auto; flex-shrink:0; }
+
+/* ── Page vote publique (vote.html) ─────────────────────────────── */
+.vote-page-header {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:.85rem 2rem; display:flex; align-items:center;
+  justify-content:space-between; position:sticky; top:0; z-index:50;
+}
+.vote-back-link {
+  font-size:.82rem; color:var(--muted); text-decoration:none;
+  display:flex; align-items:center; gap:.35rem; transition:color .15s;
+}
+.vote-back-link:hover { color:var(--text); }
+.vote-page-title { font-size:.95rem; font-weight:700; color:var(--text); }
+
+.vote-page-main { max-width:860px; margin:0 auto; padding:2rem 1.5rem; }
+
+/* Bannière */
+.vote-banner {
+  display:flex; align-items:center; gap:1.25rem;
+  border-radius:var(--r); padding:1.25rem 1.75rem; margin-bottom:1.5rem;
+}
+.vote-banner-active { background:var(--surface); border:1.5px solid var(--accent); }
+.vote-banner-waiting { background:var(--surface); border:1px solid var(--border); }
+.vote-banner-icon { font-size:2rem; line-height:1; flex-shrink:0; }
+.vote-banner-body { flex:1; }
+.vote-banner-title { font-size:1rem; font-weight:700; color:var(--text); margin-bottom:.2rem; }
+.vote-banner-sub { font-size:.81rem; color:var(--muted); }
+.vote-banner-countdown { font-size:.92rem; font-weight:700; color:var(--accent); margin-top:.25rem; }
+
+/* Toggle bar */
+.vote-toggle-bar {
+  display:flex; align-items:center; gap:.65rem; margin-bottom:1.5rem;
+  padding:.65rem 1rem; background:var(--surface);
+  border:1px solid var(--border); border-radius:6px;
+  font-size:.82rem; color:var(--muted); flex-wrap:wrap;
+}
+
+/* Grille livres */
+.vote-books-section { margin-bottom:1.75rem; }
+.vote-books-title {
+  font-size:.72rem; font-weight:600; text-transform:uppercase;
+  letter-spacing:.05em; color:var(--muted); margin-bottom:.85rem;
+}
+.vote-book-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(170px, 1fr));
+  gap:.65rem;
+}
+.vote-book-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r); padding:.9rem 1rem;
+  transition:border-color .15s;
+}
+.vote-book-card:hover { border-color:var(--accent); }
+.vote-book-titre { font-size:.86rem; font-weight:600; color:var(--text); margin-bottom:.15rem; line-height:1.35; }
+.vote-book-auteur { font-size:.75rem; color:var(--muted); margin-bottom:.4rem; }
+.vote-book-ai { display:none; flex-direction:column; gap:.3rem; margin-top:.45rem; border-top:1px solid var(--border); padding-top:.45rem; }
+.ai-infos-visible .vote-book-ai { display:flex; }
+.vote-book-genre { font-size:.73rem; color:var(--muted); font-style:italic; }
+.vote-book-pages { font-size:.73rem; color:var(--muted); }
+
+/* Section vote */
+.vote-section {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r); padding:1.5rem 1.75rem;
+}
+.vote-section-title {
+  font-size:.72rem; font-weight:600; text-transform:uppercase;
+  letter-spacing:.05em; color:var(--muted); margin-bottom:1.25rem;
+}
+.vote-identity-row {
+  display:flex; align-items:center; gap:.75rem; flex-wrap:wrap;
+  margin-bottom:1.25rem; padding-bottom:1.25rem; border-bottom:1px solid var(--border);
+}
+.vote-identity-row select { max-width:220px; }
+.vote-voter-label {
+  display:flex; align-items:center; flex-wrap:wrap;
+  font-size:.88rem; color:var(--accent);
+  padding:.45rem .75rem; background:var(--surface2);
+  border-radius:6px; margin-bottom:1rem;
+}
+.vote-preview-msg {
+  font-size:.82rem; color:var(--muted); font-style:italic;
+  text-align:center; padding:.5rem 0 1rem;
+}
+.vote-preview-wrap { position:relative; pointer-events:none; }
+.vote-preview-wrap::after {
+  content:''; position:absolute; inset:0;
+  background:var(--bg); opacity:.55; border-radius:4px;
+}
+
+/* Tableau de vote */
+.vt-table { width:100%; border-collapse:collapse; }
+.vt-row { border-top:1px solid var(--border); }
+.vt-label-cell { padding:.55rem .5rem .55rem 0; vertical-align:middle; min-width:140px; }
+.vt-header-cell { text-align:center; padding:.3rem .5rem; font-size:.78rem; font-weight:600; color:var(--muted); min-width:44px; }
+.vt-radio-cell { text-align:center; padding:.45rem .25rem; vertical-align:middle; }
+.vt-titre { font-size:.82rem; color:var(--accent); font-weight:500; line-height:1.35; }
+.vt-auteur { font-size:.75rem; color:var(--muted); }
+
+/* Tooltip livres (visible quand toggle ON + hover) */
+.vote-book-tooltip-wrap { position:relative; display:inline; }
+.vote-book-tooltip {
+  display:none; position:absolute;
+  bottom:calc(100% + 8px); left:0;
+  min-width:190px; max-width:270px;
+  background:var(--modal-bg); border:1px solid var(--border);
+  border-radius:8px; padding:.7rem .9rem;
+  font-size:.77rem; color:var(--text); line-height:1.55;
+  z-index:100; box-shadow:0 4px 18px rgba(0,0,0,.35);
+  pointer-events:none; white-space:normal;
+}
+.ai-infos-visible .vote-book-tooltip-wrap:hover .vote-book-tooltip { display:block; }
