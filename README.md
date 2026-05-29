@@ -705,6 +705,10 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 - Le vote se lance automatiquement côté client : le premier visiteur de `vote.html` ou `votes.html` le 1er du mois crée le vote dans Firestore (tous les livres `en_proposition`, tous les membres, expiration 23h59 fixe — pas un timer relatif de 24h).
 - La page `vote.html` ne demande pas de mot de passe — accessible directement par lien partagé. L'identification se fait par sélection du nom dans une liste.
 
+### 2026-05-29 (suite 2)
+**Votes — compte à rebours live avant le prochain vote**
+- `club-lecture/js/votes.js` + `club-lecture/js/vote.js` : remplacement du texte statique "Dans X jours" par un compte à rebours dynamique `Jj HHh MMmin SSs` mis à jour chaque seconde. Les jours sont masqués quand ils tombent à 0. Affiche "C'est aujourd'hui !" le 1er du mois avant l'ouverture automatique. L'intervalle est nettoyé si la carte se re-render.
+
 ### 2026-05-29 (suite)
 **Vote public — corrections UI**
 - `club-lecture/vote.html` + `club-lecture/js/vote.js` : ajout d'un bouton bascule thème clair/sombre en haut à gauche du header (style pill arrondi). Partage la clé `localStorage` `cl_theme` avec le reste du club.
