@@ -31,6 +31,7 @@ themeBtn.addEventListener("click", () => {
 let livres = [], membres = [], voteActif = null;
 let membreIdentifie = null;
 let countdownInterval = null;
+let nextCountdownInterval = null;
 
 function escapeHtml(s) {
   return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -156,8 +157,6 @@ function renderBanner() {
   } else {
     const now = new Date();
     const nextVote = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const diff = nextVote - now;
-    const jours = Math.ceil(diff / 86400000);
     const livresPropo = livres.filter(l => l.statut === "en_proposition");
     const moisStr = MOIS_NOMS[nextVote.getMonth()] + " " + nextVote.getFullYear();
 
@@ -167,8 +166,10 @@ function renderBanner() {
       <div class="vote-banner-body">
         <div class="vote-banner-title">Prochain vote — ${moisStr}</div>
         <div class="vote-banner-sub">${livresPropo.length} livre${livresPropo.length !== 1 ? "s" : ""} en compétition · Ouverture le 1er du mois</div>
-        <div class="vote-banner-countdown">Dans ${jours} jour${jours !== 1 ? "s" : ""}</div>
+        <div class="vote-banner-countdown" id="vote-next-countdown"></div>
       </div>`;
+
+    startNextCountdown(nextVote);
   }
 }
 
@@ -347,6 +348,29 @@ function renderVotingTable(livresPropo, disabled) {
 }
 
 // ── Countdown ──────────────────────────────────────────────────────
+
+function startNextCountdown(target) {
+  if (nextCountdownInterval) clearInterval(nextCountdownInterval);
+  updateNextCountdown(target);
+  nextCountdownInterval = setInterval(() => updateNextCountdown(target), 1000);
+}
+
+function updateNextCountdown(target) {
+  const el = document.getElementById("vote-next-countdown");
+  if (!el) { clearInterval(nextCountdownInterval); return; }
+  const ms = target - Date.now();
+  if (ms <= 0) { el.textContent = "C'est aujourd'hui !"; clearInterval(nextCountdownInterval); return; }
+  const j = Math.floor(ms / 86400000);
+  const h = Math.floor((ms % 86400000) / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  const parts = [];
+  if (j > 0) parts.push(`${j}j`);
+  parts.push(`${String(h).padStart(2, "0")}h`);
+  parts.push(`${String(m).padStart(2, "0")}min`);
+  parts.push(`${String(s).padStart(2, "0")}s`);
+  el.textContent = parts.join(" ");
+}
 
 function startCountdown() {
   if (countdownInterval) clearInterval(countdownInterval);
