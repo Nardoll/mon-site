@@ -654,6 +654,16 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 .vote-back-link:hover { color:var(--text); }
 .vote-page-title { font-size:.95rem; font-weight:700; color:var(--text); }
 
+.vote-theme-btn {
+  display:flex; align-items:center; gap:.45rem;
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:20px; padding:.4rem .85rem;
+  color:var(--text); font-size:.82rem; font-weight:500;
+  cursor:pointer; transition:background .15s, border-color .15s;
+  font-family:inherit; white-space:nowrap;
+}
+.vote-theme-btn:hover { background:var(--border); border-color:var(--accent); }
+
 .vote-page-main { max-width:860px; margin:0 auto; padding:2rem 1.5rem; }
 
 /* Bannière */

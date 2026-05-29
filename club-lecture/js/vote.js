@@ -2,6 +2,32 @@
 import { getLivres, getMembres, getVoteActif, lancerVote, soumettreVote, cloturerVoteActif } from "./db.js";
 import { formatMois, MOIS_NOMS, showToast } from "./utils.js";
 
+// ── Thème (même clé que le reste du club) ─────────────────────────
+(function() {
+  if (localStorage.getItem("cl_theme") === "light") {
+    document.documentElement.dataset.theme = "light";
+  }
+})();
+
+const themeBtn   = document.getElementById("vote-theme-btn");
+const themeIcon  = document.getElementById("vote-theme-icon");
+const themeLabel = document.getElementById("vote-theme-label");
+
+function applyThemeUI() {
+  const isLight = document.documentElement.dataset.theme === "light";
+  themeIcon.textContent  = isLight ? "🌙" : "☀️";
+  themeLabel.textContent = isLight ? "Mode sombre" : "Mode clair";
+}
+
+applyThemeUI();
+
+themeBtn.addEventListener("click", () => {
+  const light = document.documentElement.dataset.theme !== "light";
+  document.documentElement.dataset.theme = light ? "light" : "";
+  localStorage.setItem("cl_theme", light ? "light" : "dark");
+  applyThemeUI();
+});
+
 let livres = [], membres = [], voteActif = null;
 let membreIdentifie = null;
 let countdownInterval = null;
