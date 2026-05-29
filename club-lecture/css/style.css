@@ -735,11 +735,7 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
   font-size:.82rem; color:var(--muted); font-style:italic;
   text-align:center; padding:.5rem 0 1rem;
 }
-.vote-preview-wrap { position:relative; pointer-events:none; }
-.vote-preview-wrap::after {
-  content:''; position:absolute; inset:0;
-  background:var(--bg); opacity:.55; border-radius:4px;
-}
+.vote-preview-wrap { pointer-events:none; opacity:.4; }
 
 /* Tableau de vote */
 .vt-table { width:100%; border-collapse:collapse; }
