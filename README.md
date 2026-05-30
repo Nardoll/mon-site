@@ -982,12 +982,43 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 - **Wiki alimenté automatiquement** — Chaque action (révélation, oracle, événement) crée automatiquement une fiche dans le wiki. L'utilisateur peut toujours l'éditer ou la supprimer manuellement depuis le wiki.
 - **Événements liés à la cellule** — Les événements sont stockés dans leur propre collection `atelier_evenements` ET leur ID est ajouté au tableau `evenement_ids` de la cellule concernée. Pas de jointure requise pour afficher les événements d'une cellule.
 - **Données dénormalisées pour les événements** — `cellule_biome`, `cellule_q`, `cellule_r` sont copiés sur chaque événement pour éviter une lecture Firestore supplémentaire lors de l'affichage dans les listes.
-- **Pas de chart interactif de zoom** — Le chart d'activité (30 jours) est un simple bar chart statique, suffisant pour visualiser la régularité des sessions. Pas de `chartjs-adapter-date-fns` (les labels sont MM-DD calculés côté JS).
+- **Pas de chart interactif de zoom** — Bar chart adaptatif : plage X = du premier jour d'activité à aujourd'hui, minimum 7 jours. Chart.js chargé via `<script>` UMD classique dans le HTML (pas de `import()` dynamique qui ne fonctionne pas avec les bundles UMD). Instance trackée dans `_chartInstance` pour pouvoir détruire/recréer sans erreur.
 - **TODO en Firestore** — Les TODO sont persistés en Firestore (pas localStorage) pour être accessibles depuis n'importe quel appareil. Ils sont seedés automatiquement si la collection est vide.
+- **Compteur journalier en localStorage** — Le compteur d'actions du jour (`at_daily_YYYY-MM-DD`) est stocké en localStorage, pas en Firestore. C'est synchrone (rendu instantané avant toute réponse Firebase) et s'auto-remet à zéro chaque nouveau jour via la clé datée. Bouton `+1` pour ajouter une action disponible (utile en phase de test).
+- **Top-level `await` et Temporal Dead Zone** — Tous les `const` utilisés dans des fonctions appelées pendant le bloc d'initialisation (qui contient des `await`) doivent être déclarés AVANT le premier `await`. Les `const` déclarés après un `await` sont dans la TDZ au moment de leur utilisation.
+- **Modules versionnés** — Les imports dans `wiki.js` et `accueil.js` incluent `?v=N` pour contourner le cache navigateur des modules transversaux. Le fichier `_headers` à la racine force `Cache-Control: no-cache` sur tous les JS de l'atelier.
+- **Suppression en cascade** — Supprimer une fiche wiki supprime toujours le document source correspondant ET les entrées du journal d'actions associées (`ref_id === source_id`). Pour les événements, retire aussi l'ID de `evenement_ids` sur la cellule concernée.
+- **Zone de test** — Section "🧪 Zone de test" en bas du tableau de bord : boutons de suppression par collection + reset de la limite du jour. À retirer une fois le paramétrage de l'univers terminé.
 
 ---
 
 ## Historique des modifications
+
+### 2026-05-30 (suite 6)
+**Atelier — Suppression en cascade depuis le wiki**
+
+- `wiki.js` : `confirmDelete()` supprime maintenant toutes les données liées selon le `source_type` :
+  - **Lieux** : supprime la cellule dans `atelier_cellules` + les entrées du journal (`deleteActionsByRefId`)
+  - **Oracle** : supprime le document dans `atelier_oracles` + les entrées du journal
+  - **Événement** : supprime le document dans `atelier_evenements` + retire l'ID de `evenement_ids` sur la cellule + supprime les entrées du journal
+  - **Manuel** : supprime la fiche wiki uniquement
+  - La confirmation affiche un message spécifique selon ce qui va être supprimé.
+- `db.js` : nouvelles fonctions `deleteOracle`, `deleteEvenement`, `removeEvenementFromCellule`, `deleteActionsByRefId`.
+- `accueil.js` : instance Chart.js trackée (`_chartInstance`) pour pouvoir détruire et recréer le graphe sans erreur. La zone de test rafraîchit le graphique après chaque suppression bulk.
+
+### 2026-05-30 (suite 5)
+**Atelier — Correctifs bugs fondamentaux (Temporal Dead Zone + Firestore)**
+
+- **Bug TDZ** (`accueil.js`, `wiki.js`) : avec le top-level `await`, les `const` définis APRÈS le bloc init sont dans la Temporal Dead Zone quand les fonctions de rendu les utilisent. `ACTION_ICONS` et `SOURCE_ICONS` déplacés AVANT le premier `await` qui les utilise. C'était la cause de "Erreur de chargement" dans "Dernières actions" et du wiki vide.
+- **Firestore orderBy** : `getRecentActions()` et `getTodos()` utilisaient `orderBy()` qui nécessite un index Firestore non créé automatiquement sur une nouvelle collection. Remplacés par `getDocs()` + tri côté client sur `.timestamp?.seconds` et `.ordre`.
+- **Cache navigateur** : tous les imports dans `wiki.js` et `accueil.js` sont versionnés (`?v=2`) pour forcer le rechargement des modules transversaux (`db.js`, `utils.js`, etc.) quand le navigateur les a en cache depuis une ancienne version.
+- `_headers` : fichier ajouté à la racine avec `Cache-Control: no-cache` pour les JS de l'atelier — force la revalidation ETag à chaque déploiement.
+- **Graphique adaptatif** : la plage X du chart va du premier jour d'activité à aujourd'hui (minimum 7 jours) au lieu d'une fenêtre fixe de 30 jours.
+
+### 2026-05-30 (suite 4)
+**Atelier — Suppression wiki cascade cellule + fix cache**
+
+- `wiki.js` : supprimer une fiche "Lieux" supprime aussi la cellule correspondante dans `atelier_cellules` (via `cellule_id`). Ajout de `deleteCellule` dans db.js.
 
 ### 2026-05-30 (suite 3)
 **Atelier — Corrections boutons + zone de test + indicateur journalier**
