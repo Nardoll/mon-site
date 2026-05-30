@@ -8,14 +8,14 @@ import {
   addEvenement, addEvenementToCellule,
   getTodos, seedTodosIfEmpty, toggleTodo, deleteTodo, addTodo,
   deleteAllCellules, deleteAllWiki, deleteAllOracles, deleteAllEvenements, deleteAllActions,
-} from "./db.js?v=2";
+} from "./db.js?v=3";
 import {
   ORACLE_TYPES, EVENEMENT_TYPES,
   genMotsClesCellule, genMotsClesOracle, genMotsClesEvenement,
-  chooseBiome, BIOME_ICONS, BIOME_COLORS, BIOMES_NATURELS,
-} from "./mots-cles.js?v=2";
-
-const NEIGHBORS = [[1,-1],[1,0],[-1,1],[-1,0],[0,1],[0,-1]];
+} from "./mots-cles.js?v=3";
+import {
+  generateCell, BIOME_ICONS, BIOME_COLORS,
+} from "./generation.js?v=1";
 const DAILY_LIMIT = 3;
 
 // ─── Limite journalière (localStorage — synchrone, pas de Firebase) ───────────
@@ -292,51 +292,37 @@ let _revealData = null;
 
 async function openRevelerModal() {
   const cellules = await getCellules();
-  const discovered = new Map(cellules.map(c => [`${c.q},${c.r}`, c]));
 
-  let targetQ, targetR, neighborBiomes;
-
-  if (cellules.length === 0) {
-    // Première cellule : centre (0,0)
-    targetQ = 0;
-    targetR = 0;
-    neighborBiomes = [];
-  } else {
-    // Trouver toutes les cellules adjacentes non découvertes
-    const candidates = new Set();
-    for (const c of cellules) {
-      for (const [dq, dr] of NEIGHBORS) {
-        const key = `${c.q + dq},${c.r + dr}`;
-        if (!discovered.has(key)) candidates.add(key);
-      }
-    }
-    if (!candidates.size) {
-      showToast("Aucune cellule adjacente disponible.", "error");
-      return;
-    }
-
-    // Choix aléatoire parmi les candidats
-    const arr = [...candidates];
-    const chosen = arr[Math.floor(Math.random() * arr.length)];
-    [targetQ, targetR] = chosen.split(",").map(Number);
-
-    // Biomes des voisins déjà découverts
-    neighborBiomes = NEIGHBORS
-      .map(([dq, dr]) => discovered.get(`${targetQ + dq},${targetR + dr}`))
-      .filter(Boolean)
-      .map(c => c.biome);
+  // generateCell fait les étapes 1→9 en une fois
+  const genResult = generateCell(cellules);
+  if (!genResult) {
+    showToast("Aucune cellule adjacente disponible.", "error");
+    return;
   }
 
-  const biome = chooseBiome(neighborBiomes);
-  const motsCles = genMotsClesCellule(biome);
+  const { q, r, environnement, biome, montagne, riviere } = genResult;
+  const motsCles = genMotsClesCellule(biome, environnement);
   const icon = BIOME_ICONS[biome] || "🗺️";
   const color = BIOME_COLORS[biome] || "#888";
 
-  _revealData = { q: targetQ, r: targetR, biome, motsCles };
+  _revealData = { q, r, biome, environnement, motsCles, montagne, riviere };
 
   document.getElementById("reveal-biome").textContent = `${icon} ${biome}`;
   document.getElementById("reveal-biome").style.color = color;
-  document.getElementById("reveal-coords").textContent = `Coordonnées : (${targetQ}, ${targetR})`;
+
+  const envEl = document.getElementById("reveal-env");
+  if (envEl) envEl.textContent = environnement;
+
+  document.getElementById("reveal-coords").textContent = `Coordonnées : (${q}, ${r})`;
+
+  const featEl = document.getElementById("reveal-features");
+  if (featEl) {
+    const badges = [];
+    if (montagne) badges.push(`<span class="cell-feature-badge mountain">⛰️ Montagne</span>`);
+    if (riviere)  badges.push(`<span class="cell-feature-badge river">〰️ Rivière</span>`);
+    featEl.innerHTML = badges.join("");
+  }
+
   document.getElementById("reveal-chips").innerHTML = motsCles.map(m => `<span class="chip">${escapeHtml(m)}</span>`).join("");
   document.getElementById("reveal-titre").value = "";
   document.getElementById("reveal-desc").value = "";
@@ -361,8 +347,8 @@ document.getElementById("reveal-save").addEventListener("click", async () => {
   btn.textContent = "Sauvegarde…";
 
   try {
-    const { q, r, biome, motsCles } = _revealData;
-    const cellId = await addCellule({ q, r, biome, mots_cles: motsCles, titre: titre || null, description: desc });
+    const { q, r, biome, environnement, motsCles, montagne, riviere } = _revealData;
+    const cellId = await addCellule({ q, r, biome, environnement, montagne, riviere, mots_cles: motsCles, titre: titre || null, description: desc });
     const wikiId = await addWikiEntry({
       categorie: "Lieux",
       titre: titre || `${biome} (${q}, ${r})`,
@@ -372,9 +358,10 @@ document.getElementById("reveal-save").addEventListener("click", async () => {
       source_id: cellId,
       cellule_id: cellId,
     });
+    const featStr = [montagne ? "⛰️ montagne" : "", riviere ? "〰️ rivière" : ""].filter(Boolean).join(", ");
     await logAction({
       type: "cellule",
-      details: `${BIOME_ICONS[biome] || ""} ${biome} révélée en (${q}, ${r})${titre ? " — " + titre : ""}`,
+      details: `${BIOME_ICONS[biome] || ""} ${biome}${featStr ? ` (${featStr})` : ""} — ${environnement} · (${q}, ${r})${titre ? " · " + titre : ""}`,
       ref_id: cellId,
     });
     document.getElementById("reveal-overlay").classList.add("hidden");

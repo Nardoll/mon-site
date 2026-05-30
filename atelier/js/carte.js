@@ -1,8 +1,8 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
 import { escapeHtml, formatDate } from "./utils.js";
-import { getCellules, addEvenementToCellule } from "./db.js";
-import { BIOME_COLORS, BIOME_ICONS } from "./mots-cles.js";
+import { getCellules } from "./db.js";
+import { BIOME_COLORS, BIOME_ICONS, ENV_COLORS } from "./generation.js";
 import { db } from "../firebase-config.js";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -117,6 +117,8 @@ function renderMap() {
           font-family="Segoe UI,sans-serif"
           style="pointer-events:none;user-select:none"
         >${escapeHtml(c.titre.length > 12 ? c.titre.slice(0, 12) + "…" : c.titre)}</text>` : ""}
+        ${c.montagne ? `<text x="${x - 17}" y="${y - 26}" font-size="11" style="pointer-events:none;user-select:none">⛰️</text>` : ""}
+        ${c.riviere  ? `<text x="${x + 17}" y="${y - 26}" font-size="11" style="pointer-events:none;user-select:none">〰️</text>` : ""}
       </g>`;
   }
 
@@ -240,9 +242,28 @@ async function openCellModal(c) {
 
   const icon = BIOME_ICONS[c.biome] || "🗺️";
   const color = BIOME_COLORS[c.biome] || "#888";
+  const envColor = c.environnement ? (ENV_COLORS[c.environnement] || "var(--accent)") : "var(--muted2)";
 
   document.getElementById("cell-modal-biome").innerHTML =
     `<span style="margin-right:.35rem">${icon}</span><span style="color:${color}">${escapeHtml(c.biome)}</span>`;
+
+  const envEl = document.getElementById("cell-modal-env");
+  if (envEl) {
+    envEl.style.display = c.environnement ? "" : "none";
+    envEl.textContent = c.environnement || "";
+    envEl.style.borderColor = envColor;
+    envEl.style.color = envColor;
+  }
+
+  const featEl = document.getElementById("cell-modal-features");
+  if (featEl) {
+    const badges = [];
+    if (c.montagne) badges.push(`<span class="cell-feature-badge mountain">⛰️ Montagne</span>`);
+    if (c.riviere)  badges.push(`<span class="cell-feature-badge river">〰️ Rivière</span>`);
+    featEl.innerHTML = badges.join("");
+    featEl.style.display = badges.length ? "" : "none";
+  }
+
   document.getElementById("cell-modal-meta").innerHTML = [
     `<span>Coordonnées : (${c.q}, ${c.r})</span>`,
     c.date_decouverte ? `<span>Découverte le ${formatDate(c.date_decouverte)}</span>` : "",

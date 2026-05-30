@@ -11,10 +11,13 @@ export async function getCellules() {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
-export async function addCellule({ q, r, biome, mots_cles, titre, description }) {
+export async function addCellule({ q, r, biome, environnement, montagne, riviere, mots_cles, titre, description }) {
   const ref = await addDoc(collection(db, "atelier_cellules"), {
     q, r,
     biome,
+    environnement: environnement || null,
+    montagne: !!montagne,
+    riviere: !!riviere,
     mots_cles,
     titre: titre || null,
     description,

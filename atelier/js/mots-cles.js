@@ -294,16 +294,14 @@ export const BIOME_WEIGHTS = {
 };
 
 // ─── Génération de mots clés pour une cellule ───────────────────────────────
-// Retourne 3 mots clés : 1 sensation, 1 couleur, 1 faune/civilisation selon biome
+// Retourne 3 mots clés : 1 sensation, 1 couleur, 1 faune
 
-export function genMotsClesCellule(biome) {
+export function genMotsClesCellule(biome, environnement) {
   const { pickRandom } = _picks;
-  const isCivil = BIOMES_CIVILS.includes(biome);
-  const pool3 = isCivil ? MK.civilisation : MK.faune;
   return [
     pickRandom(MK.sensations),
     pickRandom(MK.couleurs),
-    pickRandom(pool3),
+    pickRandom(MK.faune),
   ];
 }
 

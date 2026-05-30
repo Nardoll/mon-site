@@ -994,6 +994,42 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-05-30 (suite 7)
+**Atelier — Système complet de génération procédurale des cellules + page de documentation**
+
+**Nouveau moteur de génération (`generation.js`) :**
+- 9 étapes de génération interconnectées, toutes implémentées dans `generateCell(cellules)`.
+- **Étape 1** : sélection pondérée de la cellule candidate (score = 2^X, X = nombre de voisins découverts). Les cellules entourées de plusieurs voisins sont exponentiellement préférées.
+- **Étape 2A** : continuité de l'environnement — 7 environnements (tempéré, steppique, désertique, tropical, glacial, volcanique, maritime), chacun avec ses propres seuils et probabilités de base (55% à 88%). Protection des petites zones à 95%.
+- **Étape 2B** : matrice de transition entre environnements — transitions interdites entre voisins géographiquement impossibles (désertique↔glacial, tropical↔glacial, maritime↔volcanique).
+- **Étape 3** : barrières naturelles — chaîne de montagne (×2.5), rivière large (×1.3), transition côtière (automatique).
+- **Étape 4** : 40+ biomes répartis dans les 7 environnements, avec poids relatifs calibrés.
+- **Étape 5** : modificateurs de proximité — 9 groupes de biomes compatibles avec coefficients 0.2 à 0.4, appliqués avant le tirage.
+- **Étape 6** : rivières — probabilités par environnement (0–30%), continuité à 85%, biomes source/embouchure, delta à 20% pour grandes zones maritimes.
+- **Étape 7** : montagnes — caractéristique superposée (prob. base 8%, +20/35/50% selon voisins montagne), axe directionnel calculé par analyse de covariance (+25% dans l'axe, −10% perpendiculaire).
+- **Étape 8** : côtes et océan — seuils bidirectionnels (zone maritime < 5 cellules → 60% max, ≥ 20 → 92% min), continuité côtière (×1.75 par voisin côtier).
+- **Étape 9** : îles et archipels — clustering (0 île voisine → 8%, 1 → 35%, 2 → 25%, 3+ → 15%), archipel linéaire via axe directionnel (+20% dans l'axe, −15% perpendiculaire).
+
+**Mise à jour des fichiers existants :**
+- `mots-cles.js` : suppression de l'ancien système de biomes (BIOMES, BIOME_COLORS, BIOME_ICONS, BIOME_WEIGHTS, chooseBiome). `genMotsClesCellule(biome, environnement)` accepte désormais l'environnement.
+- `db.js` : `addCellule` stocke maintenant `environnement`, `montagne` (boolean), `riviere` (boolean) sur chaque cellule.
+- `accueil.js` : `openRevelerModal` utilise `generateCell(cellules)` pour les étapes 1→9. La modale affiche le badge d'environnement + les badges montagne/rivière.
+- `carte.js` : imports depuis `generation.js`. Overlays SVG sur la carte : ⛰️ pour les montagnes, 〰️ pour les rivières (positionnés dans le coin supérieur de chaque hexagone). La fiche cellule (modal) affiche l'environnement et les caractéristiques.
+- `carte.html` : bouton "ℹ Règles" dans la toolbar qui ouvre la page de documentation en onglet.
+- `css/style.css` : nouveaux styles `.cell-env-badge`, `.cell-feature-badge.mountain/river`, `.info-*` (page documentation).
+
+**Nouvelle page `carte-info.html` :**
+- Accessible depuis le bouton "ℹ Règles" sur la carte (s'ouvre en onglet, protégé par le même mot de passe).
+- Documente exhaustivement les 9 étapes avec toutes les formules, tous les chiffres, toutes les tables de probabilités et la matrice de transition.
+
+**Schéma Firestore — nouveaux champs sur `atelier_cellules` :**
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `environnement` | string \| null | Un des 7 environnements (tempéré, steppique, etc.) |
+| `montagne` | boolean | Caractéristique montagne superposée au biome |
+| `riviere` | boolean | Présence d'un segment de rivière |
+
 ### 2026-05-30 (suite 6)
 **Atelier — Suppression en cascade depuis le wiki**
 

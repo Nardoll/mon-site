@@ -39,6 +39,7 @@
         <button class="btn btn-secondary" id="btn-zoom-reset" title="Réinitialiser la vue" style="padding:.4rem .7rem">⌖</button>
       </div>
       <span style="font-size:.78rem;color:var(--muted2)">Glisser pour déplacer · Molette pour zoomer · Clic sur une cellule pour voir sa fiche</span>
+      <a href="/atelier/carte-info.html" target="_blank" class="btn btn-ghost" title="Documentation des règles de génération" style="margin-left:auto;padding:.4rem .65rem;font-size:.8rem;text-decoration:none">ℹ Règles</a>
     </div>
 
     <!-- Carte SVG -->
@@ -60,6 +61,10 @@
         <button class="modal-close" id="cell-close">✕</button>
       </div>
       <div class="modal-body">
+        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.25rem">
+          <span class="cell-env-badge" id="cell-modal-env" style="display:none"></span>
+          <div id="cell-modal-features" style="display:none;gap:.35rem;flex-wrap:wrap"></div>
+        </div>
         <div class="cell-modal-meta" id="cell-modal-meta"></div>
 
         <div>

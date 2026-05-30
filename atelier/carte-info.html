@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>L'Atelier — Règles de génération</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main class="main">
+    <div class="info-content">
+
+      <h1 class="page-title">📐 Règles de génération</h1>
+
+      <div class="info-lead">
+        Ce document décrit exhaustivement toutes les règles, probabilités et formules utilisées pour générer
+        chaque cellule de la carte. Il sert de référence pour vérifier que l'implémentation dans
+        <code>generation.js</code> correspond exactement aux règles définies.
+      </div>
+
+      <!-- Table des matières -->
+      <div class="info-toc">
+        <div class="info-toc-title">Table des matières</div>
+        <a href="#step1">Étape 1 — Sélection de la cellule (pondération 2^X)</a>
+        <a href="#step2">Étape 2 — Détermination de l'environnement</a>
+        <a href="#step3">Étape 3 — Barrières naturelles</a>
+        <a href="#step4">Étape 4 — Biomes par environnement</a>
+        <a href="#step5">Étape 5 — Modificateurs de proximité</a>
+        <a href="#step6">Étape 6 — Rivières</a>
+        <a href="#step7">Étape 7 — Montagnes</a>
+        <a href="#step8">Étape 8 — Côtes et océan</a>
+        <a href="#step9">Étape 9 — Îles et archipels</a>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <div class="info-section" id="step1">
+        <div class="info-section-title">⬡ Étape 1 — Sélection de la cellule candidate</div>
+
+        <p class="info-text">
+          Quand l'utilisateur clique sur "Révéler une cellule", toutes les cellules adjacentes à au moins
+          une cellule découverte sont identifiées comme candidates. Chaque candidate reçoit un score de priorité,
+          puis un tirage pondéré détermine laquelle est révélée.
+        </p>
+
+        <div class="info-subsection">Formule du score</div>
+        <div class="info-formula">score = 2^X   où X = nombre de voisins déjà découverts (entre 1 et 6)</div>
+
+        <p class="info-text">
+          Ce score exponentiel garantit que les cellules entourées de plusieurs voisins découverts sont
+          préférées, ce qui produit une carte qui se remplit de façon cohérente sans laisser de trous isolés.
+        </p>
+
+        <div class="info-subsection">Table des scores et probabilités relatives</div>
+        <table class="info-table">
+          <thead>
+            <tr><th>Voisins découverts (X)</th><th>Score (2^X)</th><th>Rapport vs X=1</th><th>Effet</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td class="num">2</td><td class="num">1×</td><td class="muted">Probabilité de base</td></tr>
+            <tr><td>2</td><td class="num">4</td><td class="num">2×</td><td class="muted">2 fois plus probable qu'avec 1 voisin</td></tr>
+            <tr><td>3</td><td class="num">8</td><td class="num">4×</td><td class="muted">4 fois plus probable</td></tr>
+            <tr><td>4</td><td class="num">16</td><td class="num">8×</td><td class="muted">8 fois plus probable</td></tr>
+            <tr><td>5</td><td class="num">32</td><td class="num">16×</td><td class="muted">16 fois plus probable</td></tr>
+            <tr><td>6</td><td class="num">64</td><td class="num">32×</td><td class="muted">Hexagone complètement entouré — fortement privilégié</td></tr>
+          </tbody>
+        </table>
+
+        <div class="info-highlight">
+          Première cellule (carte vide) : toujours placée en (0, 0), biome tiré aléatoirement dans un environnement non-maritime et non-volcanique.
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <div class="info-section" id="step2">
+        <div class="info-section-title">🌍 Étape 2 — Détermination de l'environnement</div>
+
+        <p class="info-text">
+          Les 7 environnements disponibles sont :
+          <span class="info-env-chip" style="color:#7eb56a;border-color:#7eb56a">tempéré</span>
+          <span class="info-env-chip" style="color:#c4a53a;border-color:#c4a53a">steppique</span>
+          <span class="info-env-chip" style="color:#d4a530;border-color:#d4a530">désertique</span>
+          <span class="info-env-chip" style="color:#1a5e2a;border-color:#1a5e2a">tropical</span>
+          <span class="info-env-chip" style="color:#8aabb5;border-color:#8aabb5">glacial</span>
+          <span class="info-env-chip" style="color:#8a2010;border-color:#8a2010">volcanique</span>
+          <span class="info-env-chip" style="color:#1a5080;border-color:#1a5080">maritime</span>.
+          La montagne n'est <strong>pas</strong> un environnement — c'est une caractéristique superposée (étape 7).
+        </p>
+
+        <div class="info-subsection">2A — Probabilité de continuité de l'environnement</div>
+        <p class="info-text">
+          On identifie l'environnement dominant parmi les voisins découverts (le plus fréquent).
+          On calcule la taille de la zone connectée de cet environnement, puis on applique une probabilité
+          de continuité selon des paliers progressifs.
+        </p>
+
+        <div class="info-formula">Si taille &lt; seuil_min          → prob = 95%  (protection zones minuscules)
+Si seuil_min ≤ taille &lt; palier1 → prob = base
+Si palier1 ≤ taille &lt; palier2  → prob = base − 8%
+Si palier2 ≤ taille &lt; palier3  → prob = base − 18%
+Si taille ≥ palier3              → prob = base − 28%  (plancher)</div>
+
+        <table class="info-table">
+          <thead>
+            <tr>
+              <th>Environnement</th>
+              <th>Seuil min</th>
+              <th>Palier 1</th>
+              <th>Palier 2</th>
+              <th>Palier 3</th>
+              <th>Prob. base</th>
+              <th>Plancher (base−28%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="info-env-chip" style="color:#7eb56a;border-color:#7eb56a">tempéré</span></td>    <td class="num">10</td><td class="num">40</td><td class="num">100</td><td class="num">250</td><td class="num">85%</td><td class="num">57%</td></tr>
+            <tr><td><span class="info-env-chip" style="color:#c4a53a;border-color:#c4a53a">steppique</span></td>  <td class="num">6</td> <td class="num">25</td><td class="num">70</td> <td class="num">180</td><td class="num">80%</td><td class="num">52%</td></tr>
+            <tr><td><span class="info-env-chip" style="color:#d4a530;border-color:#d4a530">désertique</span></td><td class="num">8</td> <td class="num">35</td><td class="num">90</td> <td class="num">220</td><td class="num">82%</td><td class="num">54%</td></tr>
+            <tr><td><span class="info-env-chip" style="color:#1a5e2a;border-color:#1a5e2a">tropical</span></td>   <td class="num">6</td> <td class="num">25</td><td class="num">70</td> <td class="num">180</td><td class="num">80%</td><td class="num">52%</td></tr>
+            <tr><td><span class="info-env-chip" style="color:#8aabb5;border-color:#8aabb5">glacial</span></td>    <td class="num">10</td><td class="num">35</td><td class="num">90</td> <td class="num">200</td><td class="num">83%</td><td class="num">55%</td></tr>
+            <tr><td><span class="info-env-chip" style="color:#8a2010;border-color:#8a2010">volcanique</span></td><td class="num">1</td> <td class="num">5</td> <td class="num">12</td> <td class="num">25</td> <td class="num">55%</td><td class="num">27%</td></tr>
+            <tr><td><span class="info-env-chip" style="color:#1a5080;border-color:#1a5080">maritime</span></td>   <td class="num">8</td> <td class="num">50</td><td class="num">150</td><td class="num">400</td><td class="num">88%</td><td class="num">60%</td></tr>
+          </tbody>
+        </table>
+
+        <p class="info-text muted" style="font-size:.79rem">
+          Exemples : une zone tempérée de 5 cellules → 95% (protection). Zone de 80 cellules → 77% (85−8). Zone de 500 cellules → 57% (85−28).
+        </p>
+
+        <div class="info-subsection">2B — Matrice de transition entre environnements</div>
+        <p class="info-text">
+          Quand la continuité est rompue, le nouvel environnement est tiré selon la matrice ci-dessous
+          (poids relatifs normalisés). Les cases à 0 sont des transitions <strong>interdites</strong> (géographiquement incohérentes).
+        </p>
+
+        <div class="info-matrix">
+          <table>
+            <thead>
+              <tr>
+                <th class="row-head">Depuis →</th>
+                <th>tempéré</th><th>steppique</th><th>désertique</th><th>tropical</th><th>glacial</th><th>volcanique</th><th>maritime</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th class="row-head">tempéré</th>    <td class="zero">—</td><td class="high">30</td><td>5</td><td>20</td><td>15</td><td>5</td><td>25</td></tr>
+              <tr><th class="row-head">steppique</th>  <td class="high">35</td><td class="zero">—</td><td class="high">35</td><td>10</td><td>10</td><td>5</td><td>5</td></tr>
+              <tr><th class="row-head">désertique</th> <td>10</td><td class="high">50</td><td class="zero">—</td><td>15</td><td class="zero">0</td><td>10</td><td>15</td></tr>
+              <tr><th class="row-head">tropical</th>   <td class="high">35</td><td>15</td><td>10</td><td class="zero">—</td><td class="zero">0</td><td>10</td><td>30</td></tr>
+              <tr><th class="row-head">glacial</th>    <td class="high">40</td><td>20</td><td class="zero">0</td><td class="zero">0</td><td class="zero">—</td><td>5</td><td class="high">35</td></tr>
+              <tr><th class="row-head">volcanique</th> <td>25</td><td>15</td><td>20</td><td>20</td><td>10</td><td class="zero">—</td><td>10</td></tr>
+              <tr><th class="row-head">maritime</th>   <td class="high">35</td><td>10</td><td>10</td><td>25</td><td>20</td><td class="zero">0</td><td class="zero">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="info-text" style="font-size:.79rem;color:var(--muted2)">
+          Transitions interdites (0) : désertique↔glacial, tropical↔glacial, volcanique→maritime, maritime→volcanique.
+          Ces environnements ne peuvent jamais être directement adjacents — un environnement intermédiaire est obligatoire.
+        </p>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <div class="info-section" id="step3">
+        <div class="info-section-title">⛰️ Étape 3 — Barrières naturelles</div>
+
+        <p class="info-text">
+          Ces modificateurs augmentent la probabilité de <em>changement</em> d'environnement en traversant
+          une frontière géographique. Ils s'appliquent après le calcul de continuité de l'étape 2.
+        </p>
+
+        <div class="info-formula">prob_changement_ajustée = min(90%, prob_changement_base × multiplicateur)
+prob_continuité_finale = 1 − prob_changement_ajustée</div>
+
+        <table class="info-table">
+          <thead>
+            <tr><th>Barrière</th><th>Condition</th><th>Multiplicateur sur le changement</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Chaîne de montagne</strong></td>
+              <td>≥ 3 cellules montagne connectées en chaîne, dont au moins une voisine de la cellule cible</td>
+              <td class="num">× 2.5</td>
+            </tr>
+            <tr>
+              <td><strong>Rivière large</strong></td>
+              <td>≥ 5 cellules avec rivière dans la carte + au moins un voisin avec rivière</td>
+              <td class="num">× 1.3</td>
+            </tr>
+            <tr>
+              <td><strong>Côte</strong></td>
+              <td>Passage d'un environnement terrestre vers maritime</td>
+              <td class="num">Automatique (toujours changer)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p class="info-text" style="font-size:.79rem;color:var(--muted2)">
+          Les multiplicateurs se combinent multiplicativement. Une rivière dans une chaîne de montagne → ×2.5 × ×1.3 = ×3.25.
+          La probabilité de changement est plafonnée à 90% pour garder une part de continuité.
+        </p>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <div class="info-section" id="step4">
+        <div class="info-section-title">🌲 Étape 4 — Biomes par environnement</div>
+
+        <p class="info-text">
+          Une fois l'environnement défini, le biome spécifique est tiré selon les poids relatifs ci-dessous.
+          Les modificateurs de proximité (étape 5) sont appliqués avant le tirage final.
+        </p>
+
+        <div class="info-subsection">🌿 Tempéré</div>
+        <table class="info-table">
+          <thead><tr><th>Biome</th><th>Poids</th><th>Prob. approx.</th></tr></thead>
+          <tbody>
+            <tr><td>Plaine</td><td class="num">25</td><td class="num">25.0%</td></tr>
+            <tr><td>Colline</td><td class="num">15</td><td class="num">15.0%</td></tr>
+            <tr><td>Forêt clairsemée</td><td class="num">15</td><td class="num">15.0%</td></tr>
+            <tr><td>Prairie</td><td class="num">12</td><td class="num">12.0%</td></tr>
+            <tr><td>Forêt ancienne</td><td class="num">10</td><td class="num">10.0%</td></tr>
+            <tr><td>Marais</td><td class="num">8</td><td class="num">8.0%</td></tr>
+            <tr><td>Marécage</td><td class="num">5</td><td class="num">5.0%</td></tr>
+            <tr><td>Tourbière</td><td class="num">4</td><td class="num">4.0%</td></tr>
+            <tr><td>Plateau</td><td class="num">4</td><td class="num">4.0%</td></tr>
+            <tr><td>Versant de montagne</td><td class="num">2</td><td class="num">2.0%</td></tr>
+          </tbody>
+        </table>
+
+        <div class="info-subsection">🍂 Steppique</div>
+        <table class="info-table">
+          <thead><tr><th>Biome</th><th>Poids</th><th>Prob. approx.</th></tr></thead>
+          <tbody>
+            <tr><td>Steppe</td><td class="num">35</td><td class="num">35.0%</td></tr>
+            <tr><td>Prairie sèche</td><td class="num">25</td><td class="num">25.0%</td></tr>
+            <tr><td>Colline herbeuse</td><td class="num">20</td><td class="num">20.0%</td></tr>
+            <tr><td>Plaine ventée</td><td class="num">15</td><td class="num">15.0%</td></tr>
+            <tr><td>Plateau aride</td><td class="num">5</td><td class="num">5.0%</td></tr>
+          </tbody>
+        </table>
+
+        <div class="info-subsection">🏜️ Désertique</div>
+        <table class="info-table">
+          <thead><tr><th>Biome</th><th>Poids</th><th>Prob. approx.</th></tr></thead>
+          <tbody>
+            <tr><td>Désert de sable</td><td class="num">30</td><td class="num">30.0%</td></tr>
+            <tr><td>Désert de roche</td><td class="num">28</td><td class="num">28.0%</td></tr>
+            <tr><td>Désert de sel</td><td class="num">12</td><td class="num">12.0%</td></tr>
+            <tr><td>Plateau aride</td><td class="num">12</td><td class="num">12.0%</td></tr>
+            <tr><td>Canyon aride</td><td class="num">10</td><td class="num">10.0%</td></tr>
+            <tr><td>Oasis</td><td class="num">5</td><td class="num">5.0%</td></tr>
+            <tr><td>Colline aride</td><td class="num">3</td><td class="num">3.0%</td></tr>
+          </tbody>
+        </table>
+
+        <div class="info-subsection">🌴 Tropical</div>
+        <table class="info-table">
+          <thead><tr><th>Biome</th><th>Poids</th><th>Prob. approx.</th></tr></thead>
+          <tbody>
+            <tr><td>Jungle dense</td><td class="num">28</td><td class="num">28.0%</td></tr>
+            <tr><td>Jungle clairsemée</td><td class="num">20</td><td class="num">20.0%</td></tr>
+            <tr><td>Savane</td><td class="num">18</td><td class="num">18.0%</td></tr>
+            <tr><td>Marécage tropical</td><td class="num">12</td><td class="num">12.0%</td></tr>
+            <tr><td>Mangrove</td><td class="num">8</td><td class="num">8.0%</td></tr>
+            <tr><td>Forêt noyée</td><td class="num">8</td><td class="num">8.0%</td></tr>
+            <tr><td>Côte tropicale</td><td class="num">4</td><td class="num">4.0%</td></tr>
+            <tr><td>Delta</td><td class="num">2</td><td class="num">2.0%</td></tr>
+          </tbody>
+        </table>
+
+        <div class="info-subsection">❄️ Glacial</div>
+        <table class="info-table">
+          <thead><tr><th>Biome</th><th>Poids</th><th>Prob. approx.</th></tr></thead>
+          <tbody>
+            <tr><td>Toundra</td><td class="num">30</td><td class="num">30.0%</td></tr>
+            <tr><td>Glace permanente</td><td class="num">25</td><td class="num">25.0%</td></tr>
+            <tr><td>Glacier</td><td class="num">20</td><td class="num">20.0%</td></tr>
+            <tr><td>Plaine enneigée</td><td class="num">15</td><td class="num">15.0%</td></tr>
+            <tr><td>Côte glaciale</td><td class="num">7</td><td class="num">7.0%</td></tr>
+            <tr><td>Mer de glace</td><td class="num">3</td><td class="num">3.0%</td></tr>
+          </tbody>
+        </table>
+
+        <div class="info-subsection">🌋 Volcanique</div>
+        <table class="info-table">
+          <thead><tr><th>Biome</th><th>Poids</th><th>Prob. approx.</th></tr></thead>
+          <tbody>
+            <tr><td>Champ de lave</td><td class="num">30</td><td class="num">30.0%</td></tr>
+            <tr><td>Terres brûlées</td><td class="num">25</td><td class="num">25.0%</td></tr>
+            <tr><td>Plateau volcanique</td><td class="num">20</td><td class="num">20.0%</td></tr>
+            <tr><td>Lac de cratère</td><td class="num">10</td><td class="num">10.0%</td></tr>
+            <tr><td>Forêt de cendres</td><td class="num">10</td><td class="num">10.0%</td></tr>
+            <tr><td>Volcan actif</td><td class="num">5</td><td class="num">5.0%</td></tr>
+          </tbody>
+        </table>
+
+        <div class="info-subsection">🌊 Maritime</div>
+        <table class="info-table">
+          <thead><tr><th>Biome</th><th>Poids de base</th><th>Prob. approx. (base)</th></tr></thead>
+          <tbody>
+            <tr><td>Eau profonde</td><td class="num">35</td><td class="num">35.0%</td></tr>
+            <tr><td>Eau peu profonde</td><td class="num">30</td><td class="num">30.0%</td></tr>
+            <tr><td>Côte rocheuse</td><td class="num">12</td><td class="num">12.0%</td></tr>
+            <tr><td>Côte sablonneuse</td><td class="num">10</td><td class="num">10.0%</td></tr>
+            <tr><td>Île</td><td class="num">8</td><td class="num">8.0%</td></tr>
+            <tr><td>Archipel</td><td class="num">5</td><td class="num">5.0%</td></tr>
+          </tbody>
+        </table>
+        <p class="info-text" style="font-size:.79rem;color:var(--muted2)">
+          Les probabilités des îles sont fortement modifiées par l'étape 9 (clustering d'archipels).
+        </p>
+
+        <div class="info-subsection">Biomes spéciaux (montagne maritime)</div>
+        <p class="info-text">
+          Quand une montagne apparaît dans un environnement maritime (étape 7), le biome standard est remplacé :
+        </p>
+        <table class="info-table">
+          <thead><tr><th>Condition</th><th>Biome résultant</th></tr></thead>
+          <tbody>
+            <tr><td>Maritime + montagne + voisin volcanique</td><td><strong>Île volcanique</strong></td></tr>
+            <tr><td>Maritime + montagne + voisin non-volcanique</td><td><strong>Île rocheuse</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <div class="info-section" id="step5">
+        <div class="info-section-title">🔗 Étape 5 — Modificateurs de proximité</div>
+
+        <p class="info-text">
+          Certains biomes augmentent leur propre probabilité d'apparition quand des biomes compatibles
+          sont présents parmi les voisins. Le modificateur s'applique sur le poids du biome avant le tirage pondéré.
+        </p>
+
+        <div class="info-formula">poids_modifié = poids_base × (1 + N × coefficient)
+
+N = nombre de cellules voisines découvertes dont le biome est dans {biome cible} ∪ {biomes compatibles}</div>
+
+        <table class="info-table">
+          <thead>
+            <tr><th>Biome(s) ciblé(s)</th><th>Compatible avec</th><th>Coefficient</th><th>Effet max (6 voisins)</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Forêt ancienne</td>
+              <td>Forêt clairsemée</td>
+              <td class="num">0.40</td>
+              <td class="num">× 3.4</td>
+            </tr>
+            <tr>
+              <td>Forêt clairsemée</td>
+              <td>Forêt ancienne, Prairie</td>
+              <td class="num">0.30</td>
+              <td class="num">× 2.8</td>
+            </tr>
+            <tr>
+              <td>Jungle dense</td>
+              <td>Jungle clairsemée</td>
+              <td class="num">0.40</td>
+              <td class="num">× 3.4</td>
+            </tr>
+            <tr>
+              <td>Marais, Marécage, Tourbière, Mangrove</td>
+              <td>Entre eux (groupe humide)</td>
+              <td class="num">0.35</td>
+              <td class="num">× 3.1</td>
+            </tr>
+            <tr>
+              <td>Colline, Colline herbeuse, Colline aride</td>
+              <td>Versant de montagne, Plateau, Plateau aride</td>
+              <td class="num">0.25</td>
+              <td class="num">× 2.5</td>
+            </tr>
+            <tr>
+              <td>Désert de sable</td>
+              <td>Désert de roche</td>
+              <td class="num">0.35</td>
+              <td class="num">× 3.1</td>
+            </tr>
+            <tr>
+              <td>Glace permanente, Glacier</td>
+              <td>Entre eux (groupe glaciaire)</td>
+              <td class="num">0.40</td>
+              <td class="num">× 3.4</td>
+            </tr>
+            <tr>
+              <td>Eau profonde</td>
+              <td>Eau peu profonde</td>
+              <td class="num">0.30</td>
+              <td class="num">× 2.8</td>
+            </tr>
+            <tr>
+              <td>Île, Archipel</td>
+              <td>Entre eux</td>
+              <td class="num">0.20</td>
+              <td class="num">× 2.2</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="info-highlight">
+          Ces règles sont cumulatives : un biome peut recevoir des bonus de plusieurs groupes simultanément.
+          Les poids négatifs sont ramenés à 0 avant le tirage pondéré.
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <div class="info-section" id="step6">
+        <div class="info-section-title">〰️ Étape 6 — Rivières</div>
+
+        <p class="info-text">
+          Les rivières sont des caractéristiques de cellule (un drapeau <code>riviere: true</code>), pas des biomes.
+          À chaque cellule découverte, on calcule si un segment de rivière la traverse.
+        </p>
+
+        <div class="info-subsection">Probabilités de base par environnement</div>
+        <table class="info-table">
+          <thead><tr><th>Environnement</th><th>Probabilité de base</th></tr></thead>
+          <tbody>
+            <tr><td>Tropical</td><td class="num">30%</td></tr>
+            <tr><td>Tempéré</td><td class="num">25%</td></tr>
+            <tr><td>Glacial</td><td class="num">20%</td></tr>
+            <tr><td>Steppique</td><td class="num">12%</td></tr>
+            <tr><td>Volcanique</td><td class="num">8%</td></tr>
+            <tr><td>Désertique</td><td class="num">5%</td></tr>
+            <tr><td>Maritime</td><td class="num">0%</td></tr>
+          </tbody>
+        </table>
+
+        <div class="info-subsection">Modificateurs</div>
+        <table class="info-table">
+          <thead><tr><th>Condition</th><th>Modification</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Un ou plusieurs voisins ont déjà une rivière (continuité)</td>
+              <td>Probabilité montée à <strong>85%</strong></td>
+            </tr>
+            <tr>
+              <td>C'est la seule cellule non découverte adjacente à une rivière en attente</td>
+              <td>Probabilité montée à <strong>100%</strong> (continuation forcée)</td>
+            </tr>
+            <tr>
+              <td>Biome source : Versant de montagne, Glacier, Lac de cratère</td>
+              <td><strong>+ 15%</strong></td>
+            </tr>
+            <tr>
+              <td>Biome embouchure : Eau peu profonde, Eau profonde, Marais, Marécage, Delta, Mangrove</td>
+              <td><strong>+ 20%</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="info-subsection">Logique de delta</div>
+        <p class="info-text">
+          Quand une rivière atteint son embouchure dans une grande zone maritime (≥ 5 cellules maritimes),
+          il y a <strong>20% de chance</strong> que le segment soit marqué comme delta plutôt que comme simple embouchure.
+          Un delta peut avoir 2 à 3 cellules d'embouchure adjacentes.
+        </p>
+
+        <div class="info-highlight">
+          Une rivière a deux extrémités : une source (montagne/colline/glacier) et une embouchure (eau/marais/delta).
+          Une fois les deux extrémités définies, la rivière est complète et ne se propage plus.
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <div class="info-section" id="step7">
+        <div class="info-section-title">⛰️ Étape 7 — Montagnes</div>
+
+        <p class="info-text">
+          La montagne est une <strong>caractéristique superposée</strong> à l'environnement. Une cellule peut être
+          "désert de roche + montagne" ou "forêt ancienne + montagne". La montagne est calculée
+          indépendamment du biome, après que l'environnement et le biome sont définis.
+        </p>
+
+        <div class="info-subsection">Probabilité d'apparition</div>
+        <div class="info-formula">prob_base = 8%
+
++20% si 1 voisin montagne    → total possible 28%
++35% si 2 voisins montagne   → total possible 43%
++50% si 3+ voisins montagne  → total possible 58%</div>
+
+        <div class="info-subsection">Bonus directionnel (si ≥ 2 voisins montagne)</div>
+        <p class="info-text">
+          Quand une chaîne de montagne existante est identifiée par BFS, son axe principal est calculé
+          via une analyse de covariance (équivalent d'une analyse en composantes principales 2D).
+          La direction vers la nouvelle cellule est comparée à cet axe.
+        </p>
+
+        <table class="info-table">
+          <thead><tr><th>Direction relative à l'axe de la chaîne</th><th>Modificateur</th></tr></thead>
+          <tbody>
+            <tr><td>Dans l'axe (±30°)</td><td class="num">+ 25%</td></tr>
+            <tr><td>Zone neutre (30° à 45°)</td><td class="num">+ 0%</td></tr>
+            <tr><td>Perpendiculaire (&gt; 45°)</td><td class="num">− 10%</td></tr>
+          </tbody>
+        </table>
+
+        <p class="info-text" style="font-size:.79rem;color:var(--muted2)">
+          Exemple : une chaîne orientée nord-sud donne +25% aux cellules nord et sud, −10% aux cellules est et ouest.
+          Cela produit des chaînes allongées plutôt que des nuages de montagnes aléatoires.
+        </p>
+
+        <div class="info-highlight">
+          En environnement maritime, une montagne ne produit pas de biome montagneux : elle devient
+          automatiquement une <strong>île volcanique</strong> (si voisin volcanique) ou <strong>île rocheuse</strong> (sinon).
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <div class="info-section" id="step8">
+        <div class="info-section-title">🏖️ Étape 8 — Côtes et océan</div>
+
+        <div class="info-subsection">Règle d'apparition des côtes</div>
+        <p class="info-text">
+          Un biome côtier (côte rocheuse, côte sablonneuse, côte tropicale, côte glaciale) ne peut apparaître
+          que dans deux situations :
+        </p>
+        <ol style="font-size:.87rem;color:var(--muted2);line-height:1.8;padding-left:1.5rem;margin-bottom:.85rem">
+          <li>La cellule est <strong>terrestre</strong> et adjacente à une cellule maritime.</li>
+          <li>La cellule est <strong>maritime</strong> et adjacente à une cellule terrestre.</li>
+        </ol>
+
+        <div class="info-subsection">Continuité de la ligne de côte</div>
+        <p class="info-text">
+          Quand une côte apparaît, les cellules dans la continuité de la ligne de côte reçoivent un bonus :
+        </p>
+        <div class="info-formula">Si N voisins ont un biome côtier :
+poids_biomes_côtiers × (1 + N × 0.75)
+
+Exemple : 1 voisin côtier → poids × 1.75 (≈ 75% de chances d'être aussi une côte si le biome côtier est dans l'environnement)</div>
+
+        <div class="info-subsection">Seuils bidirectionnels de l'océan</div>
+        <p class="info-text">
+          La probabilité de continuité de l'environnement maritime est ajustée selon la taille de la zone maritime connectée :
+        </p>
+        <table class="info-table">
+          <thead><tr><th>Taille zone maritime</th><th>Ajustement de continuité</th><th>Effet</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>&lt; 5 cellules (lac, mer intérieure)</td>
+              <td>Plafonnée à <strong>60%</strong></td>
+              <td class="muted">Tendance à se refermer ou rester petite</td>
+            </tr>
+            <tr>
+              <td>5 à 20 cellules</td>
+              <td>Normale (selon tableau étape 2)</td>
+              <td class="muted">Régime standard</td>
+            </tr>
+            <tr>
+              <td>≥ 20 cellules (grand océan)</td>
+              <td>Plancher à <strong>92%</strong></td>
+              <td class="muted">Les grands océans tendent à rester grands</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <div class="info-section" id="step9">
+        <div class="info-section-title">🏝️ Étape 9 — Îles et archipels</div>
+
+        <p class="info-text">
+          Le biome "Île" apparaît dans l'environnement maritime selon le tableau de l'étape 4 (poids 8).
+          Mais quand des îles voisines existent, cette probabilité est fortement modifiée
+          pour simuler le clustering géographique des archipels.
+        </p>
+
+        <div class="info-subsection">Probabilité d'île selon le contexte</div>
+        <table class="info-table">
+          <thead><tr><th>Îles voisines (île + archipel)</th><th>Probabilité cible d'être une île</th><th>Effet</th></tr></thead>
+          <tbody>
+            <tr><td>0 île voisine</td><td class="num">8%</td><td class="muted">Île isolée — probabilité de base du tableau</td></tr>
+            <tr><td>1 île voisine</td><td class="num">35%</td><td class="muted">Fort clustering — une île attire les îles</td></tr>
+            <tr><td>2 îles voisines</td><td class="num">25%</td><td class="muted">L'archipel se stabilise</td></tr>
+            <tr><td>3 îles voisines ou plus</td><td class="num">15%</td><td class="muted">L'archipel tend à se refermer — moins d'extension</td></tr>
+          </tbody>
+        </table>
+
+        <div class="info-subsection">Archipel linéaire (point chaud)</div>
+        <p class="info-text">
+          Si les îles existantes forment une ligne, le même système d'axe directionnel que les montagnes
+          (étape 7) est appliqué avec des coefficients spécifiques aux archipels :
+        </p>
+        <table class="info-table">
+          <thead><tr><th>Direction relative à l'axe de l'archipel</th><th>Modificateur</th></tr></thead>
+          <tbody>
+            <tr><td>Dans l'axe (±30°)</td><td class="num">+ 20%</td></tr>
+            <tr><td>Zone neutre</td><td class="num">+ 0%</td></tr>
+            <tr><td>Perpendiculaire</td><td class="num">− 15%</td></tr>
+          </tbody>
+        </table>
+
+        <p class="info-text" style="font-size:.79rem;color:var(--muted2)">
+          Ce système simule les archipels formés par un point chaud volcanique sous-marin, comme les îles Hawaï
+          ou les Canaries, qui forment des chaînes linéaires caractéristiques.
+        </p>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════ -->
+      <div class="card" style="margin-top:1rem;border-color:var(--border2)">
+        <div class="card-title">📁 Implémentation</div>
+        <p style="font-size:.83rem;color:var(--muted2);line-height:1.7">
+          Toute la logique de génération est dans <code>atelier/js/generation.js</code>.
+          Les fonctions exportées principales sont :
+        </p>
+        <ul style="font-size:.83rem;color:var(--muted2);line-height:1.9;padding-left:1.5rem;margin-top:.5rem">
+          <li><code>generateCell(cellules)</code> — exécute les 9 étapes et retourne <code>&#123; q, r, environnement, biome, montagne, riviere &#125;</code></li>
+          <li><code>selectCandidateCell(cellules)</code> — étape 1 uniquement (tirage pondéré 2^X)</li>
+          <li><code>BIOME_COLORS</code>, <code>BIOME_ICONS</code>, <code>ENV_COLORS</code> — constantes visuelles</li>
+          <li><code>BIOMES_BY_ENV</code>, <code>ENVIRONMENTS</code> — données de référence</li>
+        </ul>
+      </div>
+
+    </div><!-- .info-content -->
+  </main>
+
+  <script type="module">
+    import { requireAuth } from "./js/auth.js";
+    import { initNav } from "./js/nav.js";
+    await requireAuth();
+    initNav("");
+  </script>
+
+</body>
+</html>
