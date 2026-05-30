@@ -21,6 +21,7 @@ Site **personnel et privé** de Tom. Multi-sections indépendantes. La page d'ac
 - `/club-lecture/` — Fonctionnel et en développement actif
 - `/jdr/` — Page d'accueil active, protégée par mot de passe, en cours de développement
 - `/Jeux/` — Section jeux en ligne, **accès libre** (pas de mot de passe)
+- `/atelier/` — Outil de world-building solo procédural, en développement actif
 - `/recettes/` — Supprimée de l'accueil public (dossier conservé mais non lié)
 
 ---
@@ -99,6 +100,23 @@ Mon Site/
 │   ├── css/
 │   │   └── style.css            Styles Jeux (thème indigo #667eea, header simple, cartes jeux)
 │   └── jeu_mots_multi_1.html    Version originale locale (conservée, non liée)
+│
+├── atelier/
+│   ├── index.html               Tableau de bord (KPIs, actions du jour, chart, TODO)
+│   ├── carte.html               Carte hexagonale SVG (pan+zoom, fiches cellules)
+│   ├── wiki.html                Wiki central (toutes catégories, recherche, édition)
+│   ├── firebase-config.js       Initialisation Firebase, instance nommée "atelier"
+│   ├── css/
+│   │   └── style.css            Styles Atelier (thème ambre doré, sidebar, modaux, carte, wiki)
+│   └── js/
+│       ├── auth.js              Auth (SHA-256, mot de passe Odandor, clé "at_auth")
+│       ├── nav.js               Sidebar Atelier (Tableau de bord / Carte / Wiki)
+│       ├── db.js                Toutes les fonctions Firestore (cellules, wiki, oracles, événements, actions, TODO)
+│       ├── utils.js             Helpers (formatDate, showToast, escapeHtml, pickRandom, weightedRandom)
+│       ├── mots-cles.js         Base de mots clés + biomes + règles de proximité + fonctions de génération
+│       ├── accueil.js           Logique dashboard (stats, actions, chart, TODO, modaux oracle/événement/révéler)
+│       ├── carte.js             Carte hexagonale SVG (flat-top, cube coords, pan+zoom, modal cellule)
+│       └── wiki.js              Wiki (liste, filtres, recherche, modal détail, édition, ajout)
 │
 └── recettes/
     └── index.html               Placeholder non lié (retiré de l'accueil public)
@@ -433,6 +451,201 @@ Grille de 4 outils MJ, chacun s'ouvrant dans le même onglet :
 
 ---
 
+## Section Atelier (`/atelier/`)
+
+### Accès / Sécurité
+
+- **Mot de passe** : `Odandor`
+- **Mécanisme** : `atelier/js/auth.js` — SHA-256 du mot de passe saisi comparé au hash stocké en dur. Si correct → `sessionStorage.setItem("at_auth", "1")`. Chaque page appelle `await requireAuth()` avant tout rendu.
+- **SESSION_KEY** : `"at_auth"` (distinct des autres sections)
+
+### Concept général
+
+Outil de world-building solo procédural. L'idée est de construire un univers de fiction jour après jour via trois mécaniques principales : la carte hexagonale, l'oracle, et les événements. Chaque action enrichit un wiki central qui regroupe toutes les informations de l'univers.
+
+### Sidebar / Navigation
+
+- Logo : ⚒️ L'Atelier · World-building solo
+- Pages : Tableau de bord / La Carte / Le Wiki
+- Bouton "Accueil du site" en bas
+- Bascule thème (clé localStorage `"at_theme"`)
+- Palette : ambre doré `#c49a3a` (accent), fond `#0c0b0a`, texte chaud `#e8e0d4`
+
+---
+
+### Page Tableau de bord (`index.html` + `accueil.js`)
+
+**KPIs (4 cartes) :**
+- Cellules découvertes
+- Entrées dans le wiki
+- Oracles tirés
+- Événements générés
+
+**Actions du jour (3 boutons) :**
+
+1. **🗺️ Révéler une cellule** → modal inline :
+   - Si aucune cellule : crée la cellule centrale (0,0)
+   - Si cellules existantes : choisit aléatoirement parmi toutes les cellules adjacentes non découvertes
+   - Détermine le biome via l'algorithme de proximité (voir mots-cles.js)
+   - Génère 3 mots clés : 1 sensation, 1 couleur, 1 faune/civilisation selon le biome
+   - L'utilisateur écrit une description → sauvegardé dans `atelier_cellules` + `atelier_wiki` (catégorie "Lieux") + `atelier_actions`
+
+2. **🔮 Tirer un oracle** → modal inline :
+   - Choisit aléatoirement un type d'oracle parmi 8 (créature, plante, personnage, faction, légende, objet, coutume, phénomène)
+   - Génère 4 mots clés du pool spécifique au type
+   - Bouton "🎲 Relancer" pour changer le type + mots clés
+   - L'utilisateur écrit → sauvegardé dans `atelier_oracles` + `atelier_wiki` (catégorie correspondante) + `atelier_actions`
+
+3. **⚡ Générer un événement** → modal inline :
+   - Choisit aléatoirement une cellule déjà découverte
+   - Choisit aléatoirement un type d'événement parmi 6 (naturel, population, conflit, découverte, politique, mystère)
+   - Génère 4 mots clés du pool spécifique
+   - Bouton "🎲 Relancer" pour rechoisir cellule + type
+   - L'utilisateur écrit → sauvegardé dans `atelier_evenements` + cellule liée (`evenement_ids`) + `atelier_wiki` + `atelier_actions`
+
+**Graphique d'activité :**
+- Bar chart Chart.js (lazy-loaded via CDN)
+- X = dates (30 derniers jours au format MM-DD)
+- Y = nombre d'actions par jour
+- Alimenté par la collection `atelier_actions` (champ `date_str` = ISO date du jour)
+
+**Liste TODO :**
+- Stockée dans Firestore (`atelier_todo`), initialisée automatiquement au premier chargement (`seedTodosIfEmpty()`)
+- Items cochables (toggle `fait`) + supprimables + ajoutables
+- Triée par ordre croissant, items faits en bas (via requête `orderBy("ordre")`)
+
+---
+
+### La Carte hexagonale (`carte.html` + `carte.js`)
+
+**Système de coordonnées :**
+- Hexagones flat-top (sommet plat en haut)
+- Coordonnées cube (q, r, s) avec s = -q-r implicite. Stocké : q et r seulement.
+- Conversion pixel : `x = size * 1.5 * q`, `y = size * √3 * (r + q/2)` avec size = 48
+- 6 voisins : offsets [+1,-1], [+1,0], [-1,+1], [-1,0], [0,+1], [0,-1]
+
+**Rendu SVG :**
+- `<svg id="map-svg">` → `<g id="map-root" transform="translate(tx,ty) scale(s)">` pour pan+zoom
+- Cellules découvertes : polygone coloré selon biome + emoji centré + titre court si disponible
+- Cellules adjacentes non découvertes : polygone en pointillés `.hex-adjacent` (indication visuelle de l'espace disponible)
+- Légende dynamique des biomes présents en bas de page
+
+**Pan & Zoom :**
+- Drag souris : met à jour `transform.tx`, `transform.ty`
+- Molette : zoom centré sur le curseur
+- Boutons toolbar : zoom +/-, reset (recentre sur (0,0))
+- Touch mobile : drag 1 doigt = pan, 2 doigts = pinch zoom
+
+**Fiche cellule (modal) :**
+- Biome + icône + couleur spécifique
+- Coordonnées (q, r), date de découverte, titre si défini
+- Mots clés en chips
+- Description canonique
+- Liste des événements liés à cette cellule (chargés depuis `atelier_evenements` via `evenement_ids`)
+
+---
+
+### L'Oracle (`accueil.js`)
+
+**8 types d'oracles :**
+| ID | Label |
+|----|-------|
+| creature | Créer une créature ou un animal |
+| plante | Créer une plante ou un élément naturel |
+| personnage | Créer un personnage |
+| faction | Créer une faction ou un groupe |
+| legende | Créer une légende ou un mythe |
+| objet | Créer un objet remarquable |
+| coutume | Décrire une coutume ou une pratique culturelle |
+| phenomene | Décrire un phénomène naturel ou magique |
+
+Chaque type a ~30 mots clés dédiés dans `ORACLE_MK` de `mots-cles.js`. Le tirage génère 4 mots clés aléatoires sans remise du pool du type.
+
+**Mapping oracle → catégorie wiki :**
+`creature→Créatures`, `plante→Plantes`, `personnage→Personnages`, `faction→Factions`, `legende→Légendes`, `objet→Objets`, `coutume→Coutumes`, `phenomene→Événements`
+
+---
+
+### Les Événements (`accueil.js`)
+
+**6 types d'événements :**
+| ID | Label | Exemples |
+|----|-------|---------|
+| naturel | Événement naturel | séisme, inondation, éruption, tempête |
+| population | Mouvement de population | migration, exode, colonisation, pèlerinage |
+| conflit | Conflit | guerre, raid, révolte, siège |
+| decouverte | Découverte | ressource, ruine, passage, créature inconnue |
+| politique | Événement politique | alliance, trahison, couronnement |
+| mystere | Mystérieux ou magique | apparition, malédiction, prodige, disparition |
+
+---
+
+### Le Wiki (`wiki.html` + `wiki.js`)
+
+**9 catégories :** Lieux · Créatures · Plantes · Personnages · Factions · Légendes · Objets · Coutumes · Événements
+
+**Fonctionnalités :**
+- Onglets catégorie (compteur par catégorie)
+- Recherche texte sur titre + contenu + mots clés
+- Tri par catégorie puis par titre alphabétique
+- Clic sur une entrée → modal détail (contenu, mots clés, source, dates)
+- Bouton "✏️ Modifier" dans la fiche → formulaire inline (titre, catégorie, mots clés, contenu)
+- Bouton "🗑️ Supprimer" avec confirmation
+- Bouton "+ Ajouter une fiche" pour la saisie manuelle
+
+**Source des fiches :**
+- `cellule` : créée lors de la révélation d'une cellule
+- `oracle` : créée lors d'un tirage d'oracle
+- `evenement` : créée lors d'un événement
+- `manuel` : ajoutée manuellement depuis le wiki
+
+---
+
+### Base de mots clés (`mots-cles.js`)
+
+**Pools généraux** (utilisés pour les cellules de la carte) :
+- `sensations` : 40 mots (brume, silence, chaleur étouffante…)
+- `couleurs` : 40 mots (ocre, ardoise, obsidienne…)
+- `faune` : 35 mots (migration, terrier, prédateur…) — utilisé pour biomes naturels
+- `civilisation` : 35 mots (fondation, abandon, gravure…) — utilisé pour biomes civils
+- `emotions` : 30 mots
+- `dynamiques` : 30 mots
+
+**Pools oracles** (`ORACLE_MK`) : ~30 mots par type d'oracle
+
+**Pools événements** (`EVENEMENT_MK`) : ~20 mots par type d'événement
+
+**Génération cellule** : 1 sensation + 1 couleur + 1 faune (biome naturel) ou civilisation (biome civil)
+
+---
+
+### Algorithme de biomes
+
+**25 biomes disponibles :** forêt dense, forêt clairsemée, plaine, montagne, haute montagne, colline, désert, toundra, marais, côte, mer peu profonde, océan, île, jungle, volcan, ruines, village, ville, forteresse, temple, mine, route commerciale, col de montagne, grotte, delta fluvial
+
+**Règles de proximité (`BIOME_WEIGHTS` dans `mots-cles.js`) :**
+- Chaque biome a un dictionnaire de poids vers les autres biomes
+- Clé `_default` = poids de base pour les biomes non listés
+- Lors de la révélation d'une cellule : on récupère les biomes des voisins déjà découverts, on moyenne leurs dictionnaires de poids, on tire au sort
+- **Contrainte civile** : si aucun voisin naturel, les biomes civils (village, ville, forteresse, temple, mine) ont leur poids réduit à 0.1
+
+**Biomes naturels :** forêt dense, forêt clairsemée, plaine, montagne, haute montagne, colline, désert, toundra, marais, côte, mer peu profonde, océan, île, jungle, volcan, delta fluvial
+
+**Biomes civils :** village, ville, forteresse, temple, mine
+
+**Première cellule (0,0,0)** : biome naturel tiré aléatoirement (pas de voisins → pas de contrainte)
+
+---
+
+### Design
+
+- **Thème sombre** (défaut) : fond `#0c0b0a`, cartes `#161410`, ambre `#c49a3a`
+- **Thème clair** : parchemin `#faf7f0`, fond cartes `#ffffff`, ambre foncé `#a07828`
+- Même structure sidebar que les autres sections
+- Bascule thème en bas de sidebar (clé localStorage `"at_theme"`)
+
+---
+
 ## Section Jeux (`/Jeux/`)
 
 ### Accès / Sécurité
@@ -624,6 +837,72 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 | `pages_totales` | number | Optionnel |
 | `mis_a_jour` | Timestamp | Timestamp dernière modif |
 
+#### `atelier_cellules`
+| Champ | Type | Description |
+|-------|------|-------------|
+| `q` | number | Coordonnée cube q (flat-top) |
+| `r` | number | Coordonnée cube r (s = -q-r implicite) |
+| `biome` | string | Biome de la cellule (ex: `forêt dense`) |
+| `mots_cles` | array (string) | 3 mots clés générés à la révélation |
+| `titre` | string \| null | Nom du lieu (optionnel, saisi par l'utilisateur) |
+| `description` | string | Texte canonique décrivant la cellule |
+| `date_decouverte` | Timestamp | Date de révélation |
+| `evenement_ids` | array (string) | IDs des événements survenus sur cette cellule |
+
+#### `atelier_wiki`
+| Champ | Type | Description |
+|-------|------|-------------|
+| `categorie` | string | Lieux · Créatures · Plantes · Personnages · Factions · Légendes · Objets · Coutumes · Événements |
+| `titre` | string | Titre de la fiche |
+| `mots_cles` | array (string) | Mots clés associés |
+| `contenu` | string | Corps de la fiche (texte libre) |
+| `source_type` | string | `cellule` · `oracle` · `evenement` · `manuel` |
+| `source_id` | string \| null | ID du document source (cellule, oracle ou événement) |
+| `cellule_id` | string \| null | ID de la cellule si catégorie = Lieux |
+| `cree_le` | Timestamp | Création |
+| `mis_a_jour` | Timestamp | Dernière modification |
+
+#### `atelier_oracles`
+| Champ | Type | Description |
+|-------|------|-------------|
+| `type_id` | string | `creature` · `plante` · `personnage` · `faction` · `legende` · `objet` · `coutume` · `phenomene` |
+| `type_label` | string | Label lisible du type |
+| `mots_cles` | array (string) | Mots clés tirés |
+| `wiki_id` | string \| null | ID de la fiche wiki créée |
+| `cree_le` | Timestamp | Création |
+
+#### `atelier_evenements`
+| Champ | Type | Description |
+|-------|------|-------------|
+| `cellule_id` | string | ID de la cellule concernée |
+| `cellule_biome` | string | Biome de la cellule (dénormalisé) |
+| `cellule_q` / `cellule_r` | number | Coordonnées de la cellule |
+| `type_id` | string | `naturel` · `population` · `conflit` · `decouverte` · `politique` · `mystere` |
+| `type_label` | string | Label lisible |
+| `mots_cles` | array (string) | Mots clés tirés |
+| `titre` | string \| null | Titre de l'événement |
+| `description` | string | Corps de l'événement |
+| `cree_le` | Timestamp | Création |
+
+#### `atelier_actions`
+| Champ | Type | Description |
+|-------|------|-------------|
+| `type` | string | `cellule` · `oracle` · `evenement` |
+| `details` | string | Description lisible de l'action |
+| `ref_id` | string \| null | ID du document créé |
+| `date_str` | string | Date ISO `YYYY-MM-DD` (pour le regroupement dans le chart) |
+| `timestamp` | Timestamp | Horodatage précis |
+
+#### `atelier_todo`
+| Champ | Type | Description |
+|-------|------|-------------|
+| `texte` | string | Texte de la tâche |
+| `fait` | boolean | Cochée ou non |
+| `ordre` | number | Ordre d'affichage |
+| `cree_le` | Timestamp | Création |
+
+> Les TODO sont initialisés automatiquement au premier chargement de `accueil.js` via `seedTodosIfEmpty()` si la collection est vide.
+
 #### `commentaires_lecture`
 | Champ | Type | Description |
 |-------|------|-------------|
@@ -660,6 +939,9 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 | JDR — Outil Aria | `/jdr/Outils/paradoxe_temporel_4.html` |
 | Jeux — Accueil | `/Jeux/` |
 | Jeux — Jeu de Mots | `/Jeux/jeu-de-mots.html` |
+| Atelier — Tableau de bord | `/atelier/` |
+| Atelier — La Carte | `/atelier/carte.html` |
+| Atelier — Le Wiki | `/atelier/wiki.html` |
 
 ---
 
@@ -691,7 +973,73 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ---
 
+## Décisions de conception — Atelier
+
+- **Actions sans limite journalière stricte** — Le système est conçu pour un usage quotidien (une cellule / un oracle / un événement par jour) mais ne bloque pas techniquement les actions supplémentaires. La discipline reste côté utilisateur.
+- **Carte virtuellement infinie** — Le système de coordonnées cube permet une grille sans limite fixe. Les cellules sont simplement stockées par (q, r) ; la carte s'étend dans toutes les directions.
+- **Première cellule en (0, 0)** — La cellule centrale est toujours placée aux coordonnées (0, 0). Le biome est tiré aléatoirement parmi les biomes naturels (sans contrainte de voisinage).
+- **Biome déterminé à la révélation** — Le biome d'une nouvelle cellule est calculé côté client au moment de la révélation (pas stocké en avance). L'utilisateur ne voit le biome qu'une fois le modal ouvert.
+- **Wiki alimenté automatiquement** — Chaque action (révélation, oracle, événement) crée automatiquement une fiche dans le wiki. L'utilisateur peut toujours l'éditer ou la supprimer manuellement depuis le wiki.
+- **Événements liés à la cellule** — Les événements sont stockés dans leur propre collection `atelier_evenements` ET leur ID est ajouté au tableau `evenement_ids` de la cellule concernée. Pas de jointure requise pour afficher les événements d'une cellule.
+- **Données dénormalisées pour les événements** — `cellule_biome`, `cellule_q`, `cellule_r` sont copiés sur chaque événement pour éviter une lecture Firestore supplémentaire lors de l'affichage dans les listes.
+- **Pas de chart interactif de zoom** — Le chart d'activité (30 jours) est un simple bar chart statique, suffisant pour visualiser la régularité des sessions. Pas de `chartjs-adapter-date-fns` (les labels sont MM-DD calculés côté JS).
+- **TODO en Firestore** — Les TODO sont persistés en Firestore (pas localStorage) pour être accessibles depuis n'importe quel appareil. Ils sont seedés automatiquement si la collection est vide.
+
+---
+
 ## Historique des modifications
+
+### 2026-05-30 (suite)
+**Nouvelle section Atelier — World-building solo procédural**
+
+**Architecture globale :**
+- `atelier/` : nouvelle section protégée par mot de passe (`Odandor`, SHA-256, clé `"at_auth"`)
+- Accessible depuis la page d'accueil du site (carte ambre doré `#c49a3a`)
+- 3 pages : Tableau de bord (`index.html`), Carte (`carte.html`), Wiki (`wiki.html`)
+- Instance Firebase nommée `"atelier"` pour éviter les conflits
+
+**Tableau de bord (`accueil.js`) :**
+- 4 KPIs : cellules découvertes, entrées wiki, oracles tirés, événements générés
+- 3 boutons d'action du jour avec modaux inline : Révéler une cellule / Tirer un oracle / Générer un événement
+- Graphique d'activité Chart.js (bar, 30 derniers jours)
+- Liste TODO Firestore (sémaphone, cochable, supprimable, extensible) — 12 tâches initiales pré-remplies
+- Journal des 3 dernières actions
+
+**Carte hexagonale (`carte.js`) :**
+- Hexagones flat-top, coordonnées cube (q, r), taille = 48px
+- Rendu SVG avec pan (drag) + zoom (molette + pinch mobile)
+- Cellules découvertes colorées par biome + emoji + titre court
+- Cellules adjacentes non découvertes affichées en pointillés
+- Clic cellule → modal fiche (biome, coords, mots clés, description, événements liés)
+- Boutons zoom +/-/reset en toolbar
+
+**Algorithme de biomes (`mots-cles.js`) :**
+- 25 biomes avec couleurs et emojis dédiés
+- `BIOME_WEIGHTS` : dictionnaire de poids par biome → biome
+- Calcul : moyenne des poids des voisins découverts → tirage pondéré
+- Contrainte civile : biomes civils (village, ville, forteresse, temple, mine) réduits si pas de voisin naturel
+
+**Base de mots clés (`mots-cles.js`) :**
+- 6 pools généraux : sensations (40), couleurs (40), faune (35), civilisation (35), émotions (30), dynamiques (30)
+- 8 pools oracles × ~30 mots chacun
+- 6 pools événements × ~20 mots chacun
+- Génération cellule : 1 sensation + 1 couleur + 1 faune/civilisation
+
+**Oracle :** 8 types, 4 mots clés tirés, relance possible, fiche wiki créée automatiquement
+**Événements :** 6 types, cellule tirée aléatoirement, fiche wiki + lien cellule créés automatiquement
+**Wiki :** 9 catégories, recherche, onglets, édition/suppression inline, ajout manuel
+
+**Collections Firestore ajoutées :**
+`atelier_cellules` · `atelier_wiki` · `atelier_oracles` · `atelier_evenements` · `atelier_actions` · `atelier_todo`
+
+**Navigation (page d'accueil) :**
+| Page | URL |
+|------|-----|
+| Atelier — Tableau de bord | `/atelier/` |
+| Atelier — La Carte | `/atelier/carte.html` |
+| Atelier — Le Wiki | `/atelier/wiki.html` |
+
+---
 
 ### 2026-05-30
 **Nouvelle section personnelle + notes réunions hors présence**

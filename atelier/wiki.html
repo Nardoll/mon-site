@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>L'Atelier — Le Wiki</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main class="main">
+    <h1 class="page-title">📜 Le Wiki</h1>
+
+    <!-- Toolbar -->
+    <div class="wiki-toolbar">
+      <input type="search" class="wiki-search" id="wiki-search" placeholder="Rechercher par nom ou mot clé…">
+      <button class="btn btn-primary" id="btn-add-wiki">+ Ajouter une fiche</button>
+    </div>
+
+    <!-- Onglets catégories -->
+    <div class="wiki-cat-tabs" id="wiki-cat-tabs"></div>
+
+    <!-- Liste des entrées -->
+    <div class="wiki-list" id="wiki-list"></div>
+  </main>
+
+  <!-- ─── MODAL : Détail ────────────────────────────────────────────────── -->
+  <div class="overlay hidden" id="wiki-detail-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title" id="wiki-detail-title"></span>
+        <button class="modal-close" id="wiki-detail-close">✕</button>
+      </div>
+      <div class="modal-body" id="wiki-detail-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('wiki-detail-overlay').classList.add('hidden')">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MODAL : Édition / Ajout ──────────────────────────────────────── -->
+  <div class="overlay hidden" id="wiki-edit-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">✏️ Modifier la fiche</span>
+        <button class="modal-close" id="wiki-edit-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="edit-titre">Titre</label>
+          <input type="text" class="form-input" id="edit-titre" placeholder="Nom de la fiche">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-categorie">Catégorie</label>
+          <select class="form-select" id="edit-categorie">
+            <option value="Lieux">Lieux</option>
+            <option value="Créatures">Créatures</option>
+            <option value="Plantes">Plantes</option>
+            <option value="Personnages">Personnages</option>
+            <option value="Factions">Factions</option>
+            <option value="Légendes">Légendes</option>
+            <option value="Objets">Objets</option>
+            <option value="Coutumes">Coutumes</option>
+            <option value="Événements">Événements</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-mots-cles">Mots clés <span style="font-weight:400;opacity:.7">(séparés par des virgules)</span></label>
+          <input type="text" class="form-input" id="edit-mots-cles" placeholder="brume épaisse, forêt dense, migration…">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-contenu">Contenu *</label>
+          <textarea class="form-textarea" id="edit-contenu" placeholder="Texte de la fiche…" style="min-height:200px"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('wiki-edit-overlay').classList.add('hidden')">Annuler</button>
+        <button class="btn btn-primary" id="wiki-edit-save">Sauvegarder →</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/wiki.js"></script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>L'Atelier — La Carte</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .map-page-main {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      padding: 1.25rem 1.5rem;
+    }
+    #map-container {
+      flex: 1;
+      min-height: 400px;
+      cursor: grab;
+    }
+    #map-container:active { cursor: grabbing; }
+    #map-svg { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main class="main map-page-main">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:.85rem">
+      <h1 class="page-title" style="margin-bottom:0">🗺️ La Carte</h1>
+      <span id="map-cell-count" style="font-size:.82rem;color:var(--muted2)"></span>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="map-toolbar">
+      <div class="map-zoom-controls">
+        <button class="btn btn-secondary" id="btn-zoom-in" title="Zoom avant" style="padding:.4rem .7rem">+</button>
+        <button class="btn btn-secondary" id="btn-zoom-out" title="Zoom arrière" style="padding:.4rem .7rem">−</button>
+        <button class="btn btn-secondary" id="btn-zoom-reset" title="Réinitialiser la vue" style="padding:.4rem .7rem">⌖</button>
+      </div>
+      <span style="font-size:.78rem;color:var(--muted2)">Glisser pour déplacer · Molette pour zoomer · Clic sur une cellule pour voir sa fiche</span>
+    </div>
+
+    <!-- Carte SVG -->
+    <div id="map-container" class="map-container">
+      <svg id="map-svg" xmlns="http://www.w3.org/2000/svg">
+        <g id="map-root"></g>
+      </svg>
+    </div>
+
+    <!-- Légende -->
+    <div id="map-legend" class="map-legend" style="margin-top:.85rem"></div>
+  </main>
+
+  <!-- ─── MODAL : Fiche cellule ─────────────────────────────────────────── -->
+  <div class="overlay hidden" id="cell-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title cell-modal-biome" id="cell-modal-biome"></span>
+        <button class="modal-close" id="cell-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="cell-modal-meta" id="cell-modal-meta"></div>
+
+        <div>
+          <div class="form-label" style="margin-bottom:.35rem">Mots clés</div>
+          <div class="chips-row" id="cell-modal-chips"></div>
+        </div>
+
+        <div>
+          <div class="form-label" style="margin-bottom:.35rem">Description</div>
+          <div class="cell-modal-desc" id="cell-modal-desc"></div>
+        </div>
+
+        <div>
+          <div class="form-label" style="margin-bottom:.35rem">Événements sur cette cellule</div>
+          <div class="cell-events-list" id="cell-modal-events"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('cell-overlay').classList.add('hidden')">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/carte.js"></script>
+</body>
+</html>

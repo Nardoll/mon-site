@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>L'Atelier — Tableau de bord</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main class="main">
+    <h1 class="page-title">⚒️ Tableau de bord</h1>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-value" id="kpi-cellules">—</div>
+        <div class="kpi-label">Cellules découvertes</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="kpi-wiki">—</div>
+        <div class="kpi-label">Entrées dans le wiki</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="kpi-oracles">—</div>
+        <div class="kpi-label">Oracles tirés</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="kpi-events">—</div>
+        <div class="kpi-label">Événements générés</div>
+      </div>
+    </div>
+
+    <!-- Actions du jour -->
+    <div class="actions-row">
+      <button class="action-btn" id="btn-reveler">
+        <span class="action-btn-icon">🗺️</span>
+        <span class="action-btn-label">Révéler une cellule</span>
+        <span class="action-btn-sub">Étendre la carte</span>
+      </button>
+      <button class="action-btn" id="btn-oracle">
+        <span class="action-btn-icon">🔮</span>
+        <span class="action-btn-label">Tirer un oracle</span>
+        <span class="action-btn-sub">Créer un élément de l'univers</span>
+      </button>
+      <button class="action-btn" id="btn-evenement">
+        <span class="action-btn-icon">⚡</span>
+        <span class="action-btn-label">Générer un événement</span>
+        <span class="action-btn-sub">Faire vivre le monde</span>
+      </button>
+    </div>
+
+    <!-- Dashboard grid -->
+    <div class="dashboard-grid" style="margin-bottom:1.25rem">
+      <!-- Dernières actions -->
+      <div class="card">
+        <div class="card-title">📋 Dernières actions</div>
+        <div id="recent-actions-list"></div>
+      </div>
+
+      <!-- Graphique -->
+      <div class="card">
+        <div class="card-title">📈 Activité (30 derniers jours)</div>
+        <div class="chart-wrap">
+          <canvas id="chart-activite"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- TODO -->
+    <div class="card">
+      <div class="todo-header">
+        <div class="card-title" style="margin-bottom:0">✅ À faire pour finaliser l'Atelier</div>
+        <span class="todo-count" id="todo-count"></span>
+      </div>
+      <div class="todo-list" id="todo-list"></div>
+      <div class="todo-add-row">
+        <input type="text" class="todo-add-input" id="todo-add-input" placeholder="Ajouter une tâche…">
+        <button class="btn btn-primary" id="todo-add-btn">+</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ─── MODAL : Révéler une cellule ───────────────────────────────────── -->
+  <div class="overlay hidden" id="reveal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">🗺️ Nouvelle cellule découverte</span>
+        <button class="modal-close" id="reveal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="cell-info">
+          <div class="cell-info-biome" id="reveal-biome"></div>
+          <div class="cell-info-coords" id="reveal-coords"></div>
+        </div>
+        <div>
+          <div class="form-label" style="margin-bottom:.4rem">Mots clés générés</div>
+          <div class="chips-row" id="reveal-chips"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reveal-titre">Nom du lieu (optionnel)</label>
+          <input type="text" class="form-input" id="reveal-titre" placeholder="Laisser vide pour nommer plus tard…">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reveal-desc">
+            Description *
+            <span style="font-weight:400;opacity:.7;margin-left:.4rem">Quelques phrases à partir des mots clés</span>
+          </label>
+          <textarea class="form-textarea" id="reveal-desc" placeholder="Décris ce lieu à partir des mots clés générés. Cette description devient la fiche canonique de la cellule dans le wiki." style="min-height:140px"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="reveal-cancel" onclick="document.getElementById('reveal-overlay').classList.add('hidden')">Annuler</button>
+        <button class="btn btn-primary" id="reveal-save">Révéler →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MODAL : Oracle ────────────────────────────────────────────────── -->
+  <div class="overlay hidden" id="oracle-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">🔮 Oracle</span>
+        <button class="modal-close" id="oracle-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div>
+          <div class="form-label" style="margin-bottom:.4rem">Type</div>
+          <span class="type-badge" id="oracle-type"></span>
+        </div>
+        <div>
+          <div class="form-label" style="margin-bottom:.4rem">Mots clés</div>
+          <div class="chips-row" id="oracle-chips"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="oracle-titre">Titre (optionnel)</label>
+          <input type="text" class="form-input" id="oracle-titre" placeholder="Nom de la créature, de la faction…">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="oracle-desc">
+            Description *
+          </label>
+          <textarea class="form-textarea" id="oracle-desc" placeholder="Écris librement à partir des mots clés. Ce texte sera sauvegardé dans le wiki." style="min-height:160px"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="oracle-reroll">🎲 Relancer</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('oracle-overlay').classList.add('hidden')">Annuler</button>
+        <button class="btn btn-primary" id="oracle-save">Sauvegarder →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MODAL : Événement ─────────────────────────────────────────────── -->
+  <div class="overlay hidden" id="ev-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">⚡ Événement</span>
+        <button class="modal-close" id="ev-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div>
+          <div class="form-label" style="margin-bottom:.4rem">Cellule tirée</div>
+          <div class="cell-info" id="ev-cell"></div>
+        </div>
+        <div>
+          <div class="form-label" style="margin-bottom:.25rem">Type d'événement</div>
+          <span class="type-badge" id="ev-type"></span>
+          <div style="font-size:.72rem;color:var(--muted2);margin-top:.3rem" id="ev-exemples"></div>
+        </div>
+        <div>
+          <div class="form-label" style="margin-bottom:.4rem">Mots clés</div>
+          <div class="chips-row" id="ev-chips"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ev-titre">Titre (optionnel)</label>
+          <input type="text" class="form-input" id="ev-titre" placeholder="Nom court de l'événement…">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="ev-desc">Description *</label>
+          <textarea class="form-textarea" id="ev-desc" placeholder="Décris l'événement. Il sera lié à la cellule concernée et ajouté au wiki." style="min-height:140px"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="ev-reroll">🎲 Relancer</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('ev-overlay').classList.add('hidden')">Annuler</button>
+        <button class="btn btn-primary" id="ev-save">Sauvegarder →</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/accueil.js"></script>
+</body>
+</html>
