@@ -17,15 +17,70 @@ import {
 const NEIGHBORS = [[1,-1],[1,0],[-1,1],[-1,0],[0,1],[0,-1]];
 const DAILY_LIMIT = 3;
 
+// ─── Limite journalière (localStorage — synchrone, pas de Firebase) ───────────
+
+function _dailyKey() {
+  return "at_daily_" + new Date().toISOString().slice(0, 10);
+}
+
+function _getDailyCount() {
+  return Math.min(DAILY_LIMIT, parseInt(localStorage.getItem(_dailyKey()) || "0", 10));
+}
+
+function _incrementDailyCount() {
+  const key = _dailyKey();
+  localStorage.setItem(key, (parseInt(localStorage.getItem(key) || "0", 10) + 1));
+}
+
+function isDailyLimitReached() {
+  return _getDailyCount() >= DAILY_LIMIT;
+}
+
+function renderDailyProgress() {
+  const label = document.getElementById("daily-label");
+  const dots  = document.getElementById("daily-dots");
+  const progress = document.getElementById("daily-progress");
+  if (!label || !dots || !progress) return;
+
+  const count = _getDailyCount();
+
+  dots.innerHTML = Array.from({ length: DAILY_LIMIT }, (_, i) =>
+    `<span class="daily-dot ${i < count ? "filled" : ""}"></span>`
+  ).join("");
+
+  const remaining = DAILY_LIMIT - count;
+  if (count >= DAILY_LIMIT) {
+    label.textContent = "Toutes les actions du jour posées ✓";
+    progress.classList.add("daily-done");
+    progress.classList.remove("daily-active");
+  } else if (count === 0) {
+    label.textContent = `${DAILY_LIMIT} actions disponibles aujourd'hui`;
+    progress.classList.remove("daily-done", "daily-active");
+  } else {
+    label.textContent = `${remaining} action${remaining > 1 ? "s" : ""} restante${remaining > 1 ? "s" : ""} aujourd'hui`;
+    progress.classList.add("daily-active");
+    progress.classList.remove("daily-done");
+  }
+
+  const disabled = count >= DAILY_LIMIT;
+  ["btn-reveler", "btn-oracle", "btn-evenement"].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.style.opacity = disabled ? "0.4" : "";
+    btn.style.cursor  = disabled ? "not-allowed" : "";
+    if (disabled) btn.setAttribute("data-locked", "1");
+    else btn.removeAttribute("data-locked");
+  });
+}
+
 // ─── Init ────────────────────────────────────────────────────────────────────
 
 await requireAuth();
 initNav("accueil");
-await seedTodosIfEmpty();
+renderDailyProgress(); // synchrone — s'affiche immédiatement, avant Firebase
 
 await Promise.all([renderStats(), renderRecentActions(), renderTodos()]);
 renderChart();
-renderDailyProgress();
 
 document.getElementById("btn-reveler").addEventListener("click", () => {
   if (isDailyLimitReached()) return;
@@ -39,66 +94,6 @@ document.getElementById("btn-evenement").addEventListener("click", () => {
   if (isDailyLimitReached()) return;
   openEvenementModal();
 });
-
-// ─── Limite journalière ───────────────────────────────────────────────────────
-
-let _dailyCount = 0;
-
-function isDailyLimitReached() {
-  return _dailyCount >= DAILY_LIMIT;
-}
-
-async function renderDailyProgress() {
-  const label = document.getElementById("daily-label");
-  const dots = document.getElementById("daily-dots");
-  const progress = document.getElementById("daily-progress");
-  if (!label || !dots || !progress) return;
-
-  try {
-    const today = new Date().toISOString().slice(0, 10);
-    const allActions = await getAllActions();
-    _dailyCount = allActions.filter(a => a.date_str === today).length;
-
-    dots.innerHTML = Array.from({ length: DAILY_LIMIT }, (_, i) =>
-      `<span class="daily-dot ${i < _dailyCount ? "filled" : ""}"></span>`
-    ).join("");
-
-    const remaining = DAILY_LIMIT - _dailyCount;
-    if (_dailyCount >= DAILY_LIMIT) {
-      label.textContent = "Toutes les actions du jour posées ✓";
-      progress.classList.add("daily-done");
-      progress.classList.remove("daily-active");
-    } else if (_dailyCount === 0) {
-      label.textContent = `${DAILY_LIMIT} actions disponibles aujourd'hui`;
-      progress.classList.remove("daily-done", "daily-active");
-    } else {
-      label.textContent = `${remaining} action${remaining > 1 ? "s" : ""} restante${remaining > 1 ? "s" : ""} aujourd'hui`;
-      progress.classList.add("daily-active");
-      progress.classList.remove("daily-done");
-    }
-
-    const disabled = _dailyCount >= DAILY_LIMIT;
-    ["btn-reveler", "btn-oracle", "btn-evenement"].forEach(id => {
-      const btn = document.getElementById(id);
-      if (!btn) return;
-      if (disabled) {
-        btn.setAttribute("data-locked", "1");
-        btn.style.opacity = "0.4";
-        btn.style.cursor = "not-allowed";
-      } else {
-        btn.removeAttribute("data-locked");
-        btn.style.opacity = "";
-        btn.style.cursor = "";
-      }
-    });
-  } catch (e) {
-    console.warn("renderDailyProgress:", e);
-    _dailyCount = 0;
-    label.textContent = `${DAILY_LIMIT} actions disponibles aujourd'hui`;
-    dots.innerHTML = Array.from({ length: DAILY_LIMIT }, () =>
-      `<span class="daily-dot"></span>`).join("");
-  }
-}
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
 
@@ -346,8 +341,10 @@ document.getElementById("reveal-save").addEventListener("click", async () => {
     });
     document.getElementById("reveal-overlay").classList.add("hidden");
     _revealData = null;
+    _incrementDailyCount();
+    renderDailyProgress();
     showToast("Cellule révélée et ajoutée au wiki !");
-    await Promise.all([renderStats(), renderRecentActions(), renderDailyProgress()]);
+    await Promise.all([renderStats(), renderRecentActions()]);
   } catch (e) {
     showToast("Erreur lors de la sauvegarde.", "error");
     console.error(e);
@@ -420,8 +417,10 @@ document.getElementById("oracle-save").addEventListener("click", async () => {
     });
     document.getElementById("oracle-overlay").classList.add("hidden");
     _oracleData = null;
+    _incrementDailyCount();
+    renderDailyProgress();
     showToast("Oracle sauvegardé dans le wiki !");
-    await Promise.all([renderStats(), renderRecentActions(), renderDailyProgress()]);
+    await Promise.all([renderStats(), renderRecentActions()]);
   } catch (e) {
     showToast("Erreur lors de la sauvegarde.", "error");
     console.error(e);
@@ -504,8 +503,10 @@ document.getElementById("ev-save").addEventListener("click", async () => {
     });
     document.getElementById("ev-overlay").classList.add("hidden");
     _evData = null;
+    _incrementDailyCount();
+    renderDailyProgress();
     showToast("Événement enregistré !");
-    await Promise.all([renderStats(), renderRecentActions(), renderDailyProgress()]);
+    await Promise.all([renderStats(), renderRecentActions()]);
   } catch (e) {
     showToast("Erreur lors de la sauvegarde.", "error");
     console.error(e);
