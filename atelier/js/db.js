@@ -1,7 +1,7 @@
 import { db } from "../firebase-config.js";
 import {
   collection, doc, addDoc, getDoc, getDocs, updateDoc, deleteDoc,
-  setDoc, query, orderBy, limit, serverTimestamp, Timestamp,
+  setDoc, query, orderBy, limit, serverTimestamp, Timestamp, writeBatch,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ─── Cellules ────────────────────────────────────────────────────────────────
@@ -201,8 +201,16 @@ export async function addTodo(texte) {
 
 async function deleteCollection(name) {
   const snap = await getDocs(collection(db, name));
-  await Promise.all(snap.docs.map(d => deleteDoc(doc(db, name, d.id))));
-  return snap.size;
+  if (snap.empty) return 0;
+  // Firestore writeBatch : max 500 opérations par batch
+  const BATCH_SIZE = 500;
+  const docs = snap.docs;
+  for (let i = 0; i < docs.length; i += BATCH_SIZE) {
+    const batch = writeBatch(db);
+    docs.slice(i, i + BATCH_SIZE).forEach(d => batch.delete(d.ref));
+    await batch.commit();
+  }
+  return docs.length;
 }
 
 export async function deleteCellule(id) {
