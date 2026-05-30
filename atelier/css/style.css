@@ -244,6 +244,49 @@ body {
 .btn-ghost:hover { color: var(--text); background: var(--surface2); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 
+/* ─── Progression journalière ───────────────────────────────────────────── */
+.daily-progress {
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: .7rem 1.1rem;
+  margin-bottom: 1rem;
+  transition: border-color .2s;
+}
+.daily-progress.daily-active { border-color: var(--accent-glow); }
+.daily-progress.daily-done   { border-color: var(--success); background: rgba(90,158,110,.06); }
+
+.daily-dots {
+  display: flex;
+  gap: .45rem;
+  flex-shrink: 0;
+}
+.daily-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--border2);
+  background: transparent;
+  transition: background .2s, border-color .2s;
+}
+.daily-dot.filled {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.daily-progress.daily-done .daily-dot.filled {
+  background: var(--success);
+  border-color: var(--success);
+}
+.daily-label {
+  font-size: .82rem;
+  color: var(--muted2);
+  font-weight: 500;
+}
+.daily-progress.daily-done .daily-label { color: var(--success); font-weight: 600; }
+
 /* ─── Actions du jour ────────────────────────────────────────────────────── */
 .actions-row {
   display: flex;

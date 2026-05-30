@@ -15,6 +15,7 @@ import {
 } from "./mots-cles.js";
 
 const NEIGHBORS = [[1,-1],[1,0],[-1,1],[-1,0],[0,1],[0,-1]];
+const DAILY_LIMIT = 3;
 
 // ─── Init ────────────────────────────────────────────────────────────────────
 
@@ -22,12 +23,71 @@ await requireAuth();
 initNav("accueil");
 await seedTodosIfEmpty();
 
-await Promise.all([renderStats(), renderRecentActions(), renderTodos()]);
+await Promise.all([renderStats(), renderRecentActions(), renderTodos(), renderDailyProgress()]);
 renderChart();
 
-document.getElementById("btn-reveler").addEventListener("click", openRevelerModal);
-document.getElementById("btn-oracle").addEventListener("click", openOracleModal);
-document.getElementById("btn-evenement").addEventListener("click", openEvenementModal);
+document.getElementById("btn-reveler").addEventListener("click", () => {
+  if (isDailyLimitReached()) return;
+  openRevelerModal();
+});
+document.getElementById("btn-oracle").addEventListener("click", () => {
+  if (isDailyLimitReached()) return;
+  openOracleModal();
+});
+document.getElementById("btn-evenement").addEventListener("click", () => {
+  if (isDailyLimitReached()) return;
+  openEvenementModal();
+});
+
+// ─── Limite journalière ───────────────────────────────────────────────────────
+
+let _dailyCount = 0;
+
+function isDailyLimitReached() {
+  return _dailyCount >= DAILY_LIMIT;
+}
+
+async function renderDailyProgress() {
+  const today = new Date().toISOString().slice(0, 10);
+  const allActions = await getAllActions();
+  _dailyCount = allActions.filter(a => a.date_str === today).length;
+
+  const dots = document.getElementById("daily-dots");
+  const label = document.getElementById("daily-label");
+  const progress = document.getElementById("daily-progress");
+
+  dots.innerHTML = Array.from({ length: DAILY_LIMIT }, (_, i) =>
+    `<span class="daily-dot ${i < _dailyCount ? "filled" : ""}"></span>`
+  ).join("");
+
+  const remaining = DAILY_LIMIT - _dailyCount;
+  if (_dailyCount >= DAILY_LIMIT) {
+    label.textContent = "Toutes les actions du jour posées ✓";
+    progress.classList.add("daily-done");
+    progress.classList.remove("daily-active");
+  } else if (_dailyCount === 0) {
+    label.textContent = `${DAILY_LIMIT} actions disponibles aujourd'hui`;
+    progress.classList.remove("daily-done", "daily-active");
+  } else {
+    label.textContent = `${remaining} action${remaining > 1 ? "s" : ""} restante${remaining > 1 ? "s" : ""} aujourd'hui`;
+    progress.classList.add("daily-active");
+    progress.classList.remove("daily-done");
+  }
+
+  const disabled = _dailyCount >= DAILY_LIMIT;
+  ["btn-reveler", "btn-oracle", "btn-evenement"].forEach(id => {
+    const btn = document.getElementById(id);
+    if (disabled) {
+      btn.setAttribute("data-locked", "1");
+      btn.style.opacity = "0.4";
+      btn.style.cursor = "not-allowed";
+    } else {
+      btn.removeAttribute("data-locked");
+      btn.style.opacity = "";
+      btn.style.cursor = "";
+    }
+  });
+}
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
 
@@ -276,7 +336,7 @@ document.getElementById("reveal-save").addEventListener("click", async () => {
     document.getElementById("reveal-overlay").classList.add("hidden");
     _revealData = null;
     showToast("Cellule révélée et ajoutée au wiki !");
-    await Promise.all([renderStats(), renderRecentActions()]);
+    await Promise.all([renderStats(), renderRecentActions(), renderDailyProgress()]);
   } catch (e) {
     showToast("Erreur lors de la sauvegarde.", "error");
     console.error(e);
@@ -350,7 +410,7 @@ document.getElementById("oracle-save").addEventListener("click", async () => {
     document.getElementById("oracle-overlay").classList.add("hidden");
     _oracleData = null;
     showToast("Oracle sauvegardé dans le wiki !");
-    await Promise.all([renderStats(), renderRecentActions()]);
+    await Promise.all([renderStats(), renderRecentActions(), renderDailyProgress()]);
   } catch (e) {
     showToast("Erreur lors de la sauvegarde.", "error");
     console.error(e);
@@ -434,7 +494,7 @@ document.getElementById("ev-save").addEventListener("click", async () => {
     document.getElementById("ev-overlay").classList.add("hidden");
     _evData = null;
     showToast("Événement enregistré !");
-    await Promise.all([renderStats(), renderRecentActions()]);
+    await Promise.all([renderStats(), renderRecentActions(), renderDailyProgress()]);
   } catch (e) {
     showToast("Erreur lors de la sauvegarde.", "error");
     console.error(e);
