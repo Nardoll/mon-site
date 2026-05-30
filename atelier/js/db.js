@@ -202,6 +202,10 @@ async function deleteCollection(name) {
   return snap.size;
 }
 
+export async function deleteCellule(id) {
+  await deleteDoc(doc(db, "atelier_cellules", id));
+}
+
 export const deleteAllCellules  = () => deleteCollection("atelier_cellules");
 export const deleteAllWiki      = () => deleteCollection("atelier_wiki");
 export const deleteAllOracles   = () => deleteCollection("atelier_oracles");

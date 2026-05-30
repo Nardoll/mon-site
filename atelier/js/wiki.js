@@ -1,7 +1,7 @@
 import { requireAuth } from "./auth.js?v=2";
 import { initNav } from "./nav.js?v=2";
 import { escapeHtml, formatDate, showToast } from "./utils.js?v=2";
-import { getWikiEntries, addWikiEntry, updateWikiEntry, deleteWikiEntry, WIKI_CATEGORIES } from "./db.js?v=2";
+import { getWikiEntries, addWikiEntry, updateWikiEntry, deleteWikiEntry, WIKI_CATEGORIES, deleteCellule } from "./db.js?v=2";
 
 await requireAuth();
 initNav("wiki");
@@ -215,9 +215,14 @@ document.getElementById("wiki-edit-save").addEventListener("click", async () => 
 // ─── Suppression ──────────────────────────────────────────────────────────────
 
 async function confirmDelete(entry) {
-  if (!confirm(`Supprimer "${entry.titre || "cette fiche"}" ? Cette action est irréversible.`)) return;
+  const label = entry.titre || "cette fiche";
+  const extra = entry.categorie === "Lieux" ? "\nLa cellule correspondante sera aussi supprimée de la carte." : "";
+  if (!confirm(`Supprimer "${label}" ?${extra}\nCette action est irréversible.`)) return;
   try {
     await deleteWikiEntry(entry.id);
+    if (entry.categorie === "Lieux" && entry.cellule_id) {
+      await deleteCellule(entry.cellule_id);
+    }
     allEntries = allEntries.filter(e => e.id !== entry.id);
     document.getElementById("wiki-detail-overlay").classList.add("hidden");
     document.getElementById("wiki-edit-overlay").classList.add("hidden");
