@@ -206,6 +206,30 @@ export async function deleteCellule(id) {
   await deleteDoc(doc(db, "atelier_cellules", id));
 }
 
+export async function deleteOracle(id) {
+  await deleteDoc(doc(db, "atelier_oracles", id));
+}
+
+export async function deleteEvenement(id) {
+  await deleteDoc(doc(db, "atelier_evenements", id));
+}
+
+export async function removeEvenementFromCellule(celluleId, evenementId) {
+  const ref = doc(db, "atelier_cellules", celluleId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const ids = (snap.data().evenement_ids || []).filter(id => id !== evenementId);
+  await updateDoc(ref, { evenement_ids: ids });
+}
+
+export async function deleteActionsByRefId(refId) {
+  if (!refId) return;
+  const snap = await getDocs(collection(db, "atelier_actions"));
+  await Promise.all(
+    snap.docs.filter(d => d.data().ref_id === refId).map(d => deleteDoc(doc(db, "atelier_actions", d.id)))
+  );
+}
+
 export const deleteAllCellules  = () => deleteCollection("atelier_cellules");
 export const deleteAllWiki      = () => deleteCollection("atelier_wiki");
 export const deleteAllOracles   = () => deleteCollection("atelier_oracles");

@@ -1,7 +1,11 @@
 import { requireAuth } from "./auth.js?v=2";
 import { initNav } from "./nav.js?v=2";
 import { escapeHtml, formatDate, showToast } from "./utils.js?v=2";
-import { getWikiEntries, addWikiEntry, updateWikiEntry, deleteWikiEntry, WIKI_CATEGORIES, deleteCellule } from "./db.js?v=2";
+import {
+  getWikiEntries, addWikiEntry, updateWikiEntry, deleteWikiEntry, WIKI_CATEGORIES,
+  deleteCellule, deleteOracle, deleteEvenement,
+  removeEvenementFromCellule, deleteActionsByRefId,
+} from "./db.js?v=2";
 
 await requireAuth();
 initNav("wiki");
@@ -216,22 +220,39 @@ document.getElementById("wiki-edit-save").addEventListener("click", async () => 
 
 async function confirmDelete(entry) {
   const label = entry.titre || "cette fiche";
-  const extra = entry.categorie === "Lieux" ? "\nLa cellule correspondante sera aussi supprimée de la carte." : "";
-  if (!confirm(`Supprimer "${label}" ?${extra}\nCette action est irréversible.`)) return;
+  const extras = {
+    cellule:   "La cellule sera supprimée de la carte.",
+    oracle:    "L'oracle correspondant sera supprimé.",
+    evenement: "L'événement sera supprimé de la cellule.",
+  };
+  const extra = extras[entry.source_type] ? `\n${extras[entry.source_type]}` : "";
+  if (!confirm(`Supprimer "${label}" ?${extra}\nLe journal d'actions associé sera nettoyé.\n\nCette action est irréversible.`)) return;
+
   try {
     await deleteWikiEntry(entry.id);
-    if (entry.categorie === "Lieux" && entry.cellule_id) {
+
+    if (entry.source_type === "cellule" && entry.cellule_id) {
       await deleteCellule(entry.cellule_id);
+      await deleteActionsByRefId(entry.cellule_id);
+    } else if (entry.source_type === "oracle" && entry.source_id) {
+      await deleteOracle(entry.source_id);
+      await deleteActionsByRefId(entry.source_id);
+    } else if (entry.source_type === "evenement" && entry.source_id) {
+      await deleteEvenement(entry.source_id);
+      if (entry.cellule_id) await removeEvenementFromCellule(entry.cellule_id, entry.source_id);
+      await deleteActionsByRefId(entry.source_id);
     }
+
     allEntries = allEntries.filter(e => e.id !== entry.id);
     document.getElementById("wiki-detail-overlay").classList.add("hidden");
     document.getElementById("wiki-edit-overlay").classList.add("hidden");
     currentEntry = null;
     renderCategoryTabs();
     renderList();
-    showToast("Fiche supprimée.");
+    showToast("Fiche et données associées supprimées.");
   } catch (e) {
     showToast("Erreur lors de la suppression.", "error");
+    console.error(e);
   }
 }
 

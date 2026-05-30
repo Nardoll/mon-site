@@ -155,6 +155,8 @@ async function renderRecentActions() {
 
 // ─── Chart activité ───────────────────────────────────────────────────────────
 
+let _chartInstance = null;
+
 async function renderChart() {
   const allActions = await getAllActions();
   if (!allActions.length) return;
@@ -193,9 +195,11 @@ async function renderChart() {
   const ctx = document.getElementById("chart-activite");
   if (!ctx) return;
 
+  if (_chartInstance) { _chartInstance.destroy(); _chartInstance = null; }
+
   const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#c49a3a";
 
-  new Chart(ctx, {
+  _chartInstance = new Chart(ctx, {
     type: "bar",
     data: {
       labels,
@@ -563,6 +567,7 @@ function setupTestZone() {
       }
       showToast(`${label} supprimé(e)s.`);
       await Promise.all([renderStats(), renderRecentActions()]);
+      renderChart();
     } catch (e) {
       showToast("Erreur lors de la suppression.", "error");
       console.error(e);
