@@ -31,6 +31,19 @@ function hexPoints(cx, cy, size = SIZE) {
   return pts.join(" ");
 }
 
+// ─── Couleurs vives pour le filtre environnement ─────────────────────────────
+// Bien espacées sur la roue des couleurs pour être immédiatement lisibles
+
+const ENV_FILTER_COLORS = {
+  'tempéré':    '#72cc4a',  // vert lime vif
+  'steppique':  '#f5c830',  // jaune doré vif
+  'désertique': '#e87830',  // orange vif
+  'tropical':   '#30b878',  // vert teal vif (distinct du tempéré)
+  'glacial':    '#58c0e8',  // bleu ciel vif
+  'volcanique': '#e02828',  // rouge vif
+  'maritime':   '#2868c8',  // bleu océan vif
+};
+
 // ─── État ─────────────────────────────────────────────────────────────────────
 
 let cellules = [];
@@ -38,6 +51,7 @@ let transform = { tx: 0, ty: 0, scale: 1 };
 let isDragging = false;
 let dragStart = { x: 0, y: 0 };
 let dragMoved = false;
+let envFilterActive = false;
 
 const svg = document.getElementById("map-svg");
 const mapRoot = document.getElementById("map-root");
@@ -92,7 +106,9 @@ function renderMap() {
   // Cellules découvertes
   for (const c of cellules) {
     const { x, y } = hexToPixel(c.q, c.r);
-    const color = BIOME_COLORS[c.biome] || "#555";
+    const color = envFilterActive
+      ? (ENV_FILTER_COLORS[c.environnement] || "#888")
+      : (BIOME_COLORS[c.biome] || "#555");
     const icon = BIOME_ICONS[c.biome] || "?";
     html += `
       <g class="hex-cell" data-id="${c.id}" style="cursor:pointer">
@@ -298,15 +314,48 @@ document.getElementById("cell-close").addEventListener("click", () => {
 // ─── Légende ──────────────────────────────────────────────────────────────────
 
 function renderLegend() {
-  const presentBiomes = [...new Set(cellules.map(c => c.biome))];
   const el = document.getElementById("map-legend");
   if (!el) return;
-  el.innerHTML = presentBiomes.map(b => `
-    <div class="map-legend-item">
-      <div class="map-legend-dot" style="background:${BIOME_COLORS[b] || '#888'}"></div>
-      <span>${BIOME_ICONS[b] || ""} ${b}</span>
-    </div>
-  `).join("");
+
+  if (envFilterActive) {
+    // Légende par environnement — uniquement ceux présents sur la carte
+    const presentEnvs = [...new Set(cellules.map(c => c.environnement).filter(Boolean))];
+    el.innerHTML = presentEnvs.map(env => `
+      <div class="map-legend-item">
+        <div class="map-legend-dot" style="background:${ENV_FILTER_COLORS[env] || '#888'}"></div>
+        <span>${env}</span>
+      </div>
+    `).join("");
+  } else {
+    // Légende par biome (défaut)
+    const presentBiomes = [...new Set(cellules.map(c => c.biome))];
+    el.innerHTML = presentBiomes.map(b => `
+      <div class="map-legend-item">
+        <div class="map-legend-dot" style="background:${BIOME_COLORS[b] || '#888'}"></div>
+        <span>${BIOME_ICONS[b] || ""} ${b}</span>
+      </div>
+    `).join("");
+  }
 }
+
+// ─── Toggle filtre environnement ──────────────────────────────────────────────
+
+document.getElementById("btn-env-filter")?.addEventListener("click", () => {
+  envFilterActive = !envFilterActive;
+  const btn = document.getElementById("btn-env-filter");
+  if (envFilterActive) {
+    btn.style.background = "var(--accent)";
+    btn.style.color = "#0c0b0a";
+    btn.style.border = "1px solid var(--accent)";
+    btn.textContent = "🎨 Vue biomes";
+  } else {
+    btn.style.background = "";
+    btn.style.color = "";
+    btn.style.border = "";
+    btn.textContent = "🌍 Vue environnements";
+  }
+  renderMap();
+  renderLegend();
+});
 
 renderLegend();
