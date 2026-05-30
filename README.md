@@ -994,6 +994,15 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-05-31
+**Atelier — correctifs et améliorations carte**
+
+- **Fix auth `carte-info.html`** : `sessionStorage` n'est pas partagé entre onglets navigateur — la page redemandait le mot de passe à chaque ouverture. Suppression de `requireAuth()` sur cette page (doc statique sans données sensibles).
+- **Palette de couleurs par environnement** : refonte de `BIOME_COLORS` dans `generation.js` — chaque environnement a désormais une famille de teintes cohérente (tempéré = verts moyens, steppique = ocre, désertique = brun chaud, tropical = verts profonds, glacial = bleu-gris froid, volcanique = rouge sombre, maritime = bleu océan). Les biomes d'un même environnement restent visuellement proches.
+- **Filtre de couleur par environnement** (`carte.js` + `carte.html`) : bouton toggle "🌍 Vue environnements" dans la toolbar de la carte. Quand actif, chaque hexagone prend une couleur vive et bien distincte selon son environnement (7 couleurs très espacées sur la roue chromatique). La légende bascule également vers les environnements présents. Retour aux couleurs de biome au second clic.
+- **Batch +50 cellules** (`accueil.js` + `index.html`) : bouton dans la zone de test pour générer 50 cellules automatiquement en une fois. Chaque cellule est générée en passant les précédentes comme contexte (même algorithme que la révélation normale). Pas d'incrément du compteur journalier.
+- **Fix suppression bulk** (`db.js`) : `deleteCollection` utilisait `Promise.all` avec des centaines de `deleteDoc` simultanés, ce qui saturait Firestore sur de grandes collections. Remplacement par `writeBatch` (paquets de 500 opérations atomiques) — la suppression fonctionne désormais quelle que soit la taille de la collection.
+
 ### 2026-05-30 (suite 7)
 **Atelier — Système complet de génération procédurale des cellules + page de documentation**
 
