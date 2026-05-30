@@ -2,7 +2,7 @@ import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
 import { escapeHtml, formatDate } from "./utils.js";
 import { getCellules } from "./db.js";
-import { BIOME_COLORS, BIOME_ICONS, ENV_COLORS } from "./generation.js";
+import { BIOME_COLORS, BIOME_ICONS, ENV_COLORS } from "./generation.js?v=2";
 import { db } from "../firebase-config.js";
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 

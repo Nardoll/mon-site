@@ -15,7 +15,7 @@ import {
 } from "./mots-cles.js?v=3";
 import {
   generateCell, BIOME_ICONS, BIOME_COLORS,
-} from "./generation.js?v=1";
+} from "./generation.js?v=2";
 const DAILY_LIMIT = 3;
 
 // ─── Limite journalière (localStorage — synchrone, pas de Firebase) ───────────
@@ -570,5 +570,52 @@ function setupTestZone() {
     localStorage.removeItem(_dailyKey());
     renderDailyProgress();
     showToast("Limite du jour réinitialisée.");
+  });
+
+  document.getElementById("batch-reveal")?.addEventListener("click", async () => {
+    if (!confirm("Générer 50 cellules automatiquement ? Elles seront ajoutées à la carte sans limite journalière.")) return;
+    const btn = document.getElementById("batch-reveal");
+    btn.disabled = true;
+
+    try {
+      let cellules = await getCellules();
+      let added = 0;
+      const N = 50;
+
+      for (let i = 0; i < N; i++) {
+        btn.textContent = `⏳ Génération ${i + 1} / ${N}…`;
+
+        const gen = generateCell(cellules);
+        if (!gen) break; // Plus de candidats
+
+        const { q, r, environnement, biome, montagne, riviere } = gen;
+        const motsCles = genMotsClesCellule(biome, environnement);
+        const featStr = [montagne ? "montagne" : "", riviere ? "rivière" : ""].filter(Boolean).join(", ");
+        const desc = `[auto] ${motsCles.join(" · ")}${featStr ? ` — ${featStr}` : ""}`;
+
+        const cellId = await addCellule({
+          q, r, biome, environnement, montagne, riviere,
+          mots_cles: motsCles, titre: null, description: desc,
+        });
+
+        // Injecter dans le tableau local pour que la prochaine itération ait le bon contexte
+        cellules = [...cellules, { id: cellId, q, r, biome, environnement, montagne, riviere }];
+        added++;
+      }
+
+      if (added > 0) {
+        await logAction({ type: "cellule", details: `[auto] ${added} cellules générées automatiquement`, ref_id: null });
+      }
+
+      showToast(`${added} cellule${added > 1 ? "s" : ""} générée${added > 1 ? "s" : ""}.`);
+      await Promise.all([renderStats(), renderRecentActions()]);
+      renderChart();
+    } catch (e) {
+      showToast("Erreur lors de la génération.", "error");
+      console.error(e);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "🗺️ Générer 50 cellules automatiquement (test)";
+    }
   });
 }

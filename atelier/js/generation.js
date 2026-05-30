@@ -78,64 +78,74 @@ export const BIOMES_BY_ENV = {
 
 // ─── Couleurs des biomes ──────────────────────────────────────────────────────
 
+// Palette par environnement : chaque env a une famille de teintes cohérente.
+// Tempéré = verts moyens · Steppique = ocre/doré · Désertique = brun chaud
+// Tropical = verts profonds · Glacial = bleu-gris froid · Volcanique = rouge sombre · Maritime = bleu océan
 export const BIOME_COLORS = {
-  // Tempéré
-  'plaine':              '#7eb56a',
-  'colline':             '#9c8b62',
-  'forêt clairsemée':   '#4a7a3a',
-  'forêt ancienne':      '#2d5a27',
-  'prairie':             '#8db860',
-  'marais':              '#4d7a50',
-  'marécage':            '#3a6640',
-  'tourbière':           '#5a5a3a',
-  'plateau':             '#8a7a5a',
-  'versant de montagne': '#7a6a5a',
-  // Steppique
-  'steppe':              '#c4a53a',
-  'prairie sèche':       '#b09040',
-  'colline herbeuse':    '#9a8845',
-  'plaine ventée':       '#b5a058',
-  'plateau aride':       '#a08050',
-  // Désertique
-  'désert de sable':     '#d4a530',
-  'désert de roche':     '#b07848',
-  'désert de sel':       '#e0d8c0',
-  'canyon aride':        '#9a5835',
-  'oasis':               '#5a9a5a',
-  'colline aride':       '#a07040',
-  // Tropical
-  'jungle dense':        '#1a5e2a',
-  'jungle clairsemée':   '#2a7a3a',
-  'savane':              '#b09035',
-  'marécage tropical':   '#3a6640',
-  'mangrove':            '#2a5a3a',
-  'forêt noyée':         '#3a6a4a',
-  'côte tropicale':      '#c8a860',
-  'delta':               '#5a9060',
-  // Glacial
-  'toundra':             '#8aabb5',
-  'glace permanente':    '#d0e8f8',
-  'glacier':             '#b0d0e8',
-  'plaine enneigée':     '#c0d0d8',
-  'côte glaciale':       '#90b0c8',
-  'mer de glace':        '#6090a8',
-  // Volcanique
+  // ── Tempéré — verts moyens (HSL ~115-130°, saturation modérée)
+  'plaine':              '#8ab568',
+  'colline':             '#7a9a58',
+  'forêt clairsemée':   '#4d8038',
+  'forêt ancienne':      '#2e5c22',
+  'prairie':             '#9ec070',
+  'marais':              '#4d7850',
+  'marécage':            '#406045',
+  'tourbière':           '#4a5840',
+  'plateau':             '#7a8860',
+  'versant de montagne': '#607055',
+
+  // ── Steppique — ocre/doré (HSL ~42-50°)
+  'steppe':              '#c4a838',
+  'prairie sèche':       '#b08830',
+  'colline herbeuse':    '#9a8040',
+  'plaine ventée':       '#c0a850',
+  'plateau aride':       '#8a7840',
+
+  // ── Désertique — brun chaud (HSL ~28-38°)
+  'désert de sable':     '#d4a028',
+  'désert de roche':     '#a86838',
+  'désert de sel':       '#ddd8b0',
+  'canyon aride':        '#884030',
+  'oasis':               '#5a8a48',
+  'colline aride':       '#908858',
+
+  // ── Tropical — verts profonds saturés (HSL ~128-140°, plus sombres que tempéré)
+  'jungle dense':        '#1a5818',
+  'jungle clairsemée':   '#287838',
+  'savane':              '#928a30',
+  'marécage tropical':   '#3a6840',
+  'mangrove':            '#286048',
+  'forêt noyée':         '#3a6850',
+  'côte tropicale':      '#6a9858',
+  'delta':               '#4a8058',
+
+  // ── Glacial — bleu-gris froid (HSL ~205-215°)
+  'toundra':             '#8aaab5',
+  'glace permanente':    '#c0d8e8',
+  'glacier':             '#a0c0dc',
+  'plaine enneigée':     '#b8ccd8',
+  'côte glaciale':       '#7898a8',
+  'mer de glace':        '#5080a0',
+
+  // ── Volcanique — rouge sombre / noir (HSL ~0°, très sombre)
   'champ de lave':       '#3a1010',
-  'terres brûlées':      '#5a2a20',
-  'plateau volcanique':  '#6a3828',
-  'lac de cratère':      '#304858',
+  'terres brûlées':      '#5a2818',
+  'plateau volcanique':  '#6a3820',
+  'lac de cratère':      '#304058',
   'forêt de cendres':    '#484838',
-  'volcan actif':        '#8a2010',
-  // Maritime
-  'eau peu profonde':    '#3a9ec0',
-  'eau profonde':        '#1a5080',
-  'côte rocheuse':       '#7a6855',
-  'côte sablonneuse':    '#c8b870',
-  'île':                 '#8a9840',
-  'archipel':            '#7a8838',
-  // Spéciaux (maritime + montagne)
-  'île volcanique':      '#7a2820',
-  'île rocheuse':        '#6a6050',
+  'volcan actif':        '#9a2018',
+
+  // ── Maritime — bleu océan (HSL ~210-220°)
+  'eau peu profonde':    '#2a7ab0',
+  'eau profonde':        '#1a4878',
+  'côte rocheuse':       '#5a6878',
+  'côte sablonneuse':    '#c0a868',
+  'île':                 '#7a9040',
+  'archipel':            '#6a8038',
+
+  // ── Spéciaux maritime + montagne
+  'île volcanique':      '#7a2818',
+  'île rocheuse':        '#6a6858',
 };
 
 // ─── Icônes des biomes ────────────────────────────────────────────────────────
