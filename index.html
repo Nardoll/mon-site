@@ -207,6 +207,34 @@
     @media (min-width: 641px) and (max-width: 900px) {
       .sections-grid { grid-template-columns: 1fr 1fr; max-width: 620px; }
     }
+
+    /* ── Bouton personnel discret ─────────── */
+    .perso-btn {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      color: rgba(255,255,255,.2);
+      transition: background .2s, border-color .2s, color .2s;
+    }
+    .perso-btn:hover {
+      background: rgba(255,255,255,.1);
+      border-color: rgba(255,255,255,.18);
+      color: rgba(255,255,255,.45);
+    }
+    .perso-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
   </style>
 </head>
 <body>
@@ -268,6 +296,12 @@
     Si vous êtes arrivé ici par erreur, il n'y a rien à voir.
     Les sections s'accèdent directement par leur URL.
   </p>
+
+  <a href="/perso/" class="perso-btn" title="">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+    </svg>
+  </a>
 
 </body>
 </html>

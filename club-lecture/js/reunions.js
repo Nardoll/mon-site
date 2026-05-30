@@ -101,17 +101,50 @@ function renderDetailContent(r) {
   const participants = r.participant_ids || [];
   const nf = computeNoteFinale(r);
 
-  const notesHtml = participants.length
-    ? participants.map(membreId => {
-        const note = r.notes_finales?.[membreId] ?? "";
-        return `<div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.4rem">
-          <a href="membres.html?open=${membreId}" style="flex:1;font-size:.88rem;color:inherit;text-decoration:none">${nomMembre(membreId)}</a>
-          <input type="number" class="note-finale-input" data-membre="${membreId}"
-            min="1" max="10" step="0.5" placeholder="—" value="${note}" style="width:80px">
-          <span style="font-size:.78rem;color:var(--muted)">/10</span>
-        </div>`;
-      }).join("")
+  // Membres ayant une note mais pas participants (lecture hors réunion)
+  const notedAbsents = Object.keys(r.notes_finales || {}).filter(id => !participants.includes(id));
+
+  function noteRow(membreId, isAbsent) {
+    const note = r.notes_finales?.[membreId] ?? "";
+    const badge = isAbsent
+      ? `<span style="font-size:.72rem;color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:.1em .4em;flex-shrink:0">absent</span>`
+      : "";
+    return `<div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.4rem">
+      <a href="membres.html?open=${membreId}" style="flex:1;font-size:.88rem;color:inherit;text-decoration:none">${nomMembre(membreId)}</a>
+      ${badge}
+      <input type="number" class="note-finale-input" data-membre="${membreId}"
+        min="1" max="10" step="0.5" placeholder="—" value="${note}" style="width:80px">
+      <span style="font-size:.78rem;color:var(--muted)">/10</span>
+    </div>`;
+  }
+
+  const participantRows = participants.length
+    ? participants.map(id => noteRow(id, false)).join("")
     : `<div class="text-muted" style="font-size:.85rem">Aucun participant enregistré.</div>`;
+
+  const absentRows = notedAbsents.length
+    ? `<div style="margin-top:.65rem;padding-top:.65rem;border-top:1px dashed var(--border)">
+        <div style="font-size:.75rem;color:var(--muted);margin-bottom:.4rem">Ayant lu hors réunion</div>
+        ${notedAbsents.map(id => noteRow(id, true)).join("")}
+       </div>`
+    : "";
+
+  // Dropdown pour ajouter un membre absent
+  const membresDisponibles = membres.filter(m =>
+    !participants.includes(m.id) && !notedAbsents.includes(m.id)
+  );
+  const addAbsentHtml = membresDisponibles.length
+    ? `<div style="margin-top:.75rem;padding-top:.75rem;border-top:1px dashed var(--border)">
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:.4rem">Ajouter un membre ayant lu hors réunion :</div>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <select id="absent-select" style="flex:1">
+            <option value="">— Choisir un membre —</option>
+            ${membresDisponibles.map(m => `<option value="${m.id}">${m.nom}</option>`).join("")}
+          </select>
+          <button class="btn btn-secondary btn-sm" id="add-absent-btn">Ajouter</button>
+        </div>
+       </div>`
+    : "";
 
   const livreLink = r.livre_id
     ? `<a href="bibliotheque.html?open=${r.livre_id}" style="color:var(--accent);text-decoration:none">${getLivreTitle(r.livre_id)} →</a>`
@@ -136,10 +169,12 @@ function renderDetailContent(r) {
       <span style="font-size:.75rem;font-weight:400;color:var(--muted)">sur 10</span>
       ${nf !== null ? `<span style="font-size:.88rem;font-weight:800;color:var(--accent);margin-left:auto">Moyenne : ${nf.toFixed(1)}/10</span>` : ""}
     </div>
-    ${notesHtml}
-    ${participants.length ? `<div style="margin-top:.75rem">
+    ${participantRows}
+    ${absentRows}
+    ${addAbsentHtml}
+    <div style="margin-top:.75rem">
       <button class="btn btn-primary btn-sm" id="save-notes-btn">Enregistrer les notes</button>
-    </div>` : ""}
+    </div>
   `;
 
   document.getElementById("save-notes-btn")?.addEventListener("click", async () => {
@@ -154,7 +189,22 @@ function renderDetailContent(r) {
       if (r) r.notes_finales = notes;
       renderList();
       showToast("Notes enregistrées !", "success");
-      // Refresh the note finale display
+      openDetail(currentReunionId);
+    } catch (e) { showToast("Erreur : " + e.message, "error"); }
+  });
+
+  document.getElementById("add-absent-btn")?.addEventListener("click", async () => {
+    const sel = document.getElementById("absent-select");
+    const membreId = sel.value;
+    if (!membreId) return;
+    const r = reunions.find(x => x.id === currentReunionId);
+    if (!r) return;
+    const notes = { ...(r.notes_finales || {}), [membreId]: 0 };
+    try {
+      await updateReunion(currentReunionId, { notes_finales: notes });
+      r.notes_finales = notes;
+      renderList();
+      showToast(`${nomMembre(membreId)} ajouté. Entrez sa note et enregistrez.`, "success");
       openDetail(currentReunionId);
     } catch (e) { showToast("Erreur : " + e.message, "error"); }
   });

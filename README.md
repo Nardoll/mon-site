@@ -693,6 +693,55 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-05-30
+**Nouvelle section personnelle + notes réunions hors présence**
+
+**Section personnelle (`/perso/`) :**
+- `index.html` : ajout d'un bouton bonhomme discret (SVG, 36px, `position:fixed` bas-droite), entièrement opaque et sans texte. Lien vers `/perso/`.
+- `perso/firebase-config.js` : même projet Firebase `mon-site-e253f`, instance nommée `"perso"` pour éviter les conflits.
+- `perso/js/auth.js` : mot de passe `Fantominus` (SHA-256), clé `sessionStorage` `"perso_auth"`. Porte de connexion avec fond teal.
+- `perso/js/nav.js` : sidebar identique au club de lecture — logo, liens de navigation, bouton "Accueil du site", bascule thème (clé `localStorage` `"perso_theme"`).
+- `perso/css/style.css` : thème teal (`--accent: #14b8a6`). Mode sombre par défaut, mode clair via `[data-theme="light"]`. Composants complets : sidebar, boutons, cards, formulaires, modals, table, KPIs, onglets toggle, toast.
+- `perso/index.html` + `perso/js/accueil.js` : page d'accueil avec 2 KPIs (total migraines, ce mois) et la dernière migraine enregistrée.
+- `perso/migraines.html` + `perso/js/migraines.js` : page **Migraines ophtalmiques** complète :
+  - 4 KPIs : total, cette année, ce mois, jours depuis la dernière.
+  - Graphique Chart.js (bar) avec toggle **Jours / Mois / Années**. Échelle linéaire : toutes les périodes entre la première et la dernière migraine sont affichées (les périodes vides apparaissent à 0).
+  - Tableau historique trié par date décroissante (date, commentaire, boutons ✏️ et 🗑️ avec confirmation).
+  - Modal d'ajout/modification : date (obligatoire, défaut = aujourd'hui) + commentaire optionnel.
+- `perso/js/db.js` : CRUD Firestore sur la collection `perso_migraines` (`getMigraines`, `addMigraine`, `updateMigraine`, `deleteMigraine`).
+- `perso/js/utils.js` : `formatDate`, `formatDateShort`, `showToast`.
+
+**Club de lecture — notes de lecture hors réunion :**
+- `club-lecture/js/reunions.js` : la fiche détail d'une réunion distingue maintenant trois zones :
+  1. Participants présents → note (inchangé).
+  2. Membres absents ayant déjà une note → affichés avec badge "absent" + input note modifiable.
+  3. Dropdown "Ajouter un membre ayant lu hors réunion" → ajoute le membre dans `notes_finales` avec note 0, puis l'utilisateur saisit la note et enregistre.
+- `club-lecture/js/membres.js` : la section "Réunions" dans le profil d'un membre inclut désormais les réunions où le membre a une note dans `notes_finales` même s'il n'était pas présent (`participant_ids`). Badge "absent" affiché dans ce cas.
+
+**Impacts automatiques (aucun changement de code nécessaire) :**
+- Note finale du livre : `computeNoteFinale()` calcule déjà la moyenne de tout `notes_finales` → inclut automatiquement les absents.
+- Palmarès accueil : basé sur la note finale → mis à jour.
+- Bibliothèque (tri note finale) → mis à jour.
+- Statistiques — lectures cumulées et pages cumulées : `membersWhoFinishedBook()` utilise déjà `notes_finales` → les absents notés comptent comme ayant terminé le livre.
+- Statistiques — note moyenne globale : utilise toutes les `notes_finales` → inclut les absents.
+- Statistiques — membres actifs : le score "livres lus" augmente pour les membres ayant noté hors réunion.
+
+**Collection Firestore ajoutée :**
+```
+perso_migraines
+  date         Timestamp   Date de la migraine
+  commentaire  string      Commentaire libre (optionnel)
+  cree_le      Timestamp   Timestamp création
+```
+
+**Navigation :**
+| Page | URL |
+|------|-----|
+| Perso — Accueil | `/perso/` |
+| Perso — Migraines ophtalmiques | `/perso/migraines.html` |
+
+
+
 ### 2026-05-29
 **Votes — lancement automatique + page vote publique**
 - `club-lecture/votes.html` : suppression du bouton "Lancer un vote" et de tous ses modals (lancer, confirmer, soumettre). Remplacement par un encart `#vote-status-card` au-dessus de l'historique.

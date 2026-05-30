@@ -184,18 +184,26 @@ async function openProfil(id) {
     : `<div class="text-muted" style="font-size:.85rem">Aucun commentaire enregistré.</div>`;
 
   // ── Réunions ──────────────────────────────────────────────────────
-  const reunionsMembre = reunions.filter(r => (r.participant_ids || []).includes(id))
-    .sort((a, b) => (b.date?.seconds ?? 0) - (a.date?.seconds ?? 0));
+  // Inclut les réunions où le membre était présent ET celles où il a noté le livre (hors réunion)
+  const reunionsMembre = reunions.filter(r =>
+    (r.participant_ids || []).includes(id) ||
+    (r.notes_finales && r.notes_finales[id] !== undefined)
+  ).sort((a, b) => (b.date?.seconds ?? 0) - (a.date?.seconds ?? 0));
 
   const reunionsSection = reunionsMembre.length
     ? reunionsMembre.map(r => {
         const titre = r.livre_id ? (livres.find(l => l.id === r.livre_id)?.titre ?? "—") : "Aucun livre";
         const note = r.notes_finales?.[id];
+        const estParticipant = (r.participant_ids || []).includes(id);
         const noteStr = note ? `<strong style="color:var(--accent)">${Number(note).toFixed(1)}/10</strong>` : `<span style="color:var(--muted)">Non noté</span>`;
+        const absentBadge = !estParticipant
+          ? `<span style="font-size:.7rem;color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:.1em .4em;margin-right:.35rem">absent</span>`
+          : "";
         return `<div class="vmr" style="cursor:pointer" data-reunion-id="${r.id}">
           <div class="vmr-header">
             <span class="vmr-month">${formatMois(r.mois, r.annee)}</span>
             <span class="vmr-top" style="flex:1;font-size:.84rem">${titre}</span>
+            ${absentBadge}
             <span>${noteStr}</span>
           </div>
         </div>`;
