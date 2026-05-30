@@ -7,6 +7,7 @@ import {
   addOracle, linkOracleToWiki,
   addEvenement, addEvenementToCellule,
   getTodos, seedTodosIfEmpty, toggleTodo, deleteTodo, addTodo,
+  deleteAllCellules, deleteAllWiki, deleteAllOracles, deleteAllEvenements, deleteAllActions,
 } from "./db.js";
 import {
   ORACLE_TYPES, EVENEMENT_TYPES,
@@ -77,23 +78,42 @@ function renderDailyProgress() {
 
 await requireAuth();
 initNav("accueil");
-renderDailyProgress(); // synchrone — s'affiche immédiatement, avant Firebase
+renderDailyProgress(); // synchrone — avant tout Firebase
 
-await Promise.all([renderStats(), renderRecentActions(), renderTodos()]);
-renderChart();
-
+// Les event listeners sont enregistrés AVANT les chargements async
+// pour qu'un éventuel échec Firebase ne les empêche pas de fonctionner.
 document.getElementById("btn-reveler").addEventListener("click", () => {
   if (isDailyLimitReached()) return;
-  openRevelerModal();
+  openRevelerModal().catch(e => { showToast("Erreur inattendue.", "error"); console.error(e); });
 });
 document.getElementById("btn-oracle").addEventListener("click", () => {
   if (isDailyLimitReached()) return;
-  openOracleModal();
+  openOracleModal().catch(e => { showToast("Erreur inattendue.", "error"); console.error(e); });
 });
 document.getElementById("btn-evenement").addEventListener("click", () => {
   if (isDailyLimitReached()) return;
-  openEvenementModal();
+  openEvenementModal().catch(e => { showToast("Erreur inattendue.", "error"); console.error(e); });
 });
+
+// Bouton +1 action sur l'indicateur
+document.getElementById("daily-plus")?.addEventListener("click", () => {
+  const key = _dailyKey();
+  const current = parseInt(localStorage.getItem(key) || "0", 10);
+  if (current > 0) localStorage.setItem(key, current - 1);
+  renderDailyProgress();
+});
+
+// Boutons de test
+setupTestZone();
+
+// Chargements async (dans try/catch pour ne jamais bloquer les boutons)
+try {
+  await seedTodosIfEmpty();
+  await Promise.all([renderStats(), renderRecentActions(), renderTodos()]);
+} catch (e) {
+  console.error("Erreur chargement données:", e);
+}
+renderChart();
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
 
@@ -515,3 +535,34 @@ document.getElementById("ev-save").addEventListener("click", async () => {
     btn.textContent = "Sauvegarder →";
   }
 });
+
+// ─── Zone de test ─────────────────────────────────────────────────────────────
+
+function setupTestZone() {
+  const confirmAndDelete = async (label, deleteFn, resetDaily = false) => {
+    if (!confirm(`Supprimer ${label} ? Cette action est irréversible.`)) return;
+    try {
+      await deleteFn();
+      if (resetDaily) {
+        localStorage.removeItem(_dailyKey());
+        renderDailyProgress();
+      }
+      showToast(`${label} supprimé(e)s.`);
+      await Promise.all([renderStats(), renderRecentActions()]);
+    } catch (e) {
+      showToast("Erreur lors de la suppression.", "error");
+      console.error(e);
+    }
+  };
+
+  document.getElementById("del-cellules")?.addEventListener("click",   () => confirmAndDelete("les cellules",   deleteAllCellules));
+  document.getElementById("del-oracles")?.addEventListener("click",    () => confirmAndDelete("les oracles",    deleteAllOracles));
+  document.getElementById("del-events")?.addEventListener("click",     () => confirmAndDelete("les événements", deleteAllEvenements));
+  document.getElementById("del-wiki")?.addEventListener("click",       () => confirmAndDelete("le wiki",        deleteAllWiki));
+  document.getElementById("del-actions")?.addEventListener("click",    () => confirmAndDelete("le journal d'actions", deleteAllActions, true));
+  document.getElementById("reset-daily")?.addEventListener("click", () => {
+    localStorage.removeItem(_dailyKey());
+    renderDailyProgress();
+    showToast("Limite du jour réinitialisée.");
+  });
+}

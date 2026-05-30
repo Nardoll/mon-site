@@ -36,7 +36,8 @@
     <!-- Progression du jour -->
     <div class="daily-progress" id="daily-progress">
       <div class="daily-dots" id="daily-dots"></div>
-      <span class="daily-label" id="daily-label">Chargement…</span>
+      <span class="daily-label" id="daily-label">…</span>
+      <button id="daily-plus" title="Ajouter une action disponible" style="margin-left:auto;background:none;border:1px solid var(--border2);border-radius:5px;color:var(--muted2);cursor:pointer;font-size:.8rem;padding:.15rem .5rem;font-family:inherit;transition:color .15s,border-color .15s" onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--accent)'" onmouseout="this.style.color='var(--muted2)';this.style.borderColor='var(--border2)'">+1</button>
     </div>
 
     <!-- Actions du jour -->
@@ -87,6 +88,21 @@
         <button class="btn btn-primary" id="todo-add-btn">+</button>
       </div>
     </div>
+
+    <!-- Zone de test -->
+    <div class="card" style="border-color:rgba(207,102,121,.3);margin-top:.5rem">
+      <div class="card-title" style="color:var(--danger)">🧪 Zone de test</div>
+      <p style="font-size:.8rem;color:var(--muted2);margin-bottom:.85rem">Supprime des données pour recommencer les tests. À retirer une fois le paramétrage terminé.</p>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <button class="btn btn-danger" id="del-cellules">🗑️ Cellules</button>
+        <button class="btn btn-danger" id="del-oracles">🗑️ Oracles</button>
+        <button class="btn btn-danger" id="del-events">🗑️ Événements</button>
+        <button class="btn btn-danger" id="del-wiki">🗑️ Wiki</button>
+        <button class="btn btn-danger" id="del-actions">🗑️ Journal d'actions</button>
+        <button class="btn btn-secondary" id="reset-daily" style="margin-left:auto">🔄 Réinitialiser la limite du jour</button>
+      </div>
+    </div>
+
   </main>
 
   <!-- ─── MODAL : Révéler une cellule ───────────────────────────────────── -->
@@ -197,6 +213,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/accueil.js?v=5"></script>
+  <script type="module" src="js/accueil.js?v=6"></script>
 </body>
 </html>

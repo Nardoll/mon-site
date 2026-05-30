@@ -989,6 +989,20 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-05-30 (suite 3)
+**Atelier — Corrections boutons + zone de test + indicateur journalier**
+
+- `accueil.js` : **bug fix critique** — les event listeners des boutons d'action sont maintenant enregistrés **avant** le `Promise.all` Firebase (si le chargement des données échouait, les boutons n'étaient jamais connectés). Chaque modal opener est protégé par `.catch()`. Le `Promise.all` est enveloppé dans un `try/catch` pour ne jamais bloquer l'interface.
+- **Compteur journalier via `localStorage`** (abandon de l'approche Firebase) : synchrone, s'affiche instantanément sans réseau. Clé `at_daily_YYYY-MM-DD` auto-reset quotidien.
+- **Bouton "+1"** sur l'indicateur de progression : decremente le compteur localStorage pour ajouter une action disponible (pratique en phase de test).
+- **Zone de test** en bas du tableau de bord : 5 boutons de suppression (Cellules / Oracles / Événements / Wiki / Journal d'actions) + bouton "Réinitialiser la limite du jour". Chaque suppression a une confirmation. À retirer une fois le paramétrage terminé.
+- `db.js` : ajout de `deleteAllCellules`, `deleteAllWiki`, `deleteAllOracles`, `deleteAllEvenements`, `deleteAllActions` (via fonction interne `deleteCollection(name)`).
+
+### 2026-05-30 (suite 2)
+**Atelier : 3 actions/jour avec indicateur de progression**
+
+- `accueil.js` + `index.html` + `css/style.css` : 3 actions quotidiennes à répartir librement. Indicateur visuel 3 dots + label. Boutons verrouillés après la 3e action. Reset automatique chaque nouveau jour.
+
 ### 2026-05-30 (suite)
 **Nouvelle section Atelier — World-building solo procédural**
 

@@ -194,6 +194,20 @@ export async function addTodo(texte) {
   });
 }
 
+// ─── Suppression (mode test) ──────────────────────────────────────────────────
+
+async function deleteCollection(name) {
+  const snap = await getDocs(collection(db, name));
+  await Promise.all(snap.docs.map(d => deleteDoc(doc(db, name, d.id))));
+  return snap.size;
+}
+
+export const deleteAllCellules  = () => deleteCollection("atelier_cellules");
+export const deleteAllWiki      = () => deleteCollection("atelier_wiki");
+export const deleteAllOracles   = () => deleteCollection("atelier_oracles");
+export const deleteAllEvenements= () => deleteCollection("atelier_evenements");
+export const deleteAllActions   = () => deleteCollection("atelier_actions");
+
 // ─── Stats globales ───────────────────────────────────────────────────────────
 
 export async function getStats() {
