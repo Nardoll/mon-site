@@ -1,6 +1,6 @@
-import { requireAuth } from "./auth.js";
-import { initNav } from "./nav.js";
-import { showToast, escapeHtml, formatDate } from "./utils.js";
+import { requireAuth } from "./auth.js?v=2";
+import { initNav } from "./nav.js?v=2";
+import { showToast, escapeHtml, formatDate } from "./utils.js?v=2";
 import {
   getStats, getRecentActions, getAllActions, logAction,
   getCellules, addCellule, addWikiEntry,
@@ -8,12 +8,12 @@ import {
   addEvenement, addEvenementToCellule,
   getTodos, seedTodosIfEmpty, toggleTodo, deleteTodo, addTodo,
   deleteAllCellules, deleteAllWiki, deleteAllOracles, deleteAllEvenements, deleteAllActions,
-} from "./db.js";
+} from "./db.js?v=2";
 import {
   ORACLE_TYPES, EVENEMENT_TYPES,
   genMotsClesCellule, genMotsClesOracle, genMotsClesEvenement,
   chooseBiome, BIOME_ICONS, BIOME_COLORS, BIOMES_NATURELS,
-} from "./mots-cles.js";
+} from "./mots-cles.js?v=2";
 
 const NEIGHBORS = [[1,-1],[1,0],[-1,1],[-1,0],[0,1],[0,-1]];
 const DAILY_LIMIT = 3;
@@ -110,7 +110,13 @@ setupTestZone();
 // pour qu'un échec isolé ne bloque pas les autres
 try { await seedTodosIfEmpty(); } catch (e) { console.warn("seedTodos:", e); }
 try { await renderStats(); }        catch (e) { console.warn("renderStats:", e); }
-try { await renderRecentActions(); } catch (e) { console.warn("renderRecentActions:", e); }
+try {
+  await renderRecentActions();
+} catch (e) {
+  console.warn("renderRecentActions:", e);
+  const el = document.getElementById("recent-actions-list");
+  if (el) el.innerHTML = `<p class="action-empty" style="color:var(--danger)">Erreur de chargement (voir console)</p>`;
+}
 try { await renderTodos(); }        catch (e) { console.warn("renderTodos:", e); }
 renderChart();
 

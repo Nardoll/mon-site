@@ -1,7 +1,7 @@
-import { requireAuth } from "./auth.js";
-import { initNav } from "./nav.js";
-import { escapeHtml, formatDate, showToast } from "./utils.js";
-import { getWikiEntries, addWikiEntry, updateWikiEntry, deleteWikiEntry, WIKI_CATEGORIES } from "./db.js";
+import { requireAuth } from "./auth.js?v=2";
+import { initNav } from "./nav.js?v=2";
+import { escapeHtml, formatDate, showToast } from "./utils.js?v=2";
+import { getWikiEntries, addWikiEntry, updateWikiEntry, deleteWikiEntry, WIKI_CATEGORIES } from "./db.js?v=2";
 
 await requireAuth();
 initNav("wiki");
@@ -16,8 +16,11 @@ let searchQuery = "";
 
 try {
   allEntries = await getWikiEntries();
+  console.log(`Wiki: ${allEntries.length} entrée(s) chargée(s)`);
 } catch (e) {
-  console.error("getWikiEntries:", e);
+  console.error("getWikiEntries échec:", e);
+  document.getElementById("wiki-list").innerHTML =
+    `<div class="wiki-empty" style="color:var(--danger)">Erreur Firestore — voir la console (F12)</div>`;
 }
 renderCategoryTabs();
 renderList();
