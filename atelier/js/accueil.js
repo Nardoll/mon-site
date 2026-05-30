@@ -106,13 +106,12 @@ document.getElementById("daily-plus")?.addEventListener("click", () => {
 // Boutons de test
 setupTestZone();
 
-// Chargements async (dans try/catch pour ne jamais bloquer les boutons)
-try {
-  await seedTodosIfEmpty();
-  await Promise.all([renderStats(), renderRecentActions(), renderTodos()]);
-} catch (e) {
-  console.error("Erreur chargement données:", e);
-}
+// Chargements async indépendants — chacun dans son try/catch
+// pour qu'un échec isolé ne bloque pas les autres
+try { await seedTodosIfEmpty(); } catch (e) { console.warn("seedTodos:", e); }
+try { await renderStats(); }        catch (e) { console.warn("renderStats:", e); }
+try { await renderRecentActions(); } catch (e) { console.warn("renderRecentActions:", e); }
+try { await renderTodos(); }        catch (e) { console.warn("renderTodos:", e); }
 renderChart();
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
@@ -172,9 +171,8 @@ async function renderChart() {
     data.push(counts[key] || 0);
   }
 
-  const { default: Chart } = await import(
-    "https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"
-  ).catch(() => ({ default: window.Chart }));
+  const Chart = window.Chart;
+  if (!Chart) { console.warn("Chart.js non disponible"); return; }
 
   const ctx = document.getElementById("chart-activite");
   if (!ctx) return;

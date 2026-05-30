@@ -14,7 +14,11 @@ let searchQuery = "";
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
-allEntries = await getWikiEntries();
+try {
+  allEntries = await getWikiEntries();
+} catch (e) {
+  console.error("getWikiEntries:", e);
+}
 renderCategoryTabs();
 renderList();
 
