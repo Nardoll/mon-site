@@ -131,13 +131,11 @@ export async function logAction({ type, details, ref_id }) {
 }
 
 export async function getRecentActions(n = 3) {
-  const q = query(
-    collection(db, "atelier_actions"),
-    orderBy("timestamp", "desc"),
-    limit(n)
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const snap = await getDocs(collection(db, "atelier_actions"));
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.timestamp?.seconds ?? 0) - (a.timestamp?.seconds ?? 0))
+    .slice(0, n);
 }
 
 export async function getAllActions() {
@@ -163,8 +161,10 @@ const TODO_INITIAL = [
 ];
 
 export async function getTodos() {
-  const snap = await getDocs(query(collection(db, "atelier_todo"), orderBy("ordre")));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const snap = await getDocs(collection(db, "atelier_todo"));
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0));
 }
 
 export async function seedTodosIfEmpty() {

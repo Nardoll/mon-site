@@ -159,16 +159,25 @@ async function renderChart() {
     counts[d] = (counts[d] || 0) + 1;
   }
 
-  // 30 derniers jours
+  // Plage : du premier jour d'activité à aujourd'hui
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  const allDates = allActions.map(a => a.date_str).filter(Boolean).sort();
+  const firstStr = allDates[0] || todayStr;
+
+  // Minimum 7 jours, maximum toute la plage
+  const minStart = new Date(today);
+  minStart.setDate(minStart.getDate() - 6);
+  const startDate = new Date(firstStr) < minStart ? new Date(firstStr) : minStart;
+
   const labels = [];
   const data = [];
-  const today = new Date();
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
+  const cur = new Date(startDate);
+  while (cur <= today) {
+    const key = cur.toISOString().slice(0, 10);
     labels.push(key.slice(5)); // MM-DD
     data.push(counts[key] || 0);
+    cur.setDate(cur.getDate() + 1);
   }
 
   const Chart = window.Chart;

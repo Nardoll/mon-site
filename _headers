@@ -1,0 +1,9 @@
+# Cloudflare Pages — cache headers
+# Les fichiers JS de l'atelier sont revalidés à chaque visite
+# (évite que le navigateur serve d'anciennes versions depuis son cache)
+
+/atelier/js/*
+  Cache-Control: no-cache
+
+/atelier/*.html
+  Cache-Control: no-cache
