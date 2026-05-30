@@ -23,8 +23,9 @@ await requireAuth();
 initNav("accueil");
 await seedTodosIfEmpty();
 
-await Promise.all([renderStats(), renderRecentActions(), renderTodos(), renderDailyProgress()]);
+await Promise.all([renderStats(), renderRecentActions(), renderTodos()]);
 renderChart();
+renderDailyProgress();
 
 document.getElementById("btn-reveler").addEventListener("click", () => {
   if (isDailyLimitReached()) return;
@@ -48,13 +49,22 @@ function isDailyLimitReached() {
 }
 
 async function renderDailyProgress() {
-  const today = new Date().toISOString().slice(0, 10);
-  const allActions = await getAllActions();
-  _dailyCount = allActions.filter(a => a.date_str === today).length;
-
   const dots = document.getElementById("daily-dots");
   const label = document.getElementById("daily-label");
   const progress = document.getElementById("daily-progress");
+
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const allActions = await getAllActions();
+    _dailyCount = allActions.filter(a => a.date_str === today).length;
+  } catch (e) {
+    console.warn("renderDailyProgress: impossible de charger les actions", e);
+    // Affichage neutre, boutons restent actifs
+    if (label) label.textContent = `${DAILY_LIMIT} actions disponibles aujourd'hui`;
+    if (dots) dots.innerHTML = Array.from({ length: DAILY_LIMIT }, () =>
+      `<span class="daily-dot"></span>`).join("");
+    return;
+  }
 
   dots.innerHTML = Array.from({ length: DAILY_LIMIT }, (_, i) =>
     `<span class="daily-dot ${i < _dailyCount ? "filled" : ""}"></span>`
