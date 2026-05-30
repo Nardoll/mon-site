@@ -409,10 +409,17 @@ async function openFiche(id) {
       return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
     })();
     const participants = reunion.participant_ids || [];
-    const notesParParticipant = participants.map(memId => {
-      const note = reunion.notes_finales?.[memId];
-      return `<span style="font-size:.8rem">${nomMembre(memId)}${note ? ` <strong style="color:var(--accent)">${Number(note).toFixed(1)}/10</strong>` : ""}</span>`;
-    }).join(" · ");
+    // Tous les membres ayant une note (présents + absents ayant lu hors réunion)
+    const notesMap = reunion.notes_finales || {};
+    const membresNotes = Object.entries(notesMap)
+      .filter(([, n]) => Number(n) > 0)
+      .map(([memId, note]) => {
+        const estPresent = participants.includes(memId);
+        const badge = !estPresent
+          ? `<span style="font-size:.68rem;color:var(--muted);border:1px solid var(--border);border-radius:3px;padding:.05em .3em;vertical-align:middle;margin-left:.2em">absent</span>`
+          : "";
+        return `<span style="font-size:.8rem">${nomMembre(memId)}${badge} <strong style="color:var(--accent)">${Number(note).toFixed(1)}/10</strong></span>`;
+      }).join(" · ");
     reunionHTML = `
       <div class="divider"></div>
       <div class="card-title mb-2">📝 Réunion</div>
@@ -421,7 +428,7 @@ async function openFiche(id) {
           <span style="color:var(--muted)">${reunion.date ? formatDate(reunion.date) : "Date non fixée"} · ${participants.length} participant${participants.length > 1 ? "s" : ""}</span>
           ${nf !== null ? `<strong style="font-size:1rem;color:var(--accent)">${nf.toFixed(1)}/10</strong>` : ""}
         </div>
-        ${participants.length ? `<div style="margin-top:.4rem;color:var(--muted)">${notesParParticipant}</div>` : ""}
+        ${membresNotes ? `<div style="margin-top:.4rem;color:var(--muted)">${membresNotes}</div>` : ""}
       </div>
       <div style="margin-top:.75rem">
         <a href="reunions.html?open=${reunion.id}" class="btn btn-secondary btn-sm">📝 Voir la fiche réunion →</a>
