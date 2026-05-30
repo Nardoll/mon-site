@@ -49,54 +49,55 @@ function isDailyLimitReached() {
 }
 
 async function renderDailyProgress() {
-  const dots = document.getElementById("daily-dots");
   const label = document.getElementById("daily-label");
+  const dots = document.getElementById("daily-dots");
   const progress = document.getElementById("daily-progress");
+  if (!label || !dots || !progress) return;
 
   try {
     const today = new Date().toISOString().slice(0, 10);
     const allActions = await getAllActions();
     _dailyCount = allActions.filter(a => a.date_str === today).length;
-  } catch (e) {
-    console.warn("renderDailyProgress: impossible de charger les actions", e);
-    // Affichage neutre, boutons restent actifs
-    if (label) label.textContent = `${DAILY_LIMIT} actions disponibles aujourd'hui`;
-    if (dots) dots.innerHTML = Array.from({ length: DAILY_LIMIT }, () =>
-      `<span class="daily-dot"></span>`).join("");
-    return;
-  }
 
-  dots.innerHTML = Array.from({ length: DAILY_LIMIT }, (_, i) =>
-    `<span class="daily-dot ${i < _dailyCount ? "filled" : ""}"></span>`
-  ).join("");
+    dots.innerHTML = Array.from({ length: DAILY_LIMIT }, (_, i) =>
+      `<span class="daily-dot ${i < _dailyCount ? "filled" : ""}"></span>`
+    ).join("");
 
-  const remaining = DAILY_LIMIT - _dailyCount;
-  if (_dailyCount >= DAILY_LIMIT) {
-    label.textContent = "Toutes les actions du jour posées ✓";
-    progress.classList.add("daily-done");
-    progress.classList.remove("daily-active");
-  } else if (_dailyCount === 0) {
-    label.textContent = `${DAILY_LIMIT} actions disponibles aujourd'hui`;
-    progress.classList.remove("daily-done", "daily-active");
-  } else {
-    label.textContent = `${remaining} action${remaining > 1 ? "s" : ""} restante${remaining > 1 ? "s" : ""} aujourd'hui`;
-    progress.classList.add("daily-active");
-    progress.classList.remove("daily-done");
-  }
-
-  const disabled = _dailyCount >= DAILY_LIMIT;
-  ["btn-reveler", "btn-oracle", "btn-evenement"].forEach(id => {
-    const btn = document.getElementById(id);
-    if (disabled) {
-      btn.setAttribute("data-locked", "1");
-      btn.style.opacity = "0.4";
-      btn.style.cursor = "not-allowed";
+    const remaining = DAILY_LIMIT - _dailyCount;
+    if (_dailyCount >= DAILY_LIMIT) {
+      label.textContent = "Toutes les actions du jour posées ✓";
+      progress.classList.add("daily-done");
+      progress.classList.remove("daily-active");
+    } else if (_dailyCount === 0) {
+      label.textContent = `${DAILY_LIMIT} actions disponibles aujourd'hui`;
+      progress.classList.remove("daily-done", "daily-active");
     } else {
-      btn.removeAttribute("data-locked");
-      btn.style.opacity = "";
-      btn.style.cursor = "";
+      label.textContent = `${remaining} action${remaining > 1 ? "s" : ""} restante${remaining > 1 ? "s" : ""} aujourd'hui`;
+      progress.classList.add("daily-active");
+      progress.classList.remove("daily-done");
     }
-  });
+
+    const disabled = _dailyCount >= DAILY_LIMIT;
+    ["btn-reveler", "btn-oracle", "btn-evenement"].forEach(id => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      if (disabled) {
+        btn.setAttribute("data-locked", "1");
+        btn.style.opacity = "0.4";
+        btn.style.cursor = "not-allowed";
+      } else {
+        btn.removeAttribute("data-locked");
+        btn.style.opacity = "";
+        btn.style.cursor = "";
+      }
+    });
+  } catch (e) {
+    console.warn("renderDailyProgress:", e);
+    _dailyCount = 0;
+    label.textContent = `${DAILY_LIMIT} actions disponibles aujourd'hui`;
+    dots.innerHTML = Array.from({ length: DAILY_LIMIT }, () =>
+      `<span class="daily-dot"></span>`).join("");
+  }
 }
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
