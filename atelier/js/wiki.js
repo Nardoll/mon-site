@@ -12,6 +12,9 @@ let allEntries = [];
 let activeCategory = "Tous";
 let searchQuery = "";
 
+// SOURCE_ICONS doit être avant le await qui appelle renderList()
+const SOURCE_ICONS = { oracle: "🔮", cellule: "🗺️", evenement: "⚡", manuel: "✍️" };
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 try {
@@ -75,8 +78,6 @@ function filteredEntries() {
     return (a.titre || "").localeCompare(b.titre || "");
   });
 }
-
-const SOURCE_ICONS = { oracle: "🔮", cellule: "🗺️", evenement: "⚡", manuel: "✍️" };
 
 function renderList() {
   const entries = filteredEntries();

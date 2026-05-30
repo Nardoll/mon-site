@@ -106,6 +106,9 @@ document.getElementById("daily-plus")?.addEventListener("click", () => {
 // Boutons de test
 setupTestZone();
 
+// ACTION_ICONS doit être défini avant le premier await qui appelle renderRecentActions
+const ACTION_ICONS = { cellule: "🗺️", oracle: "🔮", evenement: "⚡" };
+
 // Chargements async indépendants — chacun dans son try/catch
 // pour qu'un échec isolé ne bloque pas les autres
 try { await seedTodosIfEmpty(); } catch (e) { console.warn("seedTodos:", e); }
@@ -131,8 +134,6 @@ async function renderStats() {
 }
 
 // ─── Dernières actions ────────────────────────────────────────────────────────
-
-const ACTION_ICONS = { cellule: "🗺️", oracle: "🔮", evenement: "⚡" };
 
 async function renderRecentActions() {
   const actions = await getRecentActions(3);
