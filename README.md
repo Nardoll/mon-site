@@ -994,6 +994,13 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-05-31 (suite)
+**Atelier — Barre de recherche sur la carte**
+
+- `carte.html` : barre de recherche au-dessus de la toolbar. Champ texte avec icône 🔍, bouton ✕ pour effacer (visible uniquement quand du texte est saisi), compteur de résultats affiché à droite ("N résultats sur Total").
+- `carte.js` : état `searchQuery`, fonction `cellMatchesSearch()` — teste le biome, l'environnement, le titre, la description, les mots clés et les caractéristiques (montagne/rivière). Debounce 150ms. Classe `hex-dimmed` appliquée dynamiquement dans `renderMap()` aux cellules non-correspondantes. `updateStats()` met à jour le compteur de résultats.
+- `css/style.css` : nouveaux styles `.map-search-wrap`, `.map-search-field`, `.map-search-icon`, `.map-search-input`, `.map-search-clear`, `.map-search-count`, `.hex-dimmed` (opacity .18, pointer-events none).
+
 ### 2026-05-31
 **Atelier — correctifs et améliorations carte**
 

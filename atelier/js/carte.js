@@ -52,6 +52,7 @@ let isDragging = false;
 let dragStart = { x: 0, y: 0 };
 let dragMoved = false;
 let envFilterActive = false;
+let searchQuery = "";
 
 const svg = document.getElementById("map-svg");
 const mapRoot = document.getElementById("map-root");
@@ -75,6 +76,22 @@ function resizeSVG() {
 }
 
 await init();
+
+// ─── Recherche ────────────────────────────────────────────────────────────────
+
+function cellMatchesSearch(c, query) {
+  const q = query.toLowerCase().trim();
+  if (!q) return true;
+  return (
+    (c.biome || "").toLowerCase().includes(q) ||
+    (c.environnement || "").toLowerCase().includes(q) ||
+    (c.titre || "").toLowerCase().includes(q) ||
+    (c.description || "").toLowerCase().includes(q) ||
+    (c.mots_cles || []).some(m => m.toLowerCase().includes(q)) ||
+    (c.montagne && "montagne".includes(q)) ||
+    (c.riviere && ["rivière", "riviere"].some(s => s.includes(q)))
+  );
+}
 
 // ─── Rendu carte ─────────────────────────────────────────────────────────────
 
@@ -110,8 +127,9 @@ function renderMap() {
       ? (ENV_FILTER_COLORS[c.environnement] || "#888")
       : (BIOME_COLORS[c.biome] || "#555");
     const icon = BIOME_ICONS[c.biome] || "?";
+    const matched = cellMatchesSearch(c, searchQuery);
     html += `
-      <g class="hex-cell" data-id="${c.id}" style="cursor:pointer">
+      <g class="hex-cell${matched ? "" : " hex-dimmed"}" data-id="${c.id}" style="cursor:pointer">
         <polygon
           points="${hexPoints(x, y)}"
           fill="${color}"
@@ -153,7 +171,18 @@ function renderMap() {
 
 function updateStats() {
   const el = document.getElementById("map-cell-count");
-  if (el) el.textContent = `${cellules.length} cellule${cellules.length > 1 ? "s" : ""} découverte${cellules.length > 1 ? "s" : ""}`;
+  if (!el) return;
+  el.textContent = `${cellules.length} cellule${cellules.length > 1 ? "s" : ""} découverte${cellules.length > 1 ? "s" : ""}`;
+
+  const countEl = document.getElementById("map-search-count");
+  if (!countEl) return;
+  if (searchQuery) {
+    const n = cellules.filter(c => cellMatchesSearch(c, searchQuery)).length;
+    countEl.textContent = `${n} résultat${n > 1 ? "s" : ""} sur ${cellules.length}`;
+    countEl.classList.remove("hidden");
+  } else {
+    countEl.classList.add("hidden");
+  }
 }
 
 // ─── Pan & Zoom ───────────────────────────────────────────────────────────────
@@ -356,6 +385,31 @@ document.getElementById("btn-env-filter")?.addEventListener("click", () => {
   }
   renderMap();
   renderLegend();
+});
+
+// ─── Barre de recherche ───────────────────────────────────────────────────────
+
+const searchInput = document.getElementById("map-search");
+const searchClear = document.getElementById("map-search-clear");
+let searchDebounce = null;
+
+searchInput?.addEventListener("input", () => {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => {
+    searchQuery = searchInput.value.trim();
+    searchClear?.classList.toggle("hidden", !searchQuery);
+    renderMap();
+    updateStats();
+  }, 150);
+});
+
+searchClear?.addEventListener("click", () => {
+  searchInput.value = "";
+  searchQuery = "";
+  searchClear.classList.add("hidden");
+  renderMap();
+  updateStats();
+  searchInput.focus();
 });
 
 renderLegend();

@@ -31,6 +31,18 @@
       <span id="map-cell-count" style="font-size:.82rem;color:var(--muted2)"></span>
     </div>
 
+    <!-- Barre de recherche -->
+    <div class="map-search-wrap">
+      <div class="map-search-field">
+        <span class="map-search-icon">🔍</span>
+        <input type="search" id="map-search" class="map-search-input"
+          placeholder="Biome, environnement, mot clé, titre, description…"
+          autocomplete="off" spellcheck="false">
+        <button class="map-search-clear hidden" id="map-search-clear" title="Effacer">✕</button>
+      </div>
+      <span class="map-search-count hidden" id="map-search-count"></span>
+    </div>
+
     <!-- Toolbar -->
     <div class="map-toolbar">
       <div class="map-zoom-controls">
