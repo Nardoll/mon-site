@@ -100,6 +100,15 @@ function renderStatusCard() {
   if (voteActif) {
     const nbVotants = Object.keys(voteActif.bulletins || {}).length;
     const nbMembres = (voteActif.membre_ids || []).length;
+    const bulletins = voteActif.bulletins || {};
+    const bilanRows = (voteActif.membre_ids || []).map(id => {
+      const m = membres.find(mb => mb.id === id);
+      const aVote = bulletins[id] && Object.keys(bulletins[id]).length > 0;
+      return `<div class="bilan-row ${aVote ? "bilan-voted" : "bilan-pending"}">
+        <span class="bilan-icon">${aVote ? "✓" : "·"}</span>
+        <span class="bilan-nom">${m?.nom ?? id}</span>
+      </div>`;
+    }).join("");
     card.innerHTML = `
       <div class="vsc-active">
         <div class="vsc-left">
@@ -108,6 +117,7 @@ function renderStatusCard() {
             <div class="vsc-title">Vote en cours — ${formatMois(voteActif.mois, voteActif.annee)}</div>
             <div class="vsc-meta">${(voteActif.livre_ids || []).length} livres · ${nbVotants}/${nbMembres} votes reçus</div>
             <div class="vsc-countdown" id="vsc-countdown"></div>
+            <div class="vsc-bilan"><div class="bilan-list">${bilanRows}</div></div>
           </div>
         </div>
         <div class="vsc-right">

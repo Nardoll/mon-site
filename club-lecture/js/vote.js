@@ -137,6 +137,32 @@ function render() {
   renderBanner();
   renderBooks();
   renderVotingSection();
+  renderVotantsBilan();
+}
+
+function renderVotantsBilan() {
+  const el = document.getElementById("vote-votants-bilan");
+  if (!el) return;
+  if (!voteActif) { el.innerHTML = ""; return; }
+
+  const memberIds = voteActif.membre_ids || [];
+  const bulletins = voteActif.bulletins || {};
+  const nbVotes = memberIds.filter(id => bulletins[id] && Object.keys(bulletins[id]).length > 0).length;
+
+  const rows = memberIds.map(id => {
+    const m = membres.find(mb => mb.id === id);
+    const aVote = bulletins[id] && Object.keys(bulletins[id]).length > 0;
+    return `<div class="bilan-row ${aVote ? "bilan-voted" : "bilan-pending"}">
+      <span class="bilan-icon">${aVote ? "✓" : "·"}</span>
+      <span class="bilan-nom">${escapeHtml(m?.nom ?? id)}</span>
+    </div>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="vote-votants-bilan-wrap">
+      <div class="vote-bilan-title">Participation — ${nbVotes} / ${memberIds.length}</div>
+      <div class="bilan-list">${rows}</div>
+    </div>`;
 }
 
 function renderBanner() {
@@ -291,6 +317,7 @@ async function handleSubmit() {
     voteActif.bulletins = { ...(voteActif.bulletins || {}), [membreIdentifie.id]: notes };
     showToast("Vote soumis ! Merci.", "success");
     renderBanner();
+    renderVotantsBilan();
     const btn = document.getElementById("vote-submit");
     if (btn) { btn.disabled = true; btn.textContent = "✓ Vote enregistré"; btn.style.opacity = ".6"; }
   } catch (e) { showToast("Erreur : " + e.message, "error"); }
