@@ -994,6 +994,14 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-06-01
+**Vote — Bilan des votants + sécurisation de l'interface**
+
+- `club-lecture/vote.html` + `club-lecture/js/vote.js` : bloc "Participation — X / N" ajouté sous le formulaire de vote. Une pilule par membre : vert bordé `✓ Prénom` si voté, gris `· Prénom` si en attente. Mis à jour en temps réel après chaque soumission.
+- `club-lecture/js/votes.js` : même bilan intégré dans l'encart "Vote en cours" de la page admin, sous le compte à rebours.
+- `club-lecture/js/votes.js` : boutons "Clôturer" et "Annuler" retirés de l'interface pendant le vote actif — seul le bouton "🗳️ Accéder au vote →" reste visible.
+- `club-lecture/css/style.css` : nouveaux styles `.bilan-list`, `.bilan-row`, `.bilan-voted`, `.bilan-pending`, `.bilan-icon`, `.vsc-bilan`, `.vote-votants-bilan-wrap`, `.vote-bilan-title`.
+
 ### 2026-05-31 (suite)
 **Atelier — Barre de recherche sur la carte**
 
