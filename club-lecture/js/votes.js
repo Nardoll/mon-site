@@ -122,29 +122,8 @@ function renderStatusCard() {
         </div>
         <div class="vsc-right">
           <a href="vote.html" class="btn btn-primary">🗳️ Accéder au vote →</a>
-          <button class="btn btn-secondary btn-sm" id="vsc-btn-cloturer">Clôturer</button>
-          <button class="btn btn-ghost btn-sm" id="vsc-btn-annuler" style="color:var(--red)">🗑️ Annuler</button>
         </div>
       </div>`;
-
-    document.getElementById("vsc-btn-cloturer").addEventListener("click", async () => {
-      if (!confirm("Clôturer le vote maintenant et calculer les résultats ?")) return;
-      if (countdownInterval) clearInterval(countdownInterval);
-      await closeExpiredVote(voteActif);
-      voteActif = null;
-      renderStatusCard();
-    });
-
-    document.getElementById("vsc-btn-annuler").addEventListener("click", async () => {
-      if (!confirm("Annuler le vote sans calculer les résultats ? Les statuts des livres ne seront pas modifiés.")) return;
-      if (countdownInterval) clearInterval(countdownInterval);
-      try {
-        await annulerVoteActif(voteActif.id);
-        voteActif = null;
-        renderStatusCard();
-        showToast("Vote annulé.", "success");
-      } catch (e) { showToast("Erreur : " + e.message, "error"); }
-    });
 
     updateCountdown();
   } else {
