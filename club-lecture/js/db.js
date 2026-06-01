@@ -1,7 +1,7 @@
 import {
   getFirestore, collection, doc,
   getDocs, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
-  query, where, orderBy, serverTimestamp, Timestamp
+  query, where, orderBy, serverTimestamp, Timestamp, arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { db } from "../firebase-config.js";
 
@@ -215,6 +215,12 @@ export async function lancerVote({ mois, annee, livre_ids, membre_ids, echelle, 
     expires_at: Timestamp.fromDate(expires_at instanceof Date ? expires_at : new Date(expires_at)),
     bulletins: {},
     cree_le: serverTimestamp(),
+  });
+}
+
+export async function ajouterMembreAuVoteActif(docId, membre_id) {
+  return updateDoc(doc(db, "votes_actifs", docId), {
+    membre_ids: arrayUnion(membre_id)
   });
 }
 

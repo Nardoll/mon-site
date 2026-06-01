@@ -1,6 +1,6 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getMembres, addMembre, getLivres, getVotes, updateMembreInfos, getCommentairesForMembre, getReunions } from "./db.js";
+import { getMembres, addMembre, getLivres, getVotes, updateMembreInfos, getCommentairesForMembre, getReunions, getVoteActif, ajouterMembreAuVoteActif } from "./db.js";
 import { formatDate, formatMois, initiales, showToast } from "./utils.js";
 
 await requireAuth();
@@ -56,8 +56,10 @@ document.getElementById("membre-save").addEventListener("click", async () => {
   if (!nom) { showToast("Le nom est obligatoire.", "error"); return; }
   const date_arrivee = document.getElementById("m-date").value || new Date().toISOString().split("T")[0];
   try {
-    await addMembre({ nom, date_arrivee });
-    showToast(`${nom} ajouté !`, "success");
+    const ref = await addMembre({ nom, date_arrivee });
+    const voteActif = await getVoteActif();
+    if (voteActif) await ajouterMembreAuVoteActif(voteActif.id, ref.id);
+    showToast(`${nom} ajouté${voteActif ? " et inscrit au vote en cours" : ""} !`, "success");
     document.getElementById("membre-overlay").classList.add("hidden");
     document.getElementById("m-nom").value = "";
     membres = await getMembres();
