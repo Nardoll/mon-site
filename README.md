@@ -999,6 +999,12 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-06-02 (suite)
+**Votes — graphique des notes par votant dans le détail du vote**
+
+- `club-lecture/js/votes.js` : nouvelle section "📊 Notes d'un votant" en bas du détail de chaque vote. Sélecteur de membre (trié alphabétiquement, peuplé uniquement avec les membres ayant voté) + histogramme horizontal immédiat. Changer le membre re-rend le graphique instantanément. Le livre élu est mis en évidence (barre verte `.best`). Deux nouvelles fonctions : `renderMemberChartSection(sorted)` et `attachMemberChartInteraction(vote)`.
+- `club-lecture/css/style.css` : style `.vote-member-select` (select pleine largeur max 280px, cohérent avec le thème).
+
 ### 2026-06-02
 **Votes — moyenne par votant dans le tableau individuel**
 
