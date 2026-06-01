@@ -325,6 +325,7 @@ function openDetail(id) {
   document.getElementById("detail-title").textContent = `Vote — ${formatMois(vote.mois, vote.annee)}`;
   document.getElementById("detail-content").innerHTML = renderDetailContent(vote);
   document.getElementById("detail-overlay").classList.remove("hidden");
+  attachMemberChartInteraction(vote);
 }
 
 function renderDetailContent(vote) {
@@ -352,6 +353,7 @@ function renderDetailContent(vote) {
     html += `<div class="divider"></div>`;
     html += renderTour2Section(vote.tour2, eluId);
   }
+  html += renderMemberChartSection(sorted);
   return html;
 }
 
@@ -377,6 +379,61 @@ function renderTour2Section(tour2, eluId) {
     <div class="vote-tour-label">Tour 2 — Vote par choix unique${tour2.tirage_au_sort ? " · tirage au sort" : ""}</div>
     ${tour2.tirage_au_sort ? `<div class="vote-t2-tirage-notice">🎲 Égalité au 2ème tour — le gagnant a été désigné par tirage au sort parmi les ex-æquo.</div>` : ""}
     <div class="vote-t2-detail">${bars}</div>`;
+}
+
+function renderMemberChartSection(sorted) {
+  const votantIds = new Set();
+  sorted.forEach(r => Object.keys(r.notes || {}).forEach(id => votantIds.add(id)));
+  if (!votantIds.size) return "";
+
+  const options = [...votantIds]
+    .map(id => membres.find(m => m.id === id))
+    .filter(Boolean)
+    .sort((a, b) => a.nom.localeCompare(b.nom))
+    .map(m => `<option value="${m.id}">${escapeHtml(m.nom)}</option>`)
+    .join("");
+
+  return `
+    <div class="divider"></div>
+    <div class="card-title mb-2">📊 Notes d'un votant</div>
+    <select id="vote-member-select" class="vote-member-select">${options}</select>
+    <div id="vote-member-chart"></div>`;
+}
+
+function attachMemberChartInteraction(vote) {
+  const select = document.getElementById("vote-member-select");
+  const chartDiv = document.getElementById("vote-member-chart");
+  if (!select || !chartDiv) return;
+
+  const resultats = vote.resultats || [];
+  const allNotes = resultats.flatMap(r => Object.values(r.notes || {})).map(Number).filter(n => !isNaN(n));
+  const scale = allNotes.length && Math.max(...allNotes) <= 5 ? 5 : 10;
+
+  function render(membreId) {
+    const memberResults = resultats
+      .filter(r => r.notes?.[membreId] !== undefined && r.notes[membreId] !== null && r.notes[membreId] !== "")
+      .sort((a, b) => Number(b.notes[membreId]) - Number(a.notes[membreId]));
+
+    if (!memberResults.length) {
+      chartDiv.innerHTML = `<div class="text-muted" style="font-size:.85rem;padding:.4rem 0">Aucun vote pour ce membre.</div>`;
+      return;
+    }
+
+    chartDiv.innerHTML = `<div class="chart" style="padding:.25rem 0">${memberResults.map((r, i) => {
+      const note = Number(r.notes[membreId]);
+      const pct = Math.round((note / scale) * 100);
+      const isElu = vote.livre_elu === r.livre_id;
+      return `<div class="chart-row">
+        <div class="chart-label"><span style="opacity:.5;margin-right:.3rem">${i + 1}.</span>${escapeHtml(r.titre ?? "?")}</div>
+        <div class="chart-bar-wrap">
+          <div class="chart-bar ${isElu ? "best" : ""}" style="width:${pct}%">${note}/${scale}</div>
+        </div>
+      </div>`;
+    }).join("")}</div>`;
+  }
+
+  render(select.value);
+  select.addEventListener("change", () => render(select.value));
 }
 
 function renderChart(sorted, scale, threshold, eluId) {
