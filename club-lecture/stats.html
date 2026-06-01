@@ -19,19 +19,35 @@
       <div class="loading">Chargement…</div>
     </div>
 
-    <!-- Ligne 2 : note moyenne + participation -->
+    <!-- Ligne 2 : note finale + participation -->
     <div class="stats-row-2" id="stats-row-2" style="display:none">
 
       <div class="card">
         <div class="card-title">⭐ Note moyenne du club</div>
+        <div class="card-sub">
+          <span class="data-source-badge data-source-reunion">Notes après lecture · réunions · /10</span>
+        </div>
         <div id="note-moyenne-content"></div>
       </div>
 
       <div class="card">
         <div class="card-title">🗳️ Participation aux votes</div>
+        <div class="card-sub">
+          <span class="data-source-badge data-source-vote">Votes d'élection des livres du mois</span>
+        </div>
         <div id="participation-content"></div>
       </div>
 
+    </div>
+
+    <!-- Note de vote — élections (/5) -->
+    <div class="card" id="card-note-vote" style="display:none;margin-bottom:1.5rem">
+      <div class="card-title">🗳️ Distribution des notes de vote</div>
+      <div class="card-sub">
+        <span class="data-source-badge data-source-vote">Votes d'élection du livre du mois · /5</span>
+        — Ces notes sont celles données lors des votes pour choisir le livre à lire, pas après lecture.
+      </div>
+      <div id="note-vote-content"></div>
     </div>
 
     <!-- Membres actifs -->
@@ -43,7 +59,110 @@
     <!-- Évolution dans le temps -->
     <div class="card" id="card-evolution" style="display:none;margin-bottom:2.5rem">
       <div class="card-title">📅 Lecteurs ayant terminé le livre, par mois</div>
+      <div class="card-sub">
+        <span class="data-source-badge data-source-reunion">Statuts de lecture + notes de réunion</span>
+      </div>
       <canvas id="chart-evolution" style="max-height:220px"></canvas>
+    </div>
+
+    <!-- ══════ SECTION : BILAN DES PROPOSITIONS ══════ -->
+    <div class="stats-section-divider" id="stats-section-propositions" style="display:none">
+      📋 Bilan des propositions
+    </div>
+
+    <!-- Bilan par membre proposant -->
+    <div class="card" id="card-bilan-propositions" style="display:none;margin-bottom:1.5rem">
+      <div class="card-title">📊 Bilan par membre proposant</div>
+      <div class="card-sub">
+        «&nbsp;Note vote reçue&nbsp;» =
+        <span class="data-source-badge data-source-vote">note d'élection /5</span>
+        &nbsp;·&nbsp;
+        «&nbsp;Note finale reçue&nbsp;» =
+        <span class="data-source-badge data-source-reunion">note après lecture /10</span>
+      </div>
+      <div id="bilan-propositions-content"></div>
+    </div>
+
+    <!-- Matrice des goûts -->
+    <div class="card" id="card-matrice-gouts" style="display:none;margin-bottom:1.5rem">
+      <div class="card-title">🎯 Matrice des goûts</div>
+      <div class="card-sub">
+        <span class="data-source-badge data-source-vote">Notes d'élection /5</span>
+        — Note moyenne donnée par chaque votant (lignes) aux livres de chaque proposant (colonnes).
+      </div>
+      <div id="matrice-gouts-content"></div>
+    </div>
+
+    <!-- ══════ SECTION : ANALYSE DES VOTES ══════ -->
+    <div class="stats-section-divider" id="stats-section-analyse" style="display:none">
+      🔍 Analyse des votes
+    </div>
+
+    <!-- Controversé + Consensuel -->
+    <div class="stats-row-2" id="card-controverse" style="display:none;margin-bottom:1.5rem">
+      <div class="card">
+        <div class="card-title">🌶️ Livre le plus controversé</div>
+        <div class="card-sub">
+          <span class="data-source-badge data-source-vote">Notes d'élection /5</span>
+          — Plus grande variance : les membres ne s'accordent pas.
+        </div>
+        <div id="controverse-content"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🕊️ Livre le plus consensuel</div>
+        <div class="card-sub">
+          <span class="data-source-badge data-source-vote">Notes d'élection /5</span>
+          — Plus faible variance : tout le monde est d'accord.
+        </div>
+        <div id="consensuel-content"></div>
+      </div>
+    </div>
+
+    <!-- Corrélation vote → réunion -->
+    <div class="card" id="card-correl" style="display:none;margin-bottom:1.5rem">
+      <div class="card-title">📈 Corrélation vote → réunion</div>
+      <div class="card-sub">
+        Axe X =
+        <span class="data-source-badge data-source-vote">note d'élection /5</span>
+        &nbsp;·&nbsp; Axe Y =
+        <span class="data-source-badge data-source-reunion">note après lecture /10</span>
+        — Les livres qu'on voulait lire sont-ils ceux qu'on a le plus aimés ?
+      </div>
+      <div id="correl-content">
+        <canvas id="chart-correl" style="max-height:280px"></canvas>
+      </div>
+    </div>
+
+    <!-- Qui vote comme qui ? -->
+    <div class="card" id="card-similarite" style="display:none;margin-bottom:2.5rem">
+      <div class="card-title">🔗 Qui vote comme qui ?</div>
+      <div class="card-sub">
+        <span class="data-source-badge data-source-vote">Notes d'élection /5</span>
+        — Corrélation de Pearson des notes entre membres. Proche de +1 = goûts similaires, proche de −1 = goûts opposés. Min. 3 livres votés en commun requis.
+      </div>
+      <div id="similarite-content"></div>
+    </div>
+
+    <!-- ══════ SECTION : DYNAMIQUES ══════ -->
+    <div class="stats-section-divider" id="stats-section-dynamiques" style="display:none">
+      📅 Dynamiques
+    </div>
+
+    <!-- Durée de vie des propositions -->
+    <div class="card" id="card-duree-vie" style="display:none;margin-bottom:1.5rem">
+      <div class="card-title">⏱️ Durée de vie des propositions</div>
+      <div class="card-sub">
+        <span class="data-source-badge data-source-vote">Votes d'élection</span>
+        — Combien de sessions de vote un livre a traversé avant d'être élu ou éliminé.
+      </div>
+      <div id="duree-vie-content"></div>
+    </div>
+
+    <!-- Évolution des propositions -->
+    <div class="card" id="card-evo-prop" style="display:none;margin-bottom:3rem">
+      <div class="card-title">📅 Évolution des propositions dans le temps</div>
+      <div class="card-sub">Qui propose quand — une barre par mois, une couleur par membre.</div>
+      <canvas id="chart-evo-prop" style="max-height:240px"></canvas>
     </div>
 
   </main>
