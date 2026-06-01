@@ -999,6 +999,11 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-06-02 (suite 2)
+**Votes — moyenne du votant affichée au-dessus du graphique**
+
+- `club-lecture/js/votes.js` : dans `attachMemberChartInteraction`, la moyenne des notes du membre sélectionné est calculée et affichée au-dessus des barres sous la forme "Moyenne : **X.XX/5**" (couleur accent, mise à jour à chaque changement de membre).
+
 ### 2026-06-02 (suite)
 **Votes — graphique des notes par votant dans le détail du vote**
 
