@@ -67,6 +67,15 @@ async function init() {
 // ── Clôture automatique Tour 1 ────────────────────────────────────
 
 async function closeExpiredVote(va) {
+  // Garde-fou : vérifier que le vote existe encore (peut avoir été clos depuis vote.html)
+  const current = await getVoteActif();
+  if (!current || current.id !== va.id) {
+    votes = await getVotes();
+    livres = await getLivres();
+    renderList();
+    return;
+  }
+
   if (va.tour === 2) {
     await closeExpiredVoteTour2(va);
     return;

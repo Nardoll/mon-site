@@ -87,6 +87,10 @@ async function autoLancerSiNecessaire() {
 // ── Clôture automatique Tour 1 ────────────────────────────────────
 
 async function closeExpiredVote(va) {
+  // Garde-fou : vérifier que le vote existe encore (peut avoir été clos depuis un autre onglet)
+  const current = await getVoteActif();
+  if (!current || current.id !== va.id) return;
+
   if (va.tour === 2) {
     await closeExpiredVoteTour2(va);
     return;
@@ -489,6 +493,30 @@ function renderVotingTableTour2(livresPropo, disabled) {
     ${disabled ? "" : '<div style="font-size:.73rem;color:var(--muted);margin-top:.5rem">* Sélectionnez un seul livre.</div>'}`;
 }
 
+// ── Clôture anticipée si 100% participation ───────────────────────
+
+function checkAllVoted() {
+  if (!voteActif) return false;
+  const memberIds = voteActif.membre_ids || [];
+  if (!memberIds.length) return false;
+  const bulletins = voteActif.bulletins || {};
+  const isTour2 = voteActif.tour === 2;
+  return memberIds.every(id => {
+    const b = bulletins[id];
+    return isTour2 ? (b != null && b !== "") : (b && Object.keys(b).length > 0);
+  });
+}
+
+async function triggerEarlyClose() {
+  clearInterval(countdownInterval);
+  await closeExpiredVote(voteActif);
+  voteActif = await getVoteActif();
+  livres = await getLivres();
+  membreIdentifie = null;
+  render();
+  if (voteActif) startCountdown();
+}
+
 // ── Identification ─────────────────────────────────────────────────
 
 function handleIdentityConfirm() {
@@ -527,6 +555,7 @@ async function handleSubmit() {
       renderVotantsBilan();
       const btn = document.getElementById("vote-submit");
       if (btn) { btn.disabled = true; btn.textContent = "✓ Vote enregistré"; btn.style.opacity = ".6"; }
+      if (checkAllVoted()) await triggerEarlyClose();
     } catch (e) { showToast("Erreur : " + e.message, "error"); }
     return;
   }
@@ -551,6 +580,7 @@ async function handleSubmit() {
     renderVotantsBilan();
     const btn = document.getElementById("vote-submit");
     if (btn) { btn.disabled = true; btn.textContent = "✓ Vote enregistré"; btn.style.opacity = ".6"; }
+    if (checkAllVoted()) await triggerEarlyClose();
   } catch (e) { showToast("Erreur : " + e.message, "error"); }
 }
 
