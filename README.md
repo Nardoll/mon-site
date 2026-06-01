@@ -999,6 +999,12 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-06-02
+**Votes — moyenne par votant dans le tableau individuel**
+
+- `club-lecture/js/votes.js` : colonne "Moy." ajoutée à droite du tableau des votes individuels. Affiche la moyenne des notes données par chaque membre sur l'ensemble des livres du vote. La ligne de pied de tableau (moyenne par livre) conserve une cellule vide à cet endroit.
+- `club-lecture/css/style.css` : nouveaux styles `.vtable-member-avg-head` et `.vtable-member-avg` — séparateur gauche, couleur accent, gras.
+
 ### 2026-06-01
 **Vote — Bilan des votants + sécurisation de l'interface**
 
