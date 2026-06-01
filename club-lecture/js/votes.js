@@ -386,56 +386,104 @@ function renderMemberChartSection(sorted) {
   sorted.forEach(r => Object.keys(r.notes || {}).forEach(id => votantIds.add(id)));
   if (!votantIds.size) return "";
 
-  const options = [...votantIds]
+  const memberOptions = [...votantIds]
     .map(id => membres.find(m => m.id === id))
     .filter(Boolean)
     .sort((a, b) => a.nom.localeCompare(b.nom))
     .map(m => `<option value="${m.id}">${escapeHtml(m.nom)}</option>`)
     .join("");
 
+  const livreOptions = sorted
+    .map(r => `<option value="${r.livre_id}">${escapeHtml(r.titre ?? r.livre_id)}</option>`)
+    .join("");
+
   return `
     <div class="divider"></div>
-    <div class="card-title mb-2">📊 Notes d'un votant</div>
-    <select id="vote-member-select" class="vote-member-select">${options}</select>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:.75rem">
+      <div class="card-title" style="margin:0">📊 Détail des votes</div>
+      <div class="vote-chart-tabs">
+        <button class="vote-chart-tab active" data-tab="membre">Par votant</button>
+        <button class="vote-chart-tab" data-tab="livre">Par livre</button>
+      </div>
+    </div>
+    <select id="vote-member-select" class="vote-member-select">${memberOptions}</select>
+    <select id="vote-livre-select" class="vote-member-select hidden">${livreOptions}</select>
     <div id="vote-member-chart"></div>`;
 }
 
 function attachMemberChartInteraction(vote) {
-  const select = document.getElementById("vote-member-select");
+  const memberSelect = document.getElementById("vote-member-select");
+  const livreSelect = document.getElementById("vote-livre-select");
   const chartDiv = document.getElementById("vote-member-chart");
-  if (!select || !chartDiv) return;
+  const tabs = document.querySelectorAll(".vote-chart-tab");
+  if (!memberSelect || !livreSelect || !chartDiv) return;
 
   const resultats = vote.resultats || [];
   const allNotes = resultats.flatMap(r => Object.values(r.notes || {})).map(Number).filter(n => !isNaN(n));
   const scale = allNotes.length && Math.max(...allNotes) <= 5 ? 5 : 10;
 
-  function render(membreId) {
+  function avgLine(avg) {
+    return `<div style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem">Moyenne : <strong style="color:var(--accent)">${avg.toFixed(2)}/${scale}</strong></div>`;
+  }
+
+  function renderMembre(membreId) {
     const memberResults = resultats
       .filter(r => r.notes?.[membreId] !== undefined && r.notes[membreId] !== null && r.notes[membreId] !== "")
       .sort((a, b) => Number(b.notes[membreId]) - Number(a.notes[membreId]));
-
     if (!memberResults.length) {
       chartDiv.innerHTML = `<div class="text-muted" style="font-size:.85rem;padding:.4rem 0">Aucun vote pour ce membre.</div>`;
       return;
     }
-
     const avg = memberResults.reduce((s, r) => s + Number(r.notes[membreId]), 0) / memberResults.length;
-    chartDiv.innerHTML = `<div style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem">Moyenne : <strong style="color:var(--accent)">${avg.toFixed(2)}/${scale}</strong></div>
-    <div class="chart" style="padding:.25rem 0">${memberResults.map((r, i) => {
+    chartDiv.innerHTML = avgLine(avg) + `<div class="chart" style="padding:.25rem 0">${memberResults.map((r, i) => {
       const note = Number(r.notes[membreId]);
       const pct = Math.round((note / scale) * 100);
       const isElu = vote.livre_elu === r.livre_id;
       return `<div class="chart-row">
         <div class="chart-label"><span style="opacity:.5;margin-right:.3rem">${i + 1}.</span>${escapeHtml(r.titre ?? "?")}</div>
-        <div class="chart-bar-wrap">
-          <div class="chart-bar ${isElu ? "best" : ""}" style="width:${pct}%">${note}/${scale}</div>
-        </div>
+        <div class="chart-bar-wrap"><div class="chart-bar ${isElu ? "best" : ""}" style="width:${pct}%">${note}/${scale}</div></div>
       </div>`;
     }).join("")}</div>`;
   }
 
-  render(select.value);
-  select.addEventListener("change", () => render(select.value));
+  function renderLivre(livreId) {
+    const result = resultats.find(r => r.livre_id === livreId);
+    if (!result) { chartDiv.innerHTML = ""; return; }
+    const memberNotes = Object.entries(result.notes || {})
+      .map(([mid, note]) => ({ m: membres.find(mb => mb.id === mid), note: Number(note) }))
+      .filter(x => x.m && !isNaN(x.note))
+      .sort((a, b) => b.note - a.note);
+    if (!memberNotes.length) {
+      chartDiv.innerHTML = `<div class="text-muted" style="font-size:.85rem;padding:.4rem 0">Aucun vote pour ce livre.</div>`;
+      return;
+    }
+    const avg = memberNotes.reduce((s, x) => s + x.note, 0) / memberNotes.length;
+    chartDiv.innerHTML = avgLine(avg) + `<div class="chart" style="padding:.25rem 0">${memberNotes.map((x, i) => {
+      const pct = Math.round((x.note / scale) * 100);
+      return `<div class="chart-row">
+        <div class="chart-label"><span style="opacity:.5;margin-right:.3rem">${i + 1}.</span>${escapeHtml(x.m.nom)}</div>
+        <div class="chart-bar-wrap"><div class="chart-bar" style="width:${pct}%">${x.note}/${scale}</div></div>
+      </div>`;
+    }).join("")}</div>`;
+  }
+
+  function switchTab(tab) {
+    tabs.forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
+    if (tab === "membre") {
+      memberSelect.classList.remove("hidden");
+      livreSelect.classList.add("hidden");
+      renderMembre(memberSelect.value);
+    } else {
+      memberSelect.classList.add("hidden");
+      livreSelect.classList.remove("hidden");
+      renderLivre(livreSelect.value);
+    }
+  }
+
+  tabs.forEach(t => t.addEventListener("click", () => switchTab(t.dataset.tab)));
+  memberSelect.addEventListener("change", () => renderMembre(memberSelect.value));
+  livreSelect.addEventListener("change", () => renderLivre(livreSelect.value));
+  renderMembre(memberSelect.value);
 }
 
 function renderChart(sorted, scale, threshold, eluId) {

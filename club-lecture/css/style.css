@@ -344,6 +344,9 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 .vtable tfoot td.elim-avg { color: var(--muted); }
 .vtable th.vtable-member-avg-head, .vtable td.vtable-member-avg { border-left: 2px solid var(--border); font-weight: 700; color: var(--accent); min-width: 52px; }
 .vote-member-select { width: 100%; max-width: 280px; margin-bottom: .75rem; padding: .45rem .7rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: .9rem; cursor: pointer; }
+.vote-chart-tabs { display: flex; gap: .25rem; }
+.vote-chart-tab { padding: .28rem .75rem; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: .8rem; cursor: pointer; transition: background .15s, color .15s; }
+.vote-chart-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 [data-theme="light"] .vtable td.winner-cell { background: rgba(26,158,106,.08); }
 [data-theme="light"] .vtable td.elim-cell { background: rgba(144,128,184,.1); }
 [data-theme="light"] .vchart-bar { opacity: .78; }
