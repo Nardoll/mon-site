@@ -1,5 +1,5 @@
 // Page vote publique — pas d'authentification requise
-import { getLivres, getMembres, getVoteActif, lancerVote, soumettreVote, cloturerVoteActif } from "./db.js";
+import { getLivres, getMembres, getVoteActif, lancerVote, soumettreVote, cloturerVoteActif, lancerTour2 } from "./db.js";
 import { formatMois, MOIS_NOMS, showToast } from "./utils.js";
 
 // ── Thème (même clé que le reste du club) ─────────────────────────
@@ -84,9 +84,14 @@ async function autoLancerSiNecessaire() {
   } catch (e) { console.error("Auto-lancement vote :", e); }
 }
 
-// ── Clôture automatique ────────────────────────────────────────────
+// ── Clôture automatique Tour 1 ────────────────────────────────────
 
 async function closeExpiredVote(va) {
+  if (va.tour === 2) {
+    await closeExpiredVoteTour2(va);
+    return;
+  }
+
   const bulletins = va.bulletins || {};
   const resultats = (va.livre_ids || []).map(livre_id => {
     const livre = livres.find(l => l.id === livre_id);
@@ -102,15 +107,70 @@ async function closeExpiredVote(va) {
 
   const withMoy = resultats.filter(r => r.moyenne !== null);
   let livre_elu = null;
+
   if (withMoy.length) {
     const max = Math.max(...withMoy.map(r => r.moyenne));
     const winners = withMoy.filter(r => r.moyenne === max);
-    if (winners.length === 1) livre_elu = winners[0].livre_id;
+    if (winners.length === 1) {
+      livre_elu = winners[0].livre_id;
+    } else {
+      // Égalité → lancer le 2ème tour
+      const today = new Date();
+      const expires2 = new Date(today.getFullYear(), today.getMonth(), 2, 23, 59, 59, 0);
+      try {
+        await lancerTour2(va.id, {
+          livre_ids_tour2: winners.map(w => w.livre_id),
+          livre_ids_tour1: va.livre_ids,
+          resultats_tour1: resultats,
+          expires_at: expires2,
+        });
+        showToast(`Égalité entre ${winners.length} livres ! 2ème tour lancé.`, "info");
+      } catch (e) { console.error("Lancement 2ème tour :", e); }
+      return;
+    }
   }
 
   await cloturerVoteActif(va.id, { mois: va.mois, annee: va.annee, resultats, livre_elu });
-  livres = await getLivres();
   showToast("Le vote est terminé — résultats enregistrés.", "success");
+}
+
+// ── Clôture automatique Tour 2 ────────────────────────────────────
+
+async function closeExpiredVoteTour2(va) {
+  const bulletins2 = va.bulletins || {};
+  const livre_ids = va.livre_ids || [];
+
+  const voteCounts = {};
+  livre_ids.forEach(id => voteCounts[id] = 0);
+  Object.values(bulletins2).forEach(choix => {
+    if (choix && livre_ids.includes(choix)) voteCounts[choix]++;
+  });
+
+  const resultats_tour2 = livre_ids.map(livre_id => {
+    const livre = livres.find(l => l.id === livre_id);
+    return { livre_id, titre: livre?.titre ?? livre_id, auteur: livre?.auteur ?? "", votes: voteCounts[livre_id] || 0 };
+  });
+
+  const maxVotes = Math.max(0, ...resultats_tour2.map(r => r.votes));
+  const winners = resultats_tour2.filter(r => r.votes === maxVotes);
+  let livre_elu;
+  let tirage_au_sort = false;
+
+  if (winners.length === 1) {
+    livre_elu = winners[0].livre_id;
+  } else {
+    livre_elu = winners[Math.floor(Math.random() * winners.length)].livre_id;
+    tirage_au_sort = true;
+  }
+
+  await cloturerVoteActif(va.id, {
+    mois: va.mois,
+    annee: va.annee,
+    resultats: va.resultats_tour1,
+    livre_elu,
+    tour2: { resultats: resultats_tour2, livre_elu, tirage_au_sort },
+  });
+  showToast("Deuxième tour terminé — livre élu !", "success");
 }
 
 // ── Init ───────────────────────────────────────────────────────────
@@ -121,7 +181,7 @@ async function init() {
 
   if (voteActif && voteActif.expires_at?.toMillis() < Date.now()) {
     await closeExpiredVote(voteActif);
-    voteActif = null;
+    voteActif = await getVoteActif();
     livres = await getLivres();
   }
 
@@ -135,48 +195,81 @@ async function init() {
 
 function render() {
   renderBanner();
+  renderTour2Context();
   renderBooks();
   renderVotingSection();
   renderVotantsBilan();
 }
 
-function renderVotantsBilan() {
-  const el = document.getElementById("vote-votants-bilan");
+// ── Contexte 2ème tour ────────────────────────────────────────────
+
+function renderTour2Context() {
+  const el = document.getElementById("vote-tour2-context");
   if (!el) return;
-  if (!voteActif) { el.innerHTML = ""; return; }
+  if (!voteActif || voteActif.tour !== 2) { el.innerHTML = ""; el.classList.add("hidden"); return; }
 
-  const memberIds = voteActif.membre_ids || [];
-  const bulletins = voteActif.bulletins || {};
-  const nbVotes = memberIds.filter(id => bulletins[id] && Object.keys(bulletins[id]).length > 0).length;
+  const resultats = voteActif.resultats_tour1 || [];
+  const tour2Ids = new Set(voteActif.livre_ids || []);
+  const sorted = [...resultats].sort((a, b) => (b.moyenne ?? 0) - (a.moyenne ?? 0));
+  const maxMoy = Math.max(0, ...sorted.map(r => r.moyenne ?? 0));
 
-  const rows = memberIds.map(id => {
-    const m = membres.find(mb => mb.id === id);
-    const aVote = bulletins[id] && Object.keys(bulletins[id]).length > 0;
-    return `<div class="bilan-row ${aVote ? "bilan-voted" : "bilan-pending"}">
-      <span class="bilan-icon">${aVote ? "✓" : "·"}</span>
-      <span class="bilan-nom">${escapeHtml(m?.nom ?? id)}</span>
-    </div>`;
+  const rows = sorted.map(r => {
+    const inTour2 = tour2Ids.has(r.livre_id);
+    const isElim = !inTour2 && (r.moyenne ?? 0) <= 2.5;
+    let color, badge;
+    if (inTour2) {
+      color = "var(--accent)";
+      badge = `<span class="vote-t1-pre-badge vote-t1-pre-badge--tour2">⚖️ 2e tour</span>`;
+    } else if (isElim) {
+      color = "var(--elim, #888)";
+      badge = `<span class="vote-t1-pre-badge vote-t1-pre-badge--elim">Éliminé</span>`;
+    } else {
+      color = "var(--purple, #9b59b6)";
+      badge = `<span class="vote-t1-pre-badge vote-t1-pre-badge--reserve">Réserve</span>`;
+    }
+    const pct = maxMoy > 0 ? Math.round((r.moyenne ?? 0) / maxMoy * 100) : 0;
+    return `
+      <div class="vote-t1-pre-row">
+        <div class="vote-t1-pre-name">${escapeHtml(r.titre)}</div>
+        <div class="vote-t1-pre-bar"><div class="vote-t1-pre-fill" style="width:${pct}%;background:${color}"></div></div>
+        <div class="vote-t1-pre-score" style="color:${color}">${r.moyenne !== null ? Number(r.moyenne).toFixed(2) : "—"}/5</div>
+        ${badge}
+      </div>`;
   }).join("");
 
+  const nbTied = tour2Ids.size;
   el.innerHTML = `
-    <div class="vote-votants-bilan-wrap">
-      <div class="vote-bilan-title">Participation — ${nbVotes} / ${memberIds.length}</div>
-      <div class="bilan-list">${rows}</div>
+    <div class="vote-tour2-context">
+      <div class="vote-t2-ctx-title">⚖️ Deuxième tour — Égalité au 1er tour</div>
+      <div class="vote-t2-ctx-sub">${nbTied} livres sont arrivés ex-æquo en tête du premier tour. Un deuxième tour est en cours pour les départager : chaque membre choisit <strong>un seul livre</strong>, celui qui obtient le plus de voix est élu.</div>
+      <div class="vote-t2-ctx-preresults">
+        <div class="vote-t2-ctx-preresults-title">Résultats du 1er tour</div>
+        ${rows}
+      </div>
     </div>`;
+  el.classList.remove("hidden");
 }
+
+// ── Bannière ──────────────────────────────────────────────────────
 
 function renderBanner() {
   const banner = document.getElementById("vote-banner");
 
   if (voteActif) {
-    const nbVotants = Object.keys(voteActif.bulletins || {}).length;
-    const nbMembres = (voteActif.membre_ids || []).length;
+    const bulletins = voteActif.bulletins || {};
+    const memberIds = voteActif.membre_ids || [];
+    const isTour2 = voteActif.tour === 2;
+    const nbVotants = isTour2
+      ? Object.values(bulletins).filter(v => v != null && v !== "").length
+      : Object.keys(bulletins).filter(id => bulletins[id] && Object.keys(bulletins[id]).length > 0).length;
+    const nbMembres = memberIds.length;
+
     banner.className = "vote-banner vote-banner-active";
     banner.innerHTML = `
-      <div class="vote-banner-icon">🗳️</div>
+      <div class="vote-banner-icon">${isTour2 ? "⚖️" : "🗳️"}</div>
       <div class="vote-banner-body">
-        <div class="vote-banner-title">Vote en cours — ${formatMois(voteActif.mois, voteActif.annee)}</div>
-        <div class="vote-banner-sub">${(voteActif.livre_ids || []).length} livres · ${nbVotants}/${nbMembres} vote${nbVotants !== 1 ? "s" : ""} reçu${nbVotants !== 1 ? "s" : ""}</div>
+        <div class="vote-banner-title">${isTour2 ? "Deuxième tour" : "Vote en cours"} — ${formatMois(voteActif.mois, voteActif.annee)}</div>
+        <div class="vote-banner-sub">${(voteActif.livre_ids || []).length} livre${(voteActif.livre_ids || []).length !== 1 ? "s" : ""} · ${nbVotants}/${nbMembres} vote${nbVotants !== 1 ? "s" : ""} reçu${nbVotants !== 1 ? "s" : ""}</div>
         <div class="vote-banner-countdown" id="vote-countdown"></div>
       </div>`;
     updateCountdown();
@@ -202,11 +295,38 @@ function renderBanner() {
 // ── Livres en compétition ──────────────────────────────────────────
 
 function renderBooks() {
+  const grid = document.getElementById("vote-books-grid");
+
+  if (voteActif?.tour === 2) {
+    // Tour 2 : tous les livres du tour 1 visibles, ceux hors tour 2 floutés
+    const tour1Ids = voteActif.livre_ids_tour1 || [];
+    const tour2Ids = new Set(voteActif.livre_ids || []);
+    const allBooks = tour1Ids.map(id => livres.find(l => l.id === id)).filter(Boolean);
+
+    if (!allBooks.length) {
+      grid.innerHTML = `<div style="color:var(--muted);font-size:.88rem">Aucun livre.</div>`;
+      return;
+    }
+
+    grid.innerHTML = allBooks.map(l => {
+      const inTour2 = tour2Ids.has(l.id);
+      return `
+        <div class="vote-book-card${inTour2 ? "" : " vote-book-card-blurred"}">
+          <div class="vote-book-titre">${escapeHtml(l.titre)}</div>
+          <div class="vote-book-auteur">${escapeHtml(l.auteur || "—")}</div>
+          <div class="vote-book-ai">
+            ${l.genre ? `<div class="vote-book-genre">${escapeHtml(l.genre)}</div>` : ""}
+            ${l.nb_pages ? `<div class="vote-book-pages">${l.nb_pages} pages</div>` : ""}
+            ${descBadge(l.description_3_mots)}
+          </div>
+        </div>`;
+    }).join("");
+    return;
+  }
+
   const livresPropo = voteActif
     ? (voteActif.livre_ids || []).map(id => livres.find(l => l.id === id)).filter(Boolean)
     : livres.filter(l => l.statut === "en_proposition");
-
-  const grid = document.getElementById("vote-books-grid");
 
   if (!livresPropo.length) {
     grid.innerHTML = `<div style="color:var(--muted);font-size:.88rem">Aucun livre en compétition pour l'instant.</div>`;
@@ -257,10 +377,25 @@ function renderVotingSection() {
         <button class="btn btn-primary" id="vote-confirm-identity">Continuer →</button>
       </div>
       <div class="vote-preview-wrap">
-        ${renderVotingTable(livresPropo, true)}
+        ${voteActif.tour === 2
+          ? renderVotingTableTour2(livresPropo, true)
+          : renderVotingTable(livresPropo, true)}
       </div>`;
-
     document.getElementById("vote-confirm-identity").addEventListener("click", handleIdentityConfirm);
+    return;
+  }
+
+  if (voteActif.tour === 2) {
+    section.innerHTML = `
+      <div class="vote-voter-label">
+        Vote de <strong>${escapeHtml(membreIdentifie.nom)}</strong>
+        <button class="btn btn-ghost btn-sm" id="vote-change-identity" style="font-size:.75rem;margin-left:.5rem">← Changer</button>
+      </div>
+      <div class="vote-t2-instructions">Choisissez le livre que vous souhaitez lire ce mois-ci :</div>
+      ${renderVotingTableTour2(livresPropo, false)}
+      <div style="display:flex;justify-content:flex-end;margin-top:1.25rem">
+        <button class="btn btn-primary" id="vote-submit">✓ Soumettre mon vote</button>
+      </div>`;
   } else {
     section.innerHTML = `
       <div class="vote-voter-label">
@@ -271,59 +406,16 @@ function renderVotingSection() {
       <div style="display:flex;justify-content:flex-end;margin-top:1.25rem">
         <button class="btn btn-primary" id="vote-submit">✓ Soumettre mon vote</button>
       </div>`;
-
-    document.getElementById("vote-change-identity").addEventListener("click", () => {
-      membreIdentifie = null;
-      renderVotingSection();
-    });
-
-    document.getElementById("vote-submit").addEventListener("click", handleSubmit);
-  }
-}
-
-function handleIdentityConfirm() {
-  const membreId = document.getElementById("vote-membre-select").value;
-  if (!membreId) { showToast("Choisissez votre nom dans la liste.", "error"); return; }
-  const nom = membres.find(m => m.id === membreId)?.nom ?? membreId;
-
-  if (!confirm(`Vous êtes bien ${nom} ?`)) return;
-
-  const aDejaVote = voteActif.bulletins?.[membreId];
-  if (aDejaVote && Object.keys(aDejaVote).length > 0) {
-    if (!confirm(`${nom} a déjà soumis un vote. Voulez-vous le modifier et écraser le vote précédent ?`)) return;
   }
 
-  membreIdentifie = { id: membreId, nom };
-  renderVotingSection();
-}
-
-async function handleSubmit() {
-  if (!voteActif || !membreIdentifie) return;
-
-  const notes = {};
-  (voteActif.livre_ids || []).forEach(livre_id => {
-    const checked = document.querySelector(`input[name="vr-${livre_id}"]:checked`);
-    if (checked) notes[livre_id] = Number(checked.value);
+  document.getElementById("vote-change-identity").addEventListener("click", () => {
+    membreIdentifie = null;
+    renderVotingSection();
   });
-
-  const manquants = (voteActif.livre_ids || []).filter(id => notes[id] === undefined);
-  if (manquants.length) {
-    showToast(`Donnez une note à chaque livre (${manquants.length} manquant${manquants.length > 1 ? "s" : ""}).`, "error");
-    return;
-  }
-
-  try {
-    await soumettreVote(voteActif.id, membreIdentifie.id, notes);
-    voteActif.bulletins = { ...(voteActif.bulletins || {}), [membreIdentifie.id]: notes };
-    showToast("Vote soumis ! Merci.", "success");
-    renderBanner();
-    renderVotantsBilan();
-    const btn = document.getElementById("vote-submit");
-    if (btn) { btn.disabled = true; btn.textContent = "✓ Vote enregistré"; btn.style.opacity = ".6"; }
-  } catch (e) { showToast("Erreur : " + e.message, "error"); }
+  document.getElementById("vote-submit").addEventListener("click", handleSubmit);
 }
 
-// ── Tableau de vote ────────────────────────────────────────────────
+// ── Tableau vote Tour 1 (notes 1–5) ───────────────────────────────
 
 function renderVotingTable(livresPropo, disabled) {
   if (!livresPropo.length) {
@@ -374,6 +466,126 @@ function renderVotingTable(livresPropo, disabled) {
     ${disabled ? "" : '<div style="font-size:.73rem;color:var(--muted);margin-top:.5rem">* Une note par livre est requise.</div>'}`;
 }
 
+// ── Tableau vote Tour 2 (choix unique) ─────────────────────────────
+
+function renderVotingTableTour2(livresPropo, disabled) {
+  if (!livresPropo.length) {
+    return `<div style="color:var(--muted);font-size:.88rem;padding:.75rem 0">Aucun livre pour ce vote.</div>`;
+  }
+  const rows = livresPropo.map(l => `
+    <label class="vt2-choice-row">
+      <input type="radio" name="tour2-choix" value="${l.id}"
+        ${disabled ? "disabled" : ""}
+        style="width:20px;height:20px;accent-color:var(--accent);cursor:${disabled ? "default" : "pointer"};flex-shrink:0">
+      <div class="vt2-choice-info">
+        <div class="vt-titre">${escapeHtml(l.titre)}</div>
+        ${l.auteur ? `<div class="vt2-choice-auteur">${escapeHtml(l.auteur)}</div>` : ""}
+      </div>
+    </label>`).join("");
+  return `<div class="vt2-choices">${rows}</div>
+    ${disabled ? "" : '<div style="font-size:.73rem;color:var(--muted);margin-top:.5rem">* Sélectionnez un seul livre.</div>'}`;
+}
+
+// ── Identification ─────────────────────────────────────────────────
+
+function handleIdentityConfirm() {
+  const membreId = document.getElementById("vote-membre-select").value;
+  if (!membreId) { showToast("Choisissez votre nom dans la liste.", "error"); return; }
+  const nom = membres.find(m => m.id === membreId)?.nom ?? membreId;
+
+  if (!confirm(`Vous êtes bien ${nom} ?`)) return;
+
+  const bulletin = voteActif.bulletins?.[membreId];
+  const aDejaVote = voteActif.tour === 2
+    ? bulletin != null && bulletin !== ""
+    : bulletin && Object.keys(bulletin).length > 0;
+
+  if (aDejaVote) {
+    if (!confirm(`${nom} a déjà soumis un vote. Voulez-vous le modifier et écraser le vote précédent ?`)) return;
+  }
+
+  membreIdentifie = { id: membreId, nom };
+  renderVotingSection();
+}
+
+// ── Soumettre le vote ──────────────────────────────────────────────
+
+async function handleSubmit() {
+  if (!voteActif || !membreIdentifie) return;
+
+  if (voteActif.tour === 2) {
+    const checked = document.querySelector('input[name="tour2-choix"]:checked');
+    if (!checked) { showToast("Choisissez un livre.", "error"); return; }
+    try {
+      await soumettreVote(voteActif.id, membreIdentifie.id, checked.value);
+      voteActif.bulletins = { ...(voteActif.bulletins || {}), [membreIdentifie.id]: checked.value };
+      showToast("Vote soumis ! Merci.", "success");
+      renderBanner();
+      renderVotantsBilan();
+      const btn = document.getElementById("vote-submit");
+      if (btn) { btn.disabled = true; btn.textContent = "✓ Vote enregistré"; btn.style.opacity = ".6"; }
+    } catch (e) { showToast("Erreur : " + e.message, "error"); }
+    return;
+  }
+
+  const notes = {};
+  (voteActif.livre_ids || []).forEach(livre_id => {
+    const checked = document.querySelector(`input[name="vr-${livre_id}"]:checked`);
+    if (checked) notes[livre_id] = Number(checked.value);
+  });
+
+  const manquants = (voteActif.livre_ids || []).filter(id => notes[id] === undefined);
+  if (manquants.length) {
+    showToast(`Donnez une note à chaque livre (${manquants.length} manquant${manquants.length > 1 ? "s" : ""}).`, "error");
+    return;
+  }
+
+  try {
+    await soumettreVote(voteActif.id, membreIdentifie.id, notes);
+    voteActif.bulletins = { ...(voteActif.bulletins || {}), [membreIdentifie.id]: notes };
+    showToast("Vote soumis ! Merci.", "success");
+    renderBanner();
+    renderVotantsBilan();
+    const btn = document.getElementById("vote-submit");
+    if (btn) { btn.disabled = true; btn.textContent = "✓ Vote enregistré"; btn.style.opacity = ".6"; }
+  } catch (e) { showToast("Erreur : " + e.message, "error"); }
+}
+
+// ── Bilan des votants ──────────────────────────────────────────────
+
+function renderVotantsBilan() {
+  const el = document.getElementById("vote-votants-bilan");
+  if (!el) return;
+  if (!voteActif) { el.innerHTML = ""; return; }
+
+  const memberIds = voteActif.membre_ids || [];
+  const bulletins = voteActif.bulletins || {};
+  const isTour2 = voteActif.tour === 2;
+
+  const hasVoted = (id) => {
+    const b = bulletins[id];
+    if (isTour2) return b != null && b !== "";
+    return b && Object.keys(b).length > 0;
+  };
+
+  const nbVotes = memberIds.filter(id => hasVoted(id)).length;
+
+  const rows = memberIds.map(id => {
+    const m = membres.find(mb => mb.id === id);
+    const aVote = hasVoted(id);
+    return `<div class="bilan-row ${aVote ? "bilan-voted" : "bilan-pending"}">
+      <span class="bilan-icon">${aVote ? "✓" : "·"}</span>
+      <span class="bilan-nom">${escapeHtml(m?.nom ?? id)}</span>
+    </div>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="vote-votants-bilan-wrap">
+      <div class="vote-bilan-title">Participation — ${nbVotes} / ${memberIds.length}</div>
+      <div class="bilan-list">${rows}</div>
+    </div>`;
+}
+
 // ── Countdown ──────────────────────────────────────────────────────
 
 function startNextCountdown(target) {
@@ -402,15 +614,16 @@ function updateNextCountdown(target) {
 function startCountdown() {
   if (countdownInterval) clearInterval(countdownInterval);
   updateCountdown();
-  countdownInterval = setInterval(() => {
+  countdownInterval = setInterval(async () => {
     if (!voteActif) { clearInterval(countdownInterval); return; }
     if (voteActif.expires_at.toMillis() <= Date.now()) {
       clearInterval(countdownInterval);
-      closeExpiredVote(voteActif).then(() => {
-        voteActif = null;
-        membreIdentifie = null;
-        render();
-      });
+      await closeExpiredVote(voteActif);
+      voteActif = await getVoteActif();
+      livres = await getLivres();
+      membreIdentifie = null;
+      render();
+      if (voteActif) startCountdown();
       return;
     }
     updateCountdown();

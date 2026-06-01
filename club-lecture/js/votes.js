@@ -1,6 +1,10 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getVotes, getMembres, getLivres, addVote, updateVote, getVoteActif, lancerVote, cloturerVoteActif, annulerVoteActif } from "./db.js";
+import { getVotes, getMembres, getLivres, addVote, updateVote, getVoteActif, lancerVote, cloturerVoteActif, annulerVoteActif, lancerTour2 } from "./db.js";
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 import { formatMois, MOIS_NOMS, moyenne, showToast } from "./utils.js";
 
 await requireAuth();
@@ -46,7 +50,8 @@ async function init() {
 
   if (voteActif && voteActif.expires_at?.toMillis() < Date.now()) {
     await closeExpiredVote(voteActif);
-    voteActif = null;
+    voteActif = await getVoteActif();
+    livres = await getLivres();
   }
 
   await autoLancerSiNecessaire();
@@ -59,9 +64,14 @@ async function init() {
   if (openId) openDetail(openId);
 }
 
-// ── Clôture automatique ────────────────────────────────────────────
+// ── Clôture automatique Tour 1 ────────────────────────────────────
 
 async function closeExpiredVote(va) {
+  if (va.tour === 2) {
+    await closeExpiredVoteTour2(va);
+    return;
+  }
+
   const bulletins = va.bulletins || {};
   const resultats = (va.livre_ids || []).map(livre_id => {
     const livre = livres.find(l => l.id === livre_id);
@@ -77,16 +87,75 @@ async function closeExpiredVote(va) {
 
   const withMoy = resultats.filter(r => r.moyenne !== null);
   let livre_elu = null;
+
   if (withMoy.length) {
     const max = Math.max(...withMoy.map(r => r.moyenne));
     const winners = withMoy.filter(r => r.moyenne === max);
-    if (winners.length === 1) livre_elu = winners[0].livre_id;
+    if (winners.length === 1) {
+      livre_elu = winners[0].livre_id;
+    } else {
+      // Égalité → lancer le 2ème tour
+      const today = new Date();
+      const expires2 = new Date(today.getFullYear(), today.getMonth(), 2, 23, 59, 59, 0);
+      try {
+        await lancerTour2(va.id, {
+          livre_ids_tour2: winners.map(w => w.livre_id),
+          livre_ids_tour1: va.livre_ids,
+          resultats_tour1: resultats,
+          expires_at: expires2,
+        });
+        showToast(`Égalité entre ${winners.length} livres ! 2ème tour lancé.`, "info");
+      } catch (e) { console.error("Lancement 2ème tour :", e); }
+      return;
+    }
   }
 
   await cloturerVoteActif(va.id, { mois: va.mois, annee: va.annee, resultats, livre_elu });
   votes = await getVotes();
   livres = await getLivres();
   showToast("Vote clôturé !", "success");
+  renderList();
+}
+
+// ── Clôture automatique Tour 2 ────────────────────────────────────
+
+async function closeExpiredVoteTour2(va) {
+  const bulletins2 = va.bulletins || {};
+  const livre_ids = va.livre_ids || [];
+
+  const voteCounts = {};
+  livre_ids.forEach(id => voteCounts[id] = 0);
+  Object.values(bulletins2).forEach(choix => {
+    if (choix && livre_ids.includes(choix)) voteCounts[choix]++;
+  });
+
+  const resultats_tour2 = livre_ids.map(livre_id => {
+    const livre = livres.find(l => l.id === livre_id);
+    return { livre_id, titre: livre?.titre ?? livre_id, auteur: livre?.auteur ?? "", votes: voteCounts[livre_id] || 0 };
+  });
+
+  const maxVotes = Math.max(0, ...resultats_tour2.map(r => r.votes));
+  const winners = resultats_tour2.filter(r => r.votes === maxVotes);
+  let livre_elu;
+  let tirage_au_sort = false;
+
+  if (winners.length === 1) {
+    livre_elu = winners[0].livre_id;
+  } else {
+    livre_elu = winners[Math.floor(Math.random() * winners.length)].livre_id;
+    tirage_au_sort = true;
+  }
+
+  await cloturerVoteActif(va.id, {
+    mois: va.mois,
+    annee: va.annee,
+    resultats: va.resultats_tour1,
+    livre_elu,
+    tour2: { resultats: resultats_tour2, livre_elu, tirage_au_sort },
+  });
+  votes = await getVotes();
+  livres = await getLivres();
+  showToast("Deuxième tour terminé — livre élu !", "success");
   renderList();
 }
 
@@ -98,12 +167,18 @@ function renderStatusCard() {
   if (nextCountdownInterval) { clearInterval(nextCountdownInterval); nextCountdownInterval = null; }
 
   if (voteActif) {
-    const nbVotants = Object.keys(voteActif.bulletins || {}).length;
-    const nbMembres = (voteActif.membre_ids || []).length;
     const bulletins = voteActif.bulletins || {};
+    const isTour2 = voteActif.tour === 2;
+    const hasVoted = (id) => {
+      const b = bulletins[id];
+      if (isTour2) return b != null && b !== "";
+      return b && Object.keys(b).length > 0;
+    };
+    const nbVotants = (voteActif.membre_ids || []).filter(id => hasVoted(id)).length;
+    const nbMembres = (voteActif.membre_ids || []).length;
     const bilanRows = (voteActif.membre_ids || []).map(id => {
       const m = membres.find(mb => mb.id === id);
-      const aVote = bulletins[id] && Object.keys(bulletins[id]).length > 0;
+      const aVote = hasVoted(id);
       return `<div class="bilan-row ${aVote ? "bilan-voted" : "bilan-pending"}">
         <span class="bilan-icon">${aVote ? "✓" : "·"}</span>
         <span class="bilan-nom">${m?.nom ?? id}</span>
@@ -112,9 +187,9 @@ function renderStatusCard() {
     card.innerHTML = `
       <div class="vsc-active">
         <div class="vsc-left">
-          <div class="vsc-icon">🗳️</div>
+          <div class="vsc-icon">${isTour2 ? "⚖️" : "🗳️"}</div>
           <div>
-            <div class="vsc-title">Vote en cours — ${formatMois(voteActif.mois, voteActif.annee)}</div>
+            <div class="vsc-title">${isTour2 ? "Deuxième tour" : "Vote en cours"} — ${formatMois(voteActif.mois, voteActif.annee)}</div>
             <div class="vsc-meta">${(voteActif.livre_ids || []).length} livres · ${nbVotants}/${nbMembres} votes reçus</div>
             <div class="vsc-countdown" id="vsc-countdown"></div>
             <div class="vsc-bilan"><div class="bilan-list">${bilanRows}</div></div>
@@ -152,11 +227,15 @@ function renderStatusCard() {
 function startCountdown() {
   if (countdownInterval) clearInterval(countdownInterval);
   updateCountdown();
-  countdownInterval = setInterval(() => {
+  countdownInterval = setInterval(async () => {
     if (!voteActif) { clearInterval(countdownInterval); return; }
     if (voteActif.expires_at.toMillis() <= Date.now()) {
       clearInterval(countdownInterval);
-      closeExpiredVote(voteActif).then(() => { voteActif = null; renderStatusCard(); });
+      await closeExpiredVote(voteActif);
+      voteActif = await getVoteActif();
+      livres = await getLivres();
+      renderStatusCard();
+      if (voteActif) startCountdown();
       return;
     }
     updateCountdown();
@@ -248,12 +327,47 @@ function renderDetailContent(vote) {
   const scale = maxNote <= 5 ? 5 : 10;
   const threshold = 2.5;
   const eluId = vote.livre_elu;
+
+  // Tour 1 : pas de gagnant à surligner si vote en 2 tours (égalité au 1er)
+  const tour1EluId = vote.tour2 ? null : eluId;
+
+  let html = "";
+  if (vote.tour2) {
+    html += `<div class="vote-tour-label">Tour 1 — Résultats (égalité)</div>`;
+  }
+  html += renderChart(sorted, scale, threshold, tour1EluId);
+  html += `<div class="divider"></div>`;
+  html += `<div class="card-title mb-2">Votes individuels${vote.tour2 ? " — Tour 1" : ""}</div>`;
+  html += renderTable(sorted, membres, scale, tour1EluId);
+  if (vote.tour2) {
+    html += `<div class="divider"></div>`;
+    html += renderTour2Section(vote.tour2, eluId);
+  }
+  return html;
+}
+
+function renderTour2Section(tour2, eluId) {
+  const resultats = [...(tour2.resultats || [])].sort((a, b) => b.votes - a.votes);
+  const maxVotes = Math.max(0, ...resultats.map(r => r.votes));
+
+  const bars = resultats.map(r => {
+    const isWinner = r.livre_id === eluId;
+    const color = isWinner ? "var(--green)" : "var(--purple)";
+    const pct = maxVotes > 0 ? Math.round(r.votes / maxVotes * 100) : 0;
+    return `<div class="vote-t2-detail-row">
+      <div class="vote-t2-detail-label" title="${escapeHtml(r.titre)}">${escapeHtml(r.titre)}</div>
+      <div class="vote-t2-detail-bar-wrap">
+        <div class="vote-t2-detail-bar-fill" style="width:${pct}%;background:${color}"></div>
+      </div>
+      <div class="vote-t2-detail-count" style="color:${color}">${r.votes} vote${r.votes !== 1 ? "s" : ""}</div>
+      ${isWinner ? `<span style="color:var(--green);font-size:1rem">🏆</span>` : ""}
+    </div>`;
+  }).join("");
+
   return `
-    ${renderChart(sorted, scale, threshold, eluId)}
-    <div class="divider"></div>
-    <div class="card-title mb-2">Votes individuels</div>
-    ${renderTable(sorted, membres, scale, eluId)}
-  `;
+    <div class="vote-tour-label">Tour 2 — Vote par choix unique${tour2.tirage_au_sort ? " · tirage au sort" : ""}</div>
+    ${tour2.tirage_au_sort ? `<div class="vote-t2-tirage-notice">🎲 Égalité au 2ème tour — le gagnant a été désigné par tirage au sort parmi les ex-æquo.</div>` : ""}
+    <div class="vote-t2-detail">${bars}</div>`;
 }
 
 function renderChart(sorted, scale, threshold, eluId) {

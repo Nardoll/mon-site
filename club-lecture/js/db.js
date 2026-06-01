@@ -96,15 +96,17 @@ export async function getVoteById(id) {
   return d.exists() ? { id: d.id, ...d.data() } : null;
 }
 
-export async function addVote({ mois, annee, resultats, livre_elu, date }) {
-  const ref = await addDoc(collection(db, "votes"), {
+export async function addVote({ mois, annee, resultats, livre_elu, date, tour2 }) {
+  const voteData = {
     mois: Number(mois),
     annee: Number(annee),
     resultats,
     livre_elu: livre_elu || null,
     date: date ? Timestamp.fromDate(new Date(date)) : serverTimestamp(),
     cree_le: serverTimestamp()
-  });
+  };
+  if (tour2) voteData.tour2 = tour2;
+  const ref = await addDoc(collection(db, "votes"), voteData);
 
   // Update book statuses based on vote results
   for (const r of resultats) {
@@ -213,6 +215,17 @@ export async function lancerVote({ mois, annee, livre_ids, membre_ids, echelle, 
     expires_at: Timestamp.fromDate(expires_at instanceof Date ? expires_at : new Date(expires_at)),
     bulletins: {},
     cree_le: serverTimestamp(),
+  });
+}
+
+export async function lancerTour2(docId, { livre_ids_tour2, livre_ids_tour1, resultats_tour1, expires_at }) {
+  return updateDoc(doc(db, "votes_actifs", docId), {
+    tour: 2,
+    livre_ids_tour1,
+    livre_ids: livre_ids_tour2,
+    resultats_tour1,
+    bulletins: {},
+    expires_at: Timestamp.fromDate(expires_at instanceof Date ? expires_at : new Date(expires_at)),
   });
 }
 
