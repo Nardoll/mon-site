@@ -454,6 +454,9 @@ function renderVotingTable(livresPropo, disabled) {
   }).join("");
 
   return `
+    <div style="font-size:.82rem;color:var(--muted);margin-bottom:.6rem">
+      🔢 <strong style="color:var(--text)">1</strong> = je veux le moins lire &nbsp;·&nbsp; <strong style="color:var(--text)">5</strong> = je veux le plus lire
+    </div>
     <div style="overflow-x:auto">
       <table class="vt-table">
         <thead><tr>
