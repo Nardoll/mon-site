@@ -229,15 +229,17 @@ Deux vues alternées :
   2. **Étape 2 — Notes** : tableau de **boutons radio** (1/5, 2/5, 3/5, 4/5, 5/5), une ligne par livre. Le formulaire est **toujours vide** (jamais pré-rempli, même en cas d'écrasement). Bouton "← Changer" pour revenir à l'étape 1.
   - Les votes des autres membres ne sont jamais visibles dans ce formulaire.
 - **Clôture automatique** : à chaque chargement de `votes.html` ou `vote.html`, si `voteActif.expires_at < now()` → calcule les résultats. Même logique si la page reste ouverte pendant l'expiration (setInterval toutes les secondes).
+- **Clôture anticipée (100% participation)** : dès que le dernier membre soumet son bulletin sur `vote.html`, le vote se clôture immédiatement sans attendre l'heure limite. Même logique que l'expiration normale : détection d'égalité, lancement du tour 2 si besoin, etc. Fonctionne pour le tour 1 et le tour 2.
 - **Logique des résultats (tour 1)** : livre avec la plus haute moyenne (unique) → `elu`, livres avec moyenne ≤ 2.5 → `refuse`. **Égalité au sommet → 2ème tour automatique** (voir ci-dessous).
 - **Deuxième tour (égalité)** : si ≥ 2 livres ex-æquo en tête du tour 1, le document `votes_actifs` est transformé en place (champ `tour: 2`) — pas de nouveau document. Le 2ème tour expire le **2 du même mois à 23h59**. Seuls les livres ex-æquo participent. Le vote se fait par **choix unique** (un seul livre par membre, pas de notes). Le livre le plus voté est élu ; si nouvelle égalité → **tirage au sort**. À la clôture du 2ème tour, **un seul document** est sauvegardé dans `votes`, avec le champ `tour2: { resultats, livre_elu, tirage_au_sort }` en plus des résultats du tour 1.
-- **UI `vote.html` au 2ème tour** : bandeau d'explication avec les résultats du tour 1 en barres colorées (⚖️ ex-æquo, Éliminé, Réserve) ; livres hors 2ème tour floutés dans la grille ; formulaire de vote = radio à choix unique (plus de notes 1–5).
+- **UI `vote.html` au 2ème tour** : bandeau d'explication avec les résultats du tour 1 en barres colorées (⚖️ ex-æquo, Éliminé, Réserve) ; livres hors 2ème tour floutés dans la grille ; formulaire de vote = radio à choix unique (plus de notes 1–5). Légende de l'échelle affichée au-dessus du tableau tour 1 ("1 = je veux le moins lire · 5 = je veux le plus lire").
 - **UI `votes.html` au 2ème tour** : une seule ligne dans la liste ; le détail affiche le graphe + tableau du tour 1 (libellé "Tour 1 — Résultats (égalité)"), puis la section tour 2 avec barres horizontales de voix et mention du tirage au sort si applicable.
+- **Garde-fou anti-doublon** : `closeExpiredVote` re-vérifie en Firestore que le document `votes_actifs` existe encore avant d'agir — évite un double-enregistrement si la clôture a déjà eu lieu depuis un autre onglet.
 - **Auto-ouverture** : si l'URL contient `?open=VOTE_ID`, le détail du vote s'ouvre automatiquement au chargement
 
 #### Membres (`membres.html` + `membres.js`)
 - Grille de cartes membres avec initiales, nom, date d'arrivée
-- Bouton "Ajouter un membre" → modal (nom + date)
+- Bouton "Ajouter un membre" → modal (nom + date). Si un vote est en cours au moment de l'ajout, le nouveau membre est automatiquement inscrit dans `membre_ids` du `votes_actifs` (via `arrayUnion`) et peut voter immédiatement. Le toast confirme l'inscription ("ajouté et inscrit au vote en cours").
 - Clic sur un membre → **profil** (modal) :
   - Résumé : initiales, nom, date d'arrivée, nb propositions, nb votes
   - Bouton "✏️ Modifier" dans le header → formulaire inline pour corriger nom et date d'arrivée
