@@ -429,7 +429,15 @@ function renderTable(sorted, membres, scale, eluId) {
       const cls = isWinner ? "winner-cell" : isElim ? "elim-cell" : "";
       return `<td class="${cls}">${n}/${scale}<br><span class="stars">${renderStars(n, scale)}</span></td>`;
     }).join("");
-    return `<tr><td class="member-cell">${m.nom}</td>${cells}</tr>`;
+    const memberNotes = sorted
+      .map(r => r.notes?.[m.id])
+      .filter(n => n !== undefined && n !== null && n !== "")
+      .map(Number).filter(n => !isNaN(n));
+    const memberAvg = memberNotes.length ? memberNotes.reduce((a, b) => a + b, 0) / memberNotes.length : null;
+    const avgCell = memberAvg !== null
+      ? `<td class="vtable-member-avg">${memberAvg.toFixed(2)}</td>`
+      : `<td class="text-muted vtable-member-avg">—</td>`;
+    return `<tr><td class="member-cell">${m.nom}</td>${cells}${avgCell}</tr>`;
   }).join("");
   const avgCells = sorted.map(r => {
     const isWinner = r.livre_id === eluId;
@@ -437,9 +445,9 @@ function renderTable(sorted, membres, scale, eluId) {
     return `<td class="${isWinner ? "winner-avg" : isElim ? "elim-avg" : ""}">${r.moyenne !== null && r.moyenne !== undefined ? Number(r.moyenne).toFixed(2) : "—"}</td>`;
   }).join("");
   return `<div class="vtable-wrap"><table class="vtable">
-    <thead><tr><th>Votant</th>${headers}</tr></thead>
+    <thead><tr><th>Votant</th>${headers}<th class="vtable-member-avg-head">Moy.</th></tr></thead>
     <tbody>${rows}</tbody>
-    <tfoot><tr><td class="member-cell">Moyenne</td>${avgCells}</tr></tfoot>
+    <tfoot><tr><td class="member-cell">Moyenne</td>${avgCells}<td></td></tr></tfoot>
   </table></div>`;
 }
 
