@@ -419,7 +419,9 @@ function attachMemberChartInteraction(vote) {
       return;
     }
 
-    chartDiv.innerHTML = `<div class="chart" style="padding:.25rem 0">${memberResults.map((r, i) => {
+    const avg = memberResults.reduce((s, r) => s + Number(r.notes[membreId]), 0) / memberResults.length;
+    chartDiv.innerHTML = `<div style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem">Moyenne : <strong style="color:var(--accent)">${avg.toFixed(2)}/${scale}</strong></div>
+    <div class="chart" style="padding:.25rem 0">${memberResults.map((r, i) => {
       const note = Number(r.notes[membreId]);
       const pct = Math.round((note / scale) * 100);
       const isElu = vote.livre_elu === r.livre_id;
