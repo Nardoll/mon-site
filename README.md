@@ -999,6 +999,12 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-06-02 (suite 3)
+**Votes — toggle par votant / par livre dans le graphique de détail**
+
+- `club-lecture/js/votes.js` : la section "📊 Détail des votes" dispose maintenant de deux onglets pills. **Par votant** : sélecteur de membre → barres horizontales de ses notes par livre (livre élu surligné en vert), moyenne en tête. **Par livre** : sélecteur de livre → barres horizontales des notes de chaque membre, triées par note décroissante, moyenne en tête. Fonctions remaniées : `renderMemberChartSection` génère les deux selects + les onglets, `attachMemberChartInteraction` gère le switch et les deux rendus (`renderMembre` / `renderLivre`).
+- `club-lecture/css/style.css` : nouveaux styles `.vote-chart-tabs`, `.vote-chart-tab`, `.vote-chart-tab.active` (pills, accent orange à l'état actif).
+
 ### 2026-06-02 (suite 2)
 **Votes — moyenne du votant affichée au-dessus du graphique**
 
