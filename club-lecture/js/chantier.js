@@ -214,11 +214,11 @@ async function renderTabDispersion() {
   el.innerHTML = `
     <div class="cht-section-label">Dispersion des votes par livre — ${formatMois(lastVote.mois, lastVote.annee)}</div>
     <div class="cht-expl">
-      Chaque <strong>petit cercle bleuté</strong> = la note d'un votant. Quand plusieurs personnes donnent la même note, les points sont légèrement décalés horizontalement pour éviter la superposition.
-      <span style="white-space:nowrap"><strong style="color:var(--accent)">◆ Losange orange</strong> = moyenne</span> ·
-      <span style="white-space:nowrap"><strong style="color:#9b59b6">▲ Triangle violet</strong> = médiane</span> ·
-      <span style="white-space:nowrap"><strong style="color:#4ab870">★ Étoile verte</strong> = combiné (moy+méd)÷2</span>
-      <br><small style="opacity:.65;line-height:1.5;display:block;margin-top:.3rem">Le centre de gravité physique d'un nuage de points est mathématiquement identique à la moyenne — ce sont la même chose. La médiane minimise la distance absolue plutôt que la distance au carré, ce qui la rend plus robuste aux valeurs extrêmes.</small>
+      Chaque <strong>petit cercle bleuté</strong> = la note d'un votant (légèrement décalé si plusieurs ont la même note).
+      <span style="white-space:nowrap"><strong style="color:#9b59b6">▲ Triangle violet</strong> = <strong>médiane</strong> — le centre de référence</span> ·
+      <span style="white-space:nowrap"><strong style="color:var(--accent)">◆ Losange orange</strong> = moyenne (dérive ± vs médiane)</span> ·
+      <span style="white-space:nowrap"><strong style="color:#4ab870">★ Étoile verte</strong> = combiné ÷2 (dérive ± vs médiane)</span>
+      <br><small style="opacity:.65;line-height:1.5;display:block;margin-top:.3rem">La médiane est le centre de référence : elle représente le "votant du milieu" et résiste aux extrêmes. Sous chaque titre, l'indicateur <em>moy ±X</em> montre de combien la moyenne dérive par rapport à cette médiane — un écart important révèle l'influence des notes extrêmes.</small>
     </div>
     <div style="overflow-x:auto;margin-top:.75rem">
       <div style="min-width:${minWidth}px">
@@ -263,6 +263,22 @@ async function renderTabDispersion() {
     if (comb !== null) combinedPoints.push({ x: idx, y: comb });
   });
 
+  // Indicateurs d'écart à la médiane par livre (pour le tooltip et les annotations)
+  const deviations = resultats.map((r, idx) => {
+    const notes = Object.values(r.notes || {}).map(Number).filter(n => !isNaN(n));
+    const med  = median(notes);
+    const moy  = r.moyenne ?? mean(notes);
+    const comb = moy !== null && med !== null ? (moy + med) / 2 : null;
+    return {
+      titre: r.titre,
+      med,
+      moy,
+      comb,
+      moyDrift:  moy  !== null && med !== null ? moy  - med : null,
+      combDrift: comb !== null && med !== null ? comb - med : null,
+    };
+  });
+
   const labels = resultats.map(r => r.titre.length > 17 ? r.titre.slice(0, 15) + "…" : r.titre);
 
   new Chart(document.getElementById("chart-dispersion"), {
@@ -281,7 +297,18 @@ async function renderTabDispersion() {
           order: 4,
         },
         {
-          label: "Moyenne",
+          label: "Médiane (centre de référence)",
+          data: medianPoints,
+          backgroundColor: "#9b59b6",
+          borderColor: "#fff",
+          borderWidth: 2,
+          pointRadius: 11,
+          pointHoverRadius: 13,
+          pointStyle: "triangle",
+          order: 1,
+        },
+        {
+          label: "Moyenne (dérive vs médiane)",
           data: meanPoints,
           backgroundColor: accentClr,
           borderColor: "#fff",
@@ -289,21 +316,10 @@ async function renderTabDispersion() {
           pointRadius: 10,
           pointHoverRadius: 12,
           pointStyle: "rectRot",
-          order: 1,
-        },
-        {
-          label: "Médiane",
-          data: medianPoints,
-          backgroundColor: "#9b59b6",
-          borderColor: "#fff",
-          borderWidth: 2,
-          pointRadius: 10,
-          pointHoverRadius: 12,
-          pointStyle: "triangle",
           order: 2,
         },
         {
-          label: "Combiné (moy+méd)÷2",
+          label: "Combiné ÷2 (dérive vs médiane)",
           data: combinedPoints,
           backgroundColor: "#4ab870",
           borderColor: "#fff",
@@ -326,8 +342,29 @@ async function renderTabDispersion() {
         tooltip: {
           callbacks: {
             label: ctx => {
-              const titre = resultats[Math.round(ctx.parsed.x)]?.titre ?? "";
-              return `${ctx.dataset.label} — ${titre} : ${ctx.parsed.y.toFixed(2)}`;
+              const idx   = Math.round(ctx.parsed.x);
+              const dev   = deviations[idx];
+              const titre = dev?.titre ?? "";
+              const val   = ctx.parsed.y.toFixed(2);
+              const ds    = ctx.dataset.label;
+
+              if (ds.startsWith("Votes")) {
+                return `Vote — ${titre} : ${val}/5`;
+              }
+              if (ds.startsWith("Médiane")) {
+                return `Médiane — ${titre} : ${val}/5 (référence)`;
+              }
+              if (ds.startsWith("Moyenne") && dev?.moyDrift !== null) {
+                const d = dev.moyDrift;
+                const sign = d > 0 ? "+" : "";
+                return `Moyenne — ${titre} : ${val}/5  (dérive ${sign}${d.toFixed(2)} vs médiane)`;
+              }
+              if (ds.startsWith("Combiné") && dev?.combDrift !== null) {
+                const d = dev.combDrift;
+                const sign = d > 0 ? "+" : "";
+                return `Combiné — ${titre} : ${val}/5  (dérive ${sign}${d.toFixed(2)} vs médiane)`;
+              }
+              return `${ds} — ${titre} : ${val}/5`;
             }
           }
         }
@@ -344,7 +381,16 @@ async function renderTabDispersion() {
             minRotation: 25,
             callback: val => {
               const i = Math.round(val);
-              return Math.abs(val - i) < 0.01 ? (labels[i] ?? null) : null;
+              if (Math.abs(val - i) < 0.01 && labels[i]) {
+                const dev = deviations[i];
+                // Afficher l'écart moy-méd sous le titre si significatif
+                if (dev?.moyDrift !== null && Math.abs(dev.moyDrift) > 0.05) {
+                  const sign = dev.moyDrift > 0 ? "+" : "";
+                  return [labels[i], `moy ${sign}${dev.moyDrift.toFixed(2)}`];
+                }
+                return labels[i];
+              }
+              return null;
             }
           },
           grid: { color: borderClr }
@@ -353,7 +399,8 @@ async function renderTabDispersion() {
           min: 0.5,
           max: 5.5,
           ticks: { stepSize: 1, color: mutedClr },
-          grid: { color: borderClr }
+          grid: { color: borderClr },
+          title: { display: true, text: "Note /5", color: mutedClr, font: { size: 11 } }
         }
       }
     }
