@@ -218,10 +218,10 @@ async function renderTabDispersion() {
   el.innerHTML = `
     <div class="cht-section-label">Dispersion des votes par livre — ${formatMois(lastVote.mois, lastVote.annee)}</div>
     <div class="cht-expl">
-      Chaque <strong>petit cercle bleuté</strong> = la note d'un votant (légèrement décalé si plusieurs ont la même note).
-      <span style="white-space:nowrap"><strong style="color:#9b59b6">▲ violet</strong> = médiane (référence)</span> ·
-      <span style="white-space:nowrap"><strong style="color:var(--accent)">◆ orange</strong> = moyenne</span> ·
-      <span style="white-space:nowrap"><strong style="color:#4ab870">★ vert</strong> = combiné ÷2</span>
+      Chaque <strong>petit cercle bleuté</strong> = note d'un votant (décalé si plusieurs ont la même note).
+      <span style="white-space:nowrap"><strong style="color:#9b59b6">▲ Médiane</strong> = centre de référence</span> ·
+      <span style="white-space:nowrap"><strong style="color:var(--accent)">◆ Moyenne</strong></span> ·
+      <span style="white-space:nowrap"><strong style="color:#4ab870">★ Combiné ÷2</strong></span>
       — survolez un point pour voir la dérive vs médiane.
     </div>
     <div style="overflow-x:auto;margin-top:.75rem">
@@ -291,7 +291,7 @@ async function renderTabDispersion() {
     data: {
       datasets: [
         {
-          label: "Votes individuels",
+          label: "Votes",
           data: votePoints,
           backgroundColor: "rgba(130,145,210,0.38)",
           borderColor:     "rgba(130,145,210,0.65)",
@@ -302,33 +302,33 @@ async function renderTabDispersion() {
           order: 4,
         },
         {
-          label: "Médiane (centre de référence)",
+          label: "Médiane",
           data: medianPoints,
           backgroundColor: "#9b59b6",
-          borderColor: "#fff",
-          borderWidth: 2,
+          borderColor: "#6a2f8a",
+          borderWidth: 1.5,
           pointRadius: 11,
           pointHoverRadius: 13,
           pointStyle: "triangle",
           order: 1,
         },
         {
-          label: "Moyenne (dérive vs médiane)",
+          label: "Moyenne",
           data: meanPoints,
           backgroundColor: accentClr,
-          borderColor: "#fff",
-          borderWidth: 2,
+          borderColor: "#a06010",
+          borderWidth: 1.5,
           pointRadius: 10,
           pointHoverRadius: 12,
           pointStyle: "rectRot",
           order: 2,
         },
         {
-          label: "Combiné ÷2 (dérive vs médiane)",
+          label: "Combiné ÷2",
           data: combinedPoints,
           backgroundColor: "#4ab870",
-          borderColor: "#fff",
-          borderWidth: 2,
+          borderColor: "#267a45",
+          borderWidth: 1.5,
           pointRadius: 10,
           pointHoverRadius: 12,
           pointStyle: "star",
