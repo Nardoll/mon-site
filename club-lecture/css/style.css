@@ -796,6 +796,16 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 .cht-combined-score { position: relative; }
 .cht-combined-bar { height: 3px; background: var(--surface2); border-radius: 3px; margin-top: .3rem; overflow: hidden; }
 
+/* Tableau influence membres */
+.cht-infl-rank   { width: 28px; text-align: center; color: var(--muted); font-size: .75rem; }
+.cht-infl-nom    { font-weight: 600; min-width: 90px; }
+.cht-infl-hausse { text-align: right; font-weight: 700; color: var(--green,#4ab870); font-size: .82rem; min-width: 72px; }
+.cht-infl-baisse { text-align: right; font-weight: 700; color: #e05555; font-size: .82rem; min-width: 72px; }
+.cht-infl-net    { text-align: right; font-weight: 700; font-size: .85rem; min-width: 72px; }
+.cht-infl-absolu { min-width: 110px; padding: .4rem .65rem; }
+.cht-infl-absolu-val { font-weight: 800; font-size: .88rem; color: var(--accent); }
+.cht-infl-bar { height: 4px; background: var(--surface2); border-radius: 3px; margin-top: .25rem; overflow: hidden; }
+
 /* ── Page vote publique (vote.html) ─────────────────────────────── */
 .vote-page-header {
   background:var(--surface); border-bottom:1px solid var(--border);

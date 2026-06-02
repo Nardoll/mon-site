@@ -81,6 +81,7 @@ async function init() {
     </div>`;
 
   renderTabCombine();
+  renderTabInfluence();
   renderTabMediane();
   renderTabSimulation();
   renderTabImpact();
@@ -189,6 +190,84 @@ function renderTabCombine() {
       </table>
     </div>
     <div class="cht-footnote">Score combiné = (moyenne + médiane) ÷ 2 · Seuil d'élimination : ≤ 2,5 · Trié par score combiné décroissant</div>`;
+}
+
+// ── Onglet Influence membres ──────────────────────────────────────
+
+function renderTabInfluence() {
+  const el = document.getElementById("tab-influence");
+  const resultats = lastVote.resultats || [];
+  const votants = getVotants(resultats);
+
+  // Pour chaque votant : somme des deltas (moyenne avec - moyenne sans) sur tous les livres
+  const statsVotants = votants.map(v => {
+    let hausse = 0, baisse = 0;
+
+    resultats.forEach(r => {
+      const notes = r.notes || {};
+      if (notes[v.id] === undefined) return;
+
+      const notesAll     = Object.values(notes).map(Number).filter(n => !isNaN(n));
+      const notesSans    = Object.entries(notes)
+        .filter(([id]) => id !== v.id)
+        .map(([, n]) => Number(n)).filter(n => !isNaN(n));
+      if (!notesSans.length) return;
+
+      const delta = mean(notesAll) - mean(notesSans); // positif = il a fait monter
+      if (delta > 0.0001) hausse += delta;
+      else if (delta < -0.0001) baisse += delta;
+    });
+
+    const net    = hausse + baisse;
+    const absolu = hausse + Math.abs(baisse);
+    return { ...v, hausse, baisse, net, absolu };
+  }).sort((a, b) => b.absolu - a.absolu);
+
+  const maxAbsolu = Math.max(...statsVotants.map(v => v.absolu), 0.001);
+
+  const rows = statsVotants.map((v, i) => {
+    const barPct = Math.round(v.absolu / maxAbsolu * 100);
+    const netColor = v.net > 0.005 ? "var(--green,#4ab870)" : v.net < -0.005 ? "#e05555" : "var(--muted)";
+    const netSign  = v.net > 0.005 ? "+" : "";
+    return `<tr>
+      <td class="cht-infl-rank">${i + 1}</td>
+      <td class="cht-infl-nom">${prenom(v.nom)}</td>
+      <td class="cht-infl-hausse">+${v.hausse.toFixed(3)}</td>
+      <td class="cht-infl-baisse">${v.baisse.toFixed(3)}</td>
+      <td class="cht-infl-net" style="color:${netColor}">${netSign}${v.net.toFixed(3)}</td>
+      <td class="cht-infl-absolu">
+        <span class="cht-infl-absolu-val">${v.absolu.toFixed(3)}</span>
+        <div class="cht-infl-bar"><div style="width:${barPct}%;height:100%;background:var(--accent);border-radius:3px;opacity:.6"></div></div>
+      </td>
+    </tr>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="cht-section-label">Influence de chaque votant sur les moyennes — vote de ${formatMois(lastVote.mois, lastVote.annee)}</div>
+    <div class="cht-expl">
+      Pour chaque membre, on compare la moyenne de chaque livre <strong>avec</strong> et <strong>sans</strong> son vote, puis on cumule les différences sur tous les livres.
+      <strong class="cht-green">↑ Hausse</strong> = somme des livres qu'il a fait monter ·
+      <strong class="cht-red">↓ Baisse</strong> = somme des livres qu'il a fait baisser ·
+      <strong>Δ Net</strong> = hausse + baisse (signé) ·
+      <strong>Influence totale</strong> = |hausse| + |baisse| — plus ce chiffre est grand, plus la personne modifie les résultats dans un sens ou dans l'autre.
+    </div>
+    <div style="overflow-x:auto">
+      <table class="cht-table">
+        <thead><tr>
+          <th class="cht-infl-rank">#</th>
+          <th class="cht-infl-nom">Membre</th>
+          <th class="cht-infl-hausse" style="color:var(--green,#4ab870)">↑ Hausse</th>
+          <th class="cht-infl-baisse" style="color:#e05555">↓ Baisse</th>
+          <th class="cht-infl-net">Δ Net</th>
+          <th class="cht-infl-absolu">Influence totale</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="cht-footnote">
+      Δ Net = hausse + baisse · Influence totale = |hausse| + |baisse| · Trié par influence totale décroissante ·
+      Un delta net très négatif = tend à faire baisser les scores globalement · Un delta net proche de zéro avec une influence totale élevée = tire fortement dans les deux sens (vote stratégique)
+    </div>`;
 }
 
 // ── Onglet 1 : Médiane ────────────────────────────────────────────
