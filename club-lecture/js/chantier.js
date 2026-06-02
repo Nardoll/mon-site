@@ -226,7 +226,7 @@ async function renderTabDispersion() {
     </div>
     <div style="overflow-x:auto;margin-top:.75rem">
       <div style="min-width:${minWidth}px">
-        <canvas id="chart-dispersion" height="240"></canvas>
+        <canvas id="chart-dispersion" height="200"></canvas>
       </div>
     </div>
     <div class="cht-disp-legend">${legendItems}</div>`;
@@ -391,8 +391,8 @@ async function renderTabDispersion() {
           grid: { color: borderClr }
         },
         y: {
-          min: 0.5,
-          max: 5.5,
+          min: 0.8,
+          max: 5.3,
           ticks: { stepSize: 1, color: mutedClr },
           grid: { color: borderClr },
           title: { display: true, text: "Note /5", color: mutedClr, font: { size: 11 } }
