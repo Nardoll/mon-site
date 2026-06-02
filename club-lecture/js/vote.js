@@ -472,12 +472,10 @@ function renderVotingTable(livresPropo, disabled) {
           style="cursor:${disabled ? "default" : "pointer"};width:18px;height:18px;accent-color:var(--accent)">
       </td>`).join("");
 
-    const readCheck = !disabled
-      ? `<label class="vt-read-label">
-           <input type="checkbox" class="vt-read-check" data-livre="${l.id}">
-           <span>Déjà lu — je passe</span>
-         </label>`
-      : "";
+    const readCheck = `<label class="vt-read-label">
+      <input type="checkbox" class="vt-read-check" data-livre="${l.id}" ${disabled ? "disabled" : ""}>
+      <span>Déjà lu — je passe</span>
+    </label>`;
 
     return `<tr class="vt-row">
       <td class="vt-label-cell">
