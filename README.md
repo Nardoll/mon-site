@@ -1024,6 +1024,12 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-06-02 (suite 8)
+**Vote — seuil d'élimination relevé à 2,9 (temporaire)**
+
+- `club-lecture/js/db.js` : seuil `refuse` passé de `<= 2.5` à `<= 2.9`. S'applique uniquement aux votes futurs — votes passés non affectés.
+- `club-lecture/js/vote.js` : texte d'explication `.vt-rules` et affichage du contexte 2ème tour mis à jour (≤ 2,5 → ≤ 2,9).
+
 ### 2026-06-02 (suite 7)
 **Vote — nouveau calcul (moy+méd)÷2 + option "Déjà lu" + chantier discret**
 
