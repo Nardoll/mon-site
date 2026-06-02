@@ -793,6 +793,8 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 .cht-impact-abs-val { font-size: .85rem; font-weight: 700; color: var(--accent); }
 .cht-impact-abs-bar { height: 4px; background: var(--surface2); border-radius: 3px; margin: .25rem 0; overflow: hidden; }
 .cht-impact-abs-raw { font-size: .65rem; color: var(--muted); }
+.cht-combined-score { position: relative; }
+.cht-combined-bar { height: 3px; background: var(--surface2); border-radius: 3px; margin-top: .3rem; overflow: hidden; }
 
 /* ── Page vote publique (vote.html) ─────────────────────────────── */
 .vote-page-header {

@@ -80,6 +80,7 @@ async function init() {
       — ${(lastVote.resultats || []).length} livres · ${votants.length} votant${votants.length > 1 ? "s" : ""}
     </div>`;
 
+  renderTabCombine();
   renderTabMediane();
   renderTabSimulation();
   renderTabImpact();
@@ -97,6 +98,97 @@ function initTabs() {
       document.getElementById("tab-" + btn.dataset.tab).classList.remove("hidden");
     });
   });
+}
+
+// ── Onglet 0 : Combiné (moyenne + médiane) / 2 ───────────────────
+
+function renderTabCombine() {
+  const el = document.getElementById("tab-combine");
+  const resultats = lastVote.resultats || [];
+
+  const data = resultats.map(r => {
+    const notes = Object.values(r.notes || {}).map(Number).filter(n => !isNaN(n));
+    const moy = r.moyenne ?? mean(notes);
+    const med = median(notes);
+    const combined = (moy !== null && med !== null) ? (moy + med) / 2 : null;
+    return { ...r, moy, med, combined, nbNotes: notes.length };
+  });
+
+  const withCombined = data.filter(r => r.combined !== null);
+  if (!withCombined.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:.85rem">Données insuffisantes.</div>`;
+    return;
+  }
+
+  const maxCombined = Math.max(...withCombined.map(r => r.combined));
+  const maxMoy      = Math.max(...data.filter(r => r.moy !== null).map(r => r.moy));
+
+  // Égalité par score combiné ?
+  const topCombined = withCombined.filter(r => r.combined === maxCombined);
+  const tieCombined = topCombined.length > 1;
+
+  const eluActuel   = lastVote.livre_elu;
+  const eluCombined = !tieCombined ? topCombined[0]?.livre_id : null;
+
+  let alerte;
+  if (tieCombined) {
+    alerte = { type: "warn", msg: `⚖️ Égalité entre ${topCombined.length} livres avec le score combiné (${topCombined.map(r => `"${r.titre}"`).join(", ")}) — un 2ème tour serait nécessaire.` };
+  } else if (eluCombined && eluCombined !== eluActuel) {
+    const nomNouveau = data.find(r => r.livre_id === eluCombined)?.titre ?? "?";
+    const nomAncien  = data.find(r => r.livre_id === eluActuel)?.titre ?? "?";
+    alerte = { type: "change", msg: `🔄 Le résultat <strong>changerait</strong> : au lieu de "${nomAncien}", c'est "<strong>${nomNouveau}</strong>" qui serait élu.` };
+  } else {
+    alerte = { type: "ok", msg: `✅ Le score combiné <strong>ne change pas</strong> le résultat — le même livre serait élu.` };
+  }
+
+  const sorted = [...data].sort((a, b) => (b.combined ?? -1) - (a.combined ?? -1));
+
+  const rows = sorted.map((r, i) => {
+    const resActuel  = getResultat(r.moy, maxMoy, false);
+    const resCombine = getResultat(r.combined, maxCombined, tieCombined);
+    const changed    = resActuel.cls !== resCombine.cls;
+
+    // Barre de score combiné
+    const pct = maxCombined > 0 ? Math.round(r.combined / 5 * 100) : 0;
+
+    return `<tr class="${changed ? "cht-row-changed" : ""}">
+      <td class="cht-td-titre">
+        ${i === 0 && !tieCombined ? '<span style="font-size:.9rem">🏆</span> ' : ""}${r.titre}
+        <div class="cht-td-sous">${r.auteur || ""} · ${r.nbNotes} note${r.nbNotes > 1 ? "s" : ""}</div>
+      </td>
+      <td class="cht-td-score" style="background:${scoreBg(r.moy)}">${r.moy !== null ? r.moy.toFixed(2) : "—"}</td>
+      <td class="cht-td-score" style="background:${scoreBg(r.med)}">${r.med !== null ? r.med.toFixed(1) : "—"}</td>
+      <td class="cht-td-score cht-combined-score" style="background:${scoreBg(r.combined)}">
+        ${r.combined !== null ? r.combined.toFixed(2) : "—"}
+        <div class="cht-combined-bar"><div style="width:${pct}%;height:100%;background:var(--accent);border-radius:3px;opacity:.55"></div></div>
+      </td>
+      <td class="cht-td-badge"><span class="${resActuel.cls}">${resActuel.text}</span></td>
+      <td class="cht-td-badge"><span class="${resCombine.cls}">${resCombine.text}</span>${changed ? ' <span class="cht-diff">≠</span>' : ""}</td>
+    </tr>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="cht-alert cht-alert-${alerte.type}">${alerte.msg}</div>
+    <div class="cht-section-label">Résultats simulés — score combiné (moyenne + médiane) ÷ 2</div>
+    <div class="cht-expl">
+      Le <strong>score combiné</strong> fait la moyenne entre la moyenne et la médiane de chaque livre.
+      La médiane "ancre" le score là où est le groupe, la moyenne apporte la nuance entre des livres autrement à égalité.
+      Résultat : un vote stratégique isolé a <strong>deux fois moins d'impact</strong> qu'avec la moyenne seule, et les égalités de la médiane pure disparaissent presque toujours.
+    </div>
+    <div style="overflow-x:auto">
+      <table class="cht-table">
+        <thead><tr>
+          <th class="cht-td-titre">Livre</th>
+          <th class="cht-td-score">Moyenne</th>
+          <th class="cht-td-score">Médiane</th>
+          <th class="cht-td-score">Score combiné</th>
+          <th class="cht-td-badge">Résultat actuel</th>
+          <th class="cht-td-badge">Si combiné</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="cht-footnote">Score combiné = (moyenne + médiane) ÷ 2 · Seuil d'élimination : ≤ 2,5 · Trié par score combiné décroissant</div>`;
 }
 
 // ── Onglet 1 : Médiane ────────────────────────────────────────────
