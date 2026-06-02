@@ -224,11 +224,12 @@ function renderTabInfluence() {
   }).sort((a, b) => b.absolu - a.absolu);
 
   const maxAbsolu = Math.max(...statsVotants.map(v => v.absolu), 0.001);
+  const maxAbsNet = Math.max(...statsVotants.map(v => Math.abs(v.net)), 0.001);
 
   const rows = statsVotants.map((v, i) => {
-    const barPct = Math.round(v.absolu / maxAbsolu * 100);
-    const netColor = v.net > 0.005 ? "var(--green,#4ab870)" : v.net < -0.005 ? "#e05555" : "var(--muted)";
-    const netSign  = v.net > 0.005 ? "+" : "";
+    const netBarPct = Math.round(Math.abs(v.net) / maxAbsNet * 100);
+    const netColor  = v.net > 0.005 ? "var(--green,#4ab870)" : v.net < -0.005 ? "#e05555" : "var(--border)";
+    const netSign   = v.net > 0.005 ? "+" : "";
     return `<tr>
       <td class="cht-infl-rank">${i + 1}</td>
       <td class="cht-infl-nom">${prenom(v.nom)}</td>
@@ -236,9 +237,11 @@ function renderTabInfluence() {
       <td class="cht-infl-baisse">${v.baisse.toFixed(3)}</td>
       <td class="cht-infl-absolu">
         <span class="cht-infl-absolu-val">${v.absolu.toFixed(3)}</span>
-        <div class="cht-infl-bar"><div style="width:${barPct}%;height:100%;background:var(--accent);border-radius:3px;opacity:.6"></div></div>
       </td>
-      <td class="cht-infl-net" style="color:${netColor}">${netSign}${v.net.toFixed(3)}</td>
+      <td class="cht-infl-net">
+        <div style="font-size:.75rem;font-weight:700;color:${netColor};margin-bottom:.2rem">${netSign}${v.net.toFixed(3)}</div>
+        <div class="cht-infl-bar"><div style="width:${netBarPct}%;height:100%;background:${netColor};border-radius:3px;opacity:.7"></div></div>
+      </td>
     </tr>`;
   }).join("");
 
