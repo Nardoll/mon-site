@@ -234,11 +234,11 @@ function renderTabInfluence() {
       <td class="cht-infl-nom">${prenom(v.nom)}</td>
       <td class="cht-infl-hausse">+${v.hausse.toFixed(3)}</td>
       <td class="cht-infl-baisse">${v.baisse.toFixed(3)}</td>
-      <td class="cht-infl-net" style="color:${netColor}">${netSign}${v.net.toFixed(3)}</td>
       <td class="cht-infl-absolu">
         <span class="cht-infl-absolu-val">${v.absolu.toFixed(3)}</span>
         <div class="cht-infl-bar"><div style="width:${barPct}%;height:100%;background:var(--accent);border-radius:3px;opacity:.6"></div></div>
       </td>
+      <td class="cht-infl-net" style="color:${netColor}">${netSign}${v.net.toFixed(3)}</td>
     </tr>`;
   }).join("");
 
@@ -258,8 +258,8 @@ function renderTabInfluence() {
           <th class="cht-infl-nom">Membre</th>
           <th class="cht-infl-hausse" style="color:var(--green,#4ab870)">↑ Hausse</th>
           <th class="cht-infl-baisse" style="color:#e05555">↓ Baisse</th>
-          <th class="cht-infl-net">Δ Net</th>
           <th class="cht-infl-absolu">Influence totale</th>
+          <th class="cht-infl-net">Δ Net</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
