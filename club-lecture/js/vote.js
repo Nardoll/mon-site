@@ -228,7 +228,7 @@ function renderTour2Context() {
 
   const rows = sorted.map(r => {
     const inTour2 = tour2Ids.has(r.livre_id);
-    const isElim = !inTour2 && (r.moyenne ?? 0) <= 2.5;
+    const isElim = !inTour2 && (r.moyenne ?? 0) <= 2.9;
     let color, badge;
     if (inTour2) {
       color = "var(--accent)";
@@ -492,7 +492,7 @@ function renderVotingTable(livresPropo, disabled) {
 
   return `
     <div class="vt-rules">
-      📋 <strong>Comment ça marche :</strong> notez chaque livre de 1 à 5. Le score est calculé comme <strong>(moyenne + médiane) ÷ 2</strong> — cela réduit l'impact des notes extrêmes. Le livre avec le <strong>plus haut score</strong> est élu. Tout score <strong>≤ 2,5</strong> élimine le livre définitivement. Si vous avez <strong>déjà lu</strong> un livre, cochez la case pour l'exclure de votre vote.
+      📋 <strong>Comment ça marche :</strong> notez chaque livre de 1 à 5. Le score est calculé comme <strong>(moyenne + médiane) ÷ 2</strong> — cela réduit l'impact des notes extrêmes. Le livre avec le <strong>plus haut score</strong> est élu. Tout score <strong>≤ 2,9</strong> élimine le livre définitivement. Si vous avez <strong>déjà lu</strong> un livre, cochez la case pour l'exclure de votre vote.
     </div>
     <div style="font-size:.82rem;color:var(--muted);margin-bottom:.6rem">
       🔢 <strong style="color:var(--text)">1</strong> = je veux le moins lire &nbsp;·&nbsp; <strong style="color:var(--text)">5</strong> = je veux le plus lire
