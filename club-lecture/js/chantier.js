@@ -226,7 +226,7 @@ async function renderTabDispersion() {
     </div>
     <div style="overflow-x:auto;margin-top:.75rem">
       <div style="min-width:${minWidth}px">
-        <canvas id="chart-dispersion" height="200"></canvas>
+        <canvas id="chart-dispersion" height="165"></canvas>
       </div>
     </div>
     <div class="cht-disp-legend">${legendItems}</div>`;
