@@ -13,7 +13,6 @@ export function initNav(active) {
     { id: "membres",      href: "/club-lecture/membres.html",      icon: "👥", label: "Membres" },
     { id: "reunions",     href: "/club-lecture/reunions.html",     icon: "📝", label: "Réunions" },
     { id: "stats",        href: "/club-lecture/stats.html",        icon: "📊", label: "Statistiques" },
-    { id: "chantier",    href: "/club-lecture/chantier.html",     icon: "⚗️",  label: "Chantier vote" },
   ];
 
   const isLight = document.documentElement.dataset.theme === "light";
@@ -30,6 +29,7 @@ export function initNav(active) {
       </a>
     `).join("")}
     <div class="sidebar-bottom">
+      <a href="/club-lecture/chantier.html" class="sidebar-chantier-link ${active === 'chantier' ? 'active' : ''}" title="Chantier vote (temporaire)">🚧</a>
       <a href="/" class="sidebar-home-link">
         <span>🏠</span>
         <span>Accueil du site</span>

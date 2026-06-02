@@ -37,6 +37,13 @@ function escapeHtml(s) {
   return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+function median(arr) {
+  if (!arr.length) return null;
+  const s = [...arr].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 === 0 ? (s[m - 1] + s[m]) / 2 : s[m];
+}
+
 // ── Toggle infos livres (NON persisté en localStorage) ─────────────
 
 document.getElementById("vote-ai-toggle").addEventListener("change", e => {
@@ -105,8 +112,10 @@ async function closeExpiredVote(va) {
       if (n !== undefined && n !== null && n !== "") notes[membreId] = Number(n);
     });
     const vals = Object.values(notes);
-    const moy = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-    return { livre_id, titre: livre?.titre ?? livre_id, auteur: livre?.auteur ?? "", notes, moyenne: moy };
+    const moy  = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    const med  = median(vals);
+    const score = (moy !== null && med !== null) ? (moy + med) / 2 : moy;
+    return { livre_id, titre: livre?.titre ?? livre_id, auteur: livre?.auteur ?? "", notes, moyenne: score };
   });
 
   const withMoy = resultats.filter(r => r.moyenne !== null);
@@ -417,6 +426,18 @@ function renderVotingSection() {
     renderVotingSection();
   });
   document.getElementById("vote-submit").addEventListener("click", handleSubmit);
+
+  // Activer les cases "Déjà lu"
+  document.querySelectorAll(".vt-read-check").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const row = cb.closest("tr");
+      row.classList.toggle("vt-row-read", cb.checked);
+      row.querySelectorAll('input[type="radio"]').forEach(r => {
+        r.disabled = cb.checked;
+        if (cb.checked) r.checked = false;
+      });
+    });
+  });
 }
 
 // ── Tableau vote Tour 1 (notes 1–5) ───────────────────────────────
@@ -451,6 +472,13 @@ function renderVotingTable(livresPropo, disabled) {
           style="cursor:${disabled ? "default" : "pointer"};width:18px;height:18px;accent-color:var(--accent)">
       </td>`).join("");
 
+    const readCheck = !disabled
+      ? `<label class="vt-read-label">
+           <input type="checkbox" class="vt-read-check" data-livre="${l.id}">
+           <span>Déjà lu — je passe</span>
+         </label>`
+      : "";
+
     return `<tr class="vt-row">
       <td class="vt-label-cell">
         <span class="vote-book-tooltip-wrap">
@@ -458,6 +486,7 @@ function renderVotingTable(livresPropo, disabled) {
           ${l.auteur ? `<span class="vt-auteur"> — ${escapeHtml(l.auteur)}</span>` : ""}
           ${tooltipLines ? `<span class="vote-book-tooltip">${tooltipLines}</span>` : ""}
         </span>
+        ${readCheck}
       </td>
       ${radios}
     </tr>`;
@@ -465,7 +494,7 @@ function renderVotingTable(livresPropo, disabled) {
 
   return `
     <div class="vt-rules">
-      📋 <strong>Comment ça marche :</strong> notez chaque livre de 1 à 5. Le livre avec la <strong>plus haute moyenne</strong> est élu ce mois-ci. Tout livre dont la moyenne est <strong>≤ 2,5</strong> est définitivement éliminé de la liste.
+      📋 <strong>Comment ça marche :</strong> notez chaque livre de 1 à 5. Le score est calculé comme <strong>(moyenne + médiane) ÷ 2</strong> — cela réduit l'impact des notes extrêmes. Le livre avec le <strong>plus haut score</strong> est élu. Tout score <strong>≤ 2,5</strong> élimine le livre définitivement. Si vous avez <strong>déjà lu</strong> un livre, cochez la case pour l'exclure de votre vote.
     </div>
     <div style="font-size:.82rem;color:var(--muted);margin-bottom:.6rem">
       🔢 <strong style="color:var(--text)">1</strong> = je veux le moins lire &nbsp;·&nbsp; <strong style="color:var(--text)">5</strong> = je veux le plus lire
@@ -575,7 +604,8 @@ async function handleSubmit() {
     if (checked) notes[livre_id] = Number(checked.value);
   });
 
-  const manquants = (voteActif.livre_ids || []).filter(id => notes[id] === undefined);
+  const dejaLus = new Set([...document.querySelectorAll(".vt-read-check:checked")].map(el => el.dataset.livre));
+  const manquants = (voteActif.livre_ids || []).filter(id => !dejaLus.has(id) && notes[id] === undefined);
   if (manquants.length) {
     showToast(`Donnez une note à chaque livre (${manquants.length} manquant${manquants.length > 1 ? "s" : ""}).`, "error");
     return;
