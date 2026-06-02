@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chantier vote — Club de lecture</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main class="main">
+    <div class="page-header">
+      <h1>⚗️ Chantier vote</h1>
+    </div>
+
+    <!-- Disclaimer -->
+    <div class="cht-disclaimer">
+      <div class="cht-disclaimer-title">🚧 Page temporaire — espace d'analyse expérimentale</div>
+      <div class="cht-disclaimer-body">
+        Cette page est un outil provisoire pour explorer les données du dernier vote et évaluer des alternatives au système d'élection actuel. Elle <strong>ne modifie rien</strong> au fonctionnement du club et sera retirée une fois la décision prise.
+        <br><br>
+        <strong>Contexte :</strong> notre système actuel utilise la <em>moyenne</em> des notes 1–5. Une note extrêmement basse (vote stratégique) peut fortement peser sur la moyenne d'un livre. Nous explorons ici des alternatives et des outils pour quantifier cet impact.
+      </div>
+    </div>
+
+    <!-- Info vote analysé -->
+    <div id="chantier-vote-info" style="margin-bottom:1.25rem"></div>
+
+    <!-- Onglets -->
+    <div class="cht-tabs">
+      <button class="cht-tab active" data-tab="mediane">📊 Médiane</button>
+      <button class="cht-tab" data-tab="simulation">🔬 Simulation</button>
+      <button class="cht-tab" data-tab="impact">⚡ Impact votants</button>
+    </div>
+
+    <!-- Tab 1 : Médiane -->
+    <div id="tab-mediane" class="cht-tab-content">
+      <div class="loading">Chargement…</div>
+    </div>
+
+    <!-- Tab 2 : Simulation -->
+    <div id="tab-simulation" class="cht-tab-content hidden">
+      <div class="loading">Chargement…</div>
+    </div>
+
+    <!-- Tab 3 : Impact -->
+    <div id="tab-impact" class="cht-tab-content hidden">
+      <div class="loading">Chargement…</div>
+    </div>
+  </main>
+
+  <script type="module" src="js/nav.js"></script>
+  <script type="module" src="js/chantier.js"></script>
+</body>
+</html>

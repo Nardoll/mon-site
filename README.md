@@ -24,6 +24,8 @@ Site **personnel et privé** de Tom. Multi-sections indépendantes. La page d'ac
 - `/atelier/` — Outil de world-building solo procédural, en développement actif
 - `/recettes/` — Supprimée de l'accueil public (dossier conservé mais non lié)
 
+> **Page temporaire :** `/club-lecture/chantier.html` — espace d'analyse expérimentale pour évaluer des alternatives au système de vote. À supprimer une fois la décision prise.
+
 ---
 
 ## Stack technique
@@ -1018,6 +1020,16 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 ---
 
 ## Historique des modifications
+
+### 2026-06-02 (suite 6)
+**Club — Page temporaire "Chantier vote" (analyse expérimentale)**
+
+- `club-lecture/chantier.html` + `club-lecture/js/chantier.js` : nouvelle page d'analyse accessible via la sidebar (⚗️ Chantier vote), protégée par mot de passe. Bannière disclaimer expliquant le caractère temporaire et le contexte (réflexion sur le vote stratégique).
+- **Onglet 1 — Médiane** : reprend les données du dernier vote terminé et recalcule les résultats avec la médiane à la place de la moyenne. Tableau comparatif moy. vs médiane avec badges résultat pour chaque livre. Alerte si le résultat changerait ou si la médiane produit une égalité.
+- **Onglet 2 — Simulation** : cases à cocher pour inclure/exclure chaque votant. Recalcule les moyennes et résultats en temps réel avec les votants sélectionnés. Permet de voir l'impact d'un ou plusieurs votants sur le résultat final.
+- **Onglet 3 — Impact votants** : tableau croisé votant × livre. Chaque cellule = note donnée − moyenne des autres votants pour ce livre. Colonne "Impact ±" = écart absolu moyen du votant sur tous les livres (⚡ si parmi les plus élevés). Trié par impact décroissant pour repérer facilement les votes atypiques.
+- `club-lecture/js/nav.js` : ajout du lien "⚗️ Chantier vote" après Statistiques.
+- `club-lecture/css/style.css` : styles `.cht-*` complets (disclaimer, onglets, tableau, badges, impact, simulation).
 
 ### 2026-06-02 (suite 5)
 **Réunions — Séparation "présence" / "a lu le livre" + Vote — explication des règles + dégradé de couleur**
