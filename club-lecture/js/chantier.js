@@ -210,21 +210,26 @@ async function renderTabDispersion() {
   const resultats = lastVote.resultats || [];
   if (!resultats.length) { el.innerHTML = `<div style="color:var(--muted)">Aucune donnée.</div>`; return; }
 
-  const minWidth = Math.max(520, resultats.length * 78);
+  const minWidth = Math.max(420, resultats.length * 58);
+  const legendItems = resultats.map((r, i) =>
+    `<div class="cht-disp-legend-item"><span class="cht-disp-legend-num">${i + 1}</span>${r.titre}${r.auteur ? ` <span style="color:var(--muted);font-size:.72rem">— ${r.auteur}</span>` : ""}</div>`
+  ).join("");
+
   el.innerHTML = `
     <div class="cht-section-label">Dispersion des votes par livre — ${formatMois(lastVote.mois, lastVote.annee)}</div>
     <div class="cht-expl">
       Chaque <strong>petit cercle bleuté</strong> = la note d'un votant (légèrement décalé si plusieurs ont la même note).
-      <span style="white-space:nowrap"><strong style="color:#9b59b6">▲ Triangle violet</strong> = <strong>médiane</strong> — le centre de référence</span> ·
-      <span style="white-space:nowrap"><strong style="color:var(--accent)">◆ Losange orange</strong> = moyenne (dérive ± vs médiane)</span> ·
-      <span style="white-space:nowrap"><strong style="color:#4ab870">★ Étoile verte</strong> = combiné ÷2 (dérive ± vs médiane)</span>
-      <br><small style="opacity:.65;line-height:1.5;display:block;margin-top:.3rem">La médiane est le centre de référence : elle représente le "votant du milieu" et résiste aux extrêmes. Sous chaque titre, l'indicateur <em>moy ±X</em> montre de combien la moyenne dérive par rapport à cette médiane — un écart important révèle l'influence des notes extrêmes.</small>
+      <span style="white-space:nowrap"><strong style="color:#9b59b6">▲ violet</strong> = médiane (référence)</span> ·
+      <span style="white-space:nowrap"><strong style="color:var(--accent)">◆ orange</strong> = moyenne</span> ·
+      <span style="white-space:nowrap"><strong style="color:#4ab870">★ vert</strong> = combiné ÷2</span>
+      — survolez un point pour voir la dérive vs médiane.
     </div>
     <div style="overflow-x:auto;margin-top:.75rem">
       <div style="min-width:${minWidth}px">
-        <canvas id="chart-dispersion" height="320"></canvas>
+        <canvas id="chart-dispersion" height="240"></canvas>
       </div>
-    </div>`;
+    </div>
+    <div class="cht-disp-legend">${legendItems}</div>`;
 
   await loadChartJs();
 
@@ -279,7 +284,7 @@ async function renderTabDispersion() {
     };
   });
 
-  const labels = resultats.map(r => r.titre.length > 17 ? r.titre.slice(0, 15) + "…" : r.titre);
+  const labels = resultats.map((_, i) => String(i + 1));
 
   new Chart(document.getElementById("chart-dispersion"), {
     type: "scatter",
@@ -377,20 +382,10 @@ async function renderTabDispersion() {
           ticks: {
             stepSize: 1,
             color: mutedClr,
-            maxRotation: 42,
-            minRotation: 25,
+            maxRotation: 0,
             callback: val => {
               const i = Math.round(val);
-              if (Math.abs(val - i) < 0.01 && labels[i]) {
-                const dev = deviations[i];
-                // Afficher l'écart moy-méd sous le titre si significatif
-                if (dev?.moyDrift !== null && Math.abs(dev.moyDrift) > 0.05) {
-                  const sign = dev.moyDrift > 0 ? "+" : "";
-                  return [labels[i], `moy ${sign}${dev.moyDrift.toFixed(2)}`];
-                }
-                return labels[i];
-              }
-              return null;
+              return Math.abs(val - i) < 0.01 ? labels[i] : null;
             }
           },
           grid: { color: borderClr }
