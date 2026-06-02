@@ -3,6 +3,16 @@ import { initNav } from "./nav.js";
 import { getMembres, getVotes } from "./db.js";
 import { formatMois } from "./utils.js";
 
+async function loadChartJs() {
+  if (window.Chart) return;
+  await new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js";
+    s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
 await requireAuth();
 initNav("chantier");
 
@@ -81,6 +91,7 @@ async function init() {
     </div>`;
 
   renderTabCombine();
+  renderTabDispersion();
   renderTabInfluence();
   renderTabMediane();
   renderTabSimulation();
@@ -190,6 +201,163 @@ function renderTabCombine() {
       </table>
     </div>
     <div class="cht-footnote">Score combiné = (moyenne + médiane) ÷ 2 · Seuil d'élimination : ≤ 2,5 · Trié par score combiné décroissant</div>`;
+}
+
+// ── Onglet Dispersion ─────────────────────────────────────────────
+
+async function renderTabDispersion() {
+  const el = document.getElementById("tab-dispersion");
+  const resultats = lastVote.resultats || [];
+  if (!resultats.length) { el.innerHTML = `<div style="color:var(--muted)">Aucune donnée.</div>`; return; }
+
+  const minWidth = Math.max(520, resultats.length * 78);
+  el.innerHTML = `
+    <div class="cht-section-label">Dispersion des votes par livre — ${formatMois(lastVote.mois, lastVote.annee)}</div>
+    <div class="cht-expl">
+      Chaque <strong>petit cercle bleuté</strong> = la note d'un votant. Quand plusieurs personnes donnent la même note, les points sont légèrement décalés horizontalement pour éviter la superposition.
+      <span style="white-space:nowrap"><strong style="color:var(--accent)">◆ Losange orange</strong> = moyenne</span> ·
+      <span style="white-space:nowrap"><strong style="color:#9b59b6">▲ Triangle violet</strong> = médiane</span> ·
+      <span style="white-space:nowrap"><strong style="color:#4ab870">★ Étoile verte</strong> = combiné (moy+méd)÷2</span>
+      <br><small style="opacity:.65;line-height:1.5;display:block;margin-top:.3rem">Le centre de gravité physique d'un nuage de points est mathématiquement identique à la moyenne — ce sont la même chose. La médiane minimise la distance absolue plutôt que la distance au carré, ce qui la rend plus robuste aux valeurs extrêmes.</small>
+    </div>
+    <div style="overflow-x:auto;margin-top:.75rem">
+      <div style="min-width:${minWidth}px">
+        <canvas id="chart-dispersion" height="320"></canvas>
+      </div>
+    </div>`;
+
+  await loadChartJs();
+
+  const cs       = getComputedStyle(document.documentElement);
+  const borderClr = cs.getPropertyValue("--border").trim() || "#333";
+  const mutedClr  = cs.getPropertyValue("--muted").trim()  || "#888";
+  const accentClr = cs.getPropertyValue("--accent").trim() || "#e8a44a";
+
+  // Construire les datasets
+  const votePoints     = [];
+  const meanPoints     = [];
+  const medianPoints   = [];
+  const combinedPoints = [];
+
+  resultats.forEach((r, idx) => {
+    const notes = Object.values(r.notes || {}).map(Number).filter(n => !isNaN(n));
+    if (!notes.length) return;
+
+    // Jitter : regrouper par valeur de note, étaler horizontalement
+    const groups = {};
+    notes.forEach(n => { (groups[n] = groups[n] || []).push(n); });
+    Object.entries(groups).forEach(([noteVal, arr]) => {
+      const count  = arr.length;
+      const spread = count > 1 ? Math.min(0.33, (count - 1) * 0.09) : 0;
+      arr.forEach((_, i) => {
+        const offset = count > 1 ? -spread / 2 + i * (spread / (count - 1)) : 0;
+        votePoints.push({ x: idx + offset, y: Number(noteVal) });
+      });
+    });
+
+    const moy  = r.moyenne ?? mean(notes);
+    const med  = median(notes);
+    const comb = moy !== null && med !== null ? (moy + med) / 2 : null;
+    if (moy  !== null) meanPoints.push({ x: idx, y: moy });
+    if (med  !== null) medianPoints.push({ x: idx, y: med });
+    if (comb !== null) combinedPoints.push({ x: idx, y: comb });
+  });
+
+  const labels = resultats.map(r => r.titre.length > 17 ? r.titre.slice(0, 15) + "…" : r.titre);
+
+  new Chart(document.getElementById("chart-dispersion"), {
+    type: "scatter",
+    data: {
+      datasets: [
+        {
+          label: "Votes individuels",
+          data: votePoints,
+          backgroundColor: "rgba(130,145,210,0.38)",
+          borderColor:     "rgba(130,145,210,0.65)",
+          borderWidth: 1,
+          pointRadius: 5.5,
+          pointHoverRadius: 7,
+          pointStyle: "circle",
+          order: 4,
+        },
+        {
+          label: "Moyenne",
+          data: meanPoints,
+          backgroundColor: accentClr,
+          borderColor: "#fff",
+          borderWidth: 2,
+          pointRadius: 10,
+          pointHoverRadius: 12,
+          pointStyle: "rectRot",
+          order: 1,
+        },
+        {
+          label: "Médiane",
+          data: medianPoints,
+          backgroundColor: "#9b59b6",
+          borderColor: "#fff",
+          borderWidth: 2,
+          pointRadius: 10,
+          pointHoverRadius: 12,
+          pointStyle: "triangle",
+          order: 2,
+        },
+        {
+          label: "Combiné (moy+méd)÷2",
+          data: combinedPoints,
+          backgroundColor: "#4ab870",
+          borderColor: "#fff",
+          borderWidth: 2,
+          pointRadius: 10,
+          pointHoverRadius: 12,
+          pointStyle: "star",
+          order: 3,
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      animation: { duration: 700, easing: "easeInOutQuart" },
+      plugins: {
+        legend: {
+          position: "top",
+          labels: { color: mutedClr, font: { size: 12 }, usePointStyle: true, pointStyleWidth: 14, padding: 18 }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const titre = resultats[Math.round(ctx.parsed.x)]?.titre ?? "";
+              return `${ctx.dataset.label} — ${titre} : ${ctx.parsed.y.toFixed(2)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: "linear",
+          min: -0.5,
+          max: resultats.length - 0.5,
+          ticks: {
+            stepSize: 1,
+            color: mutedClr,
+            maxRotation: 42,
+            minRotation: 25,
+            callback: val => {
+              const i = Math.round(val);
+              return Math.abs(val - i) < 0.01 ? (labels[i] ?? null) : null;
+            }
+          },
+          grid: { color: borderClr }
+        },
+        y: {
+          min: 0.5,
+          max: 5.5,
+          ticks: { stepSize: 1, color: mutedClr },
+          grid: { color: borderClr }
+        }
+      }
+    }
+  });
 }
 
 // ── Onglet Influence membres ──────────────────────────────────────
