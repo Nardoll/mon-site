@@ -1,6 +1,6 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getMembres, getLivres, getVotes, getStatutsForLivre, upsertStatutLecture, getLivreById, updateLivre, addCommentaire, getCommentairesForLivre, getReunions, addProgressionPoint, getProgressionForLivre } from "./db.js";
+import { getMembres, getLivres, getVotes, getStatutsForLivre, upsertStatutLecture, getLivreById, updateLivre, addCommentaire, getCommentairesForLivre, getReunions, addProgressionPoint, getProgressionForLivre, updateReunion } from "./db.js";
 import { formatMois, formatDate, STATUTS_LECTURE, initiales, showToast } from "./utils.js";
 
 await requireAuth();
@@ -11,8 +11,21 @@ let currentLivreId = null, currentVote = null, editMembreId = null;
 let currentLivre = null, statutByMembre = {};
 let chartInstance = null, chartVisible = false;
 
+async function migrerLecteursIds(reunions) {
+  const aMigrer = reunions.filter(r => r.lecteurs_ids == null);
+  if (!aMigrer.length) return;
+  await Promise.all(aMigrer.map(r => {
+    const lecteurs_ids = Object.entries(r.notes_finales || {})
+      .filter(([, note]) => Number(note) > 0)
+      .map(([id]) => id);
+    r.lecteurs_ids = lecteurs_ids;
+    return updateReunion(r.id, { lecteurs_ids });
+  }));
+}
+
 async function init() {
   [allVotes, allMembres, allLivres, allReunions] = await Promise.all([getVotes(), getMembres(), getLivres(), getReunions()]);
+  await migrerLecteursIds(allReunions);
   renderFrise();
   await renderCurrentBook();
   renderPodium();

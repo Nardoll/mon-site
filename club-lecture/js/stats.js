@@ -25,9 +25,15 @@ function membersWhoFinishedBook(livreId, allStatuts, reunions) {
   allStatuts.filter(s => s.livre_id === livreId && s.statut === "termine")
     .forEach(s => set.add(s.membre_id));
   reunions.filter(r => r.livre_id === livreId).forEach(r => {
-    Object.entries(r.notes_finales || {}).forEach(([memId, note]) => {
-      if (Number(note) > 0) set.add(memId);
-    });
+    if (r.lecteurs_ids != null) {
+      // Nouveau système : qui a lu le livre est coché dans lecteurs_ids
+      (r.lecteurs_ids || []).forEach(memId => set.add(memId));
+    } else {
+      // Rétrocompat : anciennes réunions sans lecteurs_ids → utiliser notes_finales > 0
+      Object.entries(r.notes_finales || {}).forEach(([memId, note]) => {
+        if (Number(note) > 0) set.add(memId);
+      });
+    }
   });
   return set;
 }

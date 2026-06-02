@@ -10,10 +10,24 @@ let reunions = [], membres = [], livres = [], votes = [];
 let currentReunionId = null;
 let editReunionId = null;
 
+// Migration one-shot : peuple lecteurs_ids depuis notes_finales pour les anciennes réunions
+async function migrerLecteursIds() {
+  const aMigrer = reunions.filter(r => r.lecteurs_ids == null);
+  if (!aMigrer.length) return;
+  await Promise.all(aMigrer.map(r => {
+    const lecteurs_ids = Object.entries(r.notes_finales || {})
+      .filter(([, note]) => Number(note) > 0)
+      .map(([id]) => id);
+    r.lecteurs_ids = lecteurs_ids;
+    return updateReunion(r.id, { lecteurs_ids });
+  }));
+}
+
 async function init() {
   [reunions, membres, livres, votes] = await Promise.all([
     getReunions(), getMembres(), getLivres(), getVotes()
   ]);
+  await migrerLecteursIds();
   renderList();
   const openId = new URLSearchParams(window.location.search).get("open");
   if (openId) openDetail(openId);
@@ -101,47 +115,43 @@ function renderDetailContent(r) {
   const participants = r.participant_ids || [];
   const nf = computeNoteFinale(r);
 
-  // Membres ayant une note mais pas participants (lecture hors réunion)
-  const notedAbsents = Object.keys(r.notes_finales || {}).filter(id => !participants.includes(id));
+  // Qui a lu le livre : lecteurs_ids si défini (nouveau système), sinon les membres de notes_finales (rétrocompat)
+  const lecteurs = r.lecteurs_ids != null ? [...(r.lecteurs_ids || [])] : Object.keys(r.notes_finales || {});
+  // Membres avec une note mais pas encore dans lecteurs (données antérieures)
+  const extraNotés = Object.keys(r.notes_finales || {}).filter(id => !lecteurs.includes(id));
 
-  function noteRow(membreId, isAbsent) {
+  function noteRow(membreId) {
     const note = r.notes_finales?.[membreId] ?? "";
-    const badge = isAbsent
-      ? `<span style="font-size:.72rem;color:var(--muted);border:1px solid var(--border);border-radius:4px;padding:.1em .4em;flex-shrink:0">absent</span>`
-      : "";
     return `<div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.4rem">
       <a href="membres.html?open=${membreId}" style="flex:1;font-size:.88rem;color:inherit;text-decoration:none">${nomMembre(membreId)}</a>
-      ${badge}
       <input type="number" class="note-finale-input" data-membre="${membreId}"
         min="1" max="10" step="0.5" placeholder="—" value="${note}" style="width:80px">
       <span style="font-size:.78rem;color:var(--muted)">/10</span>
     </div>`;
   }
 
-  const participantRows = participants.length
-    ? participants.map(id => noteRow(id, false)).join("")
-    : `<div class="text-muted" style="font-size:.85rem">Aucun participant enregistré.</div>`;
+  const lecteurRows = lecteurs.length
+    ? lecteurs.map(id => noteRow(id)).join("")
+    : `<div class="text-muted" style="font-size:.85rem">Aucun lecteur enregistré. Ajoutez les membres ayant lu ce livre.</div>`;
 
-  const absentRows = notedAbsents.length
+  const extraRows = extraNotés.length
     ? `<div style="margin-top:.65rem;padding-top:.65rem;border-top:1px dashed var(--border)">
-        <div style="font-size:.75rem;color:var(--muted);margin-bottom:.4rem">Ayant lu hors réunion</div>
-        ${notedAbsents.map(id => noteRow(id, true)).join("")}
+        <div style="font-size:.75rem;color:var(--muted);margin-bottom:.4rem">Données antérieures</div>
+        ${extraNotés.map(id => noteRow(id)).join("")}
        </div>`
     : "";
 
-  // Dropdown pour ajouter un membre absent
-  const membresDisponibles = membres.filter(m =>
-    !participants.includes(m.id) && !notedAbsents.includes(m.id)
-  );
-  const addAbsentHtml = membresDisponibles.length
+  // Dropdown : membres pas encore dans lecteurs
+  const membresDisponibles = membres.filter(m => !lecteurs.includes(m.id) && !extraNotés.includes(m.id));
+  const addLecteurHtml = membresDisponibles.length
     ? `<div style="margin-top:.75rem;padding-top:.75rem;border-top:1px dashed var(--border)">
-        <div style="font-size:.78rem;color:var(--muted);margin-bottom:.4rem">Ajouter un membre ayant lu hors réunion :</div>
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:.4rem">Ajouter un lecteur :</div>
         <div style="display:flex;gap:.5rem;align-items:center">
-          <select id="absent-select" style="flex:1">
+          <select id="lecteur-select" style="flex:1">
             <option value="">— Choisir un membre —</option>
             ${membresDisponibles.map(m => `<option value="${m.id}">${m.nom}</option>`).join("")}
           </select>
-          <button class="btn btn-secondary btn-sm" id="add-absent-btn">Ajouter</button>
+          <button class="btn btn-secondary btn-sm" id="add-lecteur-btn">Ajouter</button>
         </div>
        </div>`
     : "";
@@ -150,13 +160,17 @@ function renderDetailContent(r) {
     ? `<a href="bibliotheque.html?open=${r.livre_id}" style="color:var(--accent);text-decoration:none">${getLivreTitle(r.livre_id)} →</a>`
     : "—";
 
+  const participantsLinks = participants.length
+    ? participants.map(id => `<a href="membres.html?open=${id}" style="color:var(--accent);text-decoration:none">${nomMembre(id)}</a>`).join(", ")
+    : "—";
+
   document.getElementById("detail-content").innerHTML = `
     <dl class="book-detail-meta">
       <dt>Statut</dt><dd>${r.statut === "passee" ? "✅ Passée" : "📅 Prévue"}</dd>
       <dt>Date</dt><dd>${r.date ? formatDate(r.date) : "Non fixée"}</dd>
       <dt>Mois</dt><dd>${formatMois(r.mois, r.annee)}</dd>
       <dt>Livre</dt><dd>${livreLink}</dd>
-      <dt>Participants</dt><dd>${participants.map(id => `<a href="membres.html?open=${id}" style="color:var(--accent);text-decoration:none">${nomMembre(id)}</a>`).join(", ") || "—"}</dd>
+      <dt>Présents</dt><dd>${participantsLinks}</dd>
       ${r.lien_video ? `<dt>Vidéo</dt><dd><a href="${r.lien_video}" target="_blank" rel="noopener" style="color:var(--accent)">Voir l'enregistrement →</a></dd>` : ""}
     </dl>
     ${r.compte_rendu ? `
@@ -165,13 +179,13 @@ function renderDetailContent(r) {
       <div style="font-size:.88rem;line-height:1.7;white-space:pre-wrap">${r.compte_rendu}</div>` : ""}
     <div class="divider"></div>
     <div class="card-title mb-2" style="display:flex;align-items:center;gap:.75rem">
-      Notes finales
-      <span style="font-size:.75rem;font-weight:400;color:var(--muted)">sur 10</span>
+      📚 Ont lu le livre
+      <span style="font-size:.75rem;font-weight:400;color:var(--muted)">— notes sur 10</span>
       ${nf !== null ? `<span style="font-size:.88rem;font-weight:800;color:var(--accent);margin-left:auto">Moyenne : ${nf.toFixed(1)}/10</span>` : ""}
     </div>
-    ${participantRows}
-    ${absentRows}
-    ${addAbsentHtml}
+    ${lecteurRows}
+    ${extraRows}
+    ${addLecteurHtml}
     <div style="margin-top:.75rem">
       <button class="btn btn-primary btn-sm" id="save-notes-btn">Enregistrer les notes</button>
     </div>
@@ -193,18 +207,17 @@ function renderDetailContent(r) {
     } catch (e) { showToast("Erreur : " + e.message, "error"); }
   });
 
-  document.getElementById("add-absent-btn")?.addEventListener("click", async () => {
-    const sel = document.getElementById("absent-select");
+  document.getElementById("add-lecteur-btn")?.addEventListener("click", async () => {
+    const sel = document.getElementById("lecteur-select");
     const membreId = sel.value;
     if (!membreId) return;
     const r = reunions.find(x => x.id === currentReunionId);
     if (!r) return;
-    const notes = { ...(r.notes_finales || {}), [membreId]: 0 };
+    const newLecteurs = [...(r.lecteurs_ids || []), membreId];
     try {
-      await updateReunion(currentReunionId, { notes_finales: notes });
-      r.notes_finales = notes;
-      renderList();
-      showToast(`${nomMembre(membreId)} ajouté. Entrez sa note et enregistrez.`, "success");
+      await updateReunion(currentReunionId, { lecteurs_ids: newLecteurs });
+      r.lecteurs_ids = newLecteurs;
+      showToast(`${nomMembre(membreId)} ajouté comme lecteur.`, "success");
       openDetail(currentReunionId);
     } catch (e) { showToast("Erreur : " + e.message, "error"); }
   });
@@ -259,6 +272,13 @@ function openFormModal(existing = null) {
       ${m.nom}
     </label>`).join("");
 
+  const selectedLecteurs = new Set(existing?.lecteurs_ids ?? []);
+  document.getElementById("r-lecteurs-list").innerHTML = membres.map(m => `
+    <label class="check-item">
+      <input type="checkbox" name="r-lecteur" value="${m.id}" ${selectedLecteurs.has(m.id) ? "checked" : ""}>
+      ${m.nom}
+    </label>`).join("");
+
   updateLivreDisplay();
   document.getElementById("detail-overlay").classList.add("hidden");
   document.getElementById("form-overlay").classList.remove("hidden");
@@ -280,6 +300,7 @@ document.getElementById("form-save").addEventListener("click", async () => {
   const annee = Number(document.getElementById("r-annee").value);
   const livre = getLivreForMois(mois, annee);
   const participant_ids = [...document.querySelectorAll("input[name='r-membre']:checked")].map(el => el.value);
+  const lecteurs_ids = [...document.querySelectorAll("input[name='r-lecteur']:checked")].map(el => el.value);
   const data = {
     statut: document.getElementById("r-statut").value,
     date: document.getElementById("r-date").value || null,
@@ -287,6 +308,7 @@ document.getElementById("form-save").addEventListener("click", async () => {
     annee,
     livre_id: livre?.id ?? null,
     participant_ids,
+    lecteurs_ids,
     compte_rendu: document.getElementById("r-compte-rendu").value.trim(),
     lien_video: document.getElementById("r-lien-video").value.trim() || null,
   };

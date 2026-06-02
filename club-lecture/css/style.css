@@ -805,6 +805,30 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 .vt-titre { font-size:.82rem; color:var(--accent); font-weight:500; line-height:1.35; }
 .vt-auteur { font-size:.75rem; color:var(--muted); }
 
+/* Dégradé couleur colonnes de vote */
+.vt-col-1 { background: rgba(210,55,55,0.15); }
+.vt-col-2 { background: rgba(220,125,40,0.13); }
+.vt-col-3 { background: rgba(190,170,30,0.10); }
+.vt-col-4 { background: rgba(75,185,80,0.10); }
+.vt-col-5 { background: rgba(35,145,55,0.15); }
+[data-theme="light"] .vt-col-1 { background: rgba(210,55,55,0.09); }
+[data-theme="light"] .vt-col-2 { background: rgba(220,125,40,0.08); }
+[data-theme="light"] .vt-col-3 { background: rgba(190,170,30,0.07); }
+[data-theme="light"] .vt-col-4 { background: rgba(75,185,80,0.08); }
+[data-theme="light"] .vt-col-5 { background: rgba(35,145,55,0.10); }
+.vt-col-num { display:block; line-height:1.1; }
+.vt-elim-tag { display:block; font-size:.58rem; color:rgba(220,70,70,.85); font-weight:700; letter-spacing:.01em; margin-top:.15rem; }
+[data-theme="light"] .vt-elim-tag { color:rgba(185,35,35,.8); }
+.vt-rules {
+  font-size:.83rem; line-height:1.6;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  padding: .65rem 1rem;
+  margin-bottom: .9rem;
+  color: var(--text);
+}
+
 /* Tooltip livres (visible quand toggle ON + hover) */
 .vote-book-tooltip-wrap { position:relative; display:inline; }
 .vote-book-tooltip {

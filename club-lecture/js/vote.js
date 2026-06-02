@@ -427,7 +427,13 @@ function renderVotingTable(livresPropo, disabled) {
   }
 
   const ratings = [1, 2, 3, 4, 5];
-  const headerCells = ratings.map(n => `<th class="vt-header-cell">${n}/5</th>`).join("");
+  const headerCells = ratings.map(n => {
+    const isElim = n <= 2;
+    return `<th class="vt-header-cell vt-col-${n}">
+      <span class="vt-col-num">${n}/5</span>
+      ${isElim ? '<span class="vt-elim-tag">&#9249; élim.</span>' : ''}
+    </th>`;
+  }).join("");
 
   const rows = livresPropo.map(l => {
     const tooltipLines = [
@@ -439,7 +445,7 @@ function renderVotingTable(livresPropo, disabled) {
     ].filter(Boolean).join(" · ");
 
     const radios = ratings.map(n => `
-      <td class="vt-radio-cell">
+      <td class="vt-radio-cell vt-col-${n}">
         <input type="radio" name="vr-${l.id}" value="${n}"
           ${disabled ? "disabled" : ""}
           style="cursor:${disabled ? "default" : "pointer"};width:18px;height:18px;accent-color:var(--accent)">
@@ -458,6 +464,9 @@ function renderVotingTable(livresPropo, disabled) {
   }).join("");
 
   return `
+    <div class="vt-rules">
+      📋 <strong>Comment ça marche :</strong> notez chaque livre de 1 à 5. Le livre avec la <strong>plus haute moyenne</strong> est élu ce mois-ci. Tout livre dont la moyenne est <strong>≤ 2,5</strong> est définitivement éliminé de la liste.
+    </div>
     <div style="font-size:.82rem;color:var(--muted);margin-bottom:.6rem">
       🔢 <strong style="color:var(--text)">1</strong> = je veux le moins lire &nbsp;·&nbsp; <strong style="color:var(--text)">5</strong> = je veux le plus lire
     </div>

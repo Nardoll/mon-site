@@ -261,7 +261,7 @@ export async function getReunions() {
   return snap(s).sort((a, b) => (b.date?.seconds ?? 0) - (a.date?.seconds ?? 0));
 }
 
-export async function addReunion({ statut, date, mois, annee, livre_id, participant_ids, compte_rendu, lien_video }) {
+export async function addReunion({ statut, date, mois, annee, livre_id, participant_ids, lecteurs_ids, compte_rendu, lien_video }) {
   return addDoc(collection(db, "reunions"), {
     statut,
     date: date ? Timestamp.fromDate(new Date(date)) : null,
@@ -269,6 +269,7 @@ export async function addReunion({ statut, date, mois, annee, livre_id, particip
     annee: Number(annee),
     livre_id: livre_id || null,
     participant_ids: participant_ids || [],
+    lecteurs_ids: lecteurs_ids || [],
     compte_rendu: compte_rendu || "",
     lien_video: lien_video || null,
     notes_finales: {},

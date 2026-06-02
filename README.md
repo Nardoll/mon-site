@@ -261,14 +261,16 @@ Page de gestion des réunions du club. Chaque réunion correspond à une séance
   - Statut : `prevue` ou `passee`
   - Date (optionnelle) : champ date
   - Mois/Année : le livre élu de ce mois est affiché automatiquement sous le champ (`#livre-display`)
-  - Participants : liste de cases à cocher (tous les membres)
+  - **Présents à la réunion** : liste de cases à cocher (`participant_ids`) — qui était là physiquement
+  - **Ont lu le livre** : liste de cases à cocher (`lecteurs_ids`) — indépendant de la présence, peut inclure des membres qui ont lu seuls
   - Compte rendu : textarea libre
   - Lien vidéo : URL optionnelle
 - **Fiche détail** (modal `#detail-overlay`) :
-  - Toutes les métadonnées + compte rendu + lien vidéo
-  - **Notes finales** : pour chaque participant, un input (1–10) pour saisir sa note de lecture. Bouton "💾 Enregistrer les notes" → met à jour `notes_finales` dans Firestore → recalcule et affiche la note finale moyenne (`computeNoteFinale()`)
+  - Métadonnées (statut, date, mois, livre, présents) + compte rendu + lien vidéo
+  - **Section "📚 Ont lu le livre"** : pour chaque membre dans `lecteurs_ids`, un input note (1–10). Bouton "Ajouter un lecteur" (dropdown) → écrit dans `lecteurs_ids` Firestore. Bouton "Enregistrer les notes" → met à jour `notes_finales`. Rétrocompat : si `lecteurs_ids` est null (ancienne réunion), affiche les membres ayant une `notes_finales`.
   - Bouton "✏️ Modifier" → ouvre le formulaire en mode édition (affiche les valeurs existantes)
-- **Note finale** = moyenne des notes finales > 0 des participants. Alimente le **Palmarès** de l'accueil et la **bibliothèque** (tri + affichage).
+- **Note finale** = moyenne de `notes_finales` > 0 (inchangé). Alimente le **Palmarès** de l'accueil et la **bibliothèque** (tri + affichage).
+- **Qui a fini le livre** (stats, pages cumulées, membres actifs) = **`lecteurs_ids`** en priorité. Pour les anciennes réunions sans ce champ : retombe sur `notes_finales > 0` (rétrocompatibilité).
 - **Auto-remplissage du livre** : quand le mois/année change dans le formulaire, `updateLivreDisplay()` cherche le vote correspondant dans la collection `votes` et affiche le livre élu.
 - **Liens croisés** : dans la fiche détail, le titre du livre est cliquable → `bibliotheque.html?open=LIVRE_ID` ; les noms des participants (dans la dl *et* dans le tableau de notes finales) sont cliquables → `membres.html?open=MEMBRE_ID`.
 - **Auto-ouverture** : si l'URL contient `?open=REUNION_ID`, la fiche détail s'ouvre automatiquement au chargement.
@@ -788,7 +790,8 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 | `mois` | number | 1–12 |
 | `annee` | number | |
 | `livre_id` | string \| null | ID du livre élu correspondant |
-| `participant_ids` | array | IDs des membres présents |
+| `participant_ids` | array | IDs des membres présents à la réunion |
+| `lecteurs_ids` | array | IDs des membres ayant lu le livre (indépendant de la présence) |
 | `compte_rendu` | string | Texte libre du compte rendu |
 | `lien_video` | string \| null | URL vidéo (optionnel) |
 | `notes_finales` | map | `{ MEMBRE_ID: note (1-10), … }` |
@@ -1015,6 +1018,27 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 ---
 
 ## Historique des modifications
+
+### 2026-06-02 (suite 5)
+**Réunions — Séparation "présence" / "a lu le livre" + Vote — explication des règles + dégradé de couleur**
+
+**Réunions :**
+- `club-lecture/reunions.html` : nouveau champ "Ont lu le livre" (`#r-lecteurs-list`) dans le formulaire ajout/modification, indépendant de "Présents à la réunion".
+- `club-lecture/js/db.js` : `addReunion()` stocke le nouveau champ `lecteurs_ids: []` dans Firestore.
+- `club-lecture/js/reunions.js` : `openFormModal` peuple les deux listes de cases à cocher (présents / lecteurs). `form-save` collecte `lecteurs_ids`. `renderDetailContent` refonte : la dl "Présents" est info-only ; la section "📚 Ont lu le livre" liste les membres cochés comme lecteurs avec leurs inputs de notes. Bouton "Ajouter un lecteur" (dropdown) remplace l'ancien "Ajouter hors réunion" — il écrit `lecteurs_ids` dans Firestore. **Migration automatique** (`migrerLecteursIds`) : au chargement de la page, toute réunion sans `lecteurs_ids` est migrée une fois — le champ est peuplé depuis les membres ayant `notes_finales > 0`, puis écrit en Firestore. Après migration, toutes les réunions ont le champ.
+- `club-lecture/js/accueil.js` : même fonction `migrerLecteursIds` (page d'accueil chargée en premier → migration déclenchée dès la première visite post-déploiement).
+- `club-lecture/js/stats.js` : `membersWhoFinishedBook()` utilise `lecteurs_ids` si défini, sinon retombe sur `notes_finales > 0` (rétrocompat). Impacte : KPIs "Lectures cumulées" et "Pages cumulées", évolution dans le temps, membres actifs, bilan propositions.
+- `club-lecture/js/membres.js` : filtre des réunions étendu à `lecteurs_ids`. Badge "hors réunion" si lecteur non présent ; "absent" conservé pour les anciennes données (uniquement dans `notes_finales`).
+
+**Vote page (`vote.html`) :**
+- `club-lecture/js/vote.js` : `renderVotingTable()` — encadré `.vt-rules` expliquant les règles (gagnant = plus haute moyenne, éliminé = moyenne ≤ 2,5) ajouté au-dessus du tableau. En-têtes de colonnes 1 et 2 marqués "élim." (`vt-elim-tag`). Classes `vt-col-1` à `vt-col-5` appliquées sur les `<th>` et `<td>`.
+- `club-lecture/css/style.css` : dégradé de couleur colonnes : `.vt-col-1` rouge, `.vt-col-2` orange, `.vt-col-3` jaune, `.vt-col-4` vert clair, `.vt-col-5` vert foncé. Adapté modes sombre et clair. Nouveaux styles `.vt-col-num`, `.vt-elim-tag`, `.vt-rules`.
+
+**Schéma Firestore — nouveau champ sur `reunions` :**
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `lecteurs_ids` | array (string) | IDs des membres ayant lu le livre (indépendant de la présence à la réunion) |
 
 ### 2026-06-02 (suite 4)
 **Stats — Nouvelles sections de statistiques + distribution des notes de vote**
