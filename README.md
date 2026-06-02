@@ -228,11 +228,11 @@ Deux vues alternées :
   - Bouton "Confirmer →" → modal de confirmation récapitulative avant de lancer
 - **Soumettre son bulletin** (modal `#soumettre-overlay`) — flux en deux étapes :
   1. **Étape 1 — Identification** : sélectionner son nom → "Continuer →" → confirmation *"Vous êtes bien [nom] ?"*. Si ce nom a déjà voté → *"[nom] a déjà soumis un vote. Voulez-vous le modifier et écraser le vote précédent ?"*
-  2. **Étape 2 — Notes** : tableau de **boutons radio** (1/5, 2/5, 3/5, 4/5, 5/5), une ligne par livre. Le formulaire est **toujours vide** (jamais pré-rempli, même en cas d'écrasement). Bouton "← Changer" pour revenir à l'étape 1.
+  2. **Étape 2 — Notes** : tableau de **boutons radio** (1/5, 2/5, 3/5, 4/5, 5/5), une ligne par livre. Le formulaire est **toujours vide** (jamais pré-rempli, même en cas d'écrasement). Bouton "← Changer" pour revenir à l'étape 1. Chaque ligne propose une case **"Déjà lu — je passe"** : si cochée, les radios se désactivent et le livre est exclu de la soumission (non compté dans la validation, pas de note envoyée).
   - Les votes des autres membres ne sont jamais visibles dans ce formulaire.
 - **Clôture automatique** : à chaque chargement de `votes.html` ou `vote.html`, si `voteActif.expires_at < now()` → calcule les résultats. Même logique si la page reste ouverte pendant l'expiration (setInterval toutes les secondes).
 - **Clôture anticipée (100% participation)** : dès que le dernier membre soumet son bulletin sur `vote.html`, le vote se clôture immédiatement sans attendre l'heure limite. Même logique que l'expiration normale : détection d'égalité, lancement du tour 2 si besoin, etc. Fonctionne pour le tour 1 et le tour 2.
-- **Logique des résultats (tour 1)** : livre avec la plus haute moyenne (unique) → `elu`, livres avec moyenne ≤ 2.5 → `refuse`. **Égalité au sommet → 2ème tour automatique** (voir ci-dessous).
+- **Logique des résultats (tour 1)** : le score de chaque livre est **(moyenne + médiane) ÷ 2** — réduit l'impact des notes extrêmes. Livre avec le score le plus élevé (unique) → `elu`, livres avec score ≤ 2.5 → `refuse`. **Égalité au sommet → 2ème tour automatique** (voir ci-dessous). Votes passés non affectés (résultats déjà enregistrés en Firestore).
 - **Deuxième tour (égalité)** : si ≥ 2 livres ex-æquo en tête du tour 1, le document `votes_actifs` est transformé en place (champ `tour: 2`) — pas de nouveau document. Le 2ème tour expire le **2 du même mois à 23h59**. Seuls les livres ex-æquo participent. Le vote se fait par **choix unique** (un seul livre par membre, pas de notes). Le livre le plus voté est élu ; si nouvelle égalité → **tirage au sort**. À la clôture du 2ème tour, **un seul document** est sauvegardé dans `votes`, avec le champ `tour2: { resultats, livre_elu, tirage_au_sort }` en plus des résultats du tour 1.
 - **UI `vote.html` au 2ème tour** : bandeau d'explication avec les résultats du tour 1 en barres colorées (⚖️ ex-æquo, Éliminé, Réserve) ; livres hors 2ème tour floutés dans la grille ; formulaire de vote = radio à choix unique (plus de notes 1–5). Légende de l'échelle affichée au-dessus du tableau tour 1 ("1 = je veux le moins lire · 5 = je veux le plus lire").
 - **UI `votes.html` au 2ème tour** : une seule ligne dans la liste ; le détail affiche le graphe + tableau du tour 1 (libellé "Tour 1 — Résultats (égalité)"), puis la section tour 2 avec barres horizontales de voix et mention du tirage au sort si applicable.
@@ -978,6 +978,8 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 - **Pas d'index Firestore composites** — tous les tris se font en JS après récupération complète des collections. Évite les erreurs d'index manquants.
 - **"Refusé" ne s'affiche jamais** — le terme affiché partout est "Éliminé". La valeur stockée en base reste `"refuse"` (ne pas changer la valeur Firestore).
 - **Notes sur 5 — fixe** — l'échelle de vote est toujours /5, sans possibilité de la modifier lors du lancement. La saisie se fait via boutons radio (1/5 à 5/5), pas de champ numérique libre. La détection de l'échelle (5 ou 10) reste automatique dans les graphes de résultats (pour les anciens votes).
+- **Score (moy+méd)÷2** — depuis juin 2026, le score de chaque livre est calculé comme `(moyenne des notes + médiane des notes) / 2`. Réduit l'impact des notes extrêmes (vote stratégique) par rapport à la moyenne seule, sans le problème d'égalités massives de la médiane pure. Stocké dans le champ `moyenne` du document Firestore pour rétrocompatibilité avec l'affichage existant.
+- **"Déjà lu — je passe"** — case à cocher optionnelle par livre dans le tableau de vote. Exclut ce livre de la soumission du votant. Le score du livre est calculé uniquement sur les membres ne l'ayant pas encore lu, évitant l'influence des lectures passées (désir de relire ou de ne pas relire).
 - **Votes permanents** — il n'existe pas de bouton de suppression pour un vote terminé. Seul un vote *actif* peut être annulé (sans enregistrer de résultats). Cela garantit l'intégrité de l'historique.
 - **Soumission de vote anonymisée** — le formulaire de vote est toujours vide à l'ouverture (jamais pré-rempli), que ce soit un premier vote ou un écrasement. Un membre ne voit jamais les notes des autres.
 - **Frise vs Chronologie** — la frise (accueil, en haut) est horizontale et montre TOUS les événements. La chronologie (accueil, en bas) montre uniquement les livres élus, verticalement.
@@ -1021,14 +1023,24 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-06-02 (suite 7)
+**Vote — nouveau calcul (moy+méd)÷2 + option "Déjà lu" + chantier discret**
+
+- `club-lecture/js/vote.js` : ajout de `median()`. `closeExpiredVote` calcule désormais le score comme `(moyenne + médiane) / 2` — stocké dans le champ `moyenne` du résultat Firestore pour rétrocompatibilité. Votes passés non affectés. Explication mise à jour dans l'encadré `.vt-rules` de la page de vote.
+- `club-lecture/js/vote.js` : case à cocher "Déjà lu — je passe" sous le titre de chaque livre dans le tableau de vote. Si cochée : la ligne s'estompe (`vt-row-read`), les radios sont désactivés et le livre est exclu de la soumission et de la validation (`dejaLus` Set).
+- `club-lecture/js/nav.js` : lien Chantier retiré du nav principal. Remplacé par un petit 🚧 discret en bas de la sidebar (opacity 30%, visible au survol).
+- `club-lecture/css/style.css` : nouveaux styles `.vt-read-label`, `.vt-row-read`, `.sidebar-chantier-link`.
+
 ### 2026-06-02 (suite 6)
 **Club — Page temporaire "Chantier vote" (analyse expérimentale)**
 
-- `club-lecture/chantier.html` + `club-lecture/js/chantier.js` : nouvelle page d'analyse accessible via la sidebar (⚗️ Chantier vote), protégée par mot de passe. Bannière disclaimer expliquant le caractère temporaire et le contexte (réflexion sur le vote stratégique).
-- **Onglet 1 — Médiane** : reprend les données du dernier vote terminé et recalcule les résultats avec la médiane à la place de la moyenne. Tableau comparatif moy. vs médiane avec badges résultat pour chaque livre. Alerte si le résultat changerait ou si la médiane produit une égalité.
-- **Onglet 2 — Simulation** : cases à cocher pour inclure/exclure chaque votant. Recalcule les moyennes et résultats en temps réel avec les votants sélectionnés. Permet de voir l'impact d'un ou plusieurs votants sur le résultat final.
-- **Onglet 3 — Impact votants** : tableau croisé votant × livre. Chaque cellule = note donnée − moyenne des autres votants pour ce livre. Colonne "Impact ±" = écart absolu moyen du votant sur tous les livres (⚡ si parmi les plus élevés). Trié par impact décroissant pour repérer facilement les votes atypiques.
-- `club-lecture/js/nav.js` : ajout du lien "⚗️ Chantier vote" après Statistiques.
+- `club-lecture/chantier.html` + `club-lecture/js/chantier.js` : nouvelle page d'analyse protégée par mot de passe, accessible via 🚧 discret en sidebar. Bannière disclaimer expliquant le caractère temporaire.
+- **Onglet Combiné** : résultats du dernier vote simulés avec score (moy+méd)÷2. Tableau comparatif avec alertes si le résultat changerait.
+- **Onglet Dispersion** : strip plot — points individuels par livre (jitterisés), avec ▲ médiane (référence), ◆ moyenne, ★ combiné. Légende numérotée. Tooltip affichant la dérive vs médiane.
+- **Onglet Influence membres** : pour chaque votant, cumul des deltas (moyenne avec/sans lui) → hausse, baisse, delta net (barre), influence totale. Tri par colonne au clic.
+- **Onglet Médiane seule** : même logique que l'onglet Combiné mais avec médiane pure (montre le problème des égalités).
+- **Onglet Simulation** : checkboxes votants, recalcul temps réel de la moyenne sans les votants décochés.
+- **Onglet Impact détaillé** : tableau croisé votant × livre, note − moyenne des autres, impact absolu moyen.
 - `club-lecture/css/style.css` : styles `.cht-*` complets (disclaimer, onglets, tableau, badges, impact, simulation).
 
 ### 2026-06-02 (suite 5)
