@@ -805,6 +805,9 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 .cht-infl-absolu { min-width: 110px; padding: .4rem .65rem; }
 .cht-infl-absolu-val { font-weight: 800; font-size: .88rem; color: var(--accent); }
 .cht-infl-bar { height: 4px; background: var(--surface2); border-radius: 3px; margin-top: .25rem; overflow: hidden; }
+.cht-infl-th:hover { background: var(--surface2) !important; }
+.cht-th-active { background: color-mix(in srgb, var(--accent) 12%, transparent) !important; color: var(--accent) !important; }
+.cht-sort-arrow { font-size: .7rem; opacity: .6; }
 
 /* ── Page vote publique (vote.html) ─────────────────────────────── */
 .vote-page-header {

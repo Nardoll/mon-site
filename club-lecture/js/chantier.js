@@ -245,32 +245,94 @@ function renderTabInfluence() {
     </tr>`;
   }).join("");
 
+  // État de tri
+  let sortCol = "absolu", sortAsc = false;
+
+  const COLS = [
+    { key: "nom",    label: "Membre",           cls: "cht-infl-nom",    extraStyle: "" },
+    { key: "hausse", label: "↑ Hausse",          cls: "cht-infl-hausse", extraStyle: "color:var(--green,#4ab870)" },
+    { key: "baisse", label: "↓ Baisse",          cls: "cht-infl-baisse", extraStyle: "color:#e05555" },
+    { key: "absolu", label: "Influence totale",  cls: "cht-infl-absolu", extraStyle: "" },
+    { key: "net",    label: "Δ Net",             cls: "cht-infl-net",    extraStyle: "" },
+  ];
+
+  function buildRows(data) {
+    return data.map((v, i) => {
+      const netBarPct = Math.round(Math.abs(v.net) / maxAbsNet * 100);
+      const netColor  = v.net > 0.005 ? "var(--green,#4ab870)" : v.net < -0.005 ? "#e05555" : "var(--border)";
+      const netSign   = v.net > 0.005 ? "+" : "";
+      return `<tr>
+        <td class="cht-infl-rank">${i + 1}</td>
+        <td class="cht-infl-nom">${prenom(v.nom)}</td>
+        <td class="cht-infl-hausse">+${v.hausse.toFixed(3)}</td>
+        <td class="cht-infl-baisse">${v.baisse.toFixed(3)}</td>
+        <td class="cht-infl-absolu"><span class="cht-infl-absolu-val">${v.absolu.toFixed(3)}</span></td>
+        <td class="cht-infl-net">
+          <div style="font-size:.75rem;font-weight:700;color:${netColor};margin-bottom:.2rem">${netSign}${v.net.toFixed(3)}</div>
+          <div class="cht-infl-bar"><div style="width:${netBarPct}%;height:100%;background:${netColor};border-radius:3px;opacity:.7"></div></div>
+        </td>
+      </tr>`;
+    }).join("");
+  }
+
+  function getSorted() {
+    return [...statsVotants].sort((a, b) => {
+      const va = sortCol === "nom" ? a.nom : a[sortCol];
+      const vb = sortCol === "nom" ? b.nom : b[sortCol];
+      if (sortCol === "nom") return sortAsc ? va.localeCompare(vb, "fr") : vb.localeCompare(va, "fr");
+      return sortAsc ? va - vb : vb - va;
+    });
+  }
+
+  function refreshTable() {
+    document.getElementById("infl-tbody").innerHTML = buildRows(getSorted());
+    document.querySelectorAll(".cht-infl-th").forEach(th => {
+      const isActive = th.dataset.col === sortCol;
+      th.classList.toggle("cht-th-active", isActive);
+      const arrow = th.querySelector(".cht-sort-arrow");
+      if (arrow) arrow.textContent = isActive ? (sortAsc ? " ↑" : " ↓") : " ↕";
+    });
+  }
+
+  const theadCells = COLS.map(c => `
+    <th class="cht-infl-th ${c.cls}" data-col="${c.key}" style="${c.extraStyle};cursor:pointer;user-select:none" title="Trier par ${c.label}">
+      ${c.label}<span class="cht-sort-arrow">${c.key === sortCol ? (sortAsc ? " ↑" : " ↓") : " ↕"}</span>
+    </th>`).join("");
+
   el.innerHTML = `
     <div class="cht-section-label">Influence de chaque votant sur les moyennes — vote de ${formatMois(lastVote.mois, lastVote.annee)}</div>
     <div class="cht-expl">
       Pour chaque membre, on compare la moyenne de chaque livre <strong>avec</strong> et <strong>sans</strong> son vote, puis on cumule les différences sur tous les livres.
       <strong class="cht-green">↑ Hausse</strong> = somme des livres qu'il a fait monter ·
       <strong class="cht-red">↓ Baisse</strong> = somme des livres qu'il a fait baisser ·
-      <strong>Δ Net</strong> = hausse + baisse (signé) ·
-      <strong>Influence totale</strong> = |hausse| + |baisse| — plus ce chiffre est grand, plus la personne modifie les résultats dans un sens ou dans l'autre.
+      <strong>Influence totale</strong> = |hausse| + |baisse| ·
+      <strong>Δ Net</strong> = hausse + baisse (signé) · <em>Cliquez sur un en-tête pour trier.</em>
     </div>
     <div style="overflow-x:auto">
       <table class="cht-table">
         <thead><tr>
           <th class="cht-infl-rank">#</th>
-          <th class="cht-infl-nom">Membre</th>
-          <th class="cht-infl-hausse" style="color:var(--green,#4ab870)">↑ Hausse</th>
-          <th class="cht-infl-baisse" style="color:#e05555">↓ Baisse</th>
-          <th class="cht-infl-absolu">Influence totale</th>
-          <th class="cht-infl-net">Δ Net</th>
+          ${theadCells}
         </tr></thead>
-        <tbody>${rows}</tbody>
+        <tbody id="infl-tbody">${buildRows(getSorted())}</tbody>
       </table>
     </div>
     <div class="cht-footnote">
-      Δ Net = hausse + baisse · Influence totale = |hausse| + |baisse| · Trié par influence totale décroissante ·
-      Un delta net très négatif = tend à faire baisser les scores globalement · Un delta net proche de zéro avec une influence totale élevée = tire fortement dans les deux sens (vote stratégique)
+      Δ Net = hausse + baisse · Influence totale = |hausse| + |baisse| ·
+      Un delta net très négatif = tend à baisser les scores · Un delta net proche de zéro avec une influence totale élevée = tire dans les deux sens (vote stratégique)
     </div>`;
+
+  el.querySelectorAll(".cht-infl-th").forEach(th => {
+    th.addEventListener("click", () => {
+      if (sortCol === th.dataset.col) {
+        sortAsc = !sortAsc;
+      } else {
+        sortCol = th.dataset.col;
+        sortAsc = sortCol === "nom";
+      }
+      refreshTable();
+    });
+  });
 }
 
 // ── Onglet 1 : Médiane ────────────────────────────────────────────
