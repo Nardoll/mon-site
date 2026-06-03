@@ -295,7 +295,7 @@ Chaque graphique de distribution porte un badge coloré indiquant sa source : **
 
 **Section "Participation aux votes"** — 🔵 **Votes d'élection**. Barres horizontales par membre (nb votes participés / nb votes total, en %). Taux moyen affiché en en-tête.
 
-**Section "Membres les plus actifs"** — tableau classant les membres par score composite (`livres×3 + votes×2 + commentaires`). Podium 🥇🥈🥉 sur les 3 premiers.
+**Section "Membres les plus actifs"** — tableau classant les membres par score composite (`proposition×5 + réunion×3 + livre fini×3 + commentaire×1`). Colonnes : Propositions · Réunions (passées) · Livres finis · Commentaires. Podium 🥇🥈🥉 sur les 3 premiers. Formule affichée en petit sous le tableau.
 
 **Section "Évolution dans le temps"** — 🟠 **Statuts de lecture + réunions**. Histogramme Chart.js : barres mensuelles représentant le nombre de membres ayant terminé le livre ce mois-là.
 
@@ -1025,6 +1025,11 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 ---
 
 ## Historique des modifications
+
+### 2026-06-04
+**Stats — Classement membres actifs refait**
+
+- `club-lecture/js/stats.js` : nouveau score composite `proposition×5 + réunion×3 + livre fini×3 + commentaire×1`. Ajout de `propositionsParMembre` (depuis `livres.propose_par`) et `reunionsParMembreActif` (depuis `reunions.participant_ids` des réunions passées). Colonne "Votes" remplacée par "Propositions" et "Réunions". Formule affichée en petit sous le tableau.
 
 ### 2026-06-03
 **Accueil — Suivi de lecture hiérarchique (Partie + Chapitre)**
