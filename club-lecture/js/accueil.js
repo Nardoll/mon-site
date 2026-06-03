@@ -217,11 +217,7 @@ async function renderCurrentBook() {
   const proposeur = nomMembre(livre?.propose_par);
   const since = livre?.date_proposition ? timeSince(livre.date_proposition) : null;
 
-  const unite = livre?.progression_unite || "";
-  const progressionTotal = livre?.progression_total || null;
-  const progressionLabel = unite
-    ? `Suivi en ${unite}${progressionTotal ? ` · ${progressionTotal} max` : ""}`
-    : "Aucun suivi configuré";
+  const progressionLabelText = progressionLabel(livre);
 
   section.innerHTML = `
     <div class="section-title">Lecture du mois — ${formatMois(latest.mois, latest.annee)}</div>
@@ -237,7 +233,7 @@ async function renderCurrentBook() {
       </div>
       <div style="height:1px;background:var(--border);margin-bottom:1rem"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
-        <span style="font-size:.78rem;color:var(--muted)" id="progression-label">${progressionLabel}</span>
+        <span style="font-size:.78rem;color:var(--muted)" id="progression-label">${progressionLabelText}</span>
         <button class="btn btn-ghost btn-sm" id="btn-progression-config">⚙️ Configurer le suivi</button>
       </div>
       <ul class="status-list" id="status-list"></ul>
@@ -294,11 +290,18 @@ function openCommentaireModal(livre) {
     sel.appendChild(opt);
   });
 
-  const unite = livre?.progression_unite || "";
-  const total = livre?.progression_total || null;
-  const advLabel = unite
-    ? `${unite.charAt(0).toUpperCase() + unite.slice(1)} actuel(le)${total ? ` (sur ${total})` : ""}`
-    : "Avancement (optionnel)";
+  const mode = livre?.progression_mode || 'simple';
+  const parties = livre?.progression_parties || [];
+  let advLabel;
+  if (mode === 'hierarchique' && parties.length) {
+    advLabel = `Chapitre global (optionnel, sur ${totalChapitres(parties)})`;
+  } else {
+    const unite = livre?.progression_unite || "";
+    const total = livre?.progression_total || null;
+    advLabel = unite
+      ? `${unite.charAt(0).toUpperCase() + unite.slice(1)} actuel(le)${total ? ` (sur ${total})` : ""}`
+      : "Avancement (optionnel)";
+  }
   document.getElementById("comm-advance-label").textContent = advLabel;
   document.getElementById("comm-date").value = new Date().toISOString().split("T")[0];
   document.getElementById("comm-advance").value = "";
@@ -342,8 +345,6 @@ function renderStatusList() {
   const list = document.getElementById("status-list");
   if (!list) return;
   document.getElementById("status-add-row")?.remove();
-  const unite = currentLivre?.progression_unite || "";
-
   const rank = { termine: 3, en_cours: 2, achete: 1, pas_commence: 0 };
   const hasRealStatut = m => {
     const s = statutByMembre[m.id];
@@ -371,11 +372,19 @@ function renderStatusList() {
     let progress = "";
     if (s.page_actuelle && s.pages_totales && s.pages_totales > 0) {
       const pct = Math.min(100, Math.round(s.page_actuelle / s.pages_totales * 100));
+      let progressText;
+      if (isHierarchique()) {
+        const { partie, chapitre } = fromAbsolute(Number(s.page_actuelle), currentLivre.progression_parties);
+        progressText = `P${partie} · Ch.${chapitre}`;
+      } else {
+        const unite = currentLivre?.progression_unite || "";
+        progressText = `${s.page_actuelle}/${s.pages_totales}${unite ? ` ${unite}` : ""}`;
+      }
       progress = `<div class="progress-wrap">
         <div class="progress-circle" style="--pct:${pct}%">
           <span class="progress-circle-text">${pct}%</span>
         </div>
-        <span class="progress-text">${s.page_actuelle}/${s.pages_totales}${unite ? ` ${unite}` : ""}</span>
+        <span class="progress-text">${progressText}</span>
       </div>`;
     }
     return `
@@ -484,22 +493,79 @@ function renderPodium() {
 
 // ── Modal statut ───────────────────────────────────────────────────
 
+function updateStatutChapitreMax() {
+  const parties = currentLivre?.progression_parties || [];
+  const idx = Number(document.getElementById('statut-partie').value) - 1;
+  const max = parties[idx] || 1;
+  document.getElementById('statut-chapitre').max = max;
+  updateStatutPositionHint();
+}
+
+function updateStatutPositionHint() {
+  const parties = currentLivre?.progression_parties || [];
+  const partie = Number(document.getElementById('statut-partie').value);
+  const chapitre = Number(document.getElementById('statut-chapitre').value);
+  const hint = document.getElementById('statut-position-hint');
+  if (!hint) return;
+  if (partie && chapitre) {
+    const abs = toAbsolute(partie, chapitre, parties);
+    const total = totalChapitres(parties);
+    hint.textContent = `→ chapitre ${abs} sur ${total} au total`;
+  } else {
+    hint.textContent = '';
+  }
+}
+
+document.getElementById('statut-partie').addEventListener('change', () => {
+  if (!document.getElementById('statut-hier-section').classList.contains('hidden')) {
+    updateStatutChapitreMax();
+  }
+});
+
+document.getElementById('statut-chapitre').addEventListener('input', () => {
+  if (!document.getElementById('statut-hier-section').classList.contains('hidden')) {
+    updateStatutPositionHint();
+  }
+});
+
 function openStatutModal(membreId, currentStatut) {
   editMembreId = membreId;
   const m = allMembres.find(x => x.id === membreId);
   document.getElementById("statut-modal-title").textContent = `Statut — ${m?.nom ?? ""}`;
   document.getElementById("statut-select").value = currentStatut;
 
-  const unite = currentLivre?.progression_unite || "pages";
-  const uniteLabel = unite.charAt(0).toUpperCase() + unite.slice(1);
-  const labelActuel = document.getElementById("label-page-actuelle");
-  const labelTotal = document.getElementById("label-pages-totales");
-  if (labelActuel) labelActuel.textContent = `${uniteLabel} actuel(le)`;
-  if (labelTotal) labelTotal.textContent = `Total (${unite})`;
+  const hier = isHierarchique();
+  const parties = currentLivre?.progression_parties || [];
 
-  const existing = statutByMembre[membreId];
-  document.getElementById("page-actuelle").value = existing?.page_actuelle ?? "";
-  document.getElementById("pages-totales").value = existing?.pages_totales ?? (currentLivre?.progression_total || "");
+  document.getElementById('statut-simple-section').classList.toggle('hidden', hier);
+  document.getElementById('statut-hier-section').classList.toggle('hidden', !hier);
+
+  if (hier) {
+    const sel = document.getElementById('statut-partie');
+    sel.innerHTML = parties.map((n, i) => `<option value="${i + 1}">Partie ${i + 1} (${n} ch.)</option>`).join('');
+
+    const existing = statutByMembre[membreId];
+    if (existing?.page_actuelle) {
+      const { partie, chapitre } = fromAbsolute(Number(existing.page_actuelle), parties);
+      sel.value = partie;
+      document.getElementById('statut-chapitre').value = chapitre;
+    } else {
+      sel.value = 1;
+      document.getElementById('statut-chapitre').value = '';
+    }
+    updateStatutChapitreMax();
+  } else {
+    const unite = currentLivre?.progression_unite || "pages";
+    const uniteLabel = unite.charAt(0).toUpperCase() + unite.slice(1);
+    const labelActuel = document.getElementById("label-page-actuelle");
+    const labelTotal = document.getElementById("label-pages-totales");
+    if (labelActuel) labelActuel.textContent = `${uniteLabel} actuel(le)`;
+    if (labelTotal) labelTotal.textContent = `Total (${unite})`;
+
+    const existing = statutByMembre[membreId];
+    document.getElementById("page-actuelle").value = existing?.page_actuelle ?? "";
+    document.getElementById("pages-totales").value = existing?.pages_totales ?? (currentLivre?.progression_total || "");
+  }
 
   document.getElementById("statut-overlay").classList.remove("hidden");
 }
@@ -518,8 +584,19 @@ document.getElementById("statut-overlay").addEventListener("click", e => {
 document.getElementById("statut-modal-save").addEventListener("click", async () => {
   if (!editMembreId || !currentLivreId) return;
   const statut = document.getElementById("statut-select").value;
-  const page_actuelle = document.getElementById("page-actuelle").value;
-  const pages_totales = document.getElementById("pages-totales").value;
+
+  let page_actuelle, pages_totales;
+  if (isHierarchique()) {
+    const parties = currentLivre.progression_parties;
+    const partie = Number(document.getElementById('statut-partie').value);
+    const chapitre = Number(document.getElementById('statut-chapitre').value);
+    page_actuelle = (partie && chapitre) ? toAbsolute(partie, chapitre, parties) : "";
+    pages_totales = totalChapitres(parties);
+  } else {
+    page_actuelle = document.getElementById("page-actuelle").value;
+    pages_totales = document.getElementById("pages-totales").value;
+  }
+
   try {
     await upsertStatutLecture({ membre_id: editMembreId, livre_id: currentLivreId, statut, page_actuelle, pages_totales });
     showToast("Statut mis à jour", "success");
@@ -541,13 +618,105 @@ document.getElementById("statut-modal-save").addEventListener("click", async () 
   } catch (e) { showToast("Erreur : " + e.message, "error"); }
 });
 
+// ── Helpers hiérarchiques ──────────────────────────────────────────
+
+function totalChapitres(parties) {
+  return (parties || []).reduce((s, n) => s + n, 0);
+}
+
+function toAbsolute(partie, chapitre, parties) {
+  let abs = 0;
+  for (let i = 0; i < partie - 1; i++) abs += parties[i];
+  return abs + chapitre;
+}
+
+function fromAbsolute(pos, parties) {
+  let remaining = pos;
+  for (let i = 0; i < parties.length; i++) {
+    if (remaining <= parties[i]) return { partie: i + 1, chapitre: remaining };
+    remaining -= parties[i];
+  }
+  return { partie: parties.length, chapitre: parties[parties.length - 1] };
+}
+
+function isHierarchique() {
+  return currentLivre?.progression_mode === 'hierarchique' && (currentLivre?.progression_parties?.length > 0);
+}
+
+function progressionLabel(livre) {
+  if (livre?.progression_mode === 'hierarchique' && livre?.progression_parties?.length) {
+    const parties = livre.progression_parties;
+    const total = totalChapitres(parties);
+    return `Suivi hiérarchique · ${parties.length} partie${parties.length > 1 ? 's' : ''} · ${total} chapitres`;
+  }
+  const u = livre?.progression_unite || "";
+  const t = livre?.progression_total || null;
+  return u ? `Suivi en ${u}${t ? ` · ${t} max` : ""}` : "Aucun suivi configuré";
+}
+
 // ── Modal configuration du suivi ──────────────────────────────────
 
+function renderPartiesList(parties) {
+  const container = document.getElementById('prog-parties-list');
+  container.innerHTML = parties.map((n, i) => `
+    <div class="prog-partie-row" style="display:flex;align-items:center;gap:.5rem;margin-bottom:.45rem">
+      <span style="font-size:.83rem;min-width:58px;color:var(--text)">Partie ${i + 1}</span>
+      <input type="number" class="prog-partie-input" min="1" value="${n}" placeholder="nb ch." style="width:74px">
+      <span style="font-size:.78rem;color:var(--muted)">chapitres</span>
+      ${parties.length > 1 ? `<button class="btn btn-ghost btn-sm prog-partie-del" data-index="${i}" style="padding:.15rem .35rem;margin-left:auto;line-height:1">✕</button>` : ''}
+    </div>`).join('');
+
+  updateTotalHint();
+
+  container.querySelectorAll('.prog-partie-input').forEach(inp => inp.addEventListener('input', updateTotalHint));
+  container.querySelectorAll('.prog-partie-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const inputs = container.querySelectorAll('.prog-partie-input');
+      const current = [...inputs].map(inp => Number(inp.value) || 1);
+      current.splice(Number(btn.dataset.index), 1);
+      renderPartiesList(current);
+    });
+  });
+}
+
+function updateTotalHint() {
+  const inputs = document.getElementById('prog-parties-list').querySelectorAll('.prog-partie-input');
+  const total = [...inputs].reduce((s, inp) => s + (Number(inp.value) || 0), 0);
+  document.getElementById('prog-total-hint').textContent = total > 0 ? `Total : ${total} chapitres` : '';
+}
+
 function openProgressionModal() {
+  const mode = currentLivre?.progression_mode || 'simple';
+  const parties = currentLivre?.progression_parties || [];
+  const hier = mode === 'hierarchique';
+
+  document.getElementById('prog-mode-simple').checked = !hier;
+  document.getElementById('prog-mode-hier').checked = hier;
+  document.getElementById('prog-simple-section').classList.toggle('hidden', hier);
+  document.getElementById('prog-hier-section').classList.toggle('hidden', !hier);
+
   document.getElementById("progression-unite").value = currentLivre?.progression_unite || "";
   document.getElementById("progression-total-input").value = currentLivre?.progression_total || "";
+
+  renderPartiesList(parties.length ? parties : [1]);
+
   document.getElementById("progression-overlay").classList.remove("hidden");
 }
+
+document.querySelectorAll('[name="prog-mode"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    const hier = document.getElementById('prog-mode-hier').checked;
+    document.getElementById('prog-simple-section').classList.toggle('hidden', hier);
+    document.getElementById('prog-hier-section').classList.toggle('hidden', !hier);
+    if (hier && !document.getElementById('prog-parties-list').children.length) renderPartiesList([1]);
+  });
+});
+
+document.getElementById('prog-add-partie').addEventListener('click', () => {
+  const inputs = document.getElementById('prog-parties-list').querySelectorAll('.prog-partie-input');
+  const current = [...inputs].map(inp => Number(inp.value) || 1);
+  renderPartiesList([...current, 1]);
+});
 
 ["progression-close","progression-cancel"].forEach(id => {
   document.getElementById(id).addEventListener("click", () => {
@@ -560,22 +729,38 @@ document.getElementById("progression-overlay").addEventListener("click", e => {
 });
 
 document.getElementById("progression-save").addEventListener("click", async () => {
-  const unite = document.getElementById("progression-unite").value.trim();
-  const total = document.getElementById("progression-total-input").value;
-  try {
-    await updateLivre(currentLivreId, {
+  const hier = document.getElementById('prog-mode-hier').checked;
+  let updates;
+
+  if (hier) {
+    const inputs = document.getElementById('prog-parties-list').querySelectorAll('.prog-partie-input');
+    const parties = [...inputs].map(inp => Number(inp.value) || 1);
+    if (!parties.length) { showToast("Définissez au moins une partie.", "error"); return; }
+    updates = {
+      progression_mode: 'hierarchique',
+      progression_parties: parties,
+      progression_total: totalChapitres(parties),
+      progression_unite: 'chapitres',
+    };
+  } else {
+    const unite = document.getElementById("progression-unite").value.trim();
+    const total = document.getElementById("progression-total-input").value;
+    updates = {
+      progression_mode: 'simple',
+      progression_parties: null,
       progression_unite: unite || null,
       progression_total: total ? Number(total) : null,
-    });
+    };
+  }
+
+  try {
+    await updateLivre(currentLivreId, updates);
     showToast("Suivi configuré !", "success");
     document.getElementById("progression-overlay").classList.add("hidden");
-    currentLivre = { ...currentLivre, progression_unite: unite || null, progression_total: total ? Number(total) : null };
+    currentLivre = { ...currentLivre, ...updates };
     const label = document.getElementById("progression-label");
-    if (label) {
-      const u = currentLivre.progression_unite || "";
-      const t = currentLivre.progression_total || null;
-      label.textContent = u ? `Suivi en ${u}${t ? ` · ${t} max` : ""}` : "Aucun suivi configuré";
-    }
+    if (label) label.textContent = progressionLabel(currentLivre);
+    renderStatusList();
   } catch (e) {
     showToast("Erreur : " + e.message, "error");
   }

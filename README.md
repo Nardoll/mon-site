@@ -730,8 +730,10 @@ Jeu de déduction multijoueur (mots à faire deviner) avec parties partageables 
 | `propose_par` | string | ID du document membre |
 | `date_proposition` | Timestamp | |
 | `statut` | string | `en_proposition` · `elu` · `refuse` |
-| `progression_unite` | string \| null | Unité de suivi (ex: `pages`, `chapitres`) |
-| `progression_total` | number \| null | Total de l'unité (ex: `300`) |
+| `progression_mode` | string \| null | `'simple'` (défaut) ou `'hierarchique'` |
+| `progression_parties` | array (number) \| null | Nb de chapitres par partie, ex : `[5, 8, 6]` — mode hiérarchique uniquement |
+| `progression_unite` | string \| null | Unité de suivi (ex: `pages`, `chapitres`) — mode simple |
+| `progression_total` | number \| null | Total de l'unité (ex: `300`) — calculé automatiquement en mode hiérarchique |
 | `nb_pages` | number \| null | Nombre de pages du livre (optionnel, fourni par IA, à vérifier quand le livre est élu) |
 | `genre` | string \| null | Genre littéraire (optionnel, fourni par IA) |
 | `description_3_mots` | string \| null | Description en 3 mots (optionnel, fourni par IA) |
@@ -1023,6 +1025,20 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 ---
 
 ## Historique des modifications
+
+### 2026-06-03
+**Accueil — Suivi de lecture hiérarchique (Partie + Chapitre)**
+
+- `club-lecture/index.html` : modal "Configurer le suivi" refactorisée — toggle Simple / Hiérarchique. En mode hiérarchique : liste de lignes "Partie N · [nb chapitres]", bouton "+ Ajouter une partie", total calculé affiché en bas. Modal "Statut" : deux sections conditionnelles — simple (inchangé) ou hiérarchique (select Partie + input Chapitre avec max auto, hint "→ chapitre X sur Y au total").
+- `club-lecture/js/accueil.js` : nouveaux helpers `totalChapitres`, `toAbsolute`, `fromAbsolute`, `isHierarchique`, `progressionLabel`. `openProgressionModal` gère les deux modes. `renderPartiesList` + `updateTotalHint` construisent la liste dynamique. `openStatutModal` bascule entre les deux sections selon le mode. `renderStatusList` affiche "P2 · Ch.7" au lieu du nombre brut en mode hiérarchique. `openCommentaireModal` adapte le label d'avancement.
+
+**Schéma Firestore — nouveaux champs sur `livres` :**
+| Champ | Type | Description |
+|-------|------|-------------|
+| `progression_mode` | string \| null | `'simple'` (défaut/ancien) ou `'hierarchique'` |
+| `progression_parties` | array (number) \| null | Chapitres par partie, ex : `[5, 8, 6]` |
+
+> `progression_total` est automatiquement calculé comme la somme des parties en mode hiérarchique. Rétrocompatibilité totale : les anciens livres sans `progression_mode` fonctionnent comme avant.
 
 ### 2026-06-02 (suite 8)
 **Vote — seuil d'élimination relevé à 2,9 (temporaire)**
