@@ -491,21 +491,14 @@ function renderPodium() {
 
 // ── Modal statut ───────────────────────────────────────────────────
 
-function updateStatutChapitreMax() {
-  const parties = currentLivre?.progression_parties || [];
-  const idx = Number(document.getElementById('statut-partie').value) - 1;
-  const max = parties[idx] || 1;
-  document.getElementById('statut-chapitre').max = max;
-  updateStatutPositionHint();
-}
-
 function updateStatutPositionHint() {
   const parties = currentLivre?.progression_parties || [];
   const partie = Number(document.getElementById('statut-partie').value);
   const chapitre = Number(document.getElementById('statut-chapitre').value);
   const hint = document.getElementById('statut-position-hint');
   if (!hint) return;
-  if (partie && chapitre) {
+  const valid = partie >= 1 && partie <= parties.length && chapitre >= 1 && chapitre <= parties[partie - 1];
+  if (valid) {
     const abs = toAbsolute(partie, chapitre, parties);
     const total = totalChapitres(parties);
     hint.textContent = `→ chapitre ${abs} sur ${total} au total`;
@@ -514,16 +507,12 @@ function updateStatutPositionHint() {
   }
 }
 
-document.getElementById('statut-partie').addEventListener('change', () => {
-  if (!document.getElementById('statut-hier-section').classList.contains('hidden')) {
-    updateStatutChapitreMax();
-  }
-});
-
-document.getElementById('statut-chapitre').addEventListener('input', () => {
-  if (!document.getElementById('statut-hier-section').classList.contains('hidden')) {
-    updateStatutPositionHint();
-  }
+['statut-partie', 'statut-chapitre'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    if (!document.getElementById('statut-hier-section').classList.contains('hidden')) {
+      updateStatutPositionHint();
+    }
+  });
 });
 
 function openStatutModal(membreId, currentStatut) {
@@ -539,19 +528,17 @@ function openStatutModal(membreId, currentStatut) {
   document.getElementById('statut-hier-section').classList.toggle('hidden', !hier);
 
   if (hier) {
-    const sel = document.getElementById('statut-partie');
-    sel.innerHTML = parties.map((n, i) => `<option value="${i + 1}">Partie ${i + 1} (${n} ch.)</option>`).join('');
-
     const existing = statutByMembre[membreId];
     if (existing?.page_actuelle) {
       const { partie, chapitre } = fromAbsolute(Number(existing.page_actuelle), parties);
-      sel.value = partie;
+      document.getElementById('statut-partie').value = partie;
       document.getElementById('statut-chapitre').value = chapitre;
     } else {
-      sel.value = 1;
+      document.getElementById('statut-partie').value = '';
       document.getElementById('statut-chapitre').value = '';
     }
-    updateStatutChapitreMax();
+    document.getElementById('statut-position-hint').textContent = '';
+    updateStatutPositionHint();
   } else {
     const unite = currentLivre?.progression_unite || "pages";
     const uniteLabel = unite.charAt(0).toUpperCase() + unite.slice(1);
@@ -588,7 +575,12 @@ document.getElementById("statut-modal-save").addEventListener("click", async () 
     const parties = currentLivre.progression_parties;
     const partie = Number(document.getElementById('statut-partie').value);
     const chapitre = Number(document.getElementById('statut-chapitre').value);
-    page_actuelle = (partie && chapitre) ? toAbsolute(partie, chapitre, parties) : "";
+    const valide = partie >= 1 && partie <= parties.length && chapitre >= 1 && chapitre <= parties[partie - 1];
+    if (partie && chapitre && !valide) {
+      showToast("Cette combinaison Partie / Chapitre n'existe pas.", "error");
+      return;
+    }
+    page_actuelle = (partie && chapitre && valide) ? toAbsolute(partie, chapitre, parties) : "";
     pages_totales = totalChapitres(parties);
   } else {
     page_actuelle = document.getElementById("page-actuelle").value;
