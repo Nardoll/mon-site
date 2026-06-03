@@ -111,6 +111,18 @@ async function computeStats() {
     votants.forEach(m => { votesParMembre[m] = (votesParMembre[m] || 0) + 1; });
   });
 
+  const propositionsParMembre = {};
+  livres.forEach(l => {
+    if (l.propose_par) propositionsParMembre[l.propose_par] = (propositionsParMembre[l.propose_par] || 0) + 1;
+  });
+
+  const reunionsParMembreActif = {};
+  reunions.filter(r => r.statut === "passee").forEach(r => {
+    (r.participant_ids || []).forEach(mId => {
+      reunionsParMembreActif[mId] = (reunionsParMembreActif[mId] || 0) + 1;
+    });
+  });
+
   const totalVotes = votes.length;
   const participationParMembre = membres.map(m => ({
     nom: m.nom, id: m.id,
@@ -134,6 +146,7 @@ async function computeStats() {
     noteMoyenne, allNotes, notesDist, reunionNotesParMembre,
     allVoteNotes, voteMoyenne, voteNotesDist, voteNotesParMembre,
     totalVotes, livresParMembre, commentsParMembre, votesParMembre,
+    propositionsParMembre, reunionsParMembreActif,
     participationParMembre, tauxMoyen,
     parMois, membres, elusLivres, elusVotes,
     livres, votes, reunions
@@ -284,27 +297,34 @@ function renderMembresActifs(s) {
   const el = document.getElementById("membres-actifs-content");
   const rows = s.membres.map(m => ({
     nom: m.nom, id: m.id,
+    props: s.propositionsParMembre[m.id] || 0,
+    reunions: s.reunionsParMembreActif[m.id] || 0,
     livres: s.livresParMembre[m.id] || 0,
     comments: s.commentsParMembre[m.id] || 0,
-    votes: s.votesParMembre[m.id] || 0,
-  })).sort((a, b) => (b.livres * 3 + b.comments + b.votes * 2) - (a.livres * 3 + a.comments + a.votes * 2));
+  })).sort((a, b) =>
+    (b.props * 5 + b.reunions * 3 + b.livres * 3 + b.comments) -
+    (a.props * 5 + a.reunions * 3 + a.livres * 3 + a.comments)
+  );
 
   el.innerHTML = `
     <div class="stats-membres-table">
       <div class="stats-membres-header">
         <span class="stats-membres-name">Membre</span>
-        <span class="stats-membres-col">📚 Livres lus</span>
+        <span class="stats-membres-col">📖 Propositions</span>
+        <span class="stats-membres-col">🎭 Réunions</span>
+        <span class="stats-membres-col">📚 Livres finis</span>
         <span class="stats-membres-col">💬 Commentaires</span>
-        <span class="stats-membres-col">🗳️ Votes</span>
       </div>
       ${rows.map((m, i) => `
         <div class="stats-membres-row ${i === 0 ? "stats-membres-top" : ""}">
           <span class="stats-membres-name">${i === 0 ? "🥇 " : i === 1 ? "🥈 " : i === 2 ? "🥉 " : ""}${m.nom}</span>
+          <span class="stats-membres-col">${m.props || "—"}</span>
+          <span class="stats-membres-col">${m.reunions || "—"}</span>
           <span class="stats-membres-col">${m.livres || "—"}</span>
           <span class="stats-membres-col">${m.comments || "—"}</span>
-          <span class="stats-membres-col">${m.votes || "—"}</span>
         </div>`).join("")}
-    </div>`;
+    </div>
+    <p style="margin-top:.75rem;font-size:.75rem;color:var(--muted);text-align:right">Score = proposition&nbsp;×5 · réunion&nbsp;×3 · livre fini&nbsp;×3 · commentaire&nbsp;×1</p>`;
 }
 
 // ── Rendu — Évolution lecteurs ────────────────────────────────────
