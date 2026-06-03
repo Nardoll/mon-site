@@ -159,10 +159,28 @@
     </div>
 
     <!-- Évolution des propositions -->
-    <div class="card" id="card-evo-prop" style="display:none;margin-bottom:3rem">
+    <div class="card" id="card-evo-prop" style="display:none;margin-bottom:2.5rem">
       <div class="card-title">📅 Évolution des propositions dans le temps</div>
       <div class="card-sub">Qui propose quand — une barre par mois, une couleur par membre.</div>
       <canvas id="chart-evo-prop" style="max-height:240px"></canvas>
+    </div>
+
+    <!-- ══════ SECTION : NOTES APRÈS LECTURE ══════ -->
+    <div class="stats-section-divider" id="stats-section-notes-membres" style="display:none">
+      📊 Notes après lecture par membre
+    </div>
+
+    <!-- Courbes notes après lecture -->
+    <div class="card" id="card-notes-membres" style="display:none;margin-bottom:3rem">
+      <div class="card-title">📈 Évolution des notes après lecture</div>
+      <div class="card-sub">
+        <span class="data-source-badge data-source-reunion">Notes après lecture · réunions · /10</span>
+        — Une courbe par membre, dans l'ordre chronologique des livres élus.
+      </div>
+      <div id="notes-membres-content">
+        <canvas id="chart-notes-membres" style="max-height:340px"></canvas>
+        <div id="notes-membres-legend" class="nm-legend"></div>
+      </div>
     </div>
 
   </main>

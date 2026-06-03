@@ -870,6 +870,128 @@ async function renderEvoProp({ evoPropMois, membres }) {
   });
 }
 
+// ── Rendu — Notes après lecture par membre (courbes) ─────────────
+
+async function renderNotesParMembre(s) {
+  const notesParLivre = {};
+  s.reunions.forEach(r => {
+    if (!r.livre_id) return;
+    if (!notesParLivre[r.livre_id]) notesParLivre[r.livre_id] = {};
+    Object.entries(r.notes_finales || {}).forEach(([memId, note]) => {
+      const n = Number(note);
+      if (n > 0) notesParLivre[r.livre_id][memId] = n;
+    });
+  });
+
+  const livresOrdonnes = [...s.elusVotes]
+    .sort((a, b) => a.annee !== b.annee ? a.annee - b.annee : a.mois - b.mois)
+    .filter(v => v.livre_elu && notesParLivre[v.livre_elu])
+    .map(v => {
+      const livre = s.livres.find(l => l.id === v.livre_elu);
+      return { id: v.livre_elu, titre: livre?.titre || "?", mois: v.mois, annee: v.annee };
+    });
+
+  const membresActifs = s.membres.filter(m =>
+    livresOrdonnes.some(l => notesParLivre[l.id]?.[m.id])
+  );
+  if (livresOrdonnes.length < 1 || !membresActifs.length) return;
+
+  document.getElementById("stats-section-notes-membres").style.display = "block";
+  document.getElementById("card-notes-membres").style.display = "block";
+  await loadChartJs();
+
+  const PALETTE = [
+    "#e8a44a","#5b9cf6","#cf6679","#4caf91","#9575cd",
+    "#ff7043","#26c6da","#66bb6a","#f06292","#ffb300"
+  ];
+  const cs     = getComputedStyle(document.documentElement);
+  const border = cs.getPropertyValue("--border").trim() || "#2a2a2a";
+  const muted  = cs.getPropertyValue("--muted").trim()  || "#888";
+
+  const labels = livresOrdonnes.map(l =>
+    l.titre.length > 22 ? l.titre.slice(0, 20) + "…" : l.titre
+  );
+
+  const datasets = membresActifs.map((m, i) => ({
+    label: m.nom,
+    data: livresOrdonnes.map(l => notesParLivre[l.id]?.[m.id] ?? null),
+    borderColor: PALETTE[i % PALETTE.length],
+    backgroundColor: PALETTE[i % PALETTE.length] + "22",
+    pointBackgroundColor: PALETTE[i % PALETTE.length],
+    pointRadius: 5, pointHoverRadius: 7,
+    tension: 0.3, spanGaps: false, borderWidth: 2,
+  }));
+
+  const chart = new Chart(document.getElementById("chart-notes-membres"), {
+    type: "line",
+    data: { labels, datasets },
+    options: {
+      responsive: true, animation: { duration: 800 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          mode: "index", intersect: false,
+          callbacks: {
+            title: items => {
+              const l = livresOrdonnes[items[0]?.dataIndex];
+              return l ? `${l.titre} · ${formatMois(l.mois, l.annee)}` : "";
+            },
+            label: item => item.parsed.y != null
+              ? ` ${item.dataset.label} : ${item.parsed.y}/10` : null,
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: border }, ticks: { color: muted, maxRotation: 35 } },
+        y: { min: 0, max: 10, ticks: { stepSize: 1, color: muted }, grid: { color: border } }
+      }
+    }
+  });
+
+  const legendEl = document.getElementById("notes-membres-legend");
+  legendEl.innerHTML = membresActifs.map((m, i) => `
+    <span class="nm-legend-item" data-idx="${i}" style="--nm-color:${PALETTE[i % PALETTE.length]}">
+      <span class="nm-legend-dot"></span>
+      <span class="nm-legend-name">${m.nom}</span>
+    </span>`).join("");
+
+  const resetColors = () => {
+    chart.data.datasets.forEach((ds, j) => {
+      if (!ds.hidden) {
+        ds.borderColor = PALETTE[j % PALETTE.length];
+        ds.borderWidth = 2;
+        ds.pointBackgroundColor = PALETTE[j % PALETTE.length];
+      }
+    });
+  };
+
+  legendEl.querySelectorAll(".nm-legend-item").forEach(item => {
+    const idx = Number(item.dataset.idx);
+
+    item.addEventListener("mouseenter", () => {
+      chart.data.datasets.forEach((ds, j) => {
+        const dim = j !== idx;
+        ds.borderColor = PALETTE[j % PALETTE.length] + (dim ? "28" : "");
+        ds.borderWidth = dim ? 1.5 : 3;
+        ds.pointBackgroundColor = PALETTE[j % PALETTE.length] + (dim ? "28" : "");
+      });
+      chart.update("none");
+    });
+
+    item.addEventListener("mouseleave", () => {
+      resetColors();
+      chart.update("none");
+    });
+
+    item.addEventListener("click", () => {
+      chart.data.datasets[idx].hidden = !chart.data.datasets[idx].hidden;
+      item.classList.toggle("nm-legend-item--off", chart.data.datasets[idx].hidden);
+      resetColors();
+      chart.update();
+    });
+  });
+}
+
 // ── Init ───────────────────────────────────────────────────────────
 
 async function init() {
@@ -935,6 +1057,8 @@ async function init() {
   }
 
   await renderEvoProp({ evoPropMois: ps.evoPropMois, membres: s.membres });
+
+  await renderNotesParMembre(s);
 }
 
 init().catch(console.error);
