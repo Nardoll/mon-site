@@ -369,30 +369,28 @@ function renderStatusList() {
     const s = statutByMembre[m.id];
     const statut = s.statut ?? "pas_commence";
     const info = STATUTS_LECTURE[statut];
-    let progress = "";
+    let pct = 0, progressText = "";
     if (s.page_actuelle && s.pages_totales && s.pages_totales > 0) {
-      const pct = Math.min(100, Math.round(s.page_actuelle / s.pages_totales * 100));
-      let progressText;
+      pct = Math.min(100, Math.round(s.page_actuelle / s.pages_totales * 100));
       if (isHierarchique()) {
         const { partie, chapitre } = fromAbsolute(Number(s.page_actuelle), currentLivre.progression_parties);
-        progressText = `P${partie} · Ch.${chapitre}`;
+        progressText = `P${partie} · Ch.${chapitre} · ${pct}%`;
       } else {
         const unite = currentLivre?.progression_unite || "";
-        progressText = `${s.page_actuelle}/${s.pages_totales}${unite ? ` ${unite}` : ""}`;
+        progressText = `${s.page_actuelle}/${s.pages_totales}${unite ? ` ${unite}` : ""} · ${pct}%`;
       }
-      progress = `<div class="progress-wrap">
-        <div class="progress-circle" style="--pct:${pct}%">
-          <span class="progress-circle-text">${pct}%</span>
-        </div>
-        <span class="progress-text">${progressText}</span>
-      </div>`;
     }
     return `
       <li class="status-row">
-        <span class="membre-link" data-id="${m.id}" style="font-size:.88rem;cursor:pointer">${m.nom}</span>
+        <span class="membre-link" data-id="${m.id}" style="font-size:.88rem;cursor:pointer;min-width:90px;flex-shrink:0">${m.nom}</span>
+        <div class="status-bar-wrap">
+          <div class="status-bar-track">
+            <div class="status-bar-fill" style="width:${pct}%"></div>
+          </div>
+        </div>
         <div class="status-right">
           <span class="st-badge st-${info.css}" data-membre="${m.id}" data-statut="${statut}">${info.label}</span>
-          ${progress}
+          ${progressText ? `<span class="progress-text">${progressText}</span>` : ""}
           <button class="btn-edit-statut" data-membre="${m.id}" data-statut="${statut}" title="Modifier le statut">✏️</button>
         </div>
       </li>`;

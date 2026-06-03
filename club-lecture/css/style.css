@@ -217,9 +217,12 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 .current-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2.5rem; }
 
 .status-list { list-style: none; }
-.status-row { display: flex; align-items: center; justify-content: space-between; padding: .55rem 0; border-bottom: 1px solid var(--border); }
+.status-row { display: flex; align-items: center; gap: .65rem; padding: .55rem 0; border-bottom: 1px solid var(--border); }
 .status-row:last-child { border-bottom: none; }
-.status-right { display: flex; align-items: center; gap: .5rem; }
+.status-bar-wrap { flex: 1; min-width: 0; }
+.status-bar-track { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.status-bar-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width .4s ease; }
+.status-right { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
 .status-right .progress-wrap { margin-top: 0; }
 .btn-edit-statut { background: none; border: none; cursor: pointer; padding: .15rem .25rem; font-size: .82rem; color: var(--muted); opacity: 0; transition: opacity .15s; flex-shrink: 0; }
 .status-row:hover .btn-edit-statut { opacity: 1; }
