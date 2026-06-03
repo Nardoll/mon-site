@@ -87,6 +87,10 @@ function renderReunionItem(r) {
   const titre = r.livre_id ? getLivreTitle(r.livre_id) : "Aucun livre associé";
   const nf = computeNoteFinale(r);
   const n = (r.participant_ids || []).length;
+  const lu = r.lecteurs_ids != null
+    ? (r.lecteurs_ids || []).length
+    : Object.values(r.notes_finales || {}).filter(note => Number(note) > 0).length;
+  const luStr = lu > 0 ? ` · ${lu} ont fini` : "";
   return `<div class="reunion-item" data-id="${r.id}">
     <div class="reunion-date">${dateStr}</div>
     <div class="reunion-livre">
@@ -94,7 +98,7 @@ function renderReunionItem(r) {
       <div class="reunion-livre-mois">${formatMois(r.mois, r.annee)}</div>
     </div>
     ${nf !== null ? `<div class="reunion-note">${nf.toFixed(1)}/10</div>` : ""}
-    <div class="reunion-participants">${n} participant${n > 1 ? "s" : ""}</div>
+    <div class="reunion-participants">${n} participant${n > 1 ? "s" : ""}${luStr}</div>
   </div>`;
 }
 

@@ -258,7 +258,7 @@ Deux vues alternées :
 Page de gestion des réunions du club. Chaque réunion correspond à une séance de discussion autour d'un livre élu.
 
 - **Deux sections** : "Prévues" (statut `prevue`) et "Passées" (statut `passee`)
-- **Liste** : date, mois correspondant, titre du livre associé (si trouvé), note finale (si disponible), participants
+- **Liste** : date, mois correspondant, titre du livre associé (si trouvé), note finale (si disponible), « N participants · X ont fini » (`lecteurs_ids` si défini, sinon `notes_finales > 0`)
 - **Ajouter / Modifier** (modal `#form-overlay`) :
   - Statut : `prevue` ou `passee`
   - Date (optionnelle) : champ date
@@ -1027,9 +1027,21 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 ## Historique des modifications
 
 ### 2026-06-04
-**Stats — Classement membres actifs refait**
 
-- `club-lecture/js/stats.js` : nouveau score composite `proposition×5 + réunion×3 + livre fini×3 + commentaire×1`. Ajout de `propositionsParMembre` (depuis `livres.propose_par`) et `reunionsParMembreActif` (depuis `reunions.participant_ids` des réunions passées). Colonne "Votes" remplacée par "Propositions" et "Réunions". Formule affichée en petit sous le tableau.
+**Réunions — Nombre de lecteurs dans la liste**
+
+- `club-lecture/js/reunions.js` : `renderReunionItem` affiche maintenant « N participants · X ont fini » (le nombre de personnes ayant terminé le livre). Utilise `lecteurs_ids` si défini, sinon retombe sur `notes_finales > 0` (rétrocompat).
+
+**Stats — Classement membres actifs refait (×3 versions successives)**
+
+- `club-lecture/js/stats.js` : score final = `réunion×3 + livre fini×3 + proposition×1 + vote×1 + commentaire×1`. Colonnes : Livres finis · Réunions · Propositions · Votes · Commentaires. Ajout de `propositionsParMembre` (depuis `livres.propose_par`) et `reunionsParMembreActif` (depuis `reunions.participant_ids` des réunions passées).
+- `club-lecture/css/style.css` : grille CSS passée à `repeat(5, 80px)` avec `line-height:1.3` et `word-break` pour les en-têtes. Ajout du bouton "i" (`.membres-actifs-info`) : au survol, une 6e colonne "🏅 Score" apparaît en accent avec le score calculé de chaque membre — disparaît au départ de la souris. Styles `.stats-membres-score`, `.membres-actifs-footer`, `.membres-actifs-info`.
+
+**Stats — Graphique "Notes après lecture par membre"**
+
+- `club-lecture/stats.html` : nouvelle section "📊 Notes après lecture par membre" + carte `#card-notes-membres` avec `<canvas id="chart-notes-membres">` et `<div id="notes-membres-legend">`.
+- `club-lecture/js/stats.js` : nouvelle fonction `renderNotesParMembre(s)` — graphique Chart.js `type: "line"`. X = livres élus dans l'ordre chronologique ; Y = notes /10. Une courbe par membre, `spanGaps:false` (ne relie pas les points nuls). Légende custom en bas : hover sur un nom → courbe mise en avant, autres estompées (alpha 0x28) ; clic → bascule activé/désactivé (classe `nm-legend-item--off`).
+- `club-lecture/css/style.css` : styles `.nm-legend`, `.nm-legend-item`, `.nm-legend-item--off`, `.nm-legend-dot`, `.nm-legend-name`.
 
 ### 2026-06-03
 **Accueil — Suivi de lecture hiérarchique (Partie + Chapitre)**
