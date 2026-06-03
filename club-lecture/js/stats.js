@@ -295,6 +295,7 @@ function renderParticipation(s) {
 
 function renderMembresActifs(s) {
   const el = document.getElementById("membres-actifs-content");
+  const score = m => m.reunions * 3 + m.livres * 3 + m.props + m.votes + m.comments;
   const rows = s.membres.map(m => ({
     nom: m.nom, id: m.id,
     props: s.propositionsParMembre[m.id] || 0,
@@ -302,10 +303,7 @@ function renderMembresActifs(s) {
     livres: s.livresParMembre[m.id] || 0,
     votes: s.votesParMembre[m.id] || 0,
     comments: s.commentsParMembre[m.id] || 0,
-  })).sort((a, b) =>
-    (b.reunions * 3 + b.livres * 3 + b.props + b.votes + b.comments) -
-    (a.reunions * 3 + a.livres * 3 + a.props + a.votes + a.comments)
-  );
+  })).sort((a, b) => score(b) - score(a));
 
   el.innerHTML = `
     <div class="stats-membres-table">
@@ -316,6 +314,7 @@ function renderMembresActifs(s) {
         <span class="stats-membres-col">📖 Propositions</span>
         <span class="stats-membres-col">🗳️ Votes</span>
         <span class="stats-membres-col">💬 Commentaires</span>
+        <span class="stats-membres-score">🏅 Score</span>
       </div>
       ${rows.map((m, i) => `
         <div class="stats-membres-row ${i === 0 ? "stats-membres-top" : ""}">
@@ -325,9 +324,18 @@ function renderMembresActifs(s) {
           <span class="stats-membres-col">${m.props || "—"}</span>
           <span class="stats-membres-col">${m.votes || "—"}</span>
           <span class="stats-membres-col">${m.comments || "—"}</span>
+          <span class="stats-membres-score">${score(m)}</span>
         </div>`).join("")}
     </div>
-    <p style="margin-top:.75rem;font-size:.75rem;color:var(--muted);text-align:right">Score = livre fini&nbsp;×3 · réunion&nbsp;×3 · proposition&nbsp;×1 · vote&nbsp;×1 · commentaire&nbsp;×1</p>`;
+    <div class="membres-actifs-footer">
+      <span class="membres-actifs-formula">Score = livre fini&nbsp;×3 · réunion&nbsp;×3 · proposition&nbsp;×1 · vote&nbsp;×1 · commentaire&nbsp;×1</span>
+      <span class="membres-actifs-info">i</span>
+    </div>`;
+
+  const table = el.querySelector(".stats-membres-table");
+  const btn = el.querySelector(".membres-actifs-info");
+  btn.addEventListener("mouseenter", () => table.classList.add("show-score"));
+  btn.addEventListener("mouseleave", () => table.classList.remove("show-score"));
 }
 
 // ── Rendu — Évolution lecteurs ────────────────────────────────────
