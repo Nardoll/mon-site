@@ -300,31 +300,34 @@ function renderMembresActifs(s) {
     props: s.propositionsParMembre[m.id] || 0,
     reunions: s.reunionsParMembreActif[m.id] || 0,
     livres: s.livresParMembre[m.id] || 0,
+    votes: s.votesParMembre[m.id] || 0,
     comments: s.commentsParMembre[m.id] || 0,
   })).sort((a, b) =>
-    (b.props * 5 + b.reunions * 3 + b.livres * 3 + b.comments) -
-    (a.props * 5 + a.reunions * 3 + a.livres * 3 + a.comments)
+    (b.reunions * 3 + b.livres * 3 + b.props + b.votes + b.comments) -
+    (a.reunions * 3 + a.livres * 3 + a.props + a.votes + a.comments)
   );
 
   el.innerHTML = `
     <div class="stats-membres-table">
       <div class="stats-membres-header">
         <span class="stats-membres-name">Membre</span>
-        <span class="stats-membres-col">📖 Propositions</span>
-        <span class="stats-membres-col">🎭 Réunions</span>
         <span class="stats-membres-col">📚 Livres finis</span>
+        <span class="stats-membres-col">🎭 Réunions</span>
+        <span class="stats-membres-col">📖 Propositions</span>
+        <span class="stats-membres-col">🗳️ Votes</span>
         <span class="stats-membres-col">💬 Commentaires</span>
       </div>
       ${rows.map((m, i) => `
         <div class="stats-membres-row ${i === 0 ? "stats-membres-top" : ""}">
           <span class="stats-membres-name">${i === 0 ? "🥇 " : i === 1 ? "🥈 " : i === 2 ? "🥉 " : ""}${m.nom}</span>
-          <span class="stats-membres-col">${m.props || "—"}</span>
-          <span class="stats-membres-col">${m.reunions || "—"}</span>
           <span class="stats-membres-col">${m.livres || "—"}</span>
+          <span class="stats-membres-col">${m.reunions || "—"}</span>
+          <span class="stats-membres-col">${m.props || "—"}</span>
+          <span class="stats-membres-col">${m.votes || "—"}</span>
           <span class="stats-membres-col">${m.comments || "—"}</span>
         </div>`).join("")}
     </div>
-    <p style="margin-top:.75rem;font-size:.75rem;color:var(--muted);text-align:right">Score = proposition&nbsp;×5 · réunion&nbsp;×3 · livre fini&nbsp;×3 · commentaire&nbsp;×1</p>`;
+    <p style="margin-top:.75rem;font-size:.75rem;color:var(--muted);text-align:right">Score = livre fini&nbsp;×3 · réunion&nbsp;×3 · proposition&nbsp;×1 · vote&nbsp;×1 · commentaire&nbsp;×1</p>`;
 }
 
 // ── Rendu — Évolution lecteurs ────────────────────────────────────
