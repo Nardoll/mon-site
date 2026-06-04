@@ -1841,6 +1841,79 @@ body {
   background: var(--accent-glow);
 }
 
+/* ── Palette de couleur de fond par section ── */
+.wp-section-palette {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 .5rem;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.wp-col-dot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,.25);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform .1s, border-color .1s;
+  position: relative;
+}
+/* Le dot "aucune couleur" a une apparence neutre */
+.wp-col-dot[data-color=""] {
+  background: none !important;
+  border: 1.5px dashed var(--muted);
+}
+.wp-col-dot[data-color=""]:hover { border-color: var(--text); }
+.wp-col-dot:hover { transform: scale(1.25); }
+/* Dot actif : anneau blanc autour */
+.wp-col-active {
+  border-color: #fff !important;
+  transform: scale(1.18);
+  box-shadow: 0 0 0 1.5px rgba(255,255,255,.45);
+}
+/* Pour le dot "aucune" actif */
+.wp-col-dot[data-color=""].wp-col-active {
+  border-color: var(--text) !important;
+  box-shadow: 0 0 0 1.5px rgba(255,255,255,.25);
+}
+
+/* ── Couleurs de fond des sections ── */
+/* Thème sombre (défaut) */
+.wp-section[data-color="green"]  { background: rgba(78, 138, 92,  .13); }
+.wp-section[data-color="yellow"] { background: rgba(200, 170, 0,  .12); }
+.wp-section[data-color="blue"]   { background: rgba(65, 130, 200, .13); }
+.wp-section[data-color="purple"] { background: rgba(140, 90, 200, .13); }
+.wp-section[data-color="red"]    { background: rgba(185, 80, 80,  .13); }
+.wp-section[data-color="teal"]   { background: rgba(20, 184, 166, .13); }
+.wp-section[data-color="orange"] { background: rgba(220, 120, 30, .13); }
+
+/* Barre des sections colorées : légèrement plus sombre */
+.wp-section[data-color] .wp-section-bar { background: rgba(0,0,0,.12); }
+/* Textarea des sections colorées : transparente pour laisser voir la couleur */
+.wp-section[data-color] .wp-section-body { background: transparent !important; }
+
+/* Thème clair : teintes un peu plus prononcées */
+[data-theme="light"] .wp-section[data-color="green"]  { background: rgba(78, 138, 92,  .12); }
+[data-theme="light"] .wp-section[data-color="yellow"] { background: rgba(200, 160, 0,  .14); }
+[data-theme="light"] .wp-section[data-color="blue"]   { background: rgba(65, 130, 200, .12); }
+[data-theme="light"] .wp-section[data-color="purple"] { background: rgba(140, 90, 200, .12); }
+[data-theme="light"] .wp-section[data-color="red"]    { background: rgba(185, 80, 80,  .12); }
+[data-theme="light"] .wp-section[data-color="teal"]   { background: rgba(20, 184, 166, .12); }
+[data-theme="light"] .wp-section[data-color="orange"] { background: rgba(220, 120, 30, .12); }
+[data-theme="light"] .wp-section[data-color] .wp-section-bar { background: rgba(0,0,0,.06); }
+
+/* Bordure gauche colorée (repère visuel supplémentaire) */
+.wp-section[data-color="green"]  { border-left: 3px solid rgba(78, 138, 92,  .55); }
+.wp-section[data-color="yellow"] { border-left: 3px solid rgba(200, 170, 0,  .55); }
+.wp-section[data-color="blue"]   { border-left: 3px solid rgba(65, 130, 200, .55); }
+.wp-section[data-color="purple"] { border-left: 3px solid rgba(140, 90, 200, .55); }
+.wp-section[data-color="red"]    { border-left: 3px solid rgba(185, 80, 80,  .55); }
+.wp-section[data-color="teal"]   { border-left: 3px solid rgba(20, 184, 166, .55); }
+.wp-section[data-color="orange"] { border-left: 3px solid rgba(220, 120, 30, .55); }
+
 /* ═══════════════════════════════════
    Chronologie — quêtes dans les arcs
 ═══════════════════════════════════ */

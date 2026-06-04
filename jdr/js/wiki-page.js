@@ -209,6 +209,26 @@ function renderAssociations() {
     cb.addEventListener('change', markUnsaved));
 }
 
+// ── Palette de couleurs de fond ───────────────────────────
+const PALETTE = [
+  { key: '',       label: 'Aucune',  dot: '' },
+  { key: 'green',  label: 'Vert',    dot: 'rgba(78,138,92,.7)' },
+  { key: 'yellow', label: 'Jaune',   dot: 'rgba(200,170,0,.75)' },
+  { key: 'blue',   label: 'Bleu',    dot: 'rgba(65,130,200,.7)' },
+  { key: 'purple', label: 'Violet',  dot: 'rgba(140,90,200,.7)' },
+  { key: 'red',    label: 'Rouge',   dot: 'rgba(185,80,80,.7)' },
+  { key: 'teal',   label: 'Cyan',    dot: 'rgba(20,184,166,.7)' },
+  { key: 'orange', label: 'Orange',  dot: 'rgba(220,120,30,.7)' },
+];
+
+function paletteDots(currentColor, i) {
+  return PALETTE.map(p => `
+    <button class="wp-col-dot${(currentColor || '') === p.key ? ' wp-col-active' : ''}"
+            data-color="${p.key}" data-i="${i}" title="${p.label}"
+            ${p.dot ? `style="background:${p.dot}"` : 'style="background:none"'}></button>
+  `).join('');
+}
+
 // ── Sections ─────────────────────────────────────────────
 function renderSections() {
   const list = document.getElementById('wp-sections-list');
@@ -221,10 +241,11 @@ function renderSections() {
   }
 
   list.innerHTML = sections.map((s, i) => `
-    <div class="wp-section" data-i="${i}">
+    <div class="wp-section" data-i="${i}"${s.color ? ` data-color="${s.color}"` : ''}>
       <div class="wp-section-bar">
         <input type="text" class="wp-section-title" data-i="${i}"
                value="${escH(s.titre)}" placeholder="Titre de la section (optionnel)">
+        <div class="wp-section-palette">${paletteDots(s.color, i)}</div>
         <div class="wp-section-btns">
           <button class="btn-ghost btn-sm wp-sec-up"   data-i="${i}" ${i === 0 ? 'disabled' : ''}>↑</button>
           <button class="btn-ghost btn-sm wp-sec-down" data-i="${i}" ${i === sections.length - 1 ? 'disabled' : ''}>↓</button>
@@ -245,6 +266,21 @@ function renderSections() {
     btn.addEventListener('click', () => moveSection(+btn.dataset.i, 1)));
   list.querySelectorAll('.wp-sec-del').forEach(btn =>
     btn.addEventListener('click', () => { sections.splice(+btn.dataset.i, 1); markUnsaved(); renderSections(); }));
+
+  // Palette : changement de couleur sans re-render complet
+  list.querySelectorAll('.wp-col-dot').forEach(btn =>
+    btn.addEventListener('click', () => {
+      const i     = +btn.dataset.i;
+      const color = btn.dataset.color;
+      sections[i].color = color;
+      markUnsaved();
+      // Applique sans re-render
+      const sectionEl = btn.closest('.wp-section');
+      if (color) sectionEl.dataset.color = color;
+      else delete sectionEl.dataset.color;
+      sectionEl.querySelectorAll('.wp-col-dot').forEach(b => b.classList.remove('wp-col-active'));
+      btn.classList.add('wp-col-active');
+    }));
 }
 
 function moveSection(i, dir) {
@@ -256,7 +292,7 @@ function moveSection(i, dir) {
 }
 
 function addSection() {
-  sections.push({ id: Date.now().toString(), titre: '', contenu: '' });
+  sections.push({ id: Date.now().toString(), titre: '', contenu: '', color: '' });
   markUnsaved();
   renderSections();
   // Scroll vers la nouvelle section
