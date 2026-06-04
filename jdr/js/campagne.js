@@ -113,6 +113,42 @@ function setupRenommerProjet() {
   const display = document.getElementById('camp-nom-display');
   const input   = document.getElementById('camp-nom-input');
 
+  // Emoji
+  const emojiDisplay = document.getElementById('camp-emoji-display');
+  const emojiInput   = document.getElementById('camp-emoji-input');
+
+  emojiDisplay.addEventListener('click', () => {
+    emojiInput.value = campagne.emoji || '';
+    emojiDisplay.classList.add('hidden');
+    emojiInput.classList.remove('hidden');
+    emojiInput.focus();
+    emojiInput.select();
+  });
+
+  async function confirmEmoji() {
+    const nouvel = [...(emojiInput.value.trim())][0] || campagne.emoji || '🎲';
+    emojiInput.classList.add('hidden');
+    emojiDisplay.classList.remove('hidden');
+    if (nouvel === campagne.emoji) return;
+    try {
+      await updateDoc(doc(db, 'jdr_campagnes', CAMP_ID), { emoji: nouvel });
+      campagne.emoji = nouvel;
+      emojiDisplay.textContent = nouvel;
+      document.title = `${nouvel} ${campagne.nom} — JDR`;
+      showToast('Émoji mis à jour ✓');
+    } catch(e) {
+      emojiDisplay.textContent = campagne.emoji;
+      showToast('Erreur : ' + e.message, 'err');
+    }
+  }
+
+  emojiInput.addEventListener('blur', confirmEmoji);
+  emojiInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); emojiInput.blur(); }
+    if (e.key === 'Escape') { emojiInput.value = campagne.emoji; emojiInput.blur(); }
+  });
+
+  // Nom
   display.addEventListener('click', () => {
     input.value = campagne.nom || '';
     display.classList.add('hidden');
