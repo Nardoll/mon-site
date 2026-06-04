@@ -138,24 +138,17 @@
         <div class="dev-kpi-label">objectif quotidien</div>
       </div>
       <div class="dev-kpi">
-        <div class="dev-kpi-value" id="dev-kpi-jours">—</div>
-        <div class="dev-kpi-label">jours actifs</div>
+        <div class="dev-kpi-value" id="dev-kpi-delta">—</div>
+        <div class="dev-kpi-label">mots écrits aujourd'hui</div>
       </div>
     </div>
 
-    <!-- Saisie du jour -->
+    <!-- Résumé du jour -->
     <div class="dev-today-card">
       <div class="dev-today-title" id="dev-today-title">Aujourd'hui</div>
       <div class="dev-today-body">
-        <div class="dev-today-existing hidden" id="dev-today-existing">
-          <span class="dev-today-count" id="dev-today-count"></span>
-          <button class="btn-ghost btn-sm" id="dev-today-edit">✏️ Modifier</button>
-        </div>
-        <div class="dev-today-form" id="dev-today-form">
-          <input type="number" id="dev-today-input" class="form-input dev-today-input"
-                 min="0" placeholder="Nombre de nouveaux mots écrits aujourd'hui…">
-          <button class="btn-primary btn-sm" id="dev-today-save">Enregistrer</button>
-        </div>
+        <div class="dev-today-delta" id="dev-today-delta"></div>
+        <div class="dev-today-status" id="dev-today-status"></div>
       </div>
     </div>
 

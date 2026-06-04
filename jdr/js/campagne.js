@@ -862,7 +862,6 @@ function todayStr() {
 }
 
 function setupDev() {
-  // Objectif — chargé depuis campagne, modifié en direct
   const objInput = document.getElementById('dev-objectif-input');
   objInput.value = campagne.objectif_mots_par_jour || 500;
   let objTimer;
@@ -877,90 +876,80 @@ function setupDev() {
       } catch(e) { /* silent */ }
     }, 800);
   });
+}
 
-  // Saisie du jour
-  document.getElementById('dev-today-save').addEventListener('click', saveTodayEntry);
-  document.getElementById('dev-today-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') saveTodayEntry();
-  });
-  document.getElementById('dev-today-edit').addEventListener('click', () => {
-    document.getElementById('dev-today-existing').classList.add('hidden');
-    const form = document.getElementById('dev-today-form');
-    form.classList.remove('hidden');
-    const existing = devJournal.find(e => e.date_str === todayStr());
-    document.getElementById('dev-today-input').value = existing?.mots ?? '';
-    document.getElementById('dev-today-input').focus();
-  });
+async function snapshotToday() {
+  const dateStr   = todayStr();
+  const totalMots = totalWordsInProject();
+  const existing  = devJournal.find(e => e.date_str === dateStr);
+
+  try {
+    if (existing) {
+      if (existing.mots_total === totalMots) return; // rien de changé
+      await updateDoc(doc(db, 'jdr_camp_dev_journal', existing.id), { mots_total: totalMots });
+      existing.mots_total = totalMots;
+    } else {
+      const ref = await addDoc(collection(db, 'jdr_camp_dev_journal'), {
+        campagne_id: CAMP_ID, date_str: dateStr, mots_total: totalMots, cree_le: serverTimestamp(),
+      });
+      devJournal.push({ id: ref.id, campagne_id: CAMP_ID, date_str: dateStr, mots_total: totalMots });
+      devJournal.sort((a, b) => a.date_str.localeCompare(b.date_str));
+    }
+  } catch(e) { /* silent — pas bloquant */ }
+}
+
+function getDelta(dateStr) {
+  const idx  = devJournal.findIndex(e => e.date_str === dateStr);
+  if (idx < 0) return null;
+  const curr = devJournal[idx].mots_total ?? 0;
+  const prev = idx > 0 ? (devJournal[idx - 1].mots_total ?? 0) : 0;
+  return Math.max(0, curr - prev);
 }
 
 function renderDev() {
   const totalMots = totalWordsInProject();
   const pages     = Math.round(totalMots / 250);
-  const joursActifs = devJournal.filter(e => e.mots > 0).length;
+  const delta     = getDelta(todayStr());
 
   document.getElementById('dev-kpi-mots').textContent  = totalMots.toLocaleString('fr-FR');
   document.getElementById('dev-kpi-pages').textContent = pages || '—';
-  document.getElementById('dev-kpi-jours').textContent = joursActifs || '—';
+  document.getElementById('dev-kpi-delta').textContent = delta !== null
+    ? (delta > 0 ? '+' + delta.toLocaleString('fr-FR') : '0')
+    : '—';
 
   // Titre aujourd'hui
   const today = new Date();
   document.getElementById('dev-today-title').textContent =
     'Aujourd\'hui — ' + today.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
 
-  // Saisie du jour : déjà remplie ?
-  const existing = devJournal.find(e => e.date_str === todayStr());
-  if (existing) {
-    document.getElementById('dev-today-existing').classList.remove('hidden');
-    document.getElementById('dev-today-form').classList.add('hidden');
-    document.getElementById('dev-today-count').textContent =
-      `✓ ${existing.mots.toLocaleString('fr-FR')} mots enregistrés`;
+  // Message delta
+  const objectif = parseInt(document.getElementById('dev-objectif-input').value) || 500;
+  const deltaEl  = document.getElementById('dev-today-delta');
+  const statusEl = document.getElementById('dev-today-status');
+
+  if (delta === null || (delta === 0 && devJournal.length === 0)) {
+    deltaEl.textContent  = 'Aucune donnée pour aujourd\'hui.';
+    statusEl.textContent = 'Écris quelque chose et reviens ici — le delta se calculera automatiquement.';
+    statusEl.className   = 'dev-today-status dev-status-neutral';
   } else {
-    document.getElementById('dev-today-existing').classList.add('hidden');
-    document.getElementById('dev-today-form').classList.remove('hidden');
-    document.getElementById('dev-today-input').value = '';
+    deltaEl.innerHTML = `<span class="dev-delta-num">+${delta.toLocaleString('fr-FR')}</span> mots écrits aujourd'hui`;
+    if (delta >= objectif) {
+      statusEl.textContent = '🎯 Objectif atteint !';
+      statusEl.className   = 'dev-today-status dev-status-ok';
+    } else if (delta > 0) {
+      const manquants = objectif - delta;
+      statusEl.textContent = `${manquants.toLocaleString('fr-FR')} mots pour atteindre l'objectif`;
+      statusEl.className   = 'dev-today-status dev-status-progress';
+    } else {
+      statusEl.textContent = `Objectif du jour : ${objectif.toLocaleString('fr-FR')} mots`;
+      statusEl.className   = 'dev-today-status dev-status-neutral';
+    }
   }
 
   renderDevCharts();
-}
 
-async function saveTodayEntry() {
-  const val = parseInt(document.getElementById('dev-today-input').value);
-  if (isNaN(val) || val < 0) return;
-
-  const btn = document.getElementById('dev-today-save');
-  btn.disabled = true;
-
-  try {
-    const dateStr  = todayStr();
-    const existing = devJournal.find(e => e.date_str === dateStr);
-
-    if (existing) {
-      await updateDoc(doc(db, 'jdr_camp_dev_journal', existing.id), { mots: val });
-      existing.mots = val;
-    } else {
-      const ref = await addDoc(collection(db, 'jdr_camp_dev_journal'), {
-        campagne_id: CAMP_ID, date_str: dateStr, mots: val, cree_le: serverTimestamp(),
-      });
-      devJournal.push({ id: ref.id, campagne_id: CAMP_ID, date_str: dateStr, mots: val });
-      devJournal.sort((a, b) => a.date_str.localeCompare(b.date_str));
-    }
-
-    document.getElementById('dev-today-existing').classList.remove('hidden');
-    document.getElementById('dev-today-form').classList.add('hidden');
-    document.getElementById('dev-today-count').textContent =
-      `✓ ${val.toLocaleString('fr-FR')} mots enregistrés`;
-
-    // Mise à jour KPIs
-    document.getElementById('dev-kpi-jours').textContent =
-      devJournal.filter(e => e.mots > 0).length;
-
-    renderDevCharts();
-    showToast('Progression enregistrée ✓');
-  } catch(e) {
-    showToast('Erreur : ' + e.message, 'err');
-  } finally {
-    btn.disabled = false;
-  }
+  // Snapshot silencieux
+  snapshotToday();
 }
 
 function renderDevCharts() {
@@ -968,7 +957,7 @@ function renderDevCharts() {
 
   const objectif = parseInt(document.getElementById('dev-objectif-input').value) || 500;
 
-  // Prépare les 30 derniers jours
+  // 30 derniers jours
   const days = [];
   for (let i = 29; i >= 0; i--) {
     const d = new Date();
@@ -976,84 +965,58 @@ function renderDevCharts() {
     days.push(d.toISOString().slice(0, 10));
   }
 
-  const dailyMap = {};
-  devJournal.forEach(e => { dailyMap[e.date_str] = (dailyMap[e.date_str] || 0) + e.mots; });
-
-  const dailyVals = days.map(d => dailyMap[d] || 0);
-  const labels    = days.map(d => {
+  const labels = days.map(d => {
     const dt = new Date(d + 'T12:00:00');
     return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   });
 
-  // Couleurs barres : accent si ≥ objectif, sinon couleur atténuée
+  // Deltas quotidiens
+  const dailyDeltas = days.map(d => getDelta(d) ?? 0);
+
   const accent    = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#4e8a5c';
   const accentDim = accent + '55';
-  const barColors = dailyVals.map(v => v >= objectif ? accent : accentDim);
+  const barColors = dailyDeltas.map(v => v >= objectif ? accent : accentDim);
 
-  const chartDefaults = {
-    responsive: true,
-    plugins: { legend: { display: false }, tooltip: { callbacks: {
-      label: ctx => ` ${ctx.parsed.y.toLocaleString('fr-FR')} mots`,
-    }}},
-    scales: {
-      x: { ticks: { color: '#888', font: { size: 11 }, maxRotation: 45 }, grid: { color: 'rgba(255,255,255,.05)' } },
-      y: { ticks: { color: '#888', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,.07)' }, beginAtZero: true },
-    },
+  const scaleOpts = {
+    x: { ticks: { color: '#888', font: { size: 11 }, maxRotation: 45 }, grid: { color: 'rgba(255,255,255,.05)' } },
+    y: { ticks: { color: '#888', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,.07)' }, beginAtZero: true },
   };
 
-  // ── Bar chart quotidien ──
+  // ── Bar chart deltas ──
   if (_devChartDaily) _devChartDaily.destroy();
   _devChartDaily = new Chart(document.getElementById('dev-chart-daily'), {
     type: 'bar',
     data: {
       labels,
       datasets: [
-        {
-          label: 'Mots/jour',
-          data: dailyVals,
-          backgroundColor: barColors,
-          borderRadius: 4,
-          borderSkipped: false,
-        },
-        {
-          label: 'Objectif',
-          data: days.map(() => objectif),
-          type: 'line',
-          borderColor: '#e05555',
-          borderDash: [5, 4],
-          borderWidth: 1.5,
-          pointRadius: 0,
-          fill: false,
-        },
+        { label: 'Mots/jour', data: dailyDeltas, backgroundColor: barColors, borderRadius: 4, borderSkipped: false },
+        { label: 'Objectif', data: days.map(() => objectif), type: 'line',
+          borderColor: '#e05555', borderDash: [5, 4], borderWidth: 1.5, pointRadius: 0, fill: false },
       ],
     },
     options: {
-      ...chartDefaults,
-      plugins: {
-        ...chartDefaults.plugins,
-        tooltip: { callbacks: { label: ctx =>
-          ctx.datasetIndex === 1
-            ? ` Objectif : ${objectif.toLocaleString('fr-FR')} mots`
-            : ` ${ctx.parsed.y.toLocaleString('fr-FR')} mots`,
-        }},
-      },
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx =>
+        ctx.datasetIndex === 1
+          ? ` Objectif : ${objectif.toLocaleString('fr-FR')} mots`
+          : ` +${ctx.parsed.y.toLocaleString('fr-FR')} mots`,
+      }}},
+      scales: scaleOpts,
     },
   });
 
-  // ── Line chart cumulé (toutes les entrées) ──
-  const allDays = devJournal.map(e => e.date_str).filter((v, i, a) => a.indexOf(v) === i).sort();
-  let cumul = 0;
-  const cumulVals   = allDays.map(d => { cumul += dailyMap[d] || 0; return cumul; });
-  const cumulLabels = allDays.map(d => {
+  // ── Line chart total cumulé (snapshots réels) ──
+  const snapDays  = devJournal.map(e => e.date_str);
+  const snapVals  = devJournal.map(e => e.mots_total ?? 0);
+  const snapLabels = snapDays.map(d => {
     const dt = new Date(d + 'T12:00:00');
     return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   });
 
   if (_devChartCumul) _devChartCumul.destroy();
 
-  if (cumulVals.length === 0) {
-    const ctx = document.getElementById('dev-chart-cumul').getContext('2d');
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  if (snapVals.length === 0) {
+    document.getElementById('dev-chart-cumul').getContext('2d').clearRect(0, 0, 9999, 9999);
     _devChartCumul = null;
     return;
   }
@@ -1061,20 +1024,26 @@ function renderDevCharts() {
   _devChartCumul = new Chart(document.getElementById('dev-chart-cumul'), {
     type: 'line',
     data: {
-      labels: cumulLabels,
+      labels: snapLabels,
       datasets: [{
-        label: 'Total cumulé',
-        data: cumulVals,
+        label: 'Total mots',
+        data: snapVals,
         borderColor: accent,
         backgroundColor: accent + '22',
         borderWidth: 2,
-        pointRadius: cumulVals.length < 20 ? 4 : 2,
+        pointRadius: snapVals.length < 20 ? 4 : 2,
         pointBackgroundColor: accent,
         fill: true,
         tension: 0.35,
       }],
     },
-    options: chartDefaults,
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        label: ctx => ` ${ctx.parsed.y.toLocaleString('fr-FR')} mots au total`,
+      }}},
+      scales: scaleOpts,
+    },
   });
 }
 

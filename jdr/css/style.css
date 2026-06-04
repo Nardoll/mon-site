@@ -2092,33 +2092,31 @@ body {
   margin-bottom: .85rem;
 }
 
-.dev-today-body { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-
-.dev-today-existing {
+.dev-today-body {
   display: flex;
-  align-items: center;
-  gap: .75rem;
+  flex-direction: column;
+  gap: .4rem;
 }
 
-.dev-today-count {
+.dev-today-delta {
   font-size: 1.05rem;
-  font-weight: 600;
+  color: var(--text);
+}
+
+.dev-delta-num {
+  font-size: 1.35rem;
+  font-weight: 700;
   color: var(--accent);
 }
 
-.dev-today-form {
-  display: flex;
-  align-items: center;
-  gap: .75rem;
-  flex: 1;
+.dev-today-status {
+  font-size: .85rem;
+  font-weight: 500;
 }
 
-.dev-today-input {
-  max-width: 280px;
-  -moz-appearance: textfield;
-}
-.dev-today-input::-webkit-outer-spin-button,
-.dev-today-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.dev-status-ok       { color: var(--accent); }
+.dev-status-progress { color: var(--muted); }
+.dev-status-neutral  { color: var(--muted); font-style: italic; }
 
 /* Graphiques */
 .dev-charts {
