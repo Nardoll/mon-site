@@ -332,14 +332,13 @@ function renderSections() {
 }
 
 function validateSection(i) {
-  // Lit les valeurs actuelles depuis le DOM avant de refermer l'éditeur
   const titleEl = document.querySelector(`.wp-section-title[data-i="${i}"]`);
   const bodyEl  = document.querySelector(`.wp-section-body[data-i="${i}"]`);
   if (titleEl) sections[i].titre   = titleEl.value;
   if (bodyEl)  sections[i].contenu = bodyEl.value;
   editingSections.delete(i);
-  markUnsaved();
   renderSections();
+  savePage();
 }
 
 function moveSection(i, dir) {

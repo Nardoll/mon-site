@@ -963,8 +963,8 @@ function presValidateSection(i) {
   if (titleEl) presSections[i].titre   = titleEl.value;
   if (bodyEl)  presSections[i].contenu = bodyEl.value;
   presEditingSections.delete(i);
-  presMarkUnsaved();
   renderPresSections();
+  savePresentation();
 }
 
 function presMoveSection(i, dir) {
