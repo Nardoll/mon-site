@@ -1026,6 +1026,50 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-06-04 (suite 9)
+
+**JDR — Onglet Développement (suivi de progression)**
+
+- `jdr/campagne.html` + `jdr/js/campagne.js` : nouvel onglet **✍️ Développement**.
+  - **KPIs** : mots totaux calculés automatiquement depuis toutes les sections (wiki + quêtes + présentation, champs rapides inclus) via `countWords()` + `totalWordsInProject()` ; pages estimées (÷ 250) ; objectif quotidien configurable inline (champ éditable, sauvegardé dans `jdr_campagnes.objectif_mots_par_jour` avec debounce 800 ms) ; jours actifs (entrées journal > 0).
+  - **Saisie quotidienne** : une entrée par jour, modifiable. Si déjà saisie, affiche "✓ X mots enregistrés" + bouton Modifier. Stockée dans la nouvelle collection `jdr_camp_dev_journal`.
+  - **Bar chart "Mots par jour"** (30 derniers jours) : barres en couleur accent si ≥ objectif, atténuées sinon. Ligne rouge pointillée = objectif. Tooltip adapté.
+  - **Line chart "Progression cumulée"** : toutes les entrées dans le temps, aire remplie, tension 0.35.
+  - Les graphiques se re-rendent à l'activation de l'onglet (canvas invisible → visible).
+- `jdr/css/style.css` : styles `.dev-kpis`, `.dev-kpi`, `.dev-objectif-input`, `.dev-today-card`, `.dev-today-form`, `.dev-charts`, `.dev-chart-card`.
+
+**Collection Firestore ajoutée :**
+
+| Collection | Champs |
+|------------|--------|
+| `jdr_camp_dev_journal` | `campagne_id`, `date_str` (YYYY-MM-DD), `mots` (number), `cree_le` |
+
+**Champ Firestore ajouté sur `jdr_campagnes` :**
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `objectif_mots_par_jour` | number | Objectif quotidien de l'onglet Développement (défaut : 500) |
+
+### 2026-06-04 (suite 8)
+
+**JDR — Valider une section sauvegarde automatiquement**
+
+- `jdr/js/wiki-page.js` + `jdr/js/campagne.js` : `validateSection` déclenche `savePage` / `savePresentation` immédiatement après fermeture de l'éditeur. Plus besoin de cliquer 💾 séparément après avoir validé une section.
+
+### 2026-06-04 (suite 7)
+
+**JDR — Émoji du projet modifiable en inline**
+
+- `jdr/campagne.html` + `jdr/js/campagne.js` : clic sur l'émoji → input compact (2 rem, bordure accent). Entrée confirme, Échap annule. Seul le premier caractère emoji est retenu. Sauvegardé dans `jdr_campagnes.emoji`, `<title>` mis à jour immédiatement.
+- `jdr/css/style.css` : styles `.camp-emoji-editable`, `.camp-emoji-input`.
+
+### 2026-06-04 (suite 6)
+
+**JDR — Idées : case à cocher "utilisée"**
+
+- `jdr/js/campagne.js` : chaque carte idée dispose d'une checkbox en début de ligne. Cochée → carte atténuée (opacity 55%), titre barré. Mise à jour optimiste du DOM + sauvegarde Firestore (`utilisee: boolean` sur `jdr_camp_idees`).
+- `jdr/css/style.css` : styles `.idee-check-label`, `.idee-check-box`, `.idee-utilisee`.
+
 ### 2026-06-04 (suite 5)
 
 **JDR — Onglet Présentation générale + renommage projet**
