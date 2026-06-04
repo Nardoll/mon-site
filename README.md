@@ -1031,18 +1031,19 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 **JDR — Onglet Développement (suivi de progression)**
 
 - `jdr/campagne.html` + `jdr/js/campagne.js` : nouvel onglet **✍️ Développement**.
-  - **KPIs** : mots totaux calculés automatiquement depuis toutes les sections (wiki + quêtes + présentation, champs rapides inclus) via `countWords()` + `totalWordsInProject()` ; pages estimées (÷ 250) ; objectif quotidien configurable inline (champ éditable, sauvegardé dans `jdr_campagnes.objectif_mots_par_jour` avec debounce 800 ms) ; jours actifs (entrées journal > 0).
-  - **Saisie quotidienne** : une entrée par jour, modifiable. Si déjà saisie, affiche "✓ X mots enregistrés" + bouton Modifier. Stockée dans la nouvelle collection `jdr_camp_dev_journal`.
-  - **Bar chart "Mots par jour"** (30 derniers jours) : barres en couleur accent si ≥ objectif, atténuées sinon. Ligne rouge pointillée = objectif. Tooltip adapté.
-  - **Line chart "Progression cumulée"** : toutes les entrées dans le temps, aire remplie, tension 0.35.
-  - Les graphiques se re-rendent à l'activation de l'onglet (canvas invisible → visible).
-- `jdr/css/style.css` : styles `.dev-kpis`, `.dev-kpi`, `.dev-objectif-input`, `.dev-today-card`, `.dev-today-form`, `.dev-charts`, `.dev-chart-card`.
+  - **KPIs** : mots totaux calculés automatiquement depuis toutes les sections (wiki + quêtes + présentation, champs rapides inclus) via `countWords()` + `totalWordsInProject()` ; pages estimées (÷ 250) ; objectif quotidien configurable inline (champ éditable, sauvegardé dans `jdr_campagnes.objectif_mots_par_jour` avec debounce 800 ms) ; mots écrits aujourd'hui (delta automatique).
+  - **Snapshot automatique** : à chaque ouverture de l'onglet, `snapshotToday()` enregistre silencieusement le total de mots actuel du projet dans `jdr_camp_dev_journal` (champ `mots_total`). Pas de saisie manuelle. Le delta quotidien = snapshot aujourd'hui − snapshot veille via `getDelta(dateStr)`.
+  - **Résumé du jour** : affiche `+N mots écrits aujourd'hui`, statut "🎯 Objectif atteint !" / "X mots manquants" / neutre.
+  - **Bar chart "Mots par jour"** (30 derniers jours) : deltas quotidiens, barres vertes si ≥ objectif, atténuées sinon. Ligne rouge pointillée = objectif.
+  - **Line chart "Progression cumulée"** : `mots_total` réel dans le temps (pas une somme reconstituée).
+  - Les graphiques se re-rendent à l'activation de l'onglet.
+- `jdr/css/style.css` : styles `.dev-kpis`, `.dev-kpi`, `.dev-objectif-input`, `.dev-today-card`, `.dev-delta-num`, `.dev-status-ok/progress/neutral`, `.dev-charts`, `.dev-chart-card`.
 
 **Collection Firestore ajoutée :**
 
 | Collection | Champs |
 |------------|--------|
-| `jdr_camp_dev_journal` | `campagne_id`, `date_str` (YYYY-MM-DD), `mots` (number), `cree_le` |
+| `jdr_camp_dev_journal` | `campagne_id`, `date_str` (YYYY-MM-DD), `mots_total` (snapshot total), `cree_le` |
 
 **Champ Firestore ajouté sur `jdr_campagnes` :**
 
