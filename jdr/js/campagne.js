@@ -720,8 +720,13 @@ function renderIdees() {
     const date = idee.cree_le?.toDate
       ? idee.cree_le.toDate().toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' })
       : '';
-    return `<div class="idee-card">
+    const utilisee = !!idee.utilisee;
+    return `<div class="idee-card${utilisee ? ' idee-utilisee' : ''}">
       <div class="idee-card-header">
+        <label class="idee-check-label" title="${utilisee ? 'Marquer comme non utilisée' : 'Marquer comme utilisée'}">
+          <input type="checkbox" class="idee-check" data-id="${idee.id}" ${utilisee ? 'checked' : ''}>
+          <span class="idee-check-box">${utilisee ? '✓' : ''}</span>
+        </label>
         ${idee.titre ? `<div class="idee-card-titre">${escH(idee.titre)}</div>` : ''}
         <div class="idee-card-meta">${date}</div>
         <button class="idee-delete btn-ghost btn-sm" data-id="${idee.id}" title="Supprimer">🗑️</button>
@@ -730,6 +735,8 @@ function renderIdees() {
     </div>`;
   }).join('');
 
+  list.querySelectorAll('.idee-check').forEach(cb =>
+    cb.addEventListener('change', () => toggleIdeeUtilisee(cb.dataset.id, cb.checked)));
   list.querySelectorAll('.idee-delete').forEach(btn =>
     btn.addEventListener('click', () => deleteIdee(btn.dataset.id)));
 }
@@ -753,6 +760,23 @@ async function saveIdee() {
     showToast('Idée ajoutée');
   } catch(e) { showToast('Erreur : ' + e.message, 'err'); }
   finally { btn.disabled = false; }
+}
+
+async function toggleIdeeUtilisee(id, utilisee) {
+  const idee = idees.find(i => i.id === id);
+  if (!idee) return;
+  idee.utilisee = utilisee;
+  const card = document.querySelector(`.idee-check[data-id="${id}"]`)?.closest('.idee-card');
+  if (card) {
+    card.classList.toggle('idee-utilisee', utilisee);
+    const box = card.querySelector('.idee-check-box');
+    if (box) box.textContent = utilisee ? '✓' : '';
+    const label = card.querySelector('.idee-check-label');
+    if (label) label.title = utilisee ? 'Marquer comme non utilisée' : 'Marquer comme utilisée';
+  }
+  try {
+    await updateDoc(doc(db, 'jdr_camp_idees', id), { utilisee });
+  } catch(e) { showToast('Erreur : ' + e.message, 'err'); }
 }
 
 async function deleteIdee(id) {

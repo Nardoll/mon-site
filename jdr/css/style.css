@@ -2210,3 +2210,42 @@ body {
   line-height: 1.55;
   white-space: pre-wrap;
 }
+
+/* Case "utilisée" */
+.idee-check-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.idee-check-label input[type="checkbox"] { display: none; }
+
+.idee-check-box {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .7rem;
+  font-weight: 700;
+  color: transparent;
+  background: transparent;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.idee-check-label:hover .idee-check-box {
+  border-color: var(--accent);
+}
+.idee-utilisee .idee-check-box {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* Carte utilisée : atténuée */
+.idee-utilisee {
+  opacity: .55;
+}
+.idee-utilisee:hover { opacity: .8; }
+.idee-utilisee .idee-card-titre { text-decoration: line-through; }
