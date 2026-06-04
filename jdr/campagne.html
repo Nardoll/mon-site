@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projet — JDR</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="main-content" id="main-content" style="display:none">
+
+  <!-- En-tête du projet -->
+  <div class="camp-page-header">
+    <span id="camp-emoji-display" class="camp-page-emoji"></span>
+    <h1 id="camp-nom-display" class="page-title"></h1>
+  </div>
+
+  <!-- Onglets -->
+  <div class="camp-tabs">
+    <button class="camp-tab active" data-tab="wiki">📖 Wiki</button>
+    <button class="camp-tab" data-tab="carte">🗺️ Carte</button>
+    <button class="camp-tab" data-tab="chrono">📅 Chronologie</button>
+  </div>
+
+  <!-- ───── TAB WIKI ───── -->
+  <div class="camp-tab-panel" id="tab-wiki">
+    <div class="wiki-toolbar">
+      <div class="wiki-cats">
+        <button class="wiki-cat active" data-cat="">Tout</button>
+        <button class="wiki-cat" data-cat="lieu">📍 Lieux</button>
+        <button class="wiki-cat" data-cat="personnage">👤 Personnages</button>
+        <button class="wiki-cat" data-cat="piste">🔍 Pistes</button>
+        <button class="wiki-cat" data-cat="quete">⚔️ Quêtes</button>
+      </div>
+      <button class="btn-primary btn-sm" id="btn-new-page">+ Nouvelle page</button>
+    </div>
+    <div id="wiki-list"></div>
+  </div>
+
+  <!-- ───── TAB CARTE ───── -->
+  <div class="camp-tab-panel hidden" id="tab-carte">
+    <div class="carte-toolbar">
+      <div class="carte-tools">
+        <button class="carte-tool active" data-tool="select" title="Sélectionner">👆</button>
+        <button class="carte-tool" data-tool="draw"   title="Dessiner">✏️</button>
+        <button class="carte-tool" data-tool="erase"  title="Effacer">🧹</button>
+        <button class="carte-tool" data-tool="marker" title="Placer un marqueur">📍</button>
+      </div>
+      <div class="carte-draw-opts hidden" id="carte-draw-opts">
+        <input type="color" id="draw-color" value="#e74c3c" title="Couleur du trait">
+        <select id="draw-width" class="filter-select">
+          <option value="2">Fin</option>
+          <option value="4" selected>Normal</option>
+          <option value="8">Épais</option>
+          <option value="14">Très épais</option>
+        </select>
+        <button class="btn-danger btn-sm" id="btn-clear-draw">🗑️ Tout effacer</button>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:.5rem">
+        <button class="btn-ghost btn-sm" id="btn-set-map">🖼️ Changer l'image</button>
+        <button class="btn-primary btn-sm" id="btn-save-carte">💾 Sauvegarder</button>
+      </div>
+    </div>
+    <div id="carte-zone">
+      <div id="carte-empty" class="camp-empty-state">
+        <div class="camp-empty-icon">🗺️</div>
+        <div class="camp-empty-text">Aucune carte configurée.</div>
+        <button class="btn-primary" id="btn-add-map">Ajouter une image de carte</button>
+      </div>
+      <div id="carte-wrap" class="carte-wrap hidden">
+        <img id="carte-img" class="carte-img" alt="Carte">
+        <canvas id="carte-canvas" class="carte-canvas"></canvas>
+        <div id="carte-markers"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── TAB CHRONO ───── -->
+  <div class="camp-tab-panel hidden" id="tab-chrono">
+    <div class="chrono-toolbar">
+      <h2 class="chrono-section-title">Chronologie</h2>
+      <button class="btn-primary btn-sm" id="btn-new-arc">+ Nouvel arc</button>
+    </div>
+    <div id="chrono-list"></div>
+  </div>
+
+</div><!-- /main-content -->
+
+
+<!-- ══ MODAL WIKI PAGE ══ -->
+<div class="overlay hidden" id="wiki-overlay">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="wiki-modal-title">Nouvelle page</h2>
+      <button class="modal-close" id="wiki-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label class="form-label">Catégorie</label>
+          <select id="wiki-cat" class="filter-select" style="width:100%">
+            <option value="lieu">📍 Lieu</option>
+            <option value="personnage">👤 Personnage</option>
+            <option value="piste">🔍 Piste</option>
+            <option value="quete">⚔️ Quête</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Titre <span style="color:var(--accent2)">*</span></label>
+          <input type="text" id="wiki-titre" class="form-input" placeholder="Nom de la page">
+        </div>
+      </div>
+      <div id="wiki-dyn-fields"></div>
+      <div class="form-row">
+        <label class="form-label">Contenu / Notes libres</label>
+        <textarea id="wiki-contenu" class="form-input" rows="5"
+                  placeholder="Description, détails, notes…" style="resize:vertical"></textarea>
+      </div>
+      <div id="wiki-error" class="form-error-msg"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-danger btn-sm hidden" id="wiki-delete">🗑️ Supprimer</button>
+      <span style="flex:1"></span>
+      <button class="btn-ghost btn-sm" id="wiki-cancel">Annuler</button>
+      <button class="btn-primary btn-sm" id="wiki-save">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL IMAGE CARTE ══ -->
+<div class="overlay hidden" id="map-overlay">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h2 class="modal-title">Image de la carte</h2>
+      <button class="modal-close" id="map-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">URL de l'image (PNG, JPG…)</label>
+        <input type="url" id="map-url" class="form-input"
+               placeholder="https://i.imgur.com/…" autocomplete="off">
+        <div style="font-size:.78rem;color:var(--muted);margin-top:.45rem">
+          Copiez l'URL d'une image hébergée en ligne — Discord, Imgur, GitHub raw…
+        </div>
+      </div>
+      <div id="map-error" class="form-error-msg"></div>
+    </div>
+    <div class="form-actions">
+      <span style="flex:1"></span>
+      <button class="btn-ghost btn-sm" id="map-cancel">Annuler</button>
+      <button class="btn-primary btn-sm" id="map-apply">Appliquer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL MARQUEUR ══ -->
+<div class="overlay hidden" id="marker-overlay">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="marker-modal-title">Nouveau marqueur</h2>
+      <button class="modal-close" id="marker-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Label</label>
+        <input type="text" id="marker-label" class="form-input" placeholder="Ex: Ville de Karrak">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Lier à une page wiki</label>
+        <select id="marker-wiki" class="filter-select" style="width:100%">
+          <option value="">— Aucune —</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Couleur</label>
+        <input type="color" id="marker-color" value="#e74c3c">
+      </div>
+      <div id="marker-error" class="form-error-msg"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-danger btn-sm hidden" id="marker-delete">🗑️</button>
+      <span style="flex:1"></span>
+      <button class="btn-ghost btn-sm" id="marker-cancel">Annuler</button>
+      <button class="btn-primary btn-sm" id="marker-save">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL ARC ══ -->
+<div class="overlay hidden" id="arc-overlay">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <h2 class="modal-title" id="arc-modal-title">Nouvel arc</h2>
+      <button class="modal-close" id="arc-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label class="form-label">Titre <span style="color:var(--accent2)">*</span></label>
+          <input type="text" id="arc-titre" class="form-input" placeholder="Ex: La Chute de Karrak">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Type</label>
+          <select id="arc-type" class="filter-select" style="width:100%">
+            <option value="prelude">🌅 Prélude</option>
+            <option value="arc" selected>⚔️ Arc principal</option>
+            <option value="interlude">💫 Interlude</option>
+            <option value="epilogue">🏁 Épilogue</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Statut</label>
+        <select id="arc-statut" class="filter-select" style="width:200px">
+          <option value="planifie">📋 Planifié</option>
+          <option value="en_cours">▶️ En cours</option>
+          <option value="termine">✅ Terminé</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Description / Résumé</label>
+        <textarea id="arc-desc" class="form-input" rows="4"
+                  placeholder="Résumé, enjeux, notes de préparation…" style="resize:vertical"></textarea>
+      </div>
+      <div class="arc-scenarios-header">
+        <span class="form-label" style="margin:0">Scénarios</span>
+        <button class="btn-ghost btn-sm" id="btn-add-scenario">+ Ajouter</button>
+      </div>
+      <div id="arc-scenarios-list"></div>
+      <div id="arc-error" class="form-error-msg"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-danger btn-sm hidden" id="arc-delete">🗑️ Supprimer</button>
+      <span style="flex:1"></span>
+      <button class="btn-ghost btn-sm" id="arc-cancel">Annuler</button>
+      <button class="btn-primary btn-sm" id="arc-save">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div id="camp-toast" class="camp-toast hidden"></div>
+
+<script type="module">
+  import { requireAuth }  from './js/auth.js';
+  import { initNav }      from './js/nav.js';
+  import { initCampagne } from './js/campagne.js';
+
+  requireAuth(() => {
+    document.getElementById('main-content').style.display = '';
+    initNav('campagne');
+    initCampagne();
+  });
+</script>
+</body>
+</html>

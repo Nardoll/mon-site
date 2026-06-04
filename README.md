@@ -1026,6 +1026,50 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-06-04 (suite)
+
+**JDR — Nouveau module "Projets" (Wiki + Carte + Chronologie)**
+
+**Architecture**
+- `jdr/campagne.html` : nouvelle page de workspace projet, accessible via `/jdr/campagne.html?id=CAMP_ID`
+- `jdr/js/campagne.js` : toute la logique du projet (export `initCampagne`)
+- `jdr/js/nav.js` : ajout d'une section "Projets" dynamique dans la sidebar (chargée depuis Firestore), bouton "+" pour créer un projet → modal inline → redirection vers la nouvelle campagne
+- `jdr/css/style.css` : nouveaux styles pour sidebar projets, page camp, wiki, carte, chronologie, toast
+
+**Onglet Wiki**
+- 4 catégories : Lieux · Personnages · Pistes · Quêtes
+- Chaque catégorie a des champs structurés dédiés (type lieu / habitants, rôle / faction / secrets, indice / lié à, objectif / récompense / statut quête) + un champ texte libre
+- Filtre par catégorie (pills) ou vue "Tout" groupée
+- CRUD complet (créer, modifier, supprimer)
+
+**Onglet Carte**
+- Image chargée depuis une URL (hébergée ailleurs — Discord, Imgur, GitHub raw…)
+- Canvas overlay : dessin libre (crayon couleur + épaisseur), gomme, effacement total
+- Marqueurs cliquables : label + couleur + lien vers une page wiki. Formes de pin colorées.
+- Sauvegarde manuelle (bouton 💾) → Firestore
+
+**Onglet Chronologie**
+- Arcs : type (Prélude / Arc / Interlude / Épilogue), statut (Planifié / En cours / Terminé), description
+- Scénarios par arc : liste de titres avec statut individuel
+- Réordonnancement ↑↓ avec persistence Firestore
+
+**Collections Firestore ajoutées**
+
+| Collection | Description |
+|------------|-------------|
+| `jdr_campagnes` | `{ nom, emoji, cree_le }` — un doc par projet |
+| `jdr_camp_wiki` | `{ campagne_id, titre, categorie, contenu, fields, cree_le, mis_a_jour }` |
+| `jdr_camp_carte` | `{ campagne_id, image_url, annotations[], markers[], mis_a_jour }` — un doc par campagne |
+| `jdr_camp_chrono` | `{ campagne_id, titre, type, statut, description, scenarios[], ordre, cree_le, mis_a_jour }` |
+
+**Navigation**
+
+| Page | URL |
+|------|-----|
+| Projet (workspace) | `/jdr/campagne.html?id=CAMP_ID` |
+
+> **Image carte** : l'image doit être hébergée en ligne (URL). Firebase Storage peut être ajouté ultérieurement pour l'upload direct.
+
 ### 2026-06-04
 
 **Réunions — Nombre de lecteurs dans la liste**
