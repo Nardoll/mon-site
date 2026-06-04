@@ -1,6 +1,6 @@
 import { db } from '../firebase-config.js';
 import {
-  collection, getDocs, doc, getDoc, updateDoc, serverTimestamp, query, where
+  collection, getDocs, doc, getDoc, updateDoc, deleteDoc, serverTimestamp, query, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ── Helpers ──────────────────────────────────────────────
@@ -135,6 +135,7 @@ export async function initWikiPage() {
 
     // Boutons
     document.getElementById('wp-save-btn').addEventListener('click', savePage);
+    document.getElementById('wp-delete-btn').addEventListener('click', deletePage);
     document.getElementById('wp-add-section').addEventListener('click', addSection);
 
     // Raccourci clavier Ctrl+S
@@ -364,6 +365,23 @@ function addSection() {
     list.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     list.querySelector(`.wp-section-body[data-i="${newIdx}"]`)?.focus();
   }, 60);
+}
+
+// ── Suppression ─────────────────────────────────────────
+async function deletePage() {
+  const label = DOC_TYPE === 'quete' ? 'cette quête' : 'cette page wiki';
+  const nom   = pageData.titre ? `"${pageData.titre}"` : label;
+  if (!confirm(`Supprimer ${nom} ? Cette action est irréversible.`)) return;
+
+  const btn = document.getElementById('wp-delete-btn');
+  btn.disabled = true;
+  try {
+    await deleteDoc(doc(db, COLL, DOC_ID));
+    window.location.href = `/jdr/campagne.html?id=${CAMP_ID}`;
+  } catch(e) {
+    showToast('Erreur : ' + e.message, 'err');
+    btn.disabled = false;
+  }
 }
 
 // ── État "non sauvegardé" ────────────────────────────────
