@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page — JDR</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="main-content" id="main-content" style="display:none">
+
+  <!-- Barre supérieure -->
+  <div class="wp-topbar">
+    <a href="#" id="wp-back-link" class="wp-back">← <span id="wp-back-label">Projet</span></a>
+    <div class="wp-topbar-right">
+      <span id="wp-save-status" class="wp-save-status"></span>
+      <button class="btn-primary btn-sm" id="wp-save-btn">💾 Sauvegarder</button>
+    </div>
+  </div>
+
+  <!-- En-tête de la page -->
+  <div class="wp-header">
+    <span class="wp-cat-badge" id="wp-cat-badge"></span>
+    <input type="text" id="wp-titre" class="wp-titre-input" placeholder="Titre de la page">
+  </div>
+
+  <!-- Infos rapides (champs structurés — wiki seulement) -->
+  <div id="wp-quick-info" class="wp-quick-info hidden"></div>
+
+  <!-- Associations (quêtes seulement) -->
+  <div id="wp-associations" class="wp-associations hidden"></div>
+
+  <!-- Éditeur de sections -->
+  <div class="wp-sections-wrap">
+    <div id="wp-sections-list"></div>
+    <button class="wp-add-section-btn" id="wp-add-section">+ Ajouter une section</button>
+  </div>
+
+</div>
+
+<div id="wp-toast" class="camp-toast hidden"></div>
+
+<script type="module">
+  import { requireAuth }   from './js/auth.js';
+  import { initNav }       from './js/nav.js';
+  import { initWikiPage }  from './js/wiki-page.js';
+
+  requireAuth(() => {
+    document.getElementById('main-content').style.display = '';
+    initNav('campagne');
+    initWikiPage();
+  });
+</script>
+</body>
+</html>

@@ -21,6 +21,7 @@
     <button class="camp-tab active" data-tab="wiki">📖 Wiki</button>
     <button class="camp-tab" data-tab="carte">🗺️ Carte</button>
     <button class="camp-tab" data-tab="chrono">📅 Chronologie</button>
+    <button class="camp-tab" data-tab="idees">💡 Idées</button>
   </div>
 
   <!-- ───── TAB WIKI ───── -->
@@ -28,10 +29,12 @@
     <div class="wiki-toolbar">
       <div class="wiki-cats">
         <button class="wiki-cat active" data-cat="">Tout</button>
-        <button class="wiki-cat" data-cat="lieu">📍 Lieux</button>
         <button class="wiki-cat" data-cat="personnage">👤 Personnages</button>
-        <button class="wiki-cat" data-cat="piste">🔍 Pistes</button>
-        <button class="wiki-cat" data-cat="quete">⚔️ Quêtes</button>
+        <button class="wiki-cat" data-cat="lieu">📍 Lieux</button>
+        <button class="wiki-cat" data-cat="objet">📦 Objets</button>
+        <button class="wiki-cat" data-cat="creature">🐉 Créatures</button>
+        <button class="wiki-cat" data-cat="faction">⚜️ Factions</button>
+        <button class="wiki-cat" data-cat="legende">📜 Légendes</button>
       </div>
       <button class="btn-primary btn-sm" id="btn-new-page">+ Nouvelle page</button>
     </div>
@@ -85,45 +88,52 @@
     <div id="chrono-list"></div>
   </div>
 
+  <!-- ───── TAB IDÉES ───── -->
+  <div class="camp-tab-panel hidden" id="tab-idees">
+    <div class="idees-header">
+      <h2 class="chrono-section-title">Boîte à idées</h2>
+    </div>
+    <div class="idee-add-form" id="idee-add-form">
+      <input type="text" id="idee-titre" class="form-input" placeholder="Titre de l'idée (optionnel)">
+      <textarea id="idee-contenu" class="form-input" rows="3"
+                placeholder="Notez votre idée ici…" style="resize:vertical"></textarea>
+      <button class="btn-primary btn-sm" id="btn-save-idee">Ajouter</button>
+    </div>
+    <div id="idees-list"></div>
+  </div>
+
 </div><!-- /main-content -->
 
 
-<!-- ══ MODAL WIKI PAGE ══ -->
+<!-- ══ MODAL CRÉATION PAGE WIKI ══ -->
 <div class="overlay hidden" id="wiki-overlay">
-  <div class="modal" style="max-width:680px">
+  <div class="modal" style="max-width:500px">
     <div class="modal-header">
-      <h2 class="modal-title" id="wiki-modal-title">Nouvelle page</h2>
+      <h2 class="modal-title">Nouvelle page wiki</h2>
       <button class="modal-close" id="wiki-close">✕</button>
     </div>
     <div class="modal-body">
-      <div class="form-grid-2">
-        <div class="form-row">
-          <label class="form-label">Catégorie</label>
-          <select id="wiki-cat" class="filter-select" style="width:100%">
-            <option value="lieu">📍 Lieu</option>
-            <option value="personnage">👤 Personnage</option>
-            <option value="piste">🔍 Piste</option>
-            <option value="quete">⚔️ Quête</option>
-          </select>
-        </div>
-        <div class="form-row">
-          <label class="form-label">Titre <span style="color:var(--accent2)">*</span></label>
-          <input type="text" id="wiki-titre" class="form-input" placeholder="Nom de la page">
-        </div>
-      </div>
-      <div id="wiki-dyn-fields"></div>
       <div class="form-row">
-        <label class="form-label">Contenu / Notes libres</label>
-        <textarea id="wiki-contenu" class="form-input" rows="5"
-                  placeholder="Description, détails, notes…" style="resize:vertical"></textarea>
+        <label class="form-label">Catégorie</label>
+        <select id="wiki-cat" class="filter-select" style="width:100%">
+          <option value="personnage">👤 Personnage</option>
+          <option value="lieu">📍 Lieu</option>
+          <option value="objet">📦 Objet</option>
+          <option value="creature">🐉 Créature</option>
+          <option value="faction">⚜️ Faction</option>
+          <option value="legende">📜 Légende</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Titre <span style="color:var(--accent2)">*</span></label>
+        <input type="text" id="wiki-titre" class="form-input" placeholder="Nom de la page">
       </div>
       <div id="wiki-error" class="form-error-msg"></div>
     </div>
     <div class="form-actions">
-      <button class="btn-danger btn-sm hidden" id="wiki-delete">🗑️ Supprimer</button>
       <span style="flex:1"></span>
       <button class="btn-ghost btn-sm" id="wiki-cancel">Annuler</button>
-      <button class="btn-primary btn-sm" id="wiki-save">Enregistrer</button>
+      <button class="btn-primary btn-sm" id="wiki-save">Créer et ouvrir →</button>
     </div>
   </div>
 </div>
@@ -189,7 +199,7 @@
 
 <!-- ══ MODAL ARC ══ -->
 <div class="overlay hidden" id="arc-overlay">
-  <div class="modal" style="max-width:640px">
+  <div class="modal" style="max-width:560px">
     <div class="modal-header">
       <h2 class="modal-title" id="arc-modal-title">Nouvel arc</h2>
       <button class="modal-close" id="arc-close">✕</button>
@@ -219,15 +229,10 @@
         </select>
       </div>
       <div class="form-row">
-        <label class="form-label">Description / Résumé</label>
-        <textarea id="arc-desc" class="form-input" rows="4"
-                  placeholder="Résumé, enjeux, notes de préparation…" style="resize:vertical"></textarea>
+        <label class="form-label">Description</label>
+        <textarea id="arc-desc" class="form-input" rows="3"
+                  placeholder="Résumé, contexte, enjeux…" style="resize:vertical"></textarea>
       </div>
-      <div class="arc-scenarios-header">
-        <span class="form-label" style="margin:0">Scénarios</span>
-        <button class="btn-ghost btn-sm" id="btn-add-scenario">+ Ajouter</button>
-      </div>
-      <div id="arc-scenarios-list"></div>
       <div id="arc-error" class="form-error-msg"></div>
     </div>
     <div class="form-actions">
@@ -235,6 +240,36 @@
       <span style="flex:1"></span>
       <button class="btn-ghost btn-sm" id="arc-cancel">Annuler</button>
       <button class="btn-primary btn-sm" id="arc-save">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL CRÉATION QUÊTE ══ -->
+<div class="overlay hidden" id="quete-overlay">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <h2 class="modal-title">Nouvelle quête</h2>
+      <button class="modal-close" id="quete-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Titre <span style="color:var(--accent2)">*</span></label>
+        <input type="text" id="quete-titre" class="form-input" placeholder="Ex: Retrouver l'artefact">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Type de quête</label>
+        <select id="quete-type" class="filter-select" style="width:100%">
+          <option value="principale">⭐ Quête principale</option>
+          <option value="importante">🔑 Quête importante</option>
+          <option value="secondaire">📌 Quête secondaire</option>
+        </select>
+      </div>
+      <div id="quete-error" class="form-error-msg"></div>
+    </div>
+    <div class="form-actions">
+      <span style="flex:1"></span>
+      <button class="btn-ghost btn-sm" id="quete-cancel">Annuler</button>
+      <button class="btn-primary btn-sm" id="quete-save">Créer et ouvrir →</button>
     </div>
   </div>
 </div>
