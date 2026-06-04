@@ -1026,6 +1026,22 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-06-04 (suite 5)
+
+**JDR — Onglet Présentation générale + renommage projet**
+
+- `jdr/campagne.html` + `jdr/js/campagne.js` : nouvel onglet **📋 Présentation** entre Chronologie et Idées.
+  - **Éditeur de sections** : même mécanique que `wiki-page.js` (mode lecture/édition, couleurs de fond, ↑↓, supprimer, valider). Sauvegardé directement dans le champ `sections_presentation` du document `jdr_campagnes` — pas de nouvelle collection Firestore.
+  - **Bilan automatique des quêtes principales** : en bas de l'onglet, toutes les quêtes `type_quete === 'principale'` regroupées par arc dans l'ordre de la Chronologie. Chaque quête est un lien cliquable → `wiki-page.html?type=quete&id=...`. Les quêtes sans arc apparaissent sous "Sans arc".
+- **Renommage du projet** : le titre `<h1>` du projet est maintenant cliquable (curseur texte, hover léger). Clic → bascule en `<input>` inline avec bordure accent. Entrée ou clic ailleurs confirme et sauvegarde dans `jdr_campagnes.nom` via Firestore. Échap annule sans modifier. Le `<title>` de la page est mis à jour immédiatement.
+- `jdr/css/style.css` : styles `.pres-editor-wrap`, `.pres-topbar`, `.pres-bilan-wrap`, `.pres-bilan-arc`, `.pres-bilan-quete`, `.camp-nom-editable`, `.camp-nom-input`.
+
+**Schéma Firestore — nouveau champ sur `jdr_campagnes` :**
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `sections_presentation` | array | Sections libres de l'onglet Présentation `[{ id, titre, contenu, color }]` |
+
 ### 2026-06-04 (suite 4)
 
 **Wiki pages — mode lecture / édition par section**
