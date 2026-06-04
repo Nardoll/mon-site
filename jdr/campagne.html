@@ -13,7 +13,8 @@
   <!-- En-tête du projet -->
   <div class="camp-page-header">
     <span id="camp-emoji-display" class="camp-page-emoji"></span>
-    <h1 id="camp-nom-display" class="page-title"></h1>
+    <h1 id="camp-nom-display" class="page-title camp-nom-editable" title="Cliquer pour renommer"></h1>
+    <input type="text" id="camp-nom-input" class="camp-nom-input hidden" placeholder="Nom du projet">
   </div>
 
   <!-- Onglets -->
@@ -21,6 +22,7 @@
     <button class="camp-tab active" data-tab="wiki">📖 Wiki</button>
     <button class="camp-tab" data-tab="carte">🗺️ Carte</button>
     <button class="camp-tab" data-tab="chrono">📅 Chronologie</button>
+    <button class="camp-tab" data-tab="presentation">📋 Présentation</button>
     <button class="camp-tab" data-tab="idees">💡 Idées</button>
   </div>
 
@@ -86,6 +88,30 @@
       <button class="btn-primary btn-sm" id="btn-new-arc">+ Nouvel arc</button>
     </div>
     <div id="chrono-list"></div>
+  </div>
+
+  <!-- ───── TAB PRÉSENTATION ───── -->
+  <div class="camp-tab-panel hidden" id="tab-presentation">
+
+    <!-- Éditeur de sections -->
+    <div class="pres-editor-wrap">
+      <div class="pres-topbar">
+        <h2 class="chrono-section-title" style="margin:0">Présentation générale</h2>
+        <div class="pres-topbar-right">
+          <span id="pres-save-status" class="wp-save-status"></span>
+          <button class="btn-primary btn-sm" id="pres-save-btn">💾 Sauvegarder</button>
+        </div>
+      </div>
+      <div id="pres-sections-list"></div>
+      <button class="wp-add-section-btn" id="pres-add-section">+ Ajouter une section</button>
+    </div>
+
+    <!-- Bilan automatique des quêtes principales -->
+    <div class="pres-bilan-wrap">
+      <h3 class="pres-bilan-title">⭐ Quêtes principales</h3>
+      <div id="pres-bilan"></div>
+    </div>
+
   </div>
 
   <!-- ───── TAB IDÉES ───── -->

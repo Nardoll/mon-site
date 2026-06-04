@@ -83,10 +83,12 @@ export async function initCampagne() {
     iSnap.forEach(d => idees.push({ id: d.id, ...d.data() }));
     idees.sort((a, b) => (b.cree_le?.seconds ?? 0) - (a.cree_le?.seconds ?? 0));
 
+    setupRenommerProjet();
     setupTabs();
     setupWiki();
     setupCarte();
     setupChrono();
+    setupPresentation();
     setupIdees();
     setupWikiModal();
     setupMapModal();
@@ -97,12 +99,50 @@ export async function initCampagne() {
     renderWiki();
     renderCarte();
     renderChrono();
+    renderPresentation();
     renderIdees();
 
   } catch(e) {
     console.error(e);
     showToast('Erreur de chargement', 'err');
   }
+}
+
+// ── RENOMMER ─────────────────────────────────────────────
+function setupRenommerProjet() {
+  const display = document.getElementById('camp-nom-display');
+  const input   = document.getElementById('camp-nom-input');
+
+  display.addEventListener('click', () => {
+    input.value = campagne.nom || '';
+    display.classList.add('hidden');
+    input.classList.remove('hidden');
+    input.focus();
+    input.select();
+  });
+
+  async function confirmRename() {
+    const nouveau = input.value.trim();
+    input.classList.add('hidden');
+    display.classList.remove('hidden');
+    if (!nouveau || nouveau === campagne.nom) return;
+    try {
+      await updateDoc(doc(db, 'jdr_campagnes', CAMP_ID), { nom: nouveau });
+      campagne.nom = nouveau;
+      display.textContent = nouveau;
+      document.title = `${campagne.emoji || '🎲'} ${nouveau} — JDR`;
+      showToast('Projet renommé ✓');
+    } catch(e) {
+      display.textContent = campagne.nom;
+      showToast('Erreur : ' + e.message, 'err');
+    }
+  }
+
+  input.addEventListener('blur', confirmRename);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.value = campagne.nom; input.blur(); }
+  });
 }
 
 // ── TABS ─────────────────────────────────────────────────
@@ -722,4 +762,254 @@ async function deleteIdee(id) {
     idees = idees.filter(i => i.id !== id);
     renderIdees();
   } catch(e) { showToast('Erreur : ' + e.message, 'err'); }
+}
+
+// ── PRÉSENTATION GÉNÉRALE ────────────────────────────────
+
+const PRES_PALETTE = [
+  { key: '',       label: 'Aucune',  dot: '' },
+  { key: 'green',  label: 'Vert',    dot: 'rgba(78,138,92,.7)' },
+  { key: 'yellow', label: 'Jaune',   dot: 'rgba(200,170,0,.75)' },
+  { key: 'blue',   label: 'Bleu',    dot: 'rgba(65,130,200,.7)' },
+  { key: 'purple', label: 'Violet',  dot: 'rgba(140,90,200,.7)' },
+  { key: 'red',    label: 'Rouge',   dot: 'rgba(185,80,80,.7)' },
+  { key: 'teal',   label: 'Cyan',    dot: 'rgba(20,184,166,.7)' },
+  { key: 'orange', label: 'Orange',  dot: 'rgba(220,120,30,.7)' },
+];
+
+let presSections     = [];
+let presUnsaved      = false;
+let presEditingSections = new Set();
+
+function setupPresentation() {
+  presSections = campagne.sections_presentation
+    ? JSON.parse(JSON.stringify(campagne.sections_presentation))
+    : [];
+  document.getElementById('pres-save-btn').addEventListener('click', savePresentation);
+  document.getElementById('pres-add-section').addEventListener('click', presAddSection);
+  updatePresSaveStatus();
+}
+
+// ── Rendu sections ────────────────────────────────────────
+function renderPresentation() {
+  renderPresSections();
+  renderPresBilan();
+}
+
+function renderPresSections() {
+  const list = document.getElementById('pres-sections-list');
+
+  if (presSections.length === 0) {
+    list.innerHTML = `<div class="wp-sections-empty">
+      Aucune section — cliquez sur "<strong>+ Ajouter une section</strong>" pour commencer à rédiger le pitch de votre campagne.
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = presSections.map((s, i) =>
+    presEditingSections.has(i) ? presBuiltSectionEdit(s, i) : presBuiltSectionView(s, i)
+  ).join('');
+
+  // Mode lecture — bouton Modifier
+  list.querySelectorAll('.wp-sec-edit-btn').forEach(btn =>
+    btn.addEventListener('click', () => {
+      presEditingSections.add(+btn.dataset.i);
+      renderPresSections();
+      setTimeout(() => {
+        const ta = list.querySelector(`.wp-section-body[data-i="${btn.dataset.i}"]`);
+        if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+      }, 40);
+    }));
+
+  // Titre + contenu
+  list.querySelectorAll('.wp-section-title').forEach(el =>
+    el.addEventListener('input', () => { presSections[+el.dataset.i].titre = el.value; presMarkUnsaved(); }));
+  list.querySelectorAll('.wp-section-body').forEach(el =>
+    el.addEventListener('input', () => { presSections[+el.dataset.i].contenu = el.value; presMarkUnsaved(); }));
+
+  // Valider
+  list.querySelectorAll('.wp-sec-validate').forEach(btn =>
+    btn.addEventListener('click', () => presValidateSection(+btn.dataset.i)));
+
+  // ↑ ↓ 🗑️
+  list.querySelectorAll('.wp-sec-up').forEach(btn =>
+    btn.addEventListener('click', () => presMoveSection(+btn.dataset.i, -1)));
+  list.querySelectorAll('.wp-sec-down').forEach(btn =>
+    btn.addEventListener('click', () => presMoveSection(+btn.dataset.i, 1)));
+  list.querySelectorAll('.wp-sec-del').forEach(btn =>
+    btn.addEventListener('click', () => {
+      const i = +btn.dataset.i;
+      presEditingSections.delete(i);
+      const rebuilt = new Set();
+      presEditingSections.forEach(idx => { rebuilt.add(idx > i ? idx - 1 : idx); });
+      presEditingSections = rebuilt;
+      presSections.splice(i, 1);
+      presMarkUnsaved();
+      renderPresSections();
+    }));
+
+  // Palette couleur
+  list.querySelectorAll('.wp-col-dot').forEach(btn =>
+    btn.addEventListener('click', () => {
+      const i = +btn.dataset.i, color = btn.dataset.color;
+      presSections[i].color = color;
+      presMarkUnsaved();
+      const el = btn.closest('.wp-section');
+      if (color) el.dataset.color = color; else delete el.dataset.color;
+      el.querySelectorAll('.wp-col-dot').forEach(b => b.classList.remove('wp-col-active'));
+      btn.classList.add('wp-col-active');
+    }));
+}
+
+function presBuiltSectionView(s, i) {
+  const attr = s.color ? ` data-color="${s.color}"` : '';
+  return `<div class="wp-section wp-section-view" data-i="${i}"${attr}>
+    <button class="wp-sec-edit-btn" data-i="${i}" title="Modifier cette section">✏️ Modifier</button>
+    ${s.titre ? `<div class="wp-section-view-title">${escH(s.titre)}</div>` : ''}
+    <div class="wp-section-view-content">${s.contenu
+      ? escH(s.contenu)
+      : '<span class="wp-view-empty">Section vide — survolez pour modifier</span>'
+    }</div>
+  </div>`;
+}
+
+function presBuiltSectionEdit(s, i) {
+  const attr = s.color ? ` data-color="${s.color}"` : '';
+  const dots = PRES_PALETTE.map(p => `
+    <button class="wp-col-dot${(s.color || '') === p.key ? ' wp-col-active' : ''}"
+            data-color="${p.key}" data-i="${i}" title="${p.label}"
+            ${p.dot ? `style="background:${p.dot}"` : 'style="background:none"'}></button>
+  `).join('');
+  return `<div class="wp-section wp-section-edit" data-i="${i}"${attr}>
+    <div class="wp-section-bar">
+      <input type="text" class="wp-section-title" data-i="${i}"
+             value="${escH(s.titre)}" placeholder="Titre de la section (optionnel)">
+      <div class="wp-section-palette">${dots}</div>
+      <div class="wp-section-btns">
+        <button class="btn-ghost btn-sm wp-sec-up"       data-i="${i}" ${i === 0 ? 'disabled' : ''}>↑</button>
+        <button class="btn-ghost btn-sm wp-sec-down"     data-i="${i}" ${i === presSections.length - 1 ? 'disabled' : ''}>↓</button>
+        <button class="btn-danger btn-sm wp-sec-del"     data-i="${i}">🗑️</button>
+        <button class="btn-primary btn-sm wp-sec-validate" data-i="${i}">✓ Valider</button>
+      </div>
+    </div>
+    <textarea class="form-input wp-section-body" data-i="${i}"
+              rows="6" placeholder="Rédigez ici…" style="resize:vertical">${escH(s.contenu || '')}</textarea>
+  </div>`;
+}
+
+function presValidateSection(i) {
+  const titleEl = document.querySelector(`#pres-sections-list .wp-section-title[data-i="${i}"]`);
+  const bodyEl  = document.querySelector(`#pres-sections-list .wp-section-body[data-i="${i}"]`);
+  if (titleEl) presSections[i].titre   = titleEl.value;
+  if (bodyEl)  presSections[i].contenu = bodyEl.value;
+  presEditingSections.delete(i);
+  presMarkUnsaved();
+  renderPresSections();
+}
+
+function presMoveSection(i, dir) {
+  const ni = i + dir;
+  if (ni < 0 || ni >= presSections.length) return;
+  [presSections[i], presSections[ni]] = [presSections[ni], presSections[i]];
+  const iEd = presEditingSections.has(i), niEd = presEditingSections.has(ni);
+  if (iEd)  presEditingSections.add(ni); else presEditingSections.delete(ni);
+  if (niEd) presEditingSections.add(i);  else presEditingSections.delete(i);
+  presMarkUnsaved();
+  renderPresSections();
+}
+
+function presAddSection() {
+  const newIdx = presSections.length;
+  presSections.push({ id: Date.now().toString(), titre: '', contenu: '', color: '' });
+  presEditingSections.add(newIdx);
+  presMarkUnsaved();
+  renderPresSections();
+  setTimeout(() => {
+    const list = document.getElementById('pres-sections-list');
+    list.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    list.querySelector(`.wp-section-body[data-i="${newIdx}"]`)?.focus();
+  }, 60);
+}
+
+function presMarkUnsaved() {
+  if (!presUnsaved) { presUnsaved = true; updatePresSaveStatus(); }
+}
+
+function updatePresSaveStatus() {
+  const el = document.getElementById('pres-save-status');
+  if (!el) return;
+  if (presUnsaved) {
+    el.textContent = '● Modifications non sauvegardées';
+    el.className = 'wp-save-status wp-unsaved';
+  } else {
+    el.textContent = '✓ Sauvegardé';
+    el.className = 'wp-save-status wp-saved';
+  }
+}
+
+async function savePresentation() {
+  const btn = document.getElementById('pres-save-btn');
+  btn.disabled = true;
+  try {
+    await updateDoc(doc(db, 'jdr_campagnes', CAMP_ID), {
+      sections_presentation: presSections,
+      mis_a_jour: serverTimestamp(),
+    });
+    campagne.sections_presentation = JSON.parse(JSON.stringify(presSections));
+    presUnsaved = false;
+    updatePresSaveStatus();
+    showToast('Sauvegardé ✓');
+  } catch(e) {
+    showToast('Erreur : ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Bilan automatique des quêtes principales ─────────────
+function renderPresBilan() {
+  const container = document.getElementById('pres-bilan');
+
+  const principales = quetes.filter(q => q.type_quete === 'principale');
+
+  if (principales.length === 0) {
+    container.innerHTML = `<div class="pres-bilan-empty">
+      Aucune quête principale pour l'instant.<br>
+      Créez des quêtes de type <strong>⭐ Principale</strong> dans l'onglet Chronologie pour les voir apparaître ici.
+    </div>`;
+    return;
+  }
+
+  // Groupe par arc (dans l'ordre des arcs), puis sans arc
+  const rows = [];
+
+  chronoArcs.forEach(arc => {
+    const arcQ = principales.filter(q => (q.arc_ids || []).includes(arc.id));
+    if (arcQ.length === 0) return;
+    rows.push({ arc, quetes: arcQ });
+  });
+
+  const sansArc = principales.filter(q => !q.arc_ids?.length ||
+    !q.arc_ids.some(aid => chronoArcs.find(a => a.id === aid)));
+  if (sansArc.length) rows.push({ arc: null, quetes: sansArc });
+
+  container.innerHTML = rows.map(({ arc, quetes: qs }) => `
+    <div class="pres-bilan-arc">
+      <div class="pres-bilan-arc-title">
+        ${arc
+          ? `<span class="arc-type-badge">${ARC_TYPE_LBL[arc.type] || arc.type}</span>
+             <span>${escH(arc.titre)}</span>`
+          : '<span class="pres-bilan-no-arc">Sans arc</span>'
+        }
+      </div>
+      <div class="pres-bilan-quetes">
+        ${qs.map(q => `
+          <a href="/jdr/wiki-page.html?camp=${CAMP_ID}&type=quete&id=${q.id}"
+             class="pres-bilan-quete">
+            <span class="pres-bilan-quete-icon">⭐</span>
+            <span class="pres-bilan-quete-titre">${escH(q.titre)}</span>
+            <span class="pres-bilan-quete-arrow">→</span>
+          </a>`).join('')}
+      </div>
+    </div>`).join('');
 }

@@ -1232,6 +1232,29 @@ body {
 
 .camp-page-emoji { font-size: 2rem; line-height: 1; }
 
+.camp-nom-editable {
+  cursor: text;
+  border-radius: 6px;
+  padding: .1rem .3rem;
+  margin: -.1rem -.3rem;
+  transition: background .15s;
+}
+.camp-nom-editable:hover { background: rgba(255,255,255,.06); }
+[data-theme="light"] .camp-nom-editable:hover { background: rgba(0,0,0,.05); }
+
+.camp-nom-input {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--card);
+  border: 2px solid var(--accent);
+  border-radius: 6px;
+  padding: .15rem .45rem;
+  outline: none;
+  width: 100%;
+  max-width: 520px;
+}
+
 .camp-tabs {
   display: flex;
   gap: .4rem;
@@ -1970,6 +1993,118 @@ body {
 .wp-section[data-color="red"]    { border-left: 3px solid rgba(185, 80, 80,  .55); }
 .wp-section[data-color="teal"]   { border-left: 3px solid rgba(20, 184, 166, .55); }
 .wp-section[data-color="orange"] { border-left: 3px solid rgba(220, 120, 30, .55); }
+
+/* ═══════════════════════════════════
+   Onglet Présentation générale
+═══════════════════════════════════ */
+.pres-editor-wrap {
+  margin-bottom: 2.5rem;
+}
+
+.pres-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pres-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+
+/* Bilan automatique */
+.pres-bilan-wrap {
+  margin-top: 2rem;
+  padding-top: 1.75rem;
+  border-top: 2px solid var(--border);
+}
+
+.pres-bilan-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 1.25rem;
+}
+
+.pres-bilan-empty {
+  color: var(--muted);
+  font-size: .88rem;
+  padding: 1rem 0;
+  line-height: 1.6;
+}
+
+.pres-bilan-arc {
+  margin-bottom: 1.5rem;
+}
+
+.pres-bilan-arc-title {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  font-weight: 600;
+  font-size: .9rem;
+  color: var(--text);
+  margin-bottom: .6rem;
+}
+
+.pres-bilan-no-arc {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.pres-bilan-quetes {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  padding-left: .75rem;
+  border-left: 2px solid var(--border);
+}
+
+.pres-bilan-quete {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .45rem .65rem;
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--text);
+  text-decoration: none;
+  font-size: .88rem;
+  transition: background .15s, transform .1s;
+}
+
+.pres-bilan-quete:hover {
+  background: var(--card-hover, rgba(255,255,255,.06));
+  transform: translateX(2px);
+}
+
+.pres-bilan-quete-icon {
+  font-size: .85rem;
+  flex-shrink: 0;
+}
+
+.pres-bilan-quete-titre {
+  flex: 1;
+  font-weight: 500;
+}
+
+.pres-bilan-quete-arrow {
+  color: var(--muted);
+  font-size: .8rem;
+  transition: color .15s;
+}
+
+.pres-bilan-quete:hover .pres-bilan-quete-arrow {
+  color: var(--accent);
+}
+
+[data-theme="light"] .pres-bilan-quete:hover {
+  background: rgba(0,0,0,.04);
+}
 
 /* ═══════════════════════════════════
    Chronologie — quêtes dans les arcs
