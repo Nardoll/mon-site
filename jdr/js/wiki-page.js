@@ -66,11 +66,12 @@ const CAT_FIELDS = {
 };
 
 // ── State ────────────────────────────────────────────────
-let pageData  = null;
-let sections  = [];
-let unsaved   = false;
-let arcs      = [];
-let wikiPages = [];
+let pageData       = null;
+let sections       = [];
+let unsaved        = false;
+let arcs           = [];
+let wikiPages      = [];
+let editingSections = new Set(); // indices des sections en mode édition
 
 // ── Init ─────────────────────────────────────────────────
 export async function initWikiPage() {
@@ -230,6 +231,38 @@ function paletteDots(currentColor, i) {
 }
 
 // ── Sections ─────────────────────────────────────────────
+
+function buildSectionView(s, i) {
+  const attr = s.color ? ` data-color="${s.color}"` : '';
+  return `<div class="wp-section wp-section-view" data-i="${i}"${attr}>
+    <button class="wp-sec-edit-btn" data-i="${i}" title="Modifier cette section">✏️ Modifier</button>
+    ${s.titre ? `<div class="wp-section-view-title">${escH(s.titre)}</div>` : ''}
+    <div class="wp-section-view-content">${s.contenu
+      ? escH(s.contenu)
+      : '<span class="wp-view-empty">Section vide — survolez pour modifier</span>'
+    }</div>
+  </div>`;
+}
+
+function buildSectionEdit(s, i) {
+  const attr = s.color ? ` data-color="${s.color}"` : '';
+  return `<div class="wp-section wp-section-edit" data-i="${i}"${attr}>
+    <div class="wp-section-bar">
+      <input type="text" class="wp-section-title" data-i="${i}"
+             value="${escH(s.titre)}" placeholder="Titre de la section (optionnel)">
+      <div class="wp-section-palette">${paletteDots(s.color, i)}</div>
+      <div class="wp-section-btns">
+        <button class="btn-ghost btn-sm wp-sec-up"      data-i="${i}" ${i === 0 ? 'disabled' : ''}>↑</button>
+        <button class="btn-ghost btn-sm wp-sec-down"    data-i="${i}" ${i === sections.length - 1 ? 'disabled' : ''}>↓</button>
+        <button class="btn-danger btn-sm wp-sec-del"    data-i="${i}">🗑️</button>
+        <button class="btn-primary btn-sm wp-sec-validate" data-i="${i}">✓ Valider</button>
+      </div>
+    </div>
+    <textarea class="form-input wp-section-body" data-i="${i}"
+              rows="6" placeholder="Rédigez ici…" style="resize:vertical">${escH(s.contenu || '')}</textarea>
+  </div>`;
+}
+
 function renderSections() {
   const list = document.getElementById('wp-sections-list');
 
@@ -240,69 +273,98 @@ function renderSections() {
     return;
   }
 
-  list.innerHTML = sections.map((s, i) => `
-    <div class="wp-section" data-i="${i}"${s.color ? ` data-color="${s.color}"` : ''}>
-      <div class="wp-section-bar">
-        <input type="text" class="wp-section-title" data-i="${i}"
-               value="${escH(s.titre)}" placeholder="Titre de la section (optionnel)">
-        <div class="wp-section-palette">${paletteDots(s.color, i)}</div>
-        <div class="wp-section-btns">
-          <button class="btn-ghost btn-sm wp-sec-up"   data-i="${i}" ${i === 0 ? 'disabled' : ''}>↑</button>
-          <button class="btn-ghost btn-sm wp-sec-down" data-i="${i}" ${i === sections.length - 1 ? 'disabled' : ''}>↓</button>
-          <button class="btn-danger btn-sm wp-sec-del" data-i="${i}">🗑️</button>
-        </div>
-      </div>
-      <textarea class="form-input wp-section-body" data-i="${i}"
-                rows="6" placeholder="Rédigez ici…" style="resize:vertical">${escH(s.contenu || '')}</textarea>
-    </div>`).join('');
+  list.innerHTML = sections.map((s, i) =>
+    editingSections.has(i) ? buildSectionEdit(s, i) : buildSectionView(s, i)
+  ).join('');
 
+  // Mode lecture — bouton Modifier
+  list.querySelectorAll('.wp-sec-edit-btn').forEach(btn =>
+    btn.addEventListener('click', () => {
+      const i = +btn.dataset.i;
+      editingSections.add(i);
+      renderSections();
+      // Focus sur le textarea
+      setTimeout(() => {
+        const ta = list.querySelector(`.wp-section-body[data-i="${i}"]`);
+        if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+      }, 40);
+    }));
+
+  // Mode édition — titre + contenu
   list.querySelectorAll('.wp-section-title').forEach(el =>
     el.addEventListener('input', () => { sections[+el.dataset.i].titre = el.value; markUnsaved(); }));
   list.querySelectorAll('.wp-section-body').forEach(el =>
     el.addEventListener('input', () => { sections[+el.dataset.i].contenu = el.value; markUnsaved(); }));
+
+  // Valider — repasse en mode lecture
+  list.querySelectorAll('.wp-sec-validate').forEach(btn =>
+    btn.addEventListener('click', () => validateSection(+btn.dataset.i)));
+
+  // ↑ ↓ 🗑️
   list.querySelectorAll('.wp-sec-up').forEach(btn =>
     btn.addEventListener('click', () => moveSection(+btn.dataset.i, -1)));
   list.querySelectorAll('.wp-sec-down').forEach(btn =>
     btn.addEventListener('click', () => moveSection(+btn.dataset.i, 1)));
   list.querySelectorAll('.wp-sec-del').forEach(btn =>
-    btn.addEventListener('click', () => { sections.splice(+btn.dataset.i, 1); markUnsaved(); renderSections(); }));
+    btn.addEventListener('click', () => {
+      const i = +btn.dataset.i;
+      editingSections.delete(i);
+      // Recalcule les indices après suppression
+      const rebuilt = new Set();
+      editingSections.forEach(idx => { if (idx > i) rebuilt.add(idx - 1); else rebuilt.add(idx); });
+      editingSections = rebuilt;
+      sections.splice(i, 1);
+      markUnsaved();
+      renderSections();
+    }));
 
-  // Palette : changement de couleur sans re-render complet
+  // Palette couleur (mode édition)
   list.querySelectorAll('.wp-col-dot').forEach(btn =>
     btn.addEventListener('click', () => {
-      const i     = +btn.dataset.i;
-      const color = btn.dataset.color;
+      const i = +btn.dataset.i, color = btn.dataset.color;
       sections[i].color = color;
       markUnsaved();
-      // Applique sans re-render
       const sectionEl = btn.closest('.wp-section');
-      if (color) sectionEl.dataset.color = color;
-      else delete sectionEl.dataset.color;
+      if (color) sectionEl.dataset.color = color; else delete sectionEl.dataset.color;
       sectionEl.querySelectorAll('.wp-col-dot').forEach(b => b.classList.remove('wp-col-active'));
       btn.classList.add('wp-col-active');
     }));
+}
+
+function validateSection(i) {
+  // Lit les valeurs actuelles depuis le DOM avant de refermer l'éditeur
+  const titleEl = document.querySelector(`.wp-section-title[data-i="${i}"]`);
+  const bodyEl  = document.querySelector(`.wp-section-body[data-i="${i}"]`);
+  if (titleEl) sections[i].titre   = titleEl.value;
+  if (bodyEl)  sections[i].contenu = bodyEl.value;
+  editingSections.delete(i);
+  markUnsaved();
+  renderSections();
 }
 
 function moveSection(i, dir) {
   const ni = i + dir;
   if (ni < 0 || ni >= sections.length) return;
   [sections[i], sections[ni]] = [sections[ni], sections[i]];
+  // Swap des états d'édition
+  const iEd = editingSections.has(i), niEd = editingSections.has(ni);
+  if (iEd)  editingSections.add(ni); else editingSections.delete(ni);
+  if (niEd) editingSections.add(i);  else editingSections.delete(i);
   markUnsaved();
   renderSections();
 }
 
 function addSection() {
+  const newIdx = sections.length;
   sections.push({ id: Date.now().toString(), titre: '', contenu: '', color: '' });
+  editingSections.add(newIdx); // nouvelle section toujours en mode édition
   markUnsaved();
   renderSections();
-  // Scroll vers la nouvelle section
-  document.getElementById('wp-sections-list').lastElementChild
-    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  // Focus sur son titre
   setTimeout(() => {
-    const inputs = document.querySelectorAll('.wp-section-title');
-    inputs[inputs.length - 1]?.focus();
-  }, 80);
+    const list = document.getElementById('wp-sections-list');
+    list.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    list.querySelector(`.wp-section-body[data-i="${newIdx}"]`)?.focus();
+  }, 60);
 }
 
 // ── État "non sauvegardé" ────────────────────────────────

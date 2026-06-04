@@ -1823,6 +1823,63 @@ body {
 }
 .wp-section-body:focus { outline: none !important; }
 
+/* ── Mode lecture ── */
+.wp-section-view {
+  position: relative;
+  cursor: default;
+}
+
+.wp-sec-edit-btn {
+  position: absolute;
+  top: .55rem;
+  right: .6rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: .75rem;
+  font-family: inherit;
+  padding: .2rem .55rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .15s, color .12s, border-color .12s;
+  z-index: 2;
+}
+.wp-section-view:hover .wp-sec-edit-btn { opacity: 1; }
+.wp-sec-edit-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+.wp-section-view-title {
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--text);
+  padding: .7rem 1rem .35rem;
+  line-height: 1.3;
+}
+
+.wp-section-view-content {
+  padding: .5rem 1rem .9rem;
+  font-size: .9rem;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  /* Décale pour ne pas chevaucher le bouton Modifier */
+  padding-right: 5.5rem;
+}
+/* Quand il n'y a pas de titre, on donne un peu plus d'espace en haut */
+.wp-section-view:not(:has(.wp-section-view-title)) .wp-section-view-content {
+  padding-top: .8rem;
+}
+
+.wp-view-empty {
+  color: var(--muted);
+  font-style: italic;
+  font-size: .85rem;
+}
+
+/* ── Mode édition — le bouton Valider se distingue ── */
+.wp-sec-validate { margin-left: .2rem; }
+
 .wp-add-section-btn {
   align-self: flex-start;
   background: none;
