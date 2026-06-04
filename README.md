@@ -1026,6 +1026,34 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-06-04 (suite 13)
+
+**JDR — Carte : zone pleine hauteur**
+
+- `jdr/css/style.css` : `#tab-carte` passe en `display:flex; flex-direction:column; height:calc(100vh - 210px)`. `#carte-zone` prend `flex:1` — s'étire pour remplir tout l'espace disponible sous la toolbar.
+
+### 2026-06-04 (suite 12)
+
+**JDR — Développement : pages = nombre réel de pages du projet**
+
+- `jdr/js/campagne.js` : KPI "pages" = `wikiPages.length + quetes.length` (plus d'estimation ÷ 250).
+- `jdr/campagne.html` : label mis à jour "pages dans le projet".
+
+### 2026-06-04 (suite 11)
+
+**JDR — Carte : outil main (pan + zoom molette)**
+
+- `jdr/campagne.html` : bouton 👆 → ✋.
+- `jdr/css/style.css` : `#carte-zone` devient le viewport clippé (`overflow:hidden`), `.carte-wrap` reçoit `transform-origin:0 0` et `will-change:transform`. Curseur `grab` / `grabbing` selon l'état.
+- `jdr/js/campagne.js` : état `pan { tx, ty, scale, active }` + `applyMapTransform()` + `resetPan()`. Outil ✋ : clic maintenu = déplacement, molette = zoom centré sur le curseur (`min 0.1×, max 10×`). Pan réinitialisé au changement d'image.
+
+### 2026-06-04 (suite 10)
+
+**JDR — Supprimer une page wiki / quête**
+
+- `jdr/wiki-page.html` : bouton "🗑️ Supprimer" dans la topbar (à gauche du 💾).
+- `jdr/js/wiki-page.js` : import `deleteDoc`. Fonction `deletePage()` — confirmation native avec le titre de la page, supprime le document Firestore, redirige vers `campagne.html`. Fonctionne pour les pages wiki et les quêtes (collection dynamique via `COLL`).
+
 ### 2026-06-04 (suite 9)
 
 **JDR — Onglet Développement (suivi de progression)**
