@@ -955,7 +955,7 @@ function getDelta(dateStr) {
 
 function renderDev() {
   const totalMots = totalWordsInProject();
-  const pages     = Math.round(totalMots / 250);
+  const pages     = wikiPages.length + quetes.length;
   const delta     = getDelta(todayStr());
 
   document.getElementById('dev-kpi-mots').textContent  = totalMots.toLocaleString('fr-FR');
