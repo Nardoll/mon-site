@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Projet — JDR</title>
   <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -24,6 +25,7 @@
     <button class="camp-tab" data-tab="carte">🗺️ Carte</button>
     <button class="camp-tab" data-tab="chrono">📅 Chronologie</button>
     <button class="camp-tab" data-tab="presentation">📋 Présentation</button>
+    <button class="camp-tab" data-tab="dev">✍️ Développement</button>
     <button class="camp-tab" data-tab="idees">💡 Idées</button>
   </div>
 
@@ -111,6 +113,62 @@
     <div class="pres-bilan-wrap">
       <h3 class="pres-bilan-title">⭐ Quêtes principales</h3>
       <div id="pres-bilan"></div>
+    </div>
+
+  </div>
+
+  <!-- ───── TAB DÉVELOPPEMENT ───── -->
+  <div class="camp-tab-panel hidden" id="tab-dev">
+
+    <!-- KPIs -->
+    <div class="dev-kpis">
+      <div class="dev-kpi">
+        <div class="dev-kpi-value" id="dev-kpi-mots">—</div>
+        <div class="dev-kpi-label">mots rédigés</div>
+      </div>
+      <div class="dev-kpi">
+        <div class="dev-kpi-value" id="dev-kpi-pages">—</div>
+        <div class="dev-kpi-label">pages estimées</div>
+      </div>
+      <div class="dev-kpi dev-kpi-objectif">
+        <div class="dev-kpi-value">
+          <input type="number" id="dev-objectif-input" class="dev-objectif-input" min="1" placeholder="500">
+          <span class="dev-kpi-unit">mots/jour</span>
+        </div>
+        <div class="dev-kpi-label">objectif quotidien</div>
+      </div>
+      <div class="dev-kpi">
+        <div class="dev-kpi-value" id="dev-kpi-jours">—</div>
+        <div class="dev-kpi-label">jours actifs</div>
+      </div>
+    </div>
+
+    <!-- Saisie du jour -->
+    <div class="dev-today-card">
+      <div class="dev-today-title" id="dev-today-title">Aujourd'hui</div>
+      <div class="dev-today-body">
+        <div class="dev-today-existing hidden" id="dev-today-existing">
+          <span class="dev-today-count" id="dev-today-count"></span>
+          <button class="btn-ghost btn-sm" id="dev-today-edit">✏️ Modifier</button>
+        </div>
+        <div class="dev-today-form" id="dev-today-form">
+          <input type="number" id="dev-today-input" class="form-input dev-today-input"
+                 min="0" placeholder="Nombre de nouveaux mots écrits aujourd'hui…">
+          <button class="btn-primary btn-sm" id="dev-today-save">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Graphiques -->
+    <div class="dev-charts">
+      <div class="dev-chart-card">
+        <div class="dev-chart-title">📅 Mots par jour</div>
+        <canvas id="dev-chart-daily" height="200"></canvas>
+      </div>
+      <div class="dev-chart-card">
+        <div class="dev-chart-title">📈 Progression cumulée</div>
+        <canvas id="dev-chart-cumul" height="200"></canvas>
+      </div>
     </div>
 
   </div>

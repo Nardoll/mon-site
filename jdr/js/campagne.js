@@ -27,6 +27,8 @@ let chronoArcs = [];
 let quetes     = [];
 let idees      = [];
 
+let devJournal   = [];
+
 let editArcId    = null;
 let editMarkerId = null;
 let pendingMarkerPos = null;
@@ -57,12 +59,13 @@ export async function initCampagne() {
     document.getElementById('camp-emoji-display').textContent = campagne.emoji || '🎲';
     document.getElementById('camp-nom-display').textContent = campagne.nom;
 
-    const [wSnap, cSnap, chSnap, qSnap, iSnap] = await Promise.all([
-      getDocs(query(collection(db, 'jdr_camp_wiki'),   where('campagne_id', '==', CAMP_ID))),
-      getDocs(query(collection(db, 'jdr_camp_carte'),  where('campagne_id', '==', CAMP_ID))),
-      getDocs(query(collection(db, 'jdr_camp_chrono'), where('campagne_id', '==', CAMP_ID))),
-      getDocs(query(collection(db, 'jdr_camp_quetes'), where('campagne_id', '==', CAMP_ID))),
-      getDocs(query(collection(db, 'jdr_camp_idees'),  where('campagne_id', '==', CAMP_ID))),
+    const [wSnap, cSnap, chSnap, qSnap, iSnap, dSnap] = await Promise.all([
+      getDocs(query(collection(db, 'jdr_camp_wiki'),        where('campagne_id', '==', CAMP_ID))),
+      getDocs(query(collection(db, 'jdr_camp_carte'),       where('campagne_id', '==', CAMP_ID))),
+      getDocs(query(collection(db, 'jdr_camp_chrono'),      where('campagne_id', '==', CAMP_ID))),
+      getDocs(query(collection(db, 'jdr_camp_quetes'),      where('campagne_id', '==', CAMP_ID))),
+      getDocs(query(collection(db, 'jdr_camp_idees'),       where('campagne_id', '==', CAMP_ID))),
+      getDocs(query(collection(db, 'jdr_camp_dev_journal'), where('campagne_id', '==', CAMP_ID))),
     ]);
 
     wikiPages = [];
@@ -83,12 +86,17 @@ export async function initCampagne() {
     iSnap.forEach(d => idees.push({ id: d.id, ...d.data() }));
     idees.sort((a, b) => (b.cree_le?.seconds ?? 0) - (a.cree_le?.seconds ?? 0));
 
+    devJournal = [];
+    dSnap.forEach(d => devJournal.push({ id: d.id, ...d.data() }));
+    devJournal.sort((a, b) => (a.date_str || '').localeCompare(b.date_str || ''));
+
     setupRenommerProjet();
     setupTabs();
     setupWiki();
     setupCarte();
     setupChrono();
     setupPresentation();
+    setupDev();
     setupIdees();
     setupWikiModal();
     setupMapModal();
@@ -100,6 +108,7 @@ export async function initCampagne() {
     renderCarte();
     renderChrono();
     renderPresentation();
+    renderDev();
     renderIdees();
 
   } catch(e) {
@@ -190,6 +199,7 @@ function setupTabs() {
       btn.classList.add('active');
       document.getElementById(`tab-${btn.dataset.tab}`).classList.remove('hidden');
       if (btn.dataset.tab === 'carte') setTimeout(initCanvas, 60);
+      if (btn.dataset.tab === 'dev')   setTimeout(renderDevCharts, 60);
     });
   });
 }
@@ -822,6 +832,250 @@ async function deleteIdee(id) {
     idees = idees.filter(i => i.id !== id);
     renderIdees();
   } catch(e) { showToast('Erreur : ' + e.message, 'err'); }
+}
+
+// ── DÉVELOPPEMENT ────────────────────────────────────────
+
+let _devChartDaily = null;
+let _devChartCumul = null;
+
+function countWords(text) {
+  return (text || '').trim().split(/\s+/).filter(Boolean).length;
+}
+
+function totalWordsInProject() {
+  let total = 0;
+  const addSections = secs => (secs || []).forEach(s => {
+    total += countWords(s.contenu) + countWords(s.titre);
+  });
+  wikiPages.forEach(p => {
+    addSections(p.sections);
+    Object.values(p.fields || {}).forEach(v => total += countWords(v));
+  });
+  quetes.forEach(q => addSections(q.sections));
+  addSections(presSections);
+  return total;
+}
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function setupDev() {
+  // Objectif — chargé depuis campagne, modifié en direct
+  const objInput = document.getElementById('dev-objectif-input');
+  objInput.value = campagne.objectif_mots_par_jour || 500;
+  let objTimer;
+  objInput.addEventListener('input', () => {
+    clearTimeout(objTimer);
+    objTimer = setTimeout(async () => {
+      const val = parseInt(objInput.value) || 500;
+      try {
+        await updateDoc(doc(db, 'jdr_campagnes', CAMP_ID), { objectif_mots_par_jour: val });
+        campagne.objectif_mots_par_jour = val;
+        renderDevCharts();
+      } catch(e) { /* silent */ }
+    }, 800);
+  });
+
+  // Saisie du jour
+  document.getElementById('dev-today-save').addEventListener('click', saveTodayEntry);
+  document.getElementById('dev-today-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveTodayEntry();
+  });
+  document.getElementById('dev-today-edit').addEventListener('click', () => {
+    document.getElementById('dev-today-existing').classList.add('hidden');
+    const form = document.getElementById('dev-today-form');
+    form.classList.remove('hidden');
+    const existing = devJournal.find(e => e.date_str === todayStr());
+    document.getElementById('dev-today-input').value = existing?.mots ?? '';
+    document.getElementById('dev-today-input').focus();
+  });
+}
+
+function renderDev() {
+  const totalMots = totalWordsInProject();
+  const pages     = Math.round(totalMots / 250);
+  const joursActifs = devJournal.filter(e => e.mots > 0).length;
+
+  document.getElementById('dev-kpi-mots').textContent  = totalMots.toLocaleString('fr-FR');
+  document.getElementById('dev-kpi-pages').textContent = pages || '—';
+  document.getElementById('dev-kpi-jours').textContent = joursActifs || '—';
+
+  // Titre aujourd'hui
+  const today = new Date();
+  document.getElementById('dev-today-title').textContent =
+    'Aujourd\'hui — ' + today.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+
+  // Saisie du jour : déjà remplie ?
+  const existing = devJournal.find(e => e.date_str === todayStr());
+  if (existing) {
+    document.getElementById('dev-today-existing').classList.remove('hidden');
+    document.getElementById('dev-today-form').classList.add('hidden');
+    document.getElementById('dev-today-count').textContent =
+      `✓ ${existing.mots.toLocaleString('fr-FR')} mots enregistrés`;
+  } else {
+    document.getElementById('dev-today-existing').classList.add('hidden');
+    document.getElementById('dev-today-form').classList.remove('hidden');
+    document.getElementById('dev-today-input').value = '';
+  }
+
+  renderDevCharts();
+}
+
+async function saveTodayEntry() {
+  const val = parseInt(document.getElementById('dev-today-input').value);
+  if (isNaN(val) || val < 0) return;
+
+  const btn = document.getElementById('dev-today-save');
+  btn.disabled = true;
+
+  try {
+    const dateStr  = todayStr();
+    const existing = devJournal.find(e => e.date_str === dateStr);
+
+    if (existing) {
+      await updateDoc(doc(db, 'jdr_camp_dev_journal', existing.id), { mots: val });
+      existing.mots = val;
+    } else {
+      const ref = await addDoc(collection(db, 'jdr_camp_dev_journal'), {
+        campagne_id: CAMP_ID, date_str: dateStr, mots: val, cree_le: serverTimestamp(),
+      });
+      devJournal.push({ id: ref.id, campagne_id: CAMP_ID, date_str: dateStr, mots: val });
+      devJournal.sort((a, b) => a.date_str.localeCompare(b.date_str));
+    }
+
+    document.getElementById('dev-today-existing').classList.remove('hidden');
+    document.getElementById('dev-today-form').classList.add('hidden');
+    document.getElementById('dev-today-count').textContent =
+      `✓ ${val.toLocaleString('fr-FR')} mots enregistrés`;
+
+    // Mise à jour KPIs
+    document.getElementById('dev-kpi-jours').textContent =
+      devJournal.filter(e => e.mots > 0).length;
+
+    renderDevCharts();
+    showToast('Progression enregistrée ✓');
+  } catch(e) {
+    showToast('Erreur : ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderDevCharts() {
+  if (typeof Chart === 'undefined') return;
+
+  const objectif = parseInt(document.getElementById('dev-objectif-input').value) || 500;
+
+  // Prépare les 30 derniers jours
+  const days = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0, 10));
+  }
+
+  const dailyMap = {};
+  devJournal.forEach(e => { dailyMap[e.date_str] = (dailyMap[e.date_str] || 0) + e.mots; });
+
+  const dailyVals = days.map(d => dailyMap[d] || 0);
+  const labels    = days.map(d => {
+    const dt = new Date(d + 'T12:00:00');
+    return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  });
+
+  // Couleurs barres : accent si ≥ objectif, sinon couleur atténuée
+  const accent    = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#4e8a5c';
+  const accentDim = accent + '55';
+  const barColors = dailyVals.map(v => v >= objectif ? accent : accentDim);
+
+  const chartDefaults = {
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { callbacks: {
+      label: ctx => ` ${ctx.parsed.y.toLocaleString('fr-FR')} mots`,
+    }}},
+    scales: {
+      x: { ticks: { color: '#888', font: { size: 11 }, maxRotation: 45 }, grid: { color: 'rgba(255,255,255,.05)' } },
+      y: { ticks: { color: '#888', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,.07)' }, beginAtZero: true },
+    },
+  };
+
+  // ── Bar chart quotidien ──
+  if (_devChartDaily) _devChartDaily.destroy();
+  _devChartDaily = new Chart(document.getElementById('dev-chart-daily'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Mots/jour',
+          data: dailyVals,
+          backgroundColor: barColors,
+          borderRadius: 4,
+          borderSkipped: false,
+        },
+        {
+          label: 'Objectif',
+          data: days.map(() => objectif),
+          type: 'line',
+          borderColor: '#e05555',
+          borderDash: [5, 4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      ...chartDefaults,
+      plugins: {
+        ...chartDefaults.plugins,
+        tooltip: { callbacks: { label: ctx =>
+          ctx.datasetIndex === 1
+            ? ` Objectif : ${objectif.toLocaleString('fr-FR')} mots`
+            : ` ${ctx.parsed.y.toLocaleString('fr-FR')} mots`,
+        }},
+      },
+    },
+  });
+
+  // ── Line chart cumulé (toutes les entrées) ──
+  const allDays = devJournal.map(e => e.date_str).filter((v, i, a) => a.indexOf(v) === i).sort();
+  let cumul = 0;
+  const cumulVals   = allDays.map(d => { cumul += dailyMap[d] || 0; return cumul; });
+  const cumulLabels = allDays.map(d => {
+    const dt = new Date(d + 'T12:00:00');
+    return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  });
+
+  if (_devChartCumul) _devChartCumul.destroy();
+
+  if (cumulVals.length === 0) {
+    const ctx = document.getElementById('dev-chart-cumul').getContext('2d');
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    _devChartCumul = null;
+    return;
+  }
+
+  _devChartCumul = new Chart(document.getElementById('dev-chart-cumul'), {
+    type: 'line',
+    data: {
+      labels: cumulLabels,
+      datasets: [{
+        label: 'Total cumulé',
+        data: cumulVals,
+        borderColor: accent,
+        backgroundColor: accent + '22',
+        borderWidth: 2,
+        pointRadius: cumulVals.length < 20 ? 4 : 2,
+        pointBackgroundColor: accent,
+        fill: true,
+        tension: 0.35,
+      }],
+    },
+    options: chartDefaults,
+  });
 }
 
 // ── PRÉSENTATION GÉNÉRALE ────────────────────────────────

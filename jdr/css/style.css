@@ -2016,6 +2016,136 @@ body {
 .wp-section[data-color="orange"] { border-left: 3px solid rgba(220, 120, 30, .55); }
 
 /* ═══════════════════════════════════
+   Onglet Développement
+═══════════════════════════════════ */
+.dev-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.dev-kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  text-align: center;
+}
+
+.dev-kpi-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
+}
+
+.dev-kpi-label {
+  font-size: .75rem;
+  color: var(--muted);
+  margin-top: .3rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.dev-objectif-input {
+  width: 70px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--accent);
+  outline: none;
+  text-align: center;
+  padding: 0;
+  -moz-appearance: textfield;
+}
+.dev-objectif-input::-webkit-outer-spin-button,
+.dev-objectif-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+.dev-kpi-unit {
+  font-size: .85rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* Saisie du jour */
+.dev-today-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.dev-today-title {
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: .85rem;
+}
+
+.dev-today-body { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+
+.dev-today-existing {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+
+.dev-today-count {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.dev-today-form {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex: 1;
+}
+
+.dev-today-input {
+  max-width: 280px;
+  -moz-appearance: textfield;
+}
+.dev-today-input::-webkit-outer-spin-button,
+.dev-today-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+/* Graphiques */
+.dev-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 700px) {
+  .dev-charts { grid-template-columns: 1fr; }
+}
+
+.dev-chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem 1.25rem 1rem;
+}
+
+.dev-chart-title {
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 1rem;
+}
+
+/* ═══════════════════════════════════
    Onglet Présentation générale
 ═══════════════════════════════════ */
 .pres-editor-wrap {
