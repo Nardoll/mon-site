@@ -40,6 +40,19 @@ let isDrawing     = false;
 let currentStroke = null;
 let drawCanvas, drawCtx;
 
+// Pan / zoom
+let pan = { tx: 0, ty: 0, scale: 1, active: false, startX: 0, startY: 0, startTx: 0, startTy: 0 };
+
+function applyMapTransform() {
+  const wrap = document.getElementById('carte-wrap');
+  if (wrap) wrap.style.transform = `translate(${pan.tx}px,${pan.ty}px) scale(${pan.scale})`;
+}
+
+function resetPan() {
+  pan.tx = 0; pan.ty = 0; pan.scale = 1;
+  applyMapTransform();
+}
+
 // ── INIT ─────────────────────────────────────────────────
 export async function initCampagne() {
   if (!CAMP_ID) {
@@ -326,14 +339,29 @@ function setupCarte() {
       btn.classList.add('active');
       const showDraw = activeTool === 'draw' || activeTool === 'erase';
       document.getElementById('carte-draw-opts').classList.toggle('hidden', !showDraw);
-      if (drawCanvas) {
-        drawCanvas.style.cursor =
-          activeTool === 'draw'   ? 'crosshair' :
-          activeTool === 'erase'  ? 'cell' :
-          activeTool === 'marker' ? 'copy' : 'default';
-      }
+      const zone = document.getElementById('carte-zone');
+      zone.style.cursor =
+        activeTool === 'draw'   ? 'crosshair' :
+        activeTool === 'erase'  ? 'cell' :
+        activeTool === 'marker' ? 'copy' : 'grab';
     });
   });
+
+  // Molette = zoom centré sur le curseur (outil main seulement)
+  document.getElementById('carte-zone').addEventListener('wheel', e => {
+    if (activeTool !== 'select') return;
+    e.preventDefault();
+    const factor   = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+    const newScale = Math.max(0.1, Math.min(10, pan.scale * factor));
+    const r  = document.getElementById('carte-zone').getBoundingClientRect();
+    const mx = e.clientX - r.left;
+    const my = e.clientY - r.top;
+    const ratio = newScale / pan.scale;
+    pan.tx    = mx - (mx - pan.tx) * ratio;
+    pan.ty    = my - (my - pan.ty) * ratio;
+    pan.scale = newScale;
+    applyMapTransform();
+  }, { passive: false });
 
   const canvas = document.getElementById('carte-canvas');
   canvas.addEventListener('mousedown', onCanvasDown);
@@ -354,6 +382,7 @@ function renderCarte() { if (carteDoc?.image_url) showMap(carteDoc.image_url); }
 function showMap(url) {
   document.getElementById('carte-empty').classList.add('hidden');
   document.getElementById('carte-wrap').classList.remove('hidden');
+  resetPan();
   const img = document.getElementById('carte-img');
   img.src = url;
   img.onload  = () => { initCanvas(); renderMarkers(); };
@@ -394,6 +423,13 @@ function canvasPos(e) {
 
 function onCanvasDown(e) {
   if (!drawCanvas) return;
+  if (activeTool === 'select') {
+    pan.active  = true;
+    pan.startX  = e.clientX; pan.startY  = e.clientY;
+    pan.startTx = pan.tx;    pan.startTy = pan.ty;
+    document.getElementById('carte-zone').classList.add('panning');
+    return;
+  }
   if (activeTool === 'marker') { openMarkerModal(null, canvasPos(e)); return; }
   if (activeTool !== 'draw' && activeTool !== 'erase') return;
   isDrawing = true;
@@ -407,6 +443,12 @@ function onCanvasDown(e) {
 }
 
 function onCanvasMove(e) {
+  if (activeTool === 'select' && pan.active) {
+    pan.tx = pan.startTx + (e.clientX - pan.startX);
+    pan.ty = pan.startTy + (e.clientY - pan.startY);
+    applyMapTransform();
+    return;
+  }
   if (!isDrawing || !currentStroke) return;
   const prev = currentStroke.points[currentStroke.points.length - 1];
   const pos  = canvasPos(e);
@@ -422,6 +464,11 @@ function onCanvasMove(e) {
 }
 
 function onCanvasUp() {
+  if (pan.active) {
+    pan.active = false;
+    document.getElementById('carte-zone').classList.remove('panning');
+    return;
+  }
   if (!isDrawing) return;
   isDrawing = false;
   if (!currentStroke?.isErase && currentStroke?.points.length > 1) {

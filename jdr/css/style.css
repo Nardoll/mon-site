@@ -1446,21 +1446,29 @@ body {
   background: none;
 }
 
-#carte-zone { position: relative; }
-
-.carte-wrap {
+#carte-zone {
   position: relative;
-  display: inline-block;
-  max-width: 100%;
+  overflow: hidden;
+  min-height: 520px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  overflow: hidden;
+  background: var(--surface);
+  cursor: grab;
+}
+#carte-zone.panning { cursor: grabbing; }
+
+.carte-wrap {
+  position: absolute;
+  top: 0; left: 0;
+  display: inline-block;
+  transform-origin: 0 0;
   line-height: 0;
+  will-change: transform;
 }
 
 .carte-img {
   display: block;
-  max-width: 100%;
+  max-width: none;
   height: auto;
   user-select: none;
   -webkit-user-drag: none;
@@ -1470,7 +1478,7 @@ body {
   position: absolute;
   top: 0; left: 0;
   pointer-events: all;
-  cursor: default;
+  cursor: inherit;
 }
 
 #carte-markers {
