@@ -1446,10 +1446,18 @@ body {
   background: none;
 }
 
+#tab-carte {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 210px);
+  min-height: 400px;
+}
+
 #carte-zone {
   position: relative;
   overflow: hidden;
-  min-height: 520px;
+  flex: 1;
+  min-height: 0;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
