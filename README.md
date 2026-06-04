@@ -1026,47 +1026,81 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
-### 2026-06-04 (suite)
+### 2026-06-04 (suite 4)
 
-**JDR — Nouveau module "Projets" (Wiki + Carte + Chronologie)**
+**Wiki pages — mode lecture / édition par section**
 
-**Architecture**
-- `jdr/campagne.html` : nouvelle page de workspace projet, accessible via `/jdr/campagne.html?id=CAMP_ID`
-- `jdr/js/campagne.js` : toute la logique du projet (export `initCampagne`)
-- `jdr/js/nav.js` : ajout d'une section "Projets" dynamique dans la sidebar (chargée depuis Firestore), bouton "+" pour créer un projet → modal inline → redirection vers la nouvelle campagne
-- `jdr/css/style.css` : nouveaux styles pour sidebar projets, page camp, wiki, carte, chronologie, toast
+- `jdr/js/wiki-page.js` : les sections s'affichent en **mode lecture** par défaut (texte rendu proprement, `white-space:pre-wrap`). Survol → bouton **✏️ Modifier** apparaît en haut à droite. Clic → bascule en **mode édition** (titre + textarea + palette couleur). Bouton **✓ Valider** → lit les valeurs du DOM, met à jour `sections[i]`, referme l'éditeur. Nouvelles sections créées directement en mode édition. Gestion de `editingSections` (Set d'indices) — les indices sont recalculés après suppression ou déplacement.
+- `jdr/css/style.css` : styles `.wp-section-view`, `.wp-section-view-title`, `.wp-section-view-content`, `.wp-sec-edit-btn` (opacity 0 → 1 au hover), `.wp-view-empty`, `.wp-sec-validate`.
 
-**Onglet Wiki**
-- 4 catégories : Lieux · Personnages · Pistes · Quêtes
-- Chaque catégorie a des champs structurés dédiés (type lieu / habitants, rôle / faction / secrets, indice / lié à, objectif / récompense / statut quête) + un champ texte libre
-- Filtre par catégorie (pills) ou vue "Tout" groupée
-- CRUD complet (créer, modifier, supprimer)
+### 2026-06-04 (suite 3)
 
-**Onglet Carte**
-- Image chargée depuis une URL (hébergée ailleurs — Discord, Imgur, GitHub raw…)
-- Canvas overlay : dessin libre (crayon couleur + épaisseur), gomme, effacement total
-- Marqueurs cliquables : label + couleur + lien vers une page wiki. Formes de pin colorées.
-- Sauvegarde manuelle (bouton 💾) → Firestore
+**Wiki pages — couleur de fond par section**
 
-**Onglet Chronologie**
-- Arcs : type (Prélude / Arc / Interlude / Épilogue), statut (Planifié / En cours / Terminé), description
-- Scénarios par arc : liste de titres avec statut individuel
-- Réordonnancement ↑↓ avec persistence Firestore
+- `jdr/js/wiki-page.js` : constante `PALETTE` (8 entrées : aucune + vert/jaune/bleu/violet/rouge/cyan/orange). Chaque section affiche une rangée de dots colorés dans sa barre (mode édition). Clic → applique `data-color` sur le div section sans re-render, met à jour `sections[i].color`. Couleur persistée dans `sections[].color` (Firestore).
+- `jdr/css/style.css` : `.wp-section[data-color="..."]` — fond teinté (rgba ~.13) + bordure gauche colorée. `.wp-section[data-color] .wp-section-bar` → fond légèrement plus sombre. `.wp-section[data-color] .wp-section-body` → transparent. Adapté thème clair. Styles `.wp-col-dot`, `.wp-col-active`.
 
-**Collections Firestore ajoutées**
+### 2026-06-04 (suite 2)
 
-| Collection | Description |
-|------------|-------------|
-| `jdr_campagnes` | `{ nom, emoji, cree_le }` — un doc par projet |
-| `jdr_camp_wiki` | `{ campagne_id, titre, categorie, contenu, fields, cree_le, mis_a_jour }` |
-| `jdr_camp_carte` | `{ campagne_id, image_url, annotations[], markers[], mis_a_jour }` — un doc par campagne |
-| `jdr_camp_chrono` | `{ campagne_id, titre, type, statut, description, scenarios[], ordre, cree_le, mis_a_jour }` |
+**JDR — Refonte module Projets : wiki pages dédiées, quêtes, boîte à idées**
+
+**Wiki restructuré**
+- `jdr/campagne.html` + `jdr/js/campagne.js` : 6 catégories univers (Personnages · Lieux · Objets · Créatures · Factions · Légendes). Suppression des catégories Pistes et Quêtes (déplacées en Chronologie).
+- Clic sur une carte wiki → navigation vers `/jdr/wiki-page.html?camp=CAMP_ID&type=wiki&id=PAGE_ID` (plus de modale).
+- Création : modale simplifiée (titre + catégorie uniquement) → crée le doc Firestore → redirige vers la page.
+
+**Nouvelle page wiki / quête (`wiki-page.html` + `wiki-page.js`)**
+- Breadcrumb ← Projet, badge catégorie, titre éditable (h1 inline).
+- **Infos rapides** (wiki) : champs structurés par catégorie (rôle, type lieu, porteur, habitat, leader, etc.) dans un bandeau collapsé.
+- **Associations** (quêtes) : cases à cocher arcs associés + lieux associés (depuis le wiki).
+- **Éditeur de sections** : autant de sections que voulu, chaque section = sous-titre optionnel + textarea. Réorder ↑↓, supprimer, **Ctrl+S** pour sauvegarder.
+- État "non sauvegardé" (● orange) / "Sauvegardé" (✓ vert) en temps réel.
+
+**Chronologie restructurée**
+- `jdr/js/campagne.js` : les arcs affichent leurs **quêtes** (Principale ⭐ / Importante 🔑 / Secondaire 📌) sous forme de liens cliquables → wiki-page.html?type=quete.
+- Bouton "+ Quête" dans chaque arc → modale (titre + type) → crée dans `jdr_camp_quetes` → redirige vers la page quête.
+- Suppression des scénarios texte simples (remplacés par les quêtes pages).
+
+**Boîte à idées (4e onglet)**
+- Formulaire inline : titre (optionnel) + note. Ajout rapide (Ctrl+Entrée). Liste triée par date décroissante. Suppression individuelle.
+
+**Collections Firestore ajoutées / modifiées**
+
+| Collection | Changement |
+|------------|------------|
+| `jdr_camp_wiki` | `sections: [{ id, titre, contenu, color }]` — remplace `contenu` plat ; `fields` conservé pour infos rapides |
+| `jdr_camp_quetes` | **Nouvelle** — `{ campagne_id, titre, type_quete, arc_ids[], lieu_ids[], sections[], statut, ordre, cree_le, mis_a_jour }` |
+| `jdr_camp_idees` | **Nouvelle** — `{ campagne_id, titre, contenu, cree_le }` |
+| `jdr_camp_chrono` | `scenarios[]` supprimé — remplacé par `jdr_camp_quetes` |
 
 **Navigation**
 
 | Page | URL |
 |------|-----|
-| Projet (workspace) | `/jdr/campagne.html?id=CAMP_ID` |
+| Page wiki ou quête | `/jdr/wiki-page.html?camp=CAMP_ID&type=wiki\|quete&id=DOC_ID` |
+
+### 2026-06-04 (suite)
+
+**JDR — Nouveau module "Projets" (Wiki + Carte + Chronologie) — version initiale**
+
+- `jdr/campagne.html` : page workspace projet, accessible via `/jdr/campagne.html?id=CAMP_ID`
+- `jdr/js/campagne.js` : logique complète (export `initCampagne`)
+- `jdr/js/nav.js` : section "Projets" dynamique en sidebar + bouton "+" → modal → redirection
+- `jdr/css/style.css` : styles sidebar projets, page camp, wiki, carte, chronologie, toast
+
+**Onglet Carte**
+- Image via URL (Discord, Imgur, GitHub raw…)
+- Canvas overlay : dessin libre (crayon couleur + épaisseur), gomme, effacement total
+- Marqueurs cliquables : label + couleur + lien vers page wiki. Pin colorée avec initiale.
+- Sauvegarde manuelle (💾) → Firestore
+
+**Collections Firestore ajoutées (version initiale)**
+
+| Collection | Description |
+|------------|-------------|
+| `jdr_campagnes` | `{ nom, emoji, cree_le }` — un doc par projet |
+| `jdr_camp_carte` | `{ campagne_id, image_url, annotations[], markers[], mis_a_jour }` — un doc par campagne |
+| `jdr_camp_chrono` | `{ campagne_id, titre, type, statut, description, ordre, cree_le, mis_a_jour }` |
 
 > **Image carte** : l'image doit être hébergée en ligne (URL). Firebase Storage peut être ajouté ultérieurement pour l'upload direct.
 
