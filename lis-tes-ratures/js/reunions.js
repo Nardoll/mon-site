@@ -49,6 +49,25 @@ function esc(s) {
   return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
+/**
+ * Détermine si une réunion est "passée" de façon robuste.
+ * On ne se fie pas uniquement au champ statut (valeurs variables en BDD) :
+ * une réunion est passée si elle a des notes, ou si sa date est dans le passé.
+ */
+function isPasse(r) {
+  // 1. Notes présentes → forcément passée
+  if (Object.keys(r.notes_finales || {}).length > 0) return true;
+  // 2. Statut contient "pass" ou "termin" (insensible à la casse/accents)
+  const s = (r.statut || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  if (s.includes("pass") || s.includes("termin")) return true;
+  // 3. Date explicitement dans le passé
+  if (r.date) {
+    const d = r.date.toDate ? r.date.toDate() : new Date(r.date);
+    if (!isNaN(d) && d < new Date()) return true;
+  }
+  return false;
+}
+
 function dotDate(ts) {
   if (!ts) return "—";
   const d = ts.toDate ? ts.toDate() : new Date(ts);
@@ -64,8 +83,8 @@ function calcAvg(notesFinales) {
 function sealColor(avg) {
   if (avg === null) return "#9a7a4e";
   if (avg >= 8)   return "#1a7a4e";
-  if (avg >= 6.5) return "#b5572d";
-  return "#9a7a4e";
+  if (avg >= 6.5) return "#c0421e"; // terracotta vif
+  return "#b83a1e";                 // rouge-brun même hors seuil
 }
 
 function coverOf(livreId) {
@@ -124,7 +143,7 @@ function renderLedger() {
   }
 
   rows.innerHTML = all.map(r => {
-    const prevue = r.statut !== "passée" && r.statut !== "Passée";
+    const prevue = !isPasse(r);
     const livre  = livreById[r.livre_id];
     const titreLivre = livre?.titre || "—";
     const avg    = calcAvg(r.notes_finales);
