@@ -1,0 +1,4 @@
+# Cloudflare Pages — redirections
+# Ancienne URL du club de lecture → nouvelle version
+/club-lecture/*  /lis-tes-ratures/:splat  301
+/club-lecture    /lis-tes-ratures/         301
