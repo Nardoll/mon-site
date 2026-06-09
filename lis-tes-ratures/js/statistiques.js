@@ -1,12 +1,11 @@
-import { checkAuth }            from "./auth.js";
+import { requireAuth }          from "./auth.js";
 import { initNav }              from "./nav.js";
 import {
   getMembres, getLivres, getVotes, getReunions,
   getAllStatutsLecture, getAllCommentaires,
 } from "./db.js";
 
-checkAuth();
-initNav("stats");
+await requireAuth();
 
 // ── Utilitaires ──────────────────────────────────────────────────────────────
 
@@ -45,6 +44,8 @@ function fmtFr(n, dec = 1) {
 // ── Point d'entrée ───────────────────────────────────────────────────────────
 
 async function init() {
+  initNav("stats");
+
   const [membres, livres, votes, reunions, statuts, commentaires] = await Promise.all([
     getMembres(), getLivres(), getVotes(), getReunions(),
     getAllStatutsLecture(), getAllCommentaires(),
