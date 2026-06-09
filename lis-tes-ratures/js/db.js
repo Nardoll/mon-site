@@ -3,7 +3,7 @@ import {
   getDocs, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
   query, where, orderBy, serverTimestamp, Timestamp, arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { db } from "../firebase-config.js";
+import { db } from "./firebase-config.js";
 
 // ── Helpers ────────────────────────────────────────────────────────
 
