@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bulletin de vote — Lis tes ratures</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    body { margin-left: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1.25rem; }
+    .bul-wrap { width: 100%; max-width: 480px; }
+    .bul-back { display:inline-flex; align-items:center; gap:.35rem; font-size:.82rem; color:var(--muted); text-decoration:none; margin-bottom:1.2rem; }
+    .bul-back:hover { color:var(--accent); }
+    .bul-back svg { width:14px; height:14px; }
+
+    /* Papier bulletin */
+    .bul-paper { position:relative; background:linear-gradient(180deg,#fcf6e8,#f4e8cf); border-radius:5px; padding:2rem 2.4rem 1.8rem 3rem; box-shadow:0 40px 80px -30px rgba(0,0,0,.48),inset 0 0 0 1px rgba(120,90,50,.12); color:#3a2b1c; }
+    .bul-paper::before { content:""; position:absolute; left:1.85rem; top:0; bottom:0; width:1.5px; background:rgba(176,72,52,.3); }
+    .bul-title { font-family:var(--serif); font-size:1.4rem; font-weight:700; color:#2c2015; }
+    .bul-mois { font-family:var(--serif); font-style:italic; font-size:.95rem; color:#6a513a; margin-top:.12rem; }
+    .bul-instruct { font-size:.82rem; color:#8a7560; margin-top:.5rem; line-height:1.5; }
+    .bul-section-head { font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#a07c4e; display:block; margin-bottom:.38rem; }
+    .bul-divider { height:1px; background:rgba(120,90,50,.2); margin:1.2rem 0; }
+    .bul-membre select { background:rgba(255,255,255,.5); border:1px solid rgba(120,90,50,.3); color:#3a2b1c; border-radius:7px; padding:.48rem .75rem; font-family:inherit; font-size:.88rem; width:100%; }
+    .bul-already { background:rgba(26,158,106,.1); border:1px solid rgba(26,158,106,.3); border-radius:7px; padding:.55rem .85rem; font-size:.82rem; color:#177a4a; margin-top:.7rem; display:flex; align-items:center; gap:.4rem; }
+
+    /* Livre + slider */
+    .bul-livre { margin-bottom:1.1rem; }
+    .bul-livre-title { font-family:var(--serif); font-weight:700; font-size:1rem; color:#2c2015; line-height:1.2; }
+    .bul-livre-author { font-size:.78rem; color:#8a7560; font-style:italic; margin-bottom:.55rem; }
+    .bul-slider-row { display:flex; align-items:center; gap:.85rem; }
+    .bul-slider { flex:1; accent-color:#b5572d; cursor:pointer; height:3px; }
+    .bul-note-val { font-family:var(--serif); font-size:1.5rem; font-weight:700; color:#b5572d; min-width:2.6rem; text-align:right; line-height:1; }
+    .bul-note-scale { font-size:.72rem; color:#a07c4e; }
+
+    /* Bouton */
+    .bul-submit { background:#b5572d; border:none; border-radius:8px; padding:.6rem 1.4rem; font-size:.9rem; color:#fff; cursor:pointer; font-family:inherit; font-weight:600; width:100%; margin-top:.4rem; transition:background .15s; }
+    .bul-submit:hover { background:#c46b41; }
+    .bul-submit:disabled { opacity:.45; cursor:not-allowed; }
+
+    /* Succès */
+    .bul-success { text-align:center; padding:1.5rem .5rem; }
+    .bul-success-icon { font-size:2.5rem; margin-bottom:.7rem; }
+    .bul-success-title { font-family:var(--serif); font-size:1.3rem; font-weight:700; color:#2c2015; margin-bottom:.4rem; }
+    .bul-success-sub { font-size:.85rem; color:#8a7560; }
+
+    /* Vide */
+    .bul-vide { text-align:center; padding:2.5rem 1rem; }
+    .bul-vide-icon { font-size:2rem; margin-bottom:.65rem; }
+    .bul-vide-title { font-family:var(--serif); font-size:1.1rem; font-weight:700; color:#2c2015; margin-bottom:.35rem; }
+    .bul-vide-sub { font-size:.83rem; color:#8a7560; }
+  </style>
+</head>
+<body>
+  <div class="bul-wrap">
+    <div id="bul-root">
+      <div style="text-align:center;padding:3rem;color:var(--muted)">Chargement…</div>
+    </div>
+  </div>
+  <script type="module" src="js/vote.js"></script>
+</body>
+</html>
