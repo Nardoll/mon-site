@@ -27,6 +27,10 @@
     .sx-badge-prop { background: rgba(120,90,50,.1); color: var(--muted); }
     /* Info-tip ⓘ sur les en-têtes de tableau */
     .sx-info-tip { font-size: .72rem; color: var(--muted); cursor: help; font-family: system-ui; font-weight: 400; margin-left: .15rem; vertical-align: middle; }
+    /* Score column — valeurs cachées par défaut, révélées au survol du TH */
+    .sx-score-col { opacity: 0; transition: opacity .18s; }
+    /* Footnote formule du score */
+    .sx-formula-note { font-size: .74rem; color: var(--muted); font-style: italic; margin-top: .7rem; padding: 0 .1rem; line-height: 1.4; }
     /* Légende interactive courbe notes */
     .sx-legend-item { display: inline-flex; align-items: center; gap: .4rem; cursor: pointer; padding: .18rem .5rem; border-radius: 4px; transition: opacity .2s, background .15s; }
     .sx-legend-item:hover { background: rgba(181,87,45,.07); }
@@ -136,12 +140,13 @@
         <thead><tr>
           <th>Membre</th><th>Livres finis</th><th>Réunions</th>
           <th>Propositions</th><th>Votes</th><th>Commentaires</th>
-          <th>Score <span class="sx-info-tip" title="Livres finis ×4 + Réunions ×3 + Propositions ×2 + Votes ×1 + Commentaires ×1">ⓘ</span></th>
+          <th class="sx-score-th" title="Survoler pour afficher les scores" style="cursor:help">Score <span class="sx-info-tip" title="Livres finis ×4 + Réunions ×3 + Propositions ×2 + Votes ×1 + Commentaires ×1">ⓘ</span></th>
         </tr></thead>
         <tbody id="tbl-actifs">
           <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1.5rem">Chargement…</td></tr>
         </tbody>
       </table>
+      <p class="sx-formula-note">Score : Livres finis ×4 + Réunions ×3 + Propositions ×2 + Votes ×1 + Commentaires ×1</p>
     </div>
 
     <!-- Bilan par membre proposant -->

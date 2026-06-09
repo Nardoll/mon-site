@@ -514,9 +514,19 @@ function renderTblActifs({ membres, livres, votes, reunions, statuts, commentair
       <td>${row.nbProps}</td>
       <td>${row.nbVotes}</td>
       <td>${row.nbComms}</td>
-      <td style="font-weight:700;color:var(--accent)">${row.score}</td>
+      <td class="sx-score-col" style="font-weight:700;color:var(--accent)">${row.score}</td>
     </tr>`;
   }).join("");
+
+  // ── Score column : révéler au survol du TH ─────────────────────
+  const table   = tbody.closest("table");
+  const scoreTh = table?.querySelector("th.sx-score-th");
+  if (scoreTh) {
+    const showScore = () => table.querySelectorAll(".sx-score-col").forEach(c => { c.style.opacity = "1"; });
+    const hideScore = () => table.querySelectorAll(".sx-score-col").forEach(c => { c.style.opacity = ""; });
+    scoreTh.addEventListener("mouseenter", showScore);
+    scoreTh.addEventListener("mouseleave", hideScore);
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -810,12 +820,13 @@ function renderHeatSim({ membres, membreById, votes }) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// 12. Controversé / Consensuel (pastilles Archétype 7)
-//     chipColor(2 - std, 0, 2) : haute std → terra (chaud), basse std → sauge
+// 12. Controversé / Consensuel — Archétype 7 DA exact :
+//     UN seul livre par panneau · sx-book-h/a + sx-stat-line + sx-chips
 // ════════════════════════════════════════════════════════════════════
 function renderContrConso({ livreById, votes }) {
   const host = document.getElementById("grid-contr-conso");
 
+  // Collect all individual vote notes per livre
   const stats = [];
   Object.entries(livreById).forEach(([lid, livre]) => {
     const pool = [];
@@ -828,7 +839,13 @@ function renderContrConso({ livreById, votes }) {
       });
     });
     if (pool.length < 2) return;
-    stats.push({ titre: livre.titre, avg: avg(pool), std: stddev(pool), cnt: pool.length });
+    stats.push({
+      titre:  livre.titre  || "—",
+      auteur: livre.auteur || "",
+      avg:    avg(pool),
+      std:    stddev(pool),
+      pool,
+    });
   });
 
   if (!stats.length) {
@@ -836,40 +853,41 @@ function renderContrConso({ livreById, votes }) {
     return;
   }
 
-  stats.sort((a, b) => b.std - a.std);
-  const top = 8;
-  const ctv = stats.slice(0, top);
-  const cns = [...stats].sort((a, b) => a.std - b.std).slice(0, top);
+  // Un seul livre : le + controversé (σ max) et le + consensuel (σ min)
+  const contro = [...stats].sort((a, b) => b.std - a.std)[0];
+  const conso  = [...stats].sort((a, b) => a.std - b.std)[0];
 
-  const makePanel = (items, title, icon) => {
-    // sx-book-h / sx-stat-line = Archétype 7 DA (pas les petits chips 26px)
-    const rows = items.map(s => {
-      const bg = chipColor(2 - Math.min(s.std, 2), 0, 2);
-      return `<div style="padding:.55rem .9rem;border-radius:6px;background:${bg};margin-bottom:.4rem">
-        <span class="sx-book-h">${esc(s.titre)}</span>
-        <div class="sx-stat-line">moy : <b>${fmtFr(s.avg)}/5</b> · σ = <b>${fmtFr(s.std)}</b> · ${s.cnt} vote${s.cnt !== 1 ? "s" : ""}</div>
-      </div>`;
-    }).join("");
+  const makePanel = (book, title, icon, comment) => {
+    // Chips individuelles triées par valeur croissante — chipColor(v) = v∈[1,5]
+    const chips = [...book.pool]
+      .sort((a, b) => a - b)
+      .map(v => `<span class="sx-chip" style="background:${chipColor(v)}">${v}</span>`)
+      .join("");
     return `<div class="sx-panel" style="margin-bottom:0">
       <div class="sx-panel-head">
-        <span class="sx-panel-title">${icon} ${title}</span>
+        <span class="sx-panel-title">${icon} ${esc(title)}</span>
         <span class="sx-tag">Écart-type des notes /5</span>
       </div>
-      ${rows}
+      <div class="sx-book-h">${esc(book.titre)}</div>
+      ${book.auteur ? `<div class="sx-book-a">${esc(book.auteur)}</div>` : ""}
+      <div class="sx-stat-line">Moy. <b>${fmtFr(book.avg)}/5</b> · écart-type <b>${fmtFr(book.std)}</b> — ${comment}</div>
+      <div class="sx-chips">${chips}</div>
     </div>`;
   };
 
   host.innerHTML =
-    makePanel(ctv, "Le plus controversé", "🔥") +
-    makePanel(cns, "Le plus consensuel",  "🤝");
+    makePanel(contro, "Livre le plus controversé", "🔥", "les membres ne s'accordent pas.") +
+    makePanel(conso,  "Livre le plus consensuel",  "🤝", "tout le monde est d'accord.");
 }
 
 // ════════════════════════════════════════════════════════════════════
 // 13. Durée de vie des propositions (barres + badge Archétype 2)
+//     Inclut : livres dans les sessions de vote + tous les elu/elimine/refuse
 // ════════════════════════════════════════════════════════════════════
 function renderDureeVie({ livreById, votes }) {
   const host = document.getElementById("bars-duree");
 
+  // Compte sessions de vote par livre_id
   const livreSessions = {};
   votes.forEach(v => {
     (v.resultats || []).forEach(r => {
@@ -877,35 +895,45 @@ function renderDureeVie({ livreById, votes }) {
     });
   });
 
-  const items = Object.entries(livreSessions)
-    .map(([lid, cnt]) => ({
+  // Union : livres en sessions OU livres elu/elimine/refuse (même sans session formelle)
+  const isTermine = st => st === "elu" || st === "elimine" || st === "refuse";
+  const inclus = new Set([
+    ...Object.keys(livreSessions),
+    ...Object.values(livreById).filter(l => isTermine(l.statut)).map(l => l.id),
+  ]);
+
+  const items = [...inclus]
+    .map(lid => ({
       titre:  livreById[lid]?.titre  ?? lid,
-      cnt,
+      cnt:    livreSessions[lid] ?? 0,
       statut: livreById[lid]?.statut ?? "?",
     }))
-    .filter(d => d.cnt > 0)
-    .sort((a, b) => b.cnt - a.cnt)
-    .slice(0, 15);
+    // Exclure les "en_proposition" / "propose" sans sessions (pas encore présentés)
+    .filter(d => d.cnt > 0 || isTermine(d.statut))
+    .sort((a, b) => b.cnt - a.cnt || a.titre.localeCompare(b.titre))
+    .slice(0, 20);
 
   if (!items.length) {
     host.innerHTML = `<p class="sx-note">Aucune proposition dans les sessions de vote.</p>`;
     return;
   }
 
-  const maxC = Math.max(...items.map(d => d.cnt));
+  const maxC = Math.max(1, ...items.map(d => d.cnt));
 
   host.innerHTML = items.map(d => {
-    const pct = maxC ? d.cnt / maxC * 100 : 0;
-    const [bCls, bTxt] = d.statut === "elu"
-      ? ["sx-badge-elu",  "Élu"]
-      : d.statut === "elimine"
-        ? ["sx-badge-elim", "Éliminé"]
-        : ["sx-badge-prop", "En attente"];
-    const label = d.titre.length > 28 ? d.titre.slice(0, 26) + "…" : d.titre;
+    const pct = d.cnt ? d.cnt / maxC * 100 : 2; // 2% minimal pour les livres 0 session
+    const isElu   = d.statut === "elu";
+    const isElim  = d.statut === "elimine" || d.statut === "refuse";
+    const [bCls, bTxt] = isElu  ? ["sx-badge-elu",  "✓ Élu"]
+                       : isElim ? ["sx-badge-elim", "✕ Éliminé"]
+                       :          ["sx-badge-prop", "En attente"];
+    const barCls = isElu ? "best" : isElim ? "low" : "";
+    const label  = d.titre.length > 28 ? d.titre.slice(0, 26) + "…" : d.titre;
+    const inner  = d.cnt ? `${d.cnt} session${d.cnt > 1 ? "s" : ""}` : "aucune session";
     return `<div class="sx-bar-row">
       <span class="sx-bar-lab" style="font-size:.77rem" title="${esc(d.titre)}">${esc(label)}</span>
-      <div class="sx-bar-track"><div class="sx-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
-      <span class="sx-bar-val">${d.cnt} <span class="sx-bar-badge ${bCls}">${bTxt}</span></span>
+      <div class="sx-bar-track"><div class="sx-bar-fill ${barCls}" style="width:${pct.toFixed(1)}%">${inner}</div></div>
+      <span class="sx-bar-val"><span class="sx-bar-badge ${bCls}">${bTxt}</span></span>
     </div>`;
   }).join("");
 }
@@ -942,7 +970,9 @@ function renderPropsStack({ membres, livres }) {
 
   const membresImpliques = membres.filter(m => keys.some(k => moisMap[k][m.id] > 0));
 
-  colsEl.innerHTML = keys.map(k => {
+  const tipData = [];
+
+  colsEl.innerHTML = keys.map((k, colIdx) => {
     const total = Object.values(moisMap[k]).reduce((a, b) => a + b, 0);
     const h     = maxTotal ? Math.max(total / maxTotal * 100, 10) : 10;
     const [year, mon] = k.split("-");
@@ -953,10 +983,21 @@ function renderPropsStack({ membres, livres }) {
       const cnt = moisMap[k][m.id] || 0;
       if (!cnt) return "";
       const segH = total ? (cnt / total * 100).toFixed(1) : 0;
-      return `<div class="sx-col-seg" style="height:${segH}%;background:${mColor(m)}" title="${esc(m.nom)} — ${cnt}"></div>`;
+      return `<div class="sx-col-seg" style="height:${segH}%;background:${mColor(m)}"></div>`;
     }).join("");
 
-    return `<div class="sx-col">
+    // Contenu du tooltip : total + détail par membre trié
+    const lines = membresImpliques
+      .filter(m => (moisMap[k][m.id] || 0) > 0)
+      .sort((a, b) => (moisMap[k][b.id] || 0) - (moisMap[k][a.id] || 0))
+      .map(m => {
+        const cnt = moisMap[k][m.id];
+        return `<span style="color:${mColor(m)};font-weight:600">${esc(m.nom)}</span> — ${cnt} proposition${cnt > 1 ? "s" : ""}`;
+      })
+      .join("<br>");
+    tipData[colIdx] = `<strong>${total} proposition${total > 1 ? "s" : ""}</strong><br>${lines}`;
+
+    return `<div class="sx-col" data-idx="${colIdx}">
       <div class="sx-col-bars" style="height:${h.toFixed(1)}%">${segs}</div>
       <div class="sx-col-v">${total}</div>
       <div class="sx-col-lab">${lab}</div>
@@ -968,6 +1009,44 @@ function renderPropsStack({ membres, livres }) {
     name:  m.nom,
     color: mColor(m),
   })));
+
+  // ── Tooltip au survol des colonnes ──────────────────────────────
+  const panel = colsEl.closest(".sx-panel") || colsEl.parentElement;
+  if (panel) {
+    panel.style.position = "relative";
+    const tip = document.createElement("div");
+    tip.style.cssText = [
+      "position:absolute",
+      "background:var(--card,#1c1916)",
+      "border:1px solid var(--border)",
+      "border-radius:6px",
+      "padding:.4rem .75rem",
+      "font-size:.78rem",
+      "line-height:1.65",
+      "pointer-events:none",
+      "white-space:nowrap",
+      "opacity:0",
+      "transition:opacity .12s",
+      "z-index:20",
+      "transform:translate(-50%,-100%)",
+      "box-shadow:0 2px 12px rgba(0,0,0,.2)",
+    ].join(";");
+    panel.appendChild(tip);
+
+    colsEl.addEventListener("mousemove", e => {
+      const col = e.target.closest(".sx-col[data-idx]");
+      if (!col) { tip.style.opacity = "0"; return; }
+      const idx = +col.dataset.idx;
+      if (tipData[idx] == null) { tip.style.opacity = "0"; return; }
+      tip.innerHTML = tipData[idx];
+      const pRect = panel.getBoundingClientRect();
+      const cRect = col.getBoundingClientRect();
+      tip.style.left = (cRect.left + cRect.width / 2 - pRect.left) + "px";
+      tip.style.top  = (cRect.top - pRect.top - 8) + "px";
+      tip.style.opacity = "1";
+    });
+    colsEl.addEventListener("mouseleave", () => { tip.style.opacity = "0"; });
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════
