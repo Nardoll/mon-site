@@ -1595,6 +1595,32 @@ Pages `lis-tes-ratures/` (nouvelle DA café-bibliothèque) :
 **Accueil — frise chronologique :**
 - `lis-tes-ratures/js/accueil.js` : `buildFriseEvents()` — filtre des propositions corrigé de `l.statut === 'en_proposition'` → `l.date_proposition`. Tous les livres ayant une date de proposition (élus, éliminés, en attente) apparaissent désormais comme événements "Proposition" dans les vues Fil cousu et Carnet.
 
+### 2026-06-09 (suite 3)
+**Refonte club de lecture — Corrections UI statistiques (suite) + page commentaires**
+
+`lis-tes-ratures/` (nouvelle DA café-bibliothèque) :
+
+**Statistiques — 4 corrections UI (suite) :**
+- `lis-tes-ratures/statistiques.html` + `lis-tes-ratures/js/statistiques.js` :
+  - **Colonne Score** : `<td class="sx-score-col">` (opacity:0 par défaut) révélée uniquement au survol du `<th class="sx-score-th">` via `mouseenter`/`mouseleave` JS. Formule ajoutée en pied de tableau (`.sx-formula-note`).
+  - **Controversé / Consensuel** : réécriture complète — UN seul livre par panel (plus haut / plus bas écart-type). Affiche `.sx-book-h` titre, `.sx-book-a` auteur, `.sx-stat-line` moy + écart-type, `.sx-chips` (chips individuelles `chipColor(v)` pour chaque note).
+  - **Durée de vie** : inclut maintenant les livres `refuse` même sans session de vote (`isTermine(st)` couvre `"elu"`, `"elimine"`, `"refuse"`). Badge `.sx-badge-elim` unifié pour `refuse` et `elimine`.
+  - **Évolution des propositions** : tooltip au survol de chaque colonne de l'histogramme — décompte par membre pour ce mois, positionné via `getBoundingClientRect()`.
+
+**Nouvelle page commentaires de lecture :**
+- `lis-tes-ratures/commentaires.html` : page dédiée aux commentaires pour un livre donné (`?livre=LIVRE_ID`, `?new=1` pour ouvrir le formulaire direct).
+  - En-tête : miniature de couverture gradient (hash `bookTint()`), titre, lien retour bibliothèque, bouton "Laisser un commentaire"
+  - Barre de suivi : label unité/total + bouton "⚙️ Configurer le suivi" → modal radio pages/chapitres + input total (met à jour `progression_unite`/`progression_total` Firestore)
+  - Filtre par membre (dropdown peuplé dynamiquement depuis les commentaires existants)
+  - Fil de lecture (`.reading`) avec pointillés façon fil cousu via `repeating-linear-gradient`
+  - Chaque commentaire (`.com`) : anneau de progression CSS conic-gradient avec initiales (`--mc` couleur membre, `--p` % avancement) + carte accordéon (header : nom, titre optionnel, barre de progression, date ; corps : texte paragraphes + bouton Modifier)
+  - **Pas de système spoiler** (volontaire — tous les commentaires en contiennent) : pas de chip spoiler, pas de bannière, pas de blur
+  - Modales "papier" (`.paper`) pour ajout, modification, configuration du suivi
+- `lis-tes-ratures/js/commentaires.js` : module ES6 — `requireAuth`, `initNav("bibliotheque")`, chargement parallèle livre + membres + commentaires, `renderHeader`, `renderFilter`, `renderList`, `openAdd/closeAdd/submitAdd`, `openEdit/closeEdit`, `openCfg/closeCfg/submitCfg`. Toutes les données via `db.js` existant.
+
+**Liens commentaires dans la page membres :**
+- `lis-tes-ratures/js/membres.js` : dans chaque groupe de livre de la section "Commentaires de lecture", lien "Voir tous les commentaires →" ajouté en bas de l'accordéon ouvert → `commentaires.html?livre=LIVRE_ID`.
+
 ### 2026-05-27
 **Nouvelle section Jeux + Club de lecture Stats + nb_pages**
 - `index.html` : ajout de la 3e carte "Jeux" (accent indigo `#667eea`, badge "✨ Accès libre"). Grille passée de `repeat(2, 1fr)` à `repeat(auto-fill, minmax(250px, 1fr))` avec `max-width: 860px`.
