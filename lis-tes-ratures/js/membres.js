@@ -239,7 +239,12 @@ async function openMember(membreId) {
                 <div class="rf-cmt-text">${esc(it.contenu)}</div>
               </div>
             </div>`;
-          }).join("")}</div>
+          }).join("")}
+          <a href="commentaires.html?livre=${livreId}"
+             style="display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;font-weight:600;color:var(--accent);text-decoration:none;margin:.55rem 0 .15rem;padding-left:.2rem">
+            ${IC.chat} Voir tous les commentaires →
+          </a>
+          </div>
         </div>`;
       }).join("")
     : `<div class="rf-empty">Aucun commentaire enregistré.</div>`;

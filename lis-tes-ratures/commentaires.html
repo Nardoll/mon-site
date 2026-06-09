@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Commentaires — Lis tes ratures</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* ══ En-tête livre ══════════════════════════════════════════════════════ */
+    .com-header { display: flex; align-items: flex-start; gap: 1.1rem; }
+    .page-header { align-items: flex-start; }
+
+    .com-cover {
+      width: 52px; height: 76px; flex-shrink: 0;
+      border-radius: 2px 5px 5px 2px;
+      background: linear-gradient(158deg, var(--g1,#46607a), var(--g2,#2c3d4f));
+      box-shadow: 0 10px 18px -10px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.08);
+      position: relative; overflow: hidden;
+    }
+    .com-cover::before {
+      content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+      width: 4px; background: rgba(0,0,0,.28);
+    }
+    .com-cover span {
+      position: absolute; inset: 0; font-family: var(--serif); font-size: .46rem;
+      color: #fdf6ea; padding: .35rem .26rem .35rem .5rem; line-height: 1.15;
+      font-weight: 600; word-break: break-word;
+    }
+    .com-htext { flex: 1; min-width: 0; }
+    .com-back {
+      display: inline-flex; align-items: center; gap: .3rem;
+      font-size: .8rem; font-weight: 600; color: var(--accent); text-decoration: none;
+    }
+    .com-back:hover { text-decoration: underline; }
+    .com-back svg { width: 14px; height: 14px; }
+    .com-h1 {
+      font-family: var(--serif); font-size: 1.5rem; font-weight: 600;
+      color: var(--text); line-height: 1.12; margin-top: .3rem;
+    }
+    .com-h1 .book { color: var(--accent); }
+
+    .com-actions { display: flex; align-items: center; gap: .8rem; flex-shrink: 0; }
+    .btn-add {
+      display: inline-flex; align-items: center; gap: .5rem;
+      background: var(--accent); color: #fff7ee;
+      border: none; border-radius: 8px; padding: .6rem 1.05rem;
+      font-size: .88rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: background .15s, transform .15s; white-space: nowrap;
+    }
+    .btn-add:hover { background: #c46b41; transform: translateY(-1px); }
+    .btn-add svg { width: 16px; height: 16px; }
+
+    /* ══ Toolbar ════════════════════════════════════════════════════════════ */
+    .com-toolbar {
+      display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap;
+      margin: 1.5rem 0 1.7rem;
+    }
+    .com-track-info { font-size: .82rem; color: var(--muted); }
+    .com-track-info b { color: var(--text); font-weight: 600; }
+    .com-config {
+      display: inline-flex; align-items: center; gap: .35rem;
+      background: none; border: none; font-family: inherit;
+      font-size: .82rem; font-weight: 600; color: var(--accent);
+      cursor: pointer; padding: 0;
+    }
+    .com-config:hover { text-decoration: underline; }
+    .com-config svg { width: 15px; height: 15px; }
+    .com-filter {
+      min-width: 180px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 7px;
+      padding: .48rem .75rem; font-size: .85rem;
+      font-family: inherit; color: var(--text); cursor: pointer;
+    }
+    .com-count { margin-left: auto; font-size: .8rem; color: var(--muted); font-style: italic; }
+
+    /* ══ Fil de lecture ═════════════════════════════════════════════════════ */
+    .reading {
+      position: relative; max-width: 880px; padding-left: 58px;
+    }
+    .reading::before {
+      content: ""; position: absolute; left: 21px; top: 6px; bottom: 26px;
+      width: 2px;
+      background: repeating-linear-gradient(
+        180deg, rgba(181,87,45,.55) 0 7px, transparent 7px 15px
+      );
+    }
+
+    .com { position: relative; margin-bottom: 1.1rem; }
+
+    .com-seal {
+      position: absolute; left: -58px; top: 6px;
+      width: 44px; height: 44px; border-radius: 50%; padding: 3px;
+      background: conic-gradient(
+        var(--mc,#8a5a3a) calc(var(--p,0) * 1%),
+        var(--border) 0
+      );
+      box-shadow: 0 2px 6px -2px rgba(60,40,20,.5);
+    }
+    .com-seal-inner {
+      width: 100%; height: 100%; border-radius: 50%;
+      background: var(--surface); display: grid; place-items: center;
+      font-family: var(--serif); font-weight: 700;
+      font-size: .92rem; color: var(--mc,#8a5a3a);
+    }
+
+    .com-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); overflow: hidden;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .com.open .com-card {
+      border-color: rgba(181,87,45,.4);
+      box-shadow: 0 10px 26px -18px rgba(60,40,20,.5);
+    }
+
+    .com-head {
+      display: flex; align-items: center; gap: .7rem;
+      width: 100%; text-align: left; background: none; border: none;
+      font-family: inherit; cursor: pointer; padding: .85rem 1.1rem;
+    }
+    .com.open .com-head { background: rgba(181,87,45,.04); }
+
+    .com-id { min-width: 0; flex: 1; }
+    .com-who {
+      font-size: .95rem; color: var(--text);
+      display: flex; align-items: baseline; gap: .45rem;
+      flex-wrap: wrap; line-height: 1.3;
+    }
+    .com-who .name { font-family: var(--serif); font-weight: 600; }
+    .com-who .title { font-style: italic; color: var(--accent); font-size: .88rem; }
+    .com-sub {
+      font-size: .78rem; color: var(--muted);
+      margin-top: .3rem; display: flex; align-items: center; gap: .5rem;
+    }
+    .com-prog-mini { display: inline-flex; align-items: center; gap: .4rem; }
+    .com-prog-track {
+      width: 64px; height: 5px;
+      background: rgba(120,90,50,.18); border-radius: 3px; overflow: hidden;
+    }
+    .com-prog-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+    .com-date { font-size: .76rem; color: var(--muted); white-space: nowrap; }
+    .com-chev {
+      width: 22px; height: 22px; flex-shrink: 0;
+      display: grid; place-items: center;
+      color: var(--muted); transition: transform .2s;
+    }
+    .com.open .com-chev { transform: rotate(180deg); color: var(--accent); }
+    .com-chev svg { width: 16px; height: 16px; }
+
+    .com-body { display: none; padding: 0 1.2rem 1.1rem; }
+    .com.open .com-body { display: block; }
+    .com-body-inner { border-top: 1px solid var(--border); padding-top: .95rem; }
+    .com-text { font-size: .92rem; line-height: 1.62; color: var(--text); }
+    .com-text p { margin-bottom: .7rem; }
+    .com-text p:last-child { margin-bottom: 0; }
+    .com-edit {
+      display: inline-flex; align-items: center; gap: .35rem;
+      margin-top: .9rem; background: none; border: none;
+      font-family: inherit; font-size: .8rem; font-weight: 600;
+      color: var(--muted); cursor: pointer; padding: 0;
+    }
+    .com-edit:hover { color: var(--accent); }
+    .com-edit svg { width: 13px; height: 13px; }
+
+    /* état vide */
+    .com-empty { text-align: center; color: var(--muted); padding: 4rem 1rem; }
+    .com-empty svg { width: 44px; height: 44px; opacity: .5; display: block; margin: 0 auto .9rem; }
+    .com-empty p { font-size: .92rem; }
+
+    /* ══ Modales papier ═════════════════════════════════════════════════════ */
+    .paper-overlay .modal {
+      padding: 0; background: transparent; border: none;
+      max-width: 540px; max-height: none; overflow: visible;
+      box-shadow: none;
+    }
+    .paper {
+      position: relative; width: 100%;
+      background: linear-gradient(180deg, #fcf6e8, #f4e8cf);
+      border-radius: 5px; padding: 1.8rem 2rem 1.7rem 2.5rem;
+      color: #3a2b1c;
+      box-shadow: 0 40px 80px -30px rgba(0,0,0,.55),
+                  inset 0 0 0 1px rgba(120,90,50,.12);
+      max-height: 90vh; overflow-y: auto;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    .paper::before {
+      content: ""; position: absolute; left: 1.6rem; top: 0; bottom: 0;
+      width: 1.5px; background: rgba(176,72,52,.3);
+    }
+    .paper-close {
+      position: absolute; top: .8rem; right: 1rem; background: none; border: none;
+      font-size: 1.25rem; color: #8a7560; cursor: pointer; line-height: 1;
+      padding: .05rem .25rem; z-index: 2;
+    }
+    .paper-close:hover { color: #3a2b1c; }
+    .paper-kicker {
+      font-size: .66rem; font-weight: 700; letter-spacing: .12em;
+      text-transform: uppercase; color: #a07c4e;
+    }
+    .paper-title {
+      font-family: var(--serif); font-size: 1.5rem; font-weight: 600;
+      color: #2c2015; margin: .1rem 0 1.4rem;
+    }
+
+    .pf-group { margin-bottom: 1.1rem; }
+    .pf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .pf-group label {
+      display: block; font-size: .8rem; font-weight: 600;
+      color: #8a5a2a; margin-bottom: .35rem;
+    }
+    .pf-group label .req { color: #b0444a; }
+    .pf-group label .opt { color: #a08768; font-weight: 400; font-style: italic; }
+    .pf-check-label {
+      display: flex; align-items: center; gap: .55rem; font-size: .88rem;
+      color: #5a4326; cursor: pointer; margin-bottom: 0 !important; font-weight: 400 !important;
+    }
+    .pf-check-label input { accent-color: #b5572d; width: 16px; height: 16px; flex-shrink: 0; }
+    .pf-input {
+      width: 100%; background: rgba(255,255,255,.6);
+      border: 1px solid rgba(120,90,50,.3); border-radius: 7px;
+      color: #3a2b1c; padding: .58rem .8rem; font-size: .9rem;
+      font-family: inherit; box-sizing: border-box;
+    }
+    .pf-input:focus { outline: none; border-color: #b5572d; }
+    textarea.pf-input { resize: vertical; min-height: 130px; line-height: 1.5; }
+    .pf-radio { display: flex; gap: .6rem; }
+    .pf-radio label {
+      flex: 1; display: flex; align-items: center; gap: .5rem;
+      background: rgba(255,255,255,.5); border: 1px solid rgba(120,90,50,.3);
+      border-radius: 8px; padding: .6rem .8rem; font-size: .88rem;
+      color: #3a2b1c; cursor: pointer; margin: 0; font-weight: 500;
+    }
+    .pf-radio label.on {
+      border-color: #b5572d; background: rgba(181,87,45,.08);
+      color: #b5572d; font-weight: 600;
+    }
+    .pf-radio input { accent-color: #b5572d; flex-shrink: 0; }
+    .pf-foot {
+      display: flex; justify-content: flex-end; gap: .6rem;
+      margin-top: 1.5rem; padding-top: 1.1rem;
+      border-top: 1px solid rgba(120,90,50,.22);
+    }
+    .pf-btn {
+      border-radius: 7px; padding: .55rem 1.1rem;
+      font-size: .86rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; border: 1px solid transparent; transition: background .15s;
+    }
+    .pf-btn.cancel {
+      background: transparent; border-color: rgba(120,90,50,.3); color: #6a513a;
+    }
+    .pf-btn.cancel:hover { background: rgba(120,90,50,.08); }
+    .pf-btn.ok { background: #b5572d; color: #fff7ee; }
+    .pf-btn.ok:hover { background: #c46b41; }
+
+    @media (max-width: 640px) {
+      .reading { padding-left: 44px; }
+      .reading::before { left: 15px; }
+      .com-seal { left: -44px; width: 34px; height: 34px; }
+      .com-seal-inner { font-size: .74rem; }
+      .pf-row { grid-template-columns: 1fr; }
+      .com-actions { flex-shrink: 1; }
+      .btn-add span { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main class="main">
+    <div class="page-header" style="align-items:flex-start;gap:1.2rem">
+      <div class="com-header" style="flex:1;min-width:0">
+        <div class="com-cover" id="com-cover"><span id="com-cover-t"></span></div>
+        <div class="com-htext">
+          <a class="com-back" id="com-back" href="bibliotheque.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 12H5M11 6l-6 6 6 6"/>
+            </svg>
+            Retour à la bibliothèque
+          </a>
+          <h1 class="com-h1">Commentaires — <span class="book" id="com-book">Chargement…</span></h1>
+        </div>
+      </div>
+      <div class="com-actions">
+        <button class="btn-add" id="btn-add">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <path d="M12 8v4M10 10h4"/>
+          </svg>
+          <span>Laisser un commentaire</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="com-toolbar">
+      <div class="com-track-info" id="track-info">Chargement…</div>
+      <button class="com-config" id="btn-config">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        Configurer le suivi
+      </button>
+      <select class="com-filter" id="com-filter"></select>
+      <span class="com-count" id="com-count"></span>
+    </div>
+
+    <div class="reading" id="reading">
+      <p style="color:var(--muted);font-size:.88rem">Chargement…</p>
+    </div>
+  </main>
+
+  <!-- Modal : laisser un commentaire -->
+  <div class="overlay paper-overlay hidden" id="add-overlay">
+    <div class="modal">
+      <div class="paper" id="add-paper"></div>
+    </div>
+  </div>
+
+  <!-- Modal : modifier un commentaire -->
+  <div class="overlay paper-overlay hidden" id="edit-overlay">
+    <div class="modal">
+      <div class="paper" id="edit-paper"></div>
+    </div>
+  </div>
+
+  <!-- Modal : configurer le suivi -->
+  <div class="overlay paper-overlay hidden" id="cfg-overlay">
+    <div class="modal" style="max-width:420px">
+      <div class="paper" id="cfg-paper"></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/commentaires.js"></script>
+</body>
+</html>
