@@ -296,7 +296,6 @@ async function renderLivreMois() {
   });
 
   const series = await buildProgressionSeries();
-  const hasSpark = series.length > 0;
 
   const bars = membresAvecSuivi.map(m => {
     const s = statutByMembre[m.id];
@@ -340,12 +339,11 @@ async function renderLivreMois() {
         ${membresAvecSuivi.length ? `<div class="lm-hint">${ICON_PEN} Cliquez sur un membre pour modifier son suivi.</div>` : ''}
         <div class="lm-bars" id="lm-bars">${bars}</div>
         ${membresAvecSuivi.length === 0 ? `<p style="font-size:.82rem;color:var(--muted);margin:.5rem 0 1rem">Aucun suivi enregistré pour l'instant.</p>` : ''}
-        ${hasSpark ? `
         <div class="lm-graph-card" id="lm-graph-card">
-          ${buildSparkSVG(series)}
-          <div class="gc-txt"><div class="gc-t">Évolution des lectures</div><div class="gc-s">La course du club, jour après jour</div></div>
+          ${series.length > 0 ? buildSparkSVG(series) : '<svg class="spark" viewBox="0 0 130 46"><line x1="8" y1="38" x2="122" y2="38" stroke="var(--border)" stroke-width="1"/><text x="65" y="22" text-anchor="middle" fill="var(--muted)" font-size="9" font-family=\'Segoe UI,sans-serif\'>Aucune donnée ce mois</text></svg>'}
+          <div class="gc-txt"><div class="gc-t">Évolution des lectures</div><div class="gc-s">${series.length > 0 ? 'La course du club, jour après jour' : 'Les données apparaîtront après les mises à jour'}</div></div>
           <span class="gc-arrow">→</span>
-        </div>` : ''}
+        </div>
         <div class="lm-foot">
           <button class="btn btn-secondary" id="lm-voir-comments">${ICON_COMMENT} Voir les commentaires</button>
           <button class="btn btn-secondary" id="lm-laisser-comment">${ICON_COMMENT} Laisser un commentaire</button>
