@@ -283,13 +283,8 @@ async function renderLivreMois() {
   const hier = isHierarchique();
   const trackLabel = progressionLabelText(currentLivre);
 
-  // Seuls les membres avec un vrai suivi
-  const membresAvecSuivi = allMembres.filter(m => {
-    const s = statutByMembre[m.id];
-    if (!s) return false;
-    if (s.statut === 'pas_commence' && !Number(s.page_actuelle)) return false;
-    return true;
-  }).sort((a, b) => {
+  // Tous les membres ayant une entrée de suivi (y compris pas_commence)
+  const membresAvecSuivi = allMembres.filter(m => !!statutByMembre[m.id]).sort((a, b) => {
     const sa = statutByMembre[a.id], sb = statutByMembre[b.id];
     const order = { termine: 3, en_cours: 2, achete: 1, pas_commence: 0 };
     const diff = (order[sb.statut] || 0) - (order[sa.statut] || 0);
@@ -400,12 +395,7 @@ async function reloadStatuts() {
 function refreshBars() {
   const bars = document.getElementById('lm-bars');
   if (!bars) return;
-  const membresAvecSuivi = allMembres.filter(m => {
-    const s = statutByMembre[m.id];
-    if (!s) return false;
-    if (s.statut === 'pas_commence' && !Number(s.page_actuelle)) return false;
-    return true;
-  }).sort((a, b) => {
+  const membresAvecSuivi = allMembres.filter(m => !!statutByMembre[m.id]).sort((a, b) => {
     const sa = statutByMembre[a.id], sb = statutByMembre[b.id];
     const order = { termine: 3, en_cours: 2, achete: 1, pas_commence: 0 };
     const diff = (order[sb.statut] || 0) - (order[sa.statut] || 0);
