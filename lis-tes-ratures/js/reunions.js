@@ -29,7 +29,7 @@ const IC = {
   users:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M17.5 19a5.5 5.5 0 0 0-2.7-4.7"/></svg>`,
   note:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 10h7M8 14h5"/></svg>`,
   edit:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>`,
-  arrowR: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`,
+  arrowR: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="0.75em" height="0.75em" style="vertical-align:middle;flex-shrink:0"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`,
 };
 
 // ── État global ─────────────────────────────────────────────────────────────
@@ -113,6 +113,10 @@ async function init() {
   });
 
   renderLedger();
+
+  // Auto-ouvrir une réunion depuis l'URL ?open=ID (ex: frise "Notre parcours")
+  const openId = new URLSearchParams(location.search).get("open");
+  if (openId) openMeeting(openId);
 
   document.getElementById("btn-add").addEventListener("click", openAdd);
   document.getElementById("mtg-overlay").addEventListener("click", e => {
@@ -416,10 +420,10 @@ function openAdd() {
 
   // Checklist membres
   const checklistHtml = (prefix, checked) => membres.map(m =>
-    `<label class="pf-check">
-      <input type="checkbox" data-mid="${esc(m.id)}" id="${prefix}-${esc(m.id)}" ${checked ? "checked" : ""} />
-      <span class="mc-dot" style="background:${m._color}">${initiales(m.nom)}</span>
-      <span>${esc(m.nom)}</span>
+    `<label class="pf-check" style="display:inline-flex;align-items:center;gap:.35rem;flex-direction:row;padding:.25rem .45rem;margin:.2rem .2rem 0 0">
+      <input type="checkbox" data-mid="${esc(m.id)}" id="${prefix}-${esc(m.id)}" ${checked ? "checked" : ""} style="margin:0;flex-shrink:0" />
+      <span class="mc-dot" style="background:${m._color};width:1.3rem;height:1.3rem;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;color:#fff;flex-shrink:0">${initiales(m.nom)}</span>
+      <span style="font-size:.82rem;white-space:nowrap">${esc(m.nom)}</span>
     </label>`
   ).join("");
 
@@ -460,7 +464,7 @@ function openAdd() {
 
     <div class="pf-group">
       <label>Présents à la réunion</label>
-      <div class="pf-checklist" id="add-presents">${checklistHtml("pre", true)}</div>
+      <div class="pf-checklist" id="add-presents" style="display:flex;flex-wrap:wrap;gap:.15rem">${checklistHtml("pre", true)}</div>
       <div class="pf-chk-tools">
         <button type="button" data-target="add-presents" data-val="true">Tout cocher</button>
         <button type="button" data-target="add-presents" data-val="false">Tout décocher</button>
@@ -469,7 +473,7 @@ function openAdd() {
 
     <div class="pf-group">
       <label>Ont lu le livre</label>
-      <div class="pf-checklist" id="add-lu">${checklistHtml("lu", false)}</div>
+      <div class="pf-checklist" id="add-lu" style="display:flex;flex-wrap:wrap;gap:.15rem">${checklistHtml("lu", false)}</div>
       <div class="pf-chk-tools">
         <button type="button" data-target="add-lu" data-val="true">Tout cocher</button>
         <button type="button" data-target="add-lu" data-val="false">Tout décocher</button>

@@ -54,6 +54,12 @@ function toDate(ts) {
   return ts.toDate ? ts.toDate() : new Date(ts);
 }
 
+function unitAbbr(u) {
+  if (u === 'chapitres') return 'ch.';
+  if (u === 'parties')   return 'par.';
+  return 'p.';
+}
+
 function detectScale(resultats) {
   const all = (resultats || []).flatMap(r => Object.values(r.notes || {})).map(Number).filter(n => !isNaN(n));
   return all.length && Math.max(...all) <= 5 ? 5 : 10;
@@ -275,13 +281,16 @@ async function openFiche(id) {
   // Avancements (élus)
   let avHtml = '';
   if (livre.statut === 'elu' && membres.length) {
+    const reunionDuLivre = reunions.find(r => r.livre_id === id);
     avHtml = `<div class="fiche-divider"></div>
       <div class="fiche-sec-title">${ICON_USERS} Avancements membres</div>
       <div class="fiche-av">${membres.map(m => {
         const s = statuts.find(x => x.membre_id === m.id);
-        const label = !s ? `<span class="fiche-av-none">—</span>`
-          : s.statut === 'termine' ? `<span class="fiche-av-done">${ICON_CHECK} Terminé</span>`
-          : s.statut === 'en_cours' ? `<span style="color:#a8501f;font-weight:600">En cours${s.page_actuelle ? ` · ${s.page_actuelle} p` : ''}</span>`
+        const hasReunionNote = reunionDuLivre?.notes_finales?.[m.id] != null;
+        const label = (hasReunionNote || s?.statut === 'termine')
+          ? `<span class="fiche-av-done">${ICON_CHECK} Terminé</span>`
+          : !s ? `<span class="fiche-av-none">—</span>`
+          : s.statut === 'en_cours' ? `<span style="color:#a8501f;font-weight:600">En cours${s.page_actuelle ? ` · ${s.page_actuelle} ${unitAbbr(livre.progression_unite)}` : ''}</span>`
           : `<span class="fiche-av-none">—</span>`;
         return `<div class="fiche-av-row"><span>${esc(m.nom)}</span>${label}</div>`;
       }).join('')}</div>`;

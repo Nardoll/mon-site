@@ -341,6 +341,17 @@ async function renderLivreMois() {
         ${membresAvecSuivi.length ? `<div class="lm-hint">${ICON_PEN} Cliquez sur un membre pour modifier son suivi.</div>` : ''}
         <div class="lm-bars" id="lm-bars">${bars}</div>
         ${membresAvecSuivi.length === 0 ? `<p style="font-size:.82rem;color:var(--muted);margin:.5rem 0 1rem">Aucun suivi enregistré pour l'instant.</p>` : ''}
+        ${(() => {
+          const tracked = new Set(membresAvecSuivi.map(m => m.id));
+          const untracked = allMembres.filter(m => !tracked.has(m.id));
+          return untracked.length ? `
+          <div class="lm-add-row" id="lm-add-row" style="display:flex;align-items:center;gap:.5rem;margin-top:.6rem;flex-wrap:wrap">
+            <select id="lm-add-sel" style="font-size:.8rem;padding:.3rem .5rem;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);flex:1;min-width:0">
+              ${untracked.map(m => `<option value="${esc(m.id)}">${esc(m.nom)}</option>`).join('')}
+            </select>
+            <button id="lm-add-btn" class="btn btn-secondary" style="font-size:.78rem;padding:.3rem .75rem;white-space:nowrap">${ICON_PEN} Ajouter au suivi</button>
+          </div>` : '';
+        })()}
         <div class="lm-graph-card" id="lm-graph-card">
           ${series.length > 0 ? buildSparkSVG(series) : '<svg class="spark" viewBox="0 0 130 46"><line x1="8" y1="38" x2="122" y2="38" stroke="var(--border)" stroke-width="1"/><text x="65" y="22" text-anchor="middle" fill="var(--muted)" font-size="9" font-family=\'Segoe UI,sans-serif\'>Aucune donnée ce mois</text></svg>'}
           <div class="gc-txt"><div class="gc-t">Évolution des lectures</div><div class="gc-s">${series.length > 0 ? 'La course du club, jour après jour' : 'Les données apparaîtront après les mises à jour'}</div></div>
@@ -365,6 +376,19 @@ async function renderLivreMois() {
     if (row) openMembreEdit(row.dataset.id);
   });
   document.getElementById('lm-graph-card')?.addEventListener('click', openGraphModal);
+
+  // Ajouter un membre au suivi
+  document.getElementById('lm-add-btn')?.addEventListener('click', async () => {
+    const sel = document.getElementById('lm-add-sel');
+    const membreId = sel?.value;
+    if (!membreId || !currentLivreId) return;
+    try {
+      await upsertStatutLecture({ membre_id: membreId, livre_id: currentLivreId, statut: 'pas_commence', page_actuelle: '', pages_totales: '' });
+      showToast('Membre ajouté au suivi', 'success');
+      await reloadStatuts();
+      await renderLivreMois();
+    } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
+  });
 }
 
 async function reloadStatuts() {
@@ -719,7 +743,7 @@ function buildFriseEvents() {
     if (v.livre_elu) {
       const r = (v.resultats || []).find(x => x.livre_id === v.livre_elu);
       const titre = r?.titre ?? allLivres.find(l => l.id === v.livre_elu)?.titre ?? 'Livre élu';
-      events.push({ d: dateStr, type: 'elu', title: titre, who: `Élu pour ${formatMois(v.mois, v.annee)}`, navId: v.livre_elu, navPage: 'bibliotheque' });
+      events.push({ d: dateStr, type: 'elu', title: titre, who: `Élu pour ${formatMois(v.mois, v.annee)}`, navId: v.id, navPage: 'votes' });
     } else {
       events.push({ d: dateStr, type: 'vote', title: `Vote de ${formatMois(v.mois, v.annee)}`, who: `${(v.resultats || []).length} livres en lice`, navId: v.id, navPage: 'votes' });
     }
