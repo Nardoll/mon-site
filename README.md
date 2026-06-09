@@ -1561,20 +1561,25 @@ Pages `lis-tes-ratures/` (nouvelle DA café-bibliothèque) :
 - `lis-tes-ratures/js/reunions.js` : `renderMeeting()` utilisait une comparaison de string directe (`!== "passée"`) au lieu de `isPasse()` → le sceau de l'overlay affichait toujours "à venir". Corrigé : `const prevue = !isPasse(r)`.
 - `lis-tes-ratures/reunions.html` : taille du texte des sceaux réduite pour tenir dans les cercles — `.reg-seal-note` `1.4rem → 1.15rem`, `.mtg-seal-note` `1.32rem → 1.1rem`.
 
-**Statistiques — nouvelle page complète :**
-- `lis-tes-ratures/statistiques.html` : page avec 4 chapitres et 9 planches, structure HTML complète avec placeholders d'IDs pour chaque graphique. Charge `stats-helpers.js` (classic, expose `window.SX`) puis `statistiques.js` (module Firebase).
-- `lis-tes-ratures/js/statistiques.js` : module ES6 — chargement parallèle de `membres`, `livres`, `votes`, `reunions`, `statuts_lecture`, `commentaires`. Rendu de chaque archétype DA :
-  - **KPI gravé** (Archétype 1) : livres lus, lectures cumulées, pages club, pages cumulées.
-  - **Histogramme /10** (Archétype 2) : distribution des `notes_finales` de réunion, moyenne en grand.
-  - **Colonnes lecteurs** (Archétype 3) : `lecteurs_ids.length` par séance passée, X = titre du livre.
-  - **Courbe à la plume** (Archétype 4) : évolution des notes par membre sur les livres lus en ordre chrono. Trous = absent.
-  - **Table-registre** (Archétype 6) : membres classés par score composite (livres finis × 3 + réunions + propositions). Médailles podium or/argent/bronze.
-  - **Heatmap goûts** (Archétype 5) : matrice votant × proposant, moyennes des notes /5 par paire, `SX.heatColor(v, 1, 5, 3)`.
-  - **Pastilles** (Archétype 7) : livre controversé (max écart-type) / consensuel (min écart-type) depuis les notes de vote /5.
-  - **Barres + badge** (Archétype 2 variante) : durée de vie des propositions (sessions traversées avant élu ✓ / éliminé ✕).
-  - **Colonnes empilées** (Archétype 3 variante) : évolution des propositions par session de vote, une couleur par membre (`SX.memberColor`).
-- Réutilise `stats-helpers.js` (window.SX) déjà présent dans `css/stats.css` + `js/stats-helpers.js`.
-- Même `isPasse()` robuste que `reunions.js` (notes_finales + date + statut normalisé).
+**Statistiques — page complète avec tous les graphiques :**
+- `lis-tes-ratures/statistiques.html` : page avec 3 chapitres et 14 planches, structure HTML complète.
+- `lis-tes-ratures/js/statistiques.js` : module ES6 — chargement parallèle de `membres`, `livres`, `votes`, `reunions`, `statuts_lecture`, `commentaires`. 14 panels rendus :
+  - **KPI gravé** (Archétype 1) : livres lus cumulés, pages lues cumulées (avec `membersWhoFinishedBook()` robuste — statut `"termine"` sans accent + retrocompat `lecteurs_ids`/`notes_finales > 0`), note moyenne /10, propositions en attente.
+  - **Histogramme /10** (Archétype 2) avec sélecteur membre : distribution des `notes_finales` de réunion.
+  - **Histogramme /5** (Archétype 2) avec sélecteur membre : distribution des notes de vote d'élection.
+  - **Participation aux votes** (Archétype 2) : barres horizontales par membre (N/total + %).
+  - **Colonnes lecteurs** (Archétype 3) : `membersWhoFinishedBook()` par séance passée.
+  - **Courbe à la plume** (Archétype 4) : évolution des notes /10 par membre, trous = absent.
+  - **Table-registre membres actifs** (Archétype 6) : livres finis, réunions, propositions, votes, commentaires.
+  - **Bilan par membre proposant** (Archétype 6) : total / élus / éliminés / en attente / note vote reçue /5 / note finale reçue /10.
+  - **Heatmap des goûts** (Archétype 5) : matrice votant × proposant, moyennes des notes /5.
+  - **Scatter corrélation vote → réunion** (SVG inline DA-style) : note élection /5 vs note finale /10, droite de tendance.
+  - **Similarité votants Pearson** (Archétype 5) : heatmap `heatColor(r, -1, 1, 0)`, min. 3 livres communs par paire.
+  - **Controversé / Consensuel** (Archétype 7) : écart-type des notes /5, fond coloré par valeur.
+  - **Durée de vie** (Archétype 2 + badge) : sessions traversées par livre, badge élu/éliminé/en attente.
+  - **Colonnes empilées propositions** (Archétype 3) : par mois de `date_proposition`, une couleur par membre.
+- API SX utilisée correctement : `lineChart(hostEl, { series:[{name,color,values}], xLabels, yMax, yStep })` ; `legend([{name,color}])` ; `memberColor(nom)` (prend le nom, pas l'id Firebase).
+- `isPasse()` robuste : notes_finales non vides OU statut contient "pass"/"termin" OU date dans le passé.
 
 ### 2026-05-27
 **Nouvelle section Jeux + Club de lecture Stats + nb_pages**
