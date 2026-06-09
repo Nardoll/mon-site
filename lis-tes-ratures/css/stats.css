@@ -1,0 +1,126 @@
+/* ══════════════════════════════════════════════════════════════════════
+   KIT STATISTIQUES — « Le bilan du club »
+   Archétypes de planches d'analyse, DA café-bibliothèque.
+   ----------------------------------------------------------------------
+   • Namespace : tout est préfixé .sx-  (évite les collisions avec style.css,
+     cf. piège des classes courtes signalé dans CLAUDE.md).
+   • Branché sur les tokens de style.css : var(--accent), --surface, --border,
+     --text, --muted, --green, --serif, --chart-bar-bg… → thème clair ET sombre
+     fonctionnent sans rien réécrire.
+   • Un archétype = un type de graph. On le recopie et on branche ses données.
+     Voir GUIDE-STATS.md pour le mode d'emploi + le mapping module → archétype.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ───────────────── Séparateur de chapitre (gravé) ───────────────── */
+.sx-chapter { display: flex; align-items: center; gap: 1rem; margin: 2.8rem 0 1.4rem; }
+.sx-chapter::before, .sx-chapter::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); }
+.sx-chapter span { font-family: var(--serif); font-size: .82rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); display: inline-flex; align-items: center; gap: .55rem; white-space: nowrap; }
+.sx-chapter .di { width: 6px; height: 6px; transform: rotate(45deg); background: var(--accent); flex-shrink: 0; }
+
+/* ───────────────── Planche (panneau d'analyse) ───────────────── */
+.sx-panel { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 1.5rem 1.6rem 1.7rem; margin-bottom: 1.5rem; }
+.sx-panel-head { display: flex; align-items: baseline; gap: .7rem; flex-wrap: wrap; margin-bottom: .35rem; }
+.sx-panel-title { font-family: var(--serif); font-size: 1.16rem; font-weight: 600; color: var(--text); display: inline-flex; align-items: center; gap: .5rem; }
+.sx-panel-title svg { width: 18px; height: 18px; color: var(--accent); }
+.sx-tag { font-size: .68rem; font-weight: 600; color: var(--accent); background: rgba(181,87,45,.1); border-radius: 5px; padding: .2rem .55rem; white-space: nowrap; }
+.sx-note { font-size: .8rem; color: var(--muted); font-style: italic; }
+.sx-spacer { margin-left: auto; }
+.sx-select { width: auto; min-width: 150px; font-size: .85rem; padding: .42rem .7rem; }
+/* légende « archétype » du kit (à retirer dans la vraie page) */
+.sx-covers { font-size: .73rem; color: var(--muted); margin: 0 0 1.2rem; padding: .4rem .65rem; background: rgba(181,87,45,.05); border-left: 2px solid var(--accent); border-radius: 0 5px 5px 0; }
+.sx-covers b { color: var(--accent); font-weight: 600; }
+.sx-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
+
+/* ───────────────── Archétype 1 · KPI gravé ───────────────── */
+.sx-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.sx-kpi { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 1.35rem 1.4rem; overflow: hidden; }
+.sx-kpi::after { content: ""; position: absolute; top: -16px; right: -16px; width: 58px; height: 58px; border: 2px solid var(--accent); border-radius: 50%; opacity: .1; }
+.sx-kpi-num { font-family: var(--serif); font-size: 2.5rem; font-weight: 700; color: var(--accent); line-height: 1; letter-spacing: .5px; }
+.sx-kpi-label { font-size: .86rem; font-weight: 600; color: var(--text); margin-top: .5rem; line-height: 1.25; }
+.sx-kpi-sub { font-size: .75rem; color: var(--muted); margin-top: .25rem; line-height: 1.3; }
+
+/* ───────────────── Archétype 2 · Barres horizontales ───────────────── */
+/* histogramme, classement, durée de vie (avec badge) … */
+.sx-bars { display: flex; flex-direction: column; gap: .5rem; }
+.sx-bar-row { display: grid; grid-template-columns: var(--lab, 120px) 1fr auto; align-items: center; gap: .8rem; }
+.sx-bar-lab { font-size: .84rem; color: var(--text); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sx-bar-track { height: 18px; background: var(--chart-bar-bg); border-radius: 5px; overflow: hidden; }
+.sx-bar-fill { height: 100%; border-radius: 5px; background: linear-gradient(90deg, #c98a5a, var(--accent)); display: flex; align-items: center; padding: 0 .5rem; font-size: .7rem; font-weight: 700; color: #fff7ee; white-space: nowrap; min-width: fit-content; }
+.sx-bar-fill.best { background: linear-gradient(90deg, #4cbd8a, var(--green)); }
+.sx-bar-fill.low  { background: linear-gradient(90deg, #d98a6a, #b0533a); }
+.sx-bar-val { font-family: var(--serif); font-weight: 700; font-size: .9rem; color: var(--accent); min-width: 38px; text-align: right; white-space: nowrap; }
+.sx-bar-badge { font-size: .7rem; font-weight: 700; padding: .14rem .5rem; border-radius: 4px; white-space: nowrap; }
+.sx-badge-elu  { background: rgba(26,158,106,.14); color: var(--green); }
+.sx-badge-elim { background: rgba(181,87,45,.14); color: var(--accent); }
+
+/* ───────────────── Archétype 3 · Colonnes verticales (par mois / empilées) ── */
+.sx-cols { display: flex; align-items: flex-end; gap: 1.2rem; height: 220px; padding-bottom: 1.7rem; margin-top: .8rem;
+  background-image: repeating-linear-gradient(0deg, var(--border) 0 1px, transparent 1px calc(25% - .3px)); background-position: 0 -1.7rem; background-size: 100% calc(100% - 1.7rem); }
+.sx-col { flex: 1; align-self: stretch; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; }
+.sx-col-v { font-family: var(--serif); font-weight: 700; font-size: .82rem; color: var(--accent); margin-bottom: .3rem; }
+.sx-col-bars { width: 68%; max-width: 90px; border-radius: 5px 5px 0 0; overflow: hidden; display: flex; flex-direction: column-reverse; }
+.sx-col-seg { width: 100%; background: linear-gradient(180deg, #d8a673, var(--accent)); }
+.sx-col-lab { position: absolute; bottom: -1.55rem; left: 0; right: 0; text-align: center; font-size: .78rem; color: var(--muted); }
+
+/* ───────────────── Légende partagée (colonnes empilées, courbes…) ── */
+.sx-legend { display: flex; flex-wrap: wrap; gap: .45rem 1.1rem; margin-top: 1.5rem; }
+.sx-legend span { display: inline-flex; align-items: center; gap: .4rem; font-size: .78rem; color: var(--muted); }
+.sx-legend i { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+/* ───────────────── Archétype 4 · Courbe à la plume (SVG) ───────────────── */
+.sx-plot { margin-top: .6rem; }
+.sx-plot svg { width: 100%; height: auto; display: block; }
+.sx-grid-line { stroke: var(--border); stroke-width: 1; opacity: .55; }
+.sx-grid-line.minor { opacity: .3; }
+.sx-axis-lab { fill: var(--muted); font-size: 11px; font-family: 'Segoe UI', system-ui, sans-serif; }
+.sx-ylab { text-anchor: end; }
+.sx-xlab { text-anchor: middle; }
+.sx-line { fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ───────────────── Archétype 5 · Heatmap encre-lavée ───────────────── */
+.sx-heat-wrap { overflow-x: auto; }
+.sx-heat { border-collapse: separate; border-spacing: 2px; font-size: .82rem; }
+.sx-heat th { font-size: .64rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); padding: .35rem .5rem; text-align: center; white-space: nowrap; }
+.sx-heat th.corner { text-align: left; color: var(--accent); }
+.sx-heat td.rowhead { text-align: left; color: var(--text); font-weight: 600; white-space: nowrap; padding: .4rem .8rem .4rem .3rem; }
+.sx-heat td { min-width: 58px; text-align: center; padding: .5rem .4rem; border-radius: 4px; color: var(--text); font-variant-numeric: tabular-nums; }
+.sx-heat td.empty { color: var(--muted); opacity: .45; }
+.sx-heat td.diag { font-style: italic; color: var(--muted); box-shadow: inset 0 0 0 1.5px var(--border); background-image: repeating-linear-gradient(45deg, rgba(120,90,50,.09) 0 4px, transparent 4px 8px); }
+.sx-heat-cap { font-size: .74rem; color: var(--muted); margin-top: .9rem; display: flex; gap: 1.2rem; flex-wrap: wrap; align-items: center; }
+.sx-heat-cap i { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: .35rem; }
+
+/* ───────────────── Archétype 6 · Table-registre (+ podium) ───────────────── */
+.sx-table { width: 100%; border-collapse: collapse; }
+.sx-table thead th { font-size: .64rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: .5rem .7rem; text-align: right; white-space: nowrap; border-bottom: 1.5px solid var(--border); }
+.sx-table thead th:first-child { text-align: left; }
+.sx-table tbody td { padding: .7rem; text-align: right; font-size: .9rem; color: var(--text); border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+.sx-table tbody td:first-child { text-align: left; font-family: var(--serif); font-weight: 600; }
+.sx-table tbody tr:last-child td { border-bottom: none; }
+.sx-table tbody tr:hover td { background: rgba(181,87,45,.05); }
+.sx-table .muted { color: var(--muted); }
+.sx-table .pos { color: var(--green); font-weight: 600; }
+.sx-table tbody tr.top td { background: rgba(181,87,45,.055); }
+.sx-medal { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: .64rem; font-weight: 800; margin-right: .5rem; color: #3a2b14; vertical-align: -4px; box-shadow: inset 0 -1px 1px rgba(0,0,0,.2), 0 1px 2px rgba(0,0,0,.2); }
+.sx-medal.or { background: linear-gradient(145deg, #f0d486, #c79a3a); }
+.sx-medal.ar { background: linear-gradient(145deg, #e3e3e7, #a8acb3); }
+.sx-medal.br { background: linear-gradient(145deg, #e0a472, #ad6838); }
+
+/* ───────────────── Archétype 7 · Pastilles de notes + écart-type ─────────── */
+.sx-book-h { font-family: var(--serif); font-size: 1.06rem; font-weight: 600; color: var(--text); }
+.sx-book-a { font-size: .84rem; color: var(--muted); font-style: italic; }
+.sx-stat-line { font-size: .86rem; color: var(--muted); margin-top: .35rem; }
+.sx-stat-line b { color: var(--text); font-family: var(--serif); }
+.sx-chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .8rem; }
+.sx-chip { width: 26px; height: 26px; border-radius: 5px; display: grid; place-items: center; font-size: .8rem; font-weight: 700; color: #3a2b14; box-shadow: inset 0 0 0 1px rgba(120,90,50,.12); }
+
+/* ───────────────── Bandeau d'intro du kit (à retirer dans la vraie page) ── */
+.sx-kit-banner { background: linear-gradient(180deg, #fcf6e8, #f4e8cf); border: 1px solid rgba(150,120,80,.34); border-radius: var(--r); padding: 1.1rem 1.4rem; margin-bottom: 1.8rem; color: #3a2b1c; }
+[data-theme="dark"] .sx-kit-banner, html:not([data-theme]) .sx-kit-banner { background: var(--surface2); color: var(--text); }
+.sx-kit-banner h2 { font-family: var(--serif); font-size: 1.05rem; font-weight: 600; margin-bottom: .35rem; color: var(--accent); }
+.sx-kit-banner p { font-size: .86rem; line-height: 1.5; }
+.sx-kit-banner code { font-family: 'Courier New', monospace; font-size: .82rem; background: rgba(181,87,45,.12); padding: .05rem .35rem; border-radius: 4px; }
+
+@media (max-width: 700px) {
+  .sx-bar-row { grid-template-columns: var(--lab, 96px) 1fr auto; gap: .55rem; }
+  .sx-cols { gap: .6rem; }
+}
