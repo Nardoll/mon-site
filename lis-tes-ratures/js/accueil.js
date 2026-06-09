@@ -210,13 +210,15 @@ async function buildProgressionSeries() {
   if (!points.length) return [];
 
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+  const monthStart = currentVote
+    ? new Date(currentVote.annee, currentVote.mois - 1, 1)
+    : new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0, 23, 59, 59);
   const totalMs = monthEnd - monthStart;
 
   const byMembre = {};
   points.forEach(p => {
-    const ts = toDate(p.date);
+    const ts = toDate(p.horodatage);
     if (!ts || ts < monthStart) return;
     if (!byMembre[p.membre_id]) byMembre[p.membre_id] = [];
     byMembre[p.membre_id].push({ ts, pct: p.pages_totales ? Math.min(100, Math.round(p.page_actuelle / p.pages_totales * 100)) : 0 });

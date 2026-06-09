@@ -143,10 +143,6 @@ function renderProps() {
       </div>
     </div>`;
   }).join('');
-  grid.addEventListener("click", e => {
-    const bk = e.target.closest(".bk[data-id]");
-    if (bk) openFiche(bk.dataset.id);
-  }, { once: true });
 }
 
 // ── Rendu élus ────────────────────────────────────────────────────
@@ -189,10 +185,6 @@ function renderElusList() {
       </div>
     </div>`;
   }).join('');
-  list.addEventListener("click", e => {
-    const item = e.target.closest(".bib-elu-item[data-id]");
-    if (item) openFiche(item.dataset.id);
-  }, { once: true });
 }
 
 // ── Rendu éliminés ────────────────────────────────────────────────
@@ -218,10 +210,6 @@ function renderElim() {
       </div>
     </div>`;
   }).join('');
-  grid.addEventListener("click", e => {
-    const card = e.target.closest(".elim-card[data-id]");
-    if (card) openFiche(card.dataset.id);
-  }, { once: true });
 }
 
 function renderVisual() {
@@ -579,8 +567,23 @@ function closeProposeModal() {
   });
 }
 
+// Délégation permanente sur les conteneurs (une seule fois, résiste aux re-renders)
+document.getElementById("prop-grid").addEventListener("click", e => {
+  const bk = e.target.closest(".bk[data-id]");
+  if (bk) openFiche(bk.dataset.id);
+});
+document.getElementById("elus-list").addEventListener("click", e => {
+  const item = e.target.closest(".bib-elu-item[data-id]");
+  if (item) openFiche(item.dataset.id);
+});
+document.getElementById("elim-grid").addEventListener("click", e => {
+  const card = e.target.closest(".elim-card[data-id]");
+  if (card) openFiche(card.dataset.id);
+});
+
 document.getElementById("open-propose").addEventListener("click", openProposeModal);
 document.getElementById("open-propose-2").addEventListener("click", openProposeModal);
+document.getElementById("pf-close").addEventListener("click", closeProposeModal);
 document.getElementById("pf-cancel").addEventListener("click", closeProposeModal);
 document.getElementById("propose-overlay").addEventListener("click", e => { if (e.target === e.currentTarget) closeProposeModal(); });
 
