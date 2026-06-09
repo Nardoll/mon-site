@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Statistiques — Lis tes ratures</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/stats.css" />
+  <style>
+    /* Scatter plot DA */
+    .sx-scatter { width:100%; height:auto; display:block; }
+    .sx-scatter-dot { fill: var(--accent); opacity: .82; }
+    .sx-scatter-dot:hover { opacity: 1; r: 7; }
+    .sx-scatter-label { fill: var(--muted); font-size: 10px; font-family: 'Segoe UI', system-ui; }
+    .sx-scatter-axis-lab { fill: var(--muted); font-size: 11px; font-family: 'Segoe UI', system-ui; text-anchor: middle; }
+    /* Note display "big" dans les panels histogramme */
+    .sx-note-big { font-family: var(--serif); font-size: 2rem; font-weight: 700; color: var(--accent); line-height: 1; margin-bottom: 1.1rem; }
+    .sx-note-big span { font-size: .95rem; color: var(--muted); font-weight: 400; }
+    /* Bilan propositions custom table */
+    .sx-table td.elu  { color: var(--green); font-weight: 600; }
+    .sx-table td.elim { color: var(--accent); }
+    .sx-table td.note { font-variant-numeric: tabular-nums; }
+    /* Taux moyen participation */
+    .sx-taux { font-size: .8rem; color: var(--muted); margin-bottom: 1rem; }
+    .sx-taux strong { color: var(--text); }
+    /* Badge "En attente" pour durée de vie */
+    .sx-badge-prop { background: rgba(120,90,50,.1); color: var(--muted); }
+  </style>
+</head>
+<body>
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main class="main">
+
+    <!-- ── En-tête ── -->
+    <div class="page-header">
+      <h1>Statistiques</h1>
+      <p id="stats-sub" style="color:var(--muted);font-size:.88rem;margin-top:.3rem">Chargement…</p>
+    </div>
+
+    <!-- ════════ KPIs ════════ -->
+    <div class="sx-kpis" id="kpis-root">
+      <div class="sx-kpi" style="opacity:.35"><div class="sx-kpi-num">—</div><div class="sx-kpi-label">Chargement…</div></div>
+    </div>
+
+    <!-- ════════ CHAPITRE : LECTURES & NOTES ════════ -->
+    <div class="sx-chapter"><span><i class="di"></i>Lectures &amp; notes</span></div>
+
+    <!-- Note moyenne /10 + histogramme (avec sélecteur membre) -->
+    <div class="sx-panel">
+      <div class="sx-panel-head">
+        <span class="sx-panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.6 5.6 6 .7-4.4 4.1 1.2 6L12 16.9 6.6 19.4l1.2-6L3.4 9.3l6-.7z"/></svg>
+          Note moyenne du club
+        </span>
+        <span class="sx-tag">Notes après lecture · /10</span>
+        <span class="sx-spacer"></span>
+        <select class="sx-select" id="hist10-sel"><option value="all">Tout le club</option></select>
+      </div>
+      <div id="hist10-avg"></div>
+      <div class="sx-bars" id="hist10-bars" style="--lab:24px"><p class="sx-note">Chargement…</p></div>
+    </div>
+
+    <!-- Distribution notes de vote /5 (avec sélecteur membre) -->
+    <div class="sx-panel">
+      <div class="sx-panel-head">
+        <span class="sx-panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 16 4-4 4 4 4-4"/></svg>
+          Distribution des notes de vote
+        </span>
+        <span class="sx-tag">Notes d'élection · /5</span>
+        <span class="sx-spacer"></span>
+        <select class="sx-select" id="hist5-sel"><option value="all">Tout le club</option></select>
+      </div>
+      <div id="hist5-avg"></div>
+      <div class="sx-bars" id="hist5-bars" style="--lab:24px"><p class="sx-note">Chargement…</p></div>
+    </div>
+
+    <!-- Participation aux votes -->
+    <div class="sx-panel">
+      <div class="sx-panel-head">
+        <span class="sx-panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m9 13 2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2.5"/></svg>
+          Participation aux votes
+        </span>
+        <span class="sx-tag">Sessions de vote</span>
+      </div>
+      <div id="participation-content"><p class="sx-note">Chargement…</p></div>
+    </div>
+
+    <!-- Lecteurs ayant terminé par séance (colonnes) -->
+    <div class="sx-panel">
+      <div class="sx-panel-head">
+        <span class="sx-panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V4M4 20h16"/><rect x="8" y="11" width="3" height="6" rx=".5"/><rect x="14" y="7" width="3" height="10" rx=".5"/></svg>
+          Lecteurs ayant terminé, par séance
+        </span>
+        <span class="sx-tag">Statuts de lecture</span>
+      </div>
+      <div class="sx-cols" id="cols-lecteurs">
+        <div class="sx-col" style="opacity:.25"><div class="sx-col-bars" style="height:60%"><div class="sx-col-seg" style="height:100%"></div></div></div>
+      </div>
+    </div>
+
+    <!-- Évolution des notes après lecture (courbe) -->
+    <div class="sx-panel">
+      <div class="sx-panel-head">
+        <span class="sx-panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="m7 14 3-4 3 3 4-6"/></svg>
+          Évolution des notes après lecture
+        </span>
+        <span class="sx-tag">/10 · ordre chronologique</span>
+      </div>
+      <div class="sx-plot" id="plot-notes"></div>
+      <div id="plot-notes-legend"></div>
+    </div>
+
+    <!-- ════════ CHAPITRE : PROPOSITIONS & VOTES ════════ -->
+    <div class="sx-chapter"><span><i class="di"></i>Propositions &amp; votes</span></div>
+
+    <!-- Membres les plus actifs (table-registre + podium) -->
+    <div class="sx-panel">
+      <div class="sx-panel-head">
+        <span class="sx-panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v2a3 3 0 0 0 3 3M18 6h3v2a3 3 0 0 1-3 3"/><path d="M9 20h6M12 14v6"/></svg>
+          Membres les plus actifs
+        </span>
+      </div>
+      <table class="sx-table">
+        <thead><tr>
+          <th>Membre</th><th>Livres finis</th><th>Réunions</th>
+          <th>Propositions</th><th>Votes</th><th>Commentaires</th>
+        </tr></thead>
+        <tbody id="tbl-actifs">
+          <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1.5rem">Chargement…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Bilan par membre proposant -->
+    <div class="sx-panel">
+      <div class="sx-panel-head">
+        <span class="sx-panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h6v16H6a1 1 0 0 1-1-1z"/><path d="M11 4h2.5l3.5.6-2.2 14-3.8-.6z"/><path d="M19 20H6"/></svg>
+          Bilan par membre proposant
+        </span>
+        <span class="sx-tag">Propositions · notes reçues</span>
+      </div>
+      <table class="sx-table">
+        <thead><tr>
+          <th>Membre</th><th>Total</th><th>Élus</th><th>Éliminés</th>
+          <th>En attente</th><th>Note vote reçue</th><th>Note finale reçue</th>
+        </tr></thead>
+        <tbody id="tbl-bilan-props">
+          <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1.5rem">Chargement…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Matrice des goûts (heatmap /5) -->
+    <div class="sx-panel" id="panel-heat">
+      <div class="sx-panel-head">
+        <span class="sx-panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".5" fill="currentColor"/></svg>
+          Matrice des goûts
+        </span>
+        <span class="sx-tag">Notes d'élection · /5</span>
+      </div>
+      <div class="sx-heat-wrap"><table class="sx-heat" id="heat-gouts"></table></div>
+      <div class="sx-heat-cap">
+        <span><i style="background:rgba(176,87,45,.4)"></i>note basse</span>
+        <span><i style="background:rgba(42,122,86,.4)"></i>note haute</span>
+        <span><i style="background:repeating-linear-gradient(45deg,rgba(120,90,50,.18) 0 4px,transparent 4px 8px);box-shadow:inset 0 0 0 1px var(--border)"></i>note à ses propres livres</span>
+      </div>
+    </div>
+
+    <!-- Corrélation vote → réunion (scatter SVG) -->
+    <div class="sx-panel" id="panel-correl">
+      <div class="sx-panel-head">
+        <span class="sx-panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="17" r="2"/><circle cx="17" cy="7" r="2"/><circle cx="17" cy="17" r="2"/><circle cx="7" cy="7" r="2"/><path d="M9 15 15 9M9 9l6 6"/></svg>
+          Corrélation vote → réunion
+        </span>
+        <span class="sx-tag">Note élection /5 · note finale /10</span>
+      </div>
+      <div class="sx-note" style="margin-bottom:.7rem">Chaque point = un livre élu. Révèle si les livres les plus désirés sont aussi ceux appréciés après lecture.</div>
+      <div class="sx-plot" id="scatter-correl"><p class="sx-note">Chargement…</p></div>
+    </div>
+
+    <!-- Qui vote comme qui ? (Pearson — heatmap similarité) -->
+    <div class="sx-panel" id="panel-sim">
+      <div class="sx-panel-head">
+        <span class="sx-panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M17.5 19a5.5 5.5 0 0 0-2.7-4.7"/></svg>
+          Qui vote comme qui ?
+        </span>
+        <span class="sx-tag">Corrélation de Pearson · −1 → +1</span>
+      </div>
+      <div class="sx-heat-wrap"><table class="sx-heat" id="heat-sim"></table></div>
+      <div class="sx-heat-cap">
+        <span><i style="background:rgba(176,87,45,.4)"></i>votes opposés (−1)</span>
+        <span><i style="background:rgba(42,122,86,.4)"></i>votes similaires (+1)</span>
+        <span style="font-style:italic">Min. 3 livres en commun par paire</span>
+      </div>
+    </div>
+
+    <!-- ════════ CHAPITRE : DYNAMIQUES ════════ -->
+    <div class="sx-chapter"><span><i class="di"></i>Dynamiques</span></div>
+
+    <!-- Controversé / Consensuel (pastilles) -->
+    <div class="sx-grid2" id="grid-contr-conso">
+      <div class="sx-panel" style="margin-bottom:0;opacity:.3">
+        <div class="sx-panel-head"><span class="sx-panel-title">Chargement…</span></div>
+      </div>
+    </div>
+
+    <!-- Durée de vie des propositions (barres + badge) -->
+    <div class="sx-panel" style="margin-top:1.5rem">
+      <div class="sx-panel-head">
+        <span class="sx-panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12M6 21h12M7 3c0 5 5 6 5 9s-5 4-5 9M17 3c0 5-5 6-5 9s5 4 5 9"/></svg>
+          Durée de vie des propositions
+        </span>
+        <span class="sx-tag">Sessions de vote traversées</span>
+      </div>
+      <div class="sx-bars" id="bars-duree" style="--lab:180px"><p class="sx-note">Chargement…</p></div>
+    </div>
+
+    <!-- Évolution des propositions (colonnes empilées) -->
+    <div class="sx-panel">
+      <div class="sx-panel-head">
+        <span class="sx-panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V4M4 20h16"/><rect x="8" y="11" width="3" height="6" rx=".5"/><rect x="14" y="7" width="3" height="10" rx=".5"/></svg>
+          Évolution des propositions
+        </span>
+        <span class="sx-tag">Par mois de proposition · une couleur par membre</span>
+      </div>
+      <div class="sx-cols" id="cols-props">
+        <div class="sx-col" style="opacity:.25"><div class="sx-col-bars" style="height:60%"><div class="sx-col-seg" style="height:100%"></div></div></div>
+      </div>
+      <div id="cols-props-legend"></div>
+    </div>
+
+  </main>
+
+  <!-- SX helpers (window.SX) — doit précéder le module -->
+  <script src="js/stats-helpers.js"></script>
+  <script type="module" src="js/statistiques.js"></script>
+</body>
+</html>

@@ -1552,6 +1552,30 @@ perso_migraines
 - Toggle AI infos persisté en `localStorage` (clé `cl_bib_ai_infos`), OFF par défaut.
 - AI infos (pages, genre, description) masquées dans la fiche livre derrière un spoiler cliquable — indépendant du toggle de la vue bibliothèque.
 
+### 2026-06-09
+**Refonte club de lecture — Statistiques + correctifs Réunions**
+
+Pages `lis-tes-ratures/` (nouvelle DA café-bibliothèque) :
+
+**Réunions — correctifs :**
+- `lis-tes-ratures/js/reunions.js` : `renderMeeting()` utilisait une comparaison de string directe (`!== "passée"`) au lieu de `isPasse()` → le sceau de l'overlay affichait toujours "à venir". Corrigé : `const prevue = !isPasse(r)`.
+- `lis-tes-ratures/reunions.html` : taille du texte des sceaux réduite pour tenir dans les cercles — `.reg-seal-note` `1.4rem → 1.15rem`, `.mtg-seal-note` `1.32rem → 1.1rem`.
+
+**Statistiques — nouvelle page complète :**
+- `lis-tes-ratures/statistiques.html` : page avec 4 chapitres et 9 planches, structure HTML complète avec placeholders d'IDs pour chaque graphique. Charge `stats-helpers.js` (classic, expose `window.SX`) puis `statistiques.js` (module Firebase).
+- `lis-tes-ratures/js/statistiques.js` : module ES6 — chargement parallèle de `membres`, `livres`, `votes`, `reunions`, `statuts_lecture`, `commentaires`. Rendu de chaque archétype DA :
+  - **KPI gravé** (Archétype 1) : livres lus, lectures cumulées, pages club, pages cumulées.
+  - **Histogramme /10** (Archétype 2) : distribution des `notes_finales` de réunion, moyenne en grand.
+  - **Colonnes lecteurs** (Archétype 3) : `lecteurs_ids.length` par séance passée, X = titre du livre.
+  - **Courbe à la plume** (Archétype 4) : évolution des notes par membre sur les livres lus en ordre chrono. Trous = absent.
+  - **Table-registre** (Archétype 6) : membres classés par score composite (livres finis × 3 + réunions + propositions). Médailles podium or/argent/bronze.
+  - **Heatmap goûts** (Archétype 5) : matrice votant × proposant, moyennes des notes /5 par paire, `SX.heatColor(v, 1, 5, 3)`.
+  - **Pastilles** (Archétype 7) : livre controversé (max écart-type) / consensuel (min écart-type) depuis les notes de vote /5.
+  - **Barres + badge** (Archétype 2 variante) : durée de vie des propositions (sessions traversées avant élu ✓ / éliminé ✕).
+  - **Colonnes empilées** (Archétype 3 variante) : évolution des propositions par session de vote, une couleur par membre (`SX.memberColor`).
+- Réutilise `stats-helpers.js` (window.SX) déjà présent dans `css/stats.css` + `js/stats-helpers.js`.
+- Même `isPasse()` robuste que `reunions.js` (notes_finales + date + statut normalisé).
+
 ### 2026-05-27
 **Nouvelle section Jeux + Club de lecture Stats + nb_pages**
 - `index.html` : ajout de la 3e carte "Jeux" (accent indigo `#667eea`, badge "✨ Accès libre"). Grille passée de `repeat(2, 1fr)` à `repeat(auto-fill, minmax(250px, 1fr))` avec `max-width: 860px`.
