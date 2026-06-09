@@ -23,7 +23,7 @@ const COVERS = [
 const IC = {
   plus:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>`,
   book:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h6v16H6a1 1 0 0 1-1-1z"/><path d="M11 4h2.5l3.5.6-2.2 14-3.8-.6z"/><path d="M19 20H6"/></svg>`,
-  chat:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 9.5 9.5 0 0 1-4-.9L3 21l1.9-5.5a8.38 8.38 0 0 1-.9-4A8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z"/></svg>`,
+  chat:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="1em" height="1em" style="vertical-align:middle;flex-shrink:0"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 9.5 9.5 0 0 1-4-.9L3 21l1.9-5.5a8.38 8.38 0 0 1-.9-4A8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z"/></svg>`,
   note:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 10h7M8 14h5"/></svg>`,
   ballot: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="1.5"/><path d="M8 8V5a4 4 0 0 1 8 0v3M9 13h6"/></svg>`,
   edit:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>`,
@@ -90,6 +90,10 @@ async function init() {
   membres.forEach((m, i) => { m._color = PALETTE[i % PALETTE.length]; });
 
   renderRack();
+
+  // Auto-ouvrir un membre depuis l'URL ?open=ID (ex: frise "Notre parcours")
+  const openId = new URLSearchParams(location.search).get("open");
+  if (openId) openMember(openId);
 
   document.getElementById("btn-add").addEventListener("click", openAdd);
   document.getElementById("member-overlay").addEventListener("click", e => {
@@ -226,7 +230,9 @@ async function openMember(membreId) {
             <span class="rf-row-chev">›</span>
           </div>
           <div class="rf-row-body hidden">${items.map(it => {
-            const adv  = it.avancement != null ? `p.${it.avancement}` : (it.titre || "Note");
+            const livreUnite = livreById[livreId]?.progression_unite;
+            const unitPfx = livreUnite === 'chapitres' ? 'ch.' : livreUnite === 'parties' ? 'par.' : 'p.';
+            const adv  = it.avancement != null ? `${unitPfx}${it.avancement}` : (it.titre || "Note");
             const date = formatDate(it.date_commentaire);
             return `
             <div class="rf-cmt">

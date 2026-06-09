@@ -21,11 +21,8 @@ export function initNav(active) {
   const nav = document.getElementById("sidebar");
   if (!nav) return;
 
-  // Thème : light par défaut (nouvelle DA), persisté sous "ltr_theme"
-  const saved = localStorage.getItem("ltr_theme");
-  document.documentElement.dataset.theme = saved === "dark" ? "dark" : "light";
-
-  const isDark = document.documentElement.dataset.theme === "dark";
+  // Thème : toujours clair
+  document.documentElement.dataset.theme = "light";
 
   nav.innerHTML = `
     <div class="sidebar-logo">
@@ -42,18 +39,6 @@ export function initNav(active) {
         <span class="nav-icon">${ICONS.home}</span>
         <span>Accueil du site</span>
       </a>
-      <button class="theme-toggle" id="theme-toggle">
-        <span id="theme-icon">${isDark ? "☀️" : "🌙"}</span>
-        <span id="theme-label">${isDark ? "Mode clair" : "Mode sombre"}</span>
-      </button>
     </div>
   `;
-
-  document.getElementById("theme-toggle").addEventListener("click", () => {
-    const dark = document.documentElement.dataset.theme !== "dark";
-    document.documentElement.dataset.theme = dark ? "dark" : "light";
-    localStorage.setItem("ltr_theme", dark ? "dark" : "light");
-    document.getElementById("theme-icon").textContent  = dark ? "☀️" : "🌙";
-    document.getElementById("theme-label").textContent = dark ? "Mode clair" : "Mode sombre";
-  });
 }

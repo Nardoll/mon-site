@@ -1017,7 +1017,8 @@ function renderPropsStack({ membres, livres }) {
     const tip = document.createElement("div");
     tip.style.cssText = [
       "position:absolute",
-      "background:var(--card,#1c1916)",
+      "background:var(--surface,#fdf6ea)",
+      "color:var(--ink,#2c1a0e)",
       "border:1px solid var(--border)",
       "border-radius:6px",
       "padding:.4rem .75rem",

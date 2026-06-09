@@ -278,7 +278,7 @@ function buildVoteTable(livreIds, preview) {
         return `<tr class="vrow" data-bk="${b.id}">
           <td class="bkc"><span class="vt-titre">${esc(b.titre)}</span> <span class="vt-auteur">— ${esc(b.auteur ?? "")}</span></td>
           ${dots}
-          <td class="readcol"><label class="read-toggle"><input type="checkbox" class="read-cb" data-bk="${b.id}"> déjà lu, je passe</label></td>
+          <td class="readcol"><label class="read-toggle"><input type="checkbox" class="read-cb" data-bk="${b.id}"${preview ? ' disabled' : ''}> déjà lu, je passe</label></td>
         </tr>`;
       }).join("");
 

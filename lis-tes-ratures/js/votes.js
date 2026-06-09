@@ -56,6 +56,13 @@ async function init() {
   renderStatus();
   renderScrutins();
   bindOverlay();
+
+  // Auto-ouvrir un scrutin depuis l'URL ?open=ID (ex: frise "Notre parcours")
+  const openId = new URLSearchParams(location.search).get("open");
+  if (openId) {
+    const v = votes.find(x => x.id === openId);
+    if (v) openResult(v);
+  }
 }
 
 // ── Statut (vote actif ou à venir) ────────────────────────────────────────
