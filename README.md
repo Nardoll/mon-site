@@ -18,13 +18,12 @@
 Site **personnel et privé** de Tom. Multi-sections indépendantes. La page d'accueil (`/`) présente le site et ses différentes sections avec des cartes visuelles. Chaque section n'est accessible qu'avec un mot de passe.
 
 **Sections existantes :**
-- `/club-lecture/` — Fonctionnel et en développement actif
+- `/lis-tes-ratures/` — Club de lecture, **version en production** (remplace `/club-lecture/`) — fonctionnel, DA "café littéraire × vieille bibliothèque"
+- `/club-lecture/` — Ancienne version du club de lecture, **redirigée automatiquement** vers `/lis-tes-ratures/` via `_redirects` (301). Dossier conservé dans le repo.
 - `/jdr/` — Page d'accueil active, protégée par mot de passe, en cours de développement
 - `/Jeux/` — Section jeux en ligne, **accès libre** (pas de mot de passe)
 - `/atelier/` — Outil de world-building solo procédural, en développement actif
 - `/recettes/` — Supprimée de l'accueil public (dossier conservé mais non lié)
-
-> **Page temporaire :** `/club-lecture/chantier.html` — espace d'analyse expérimentale pour évaluer des alternatives au système de vote. À supprimer une fois la décision prise.
 
 ---
 
@@ -50,33 +49,41 @@ Site **personnel et privé** de Tom. Multi-sections indépendantes. La page d'ac
 
 ```
 Mon Site/
-├── index.html                   Page d'accueil publique (hero + 3 cartes sections actives)
-├── netlify.toml                 Config redirections (héritage — Cloudflare Pages utilisé)
+├── index.html                   Page d'accueil publique (hero + cartes sections)
+├── _redirects                   Redirections Cloudflare Pages (/club-lecture/* → /lis-tes-ratures/*)
+├── _headers                     Cache headers Cloudflare Pages (no-cache JS/HTML atelier + lis-tes-ratures)
+├── netlify.toml                 Config héritage (Cloudflare Pages utilisé à la place)
 ├── README.md                    Ce fichier
 │
-├── club-lecture/
-│   ├── index.html               Page Accueil du club
+├── lis-tes-ratures/             ★ Club de lecture — VERSION EN PRODUCTION (DA café-bibliothèque)
+│   ├── index.html               Page Accueil
 │   ├── bibliotheque.html        Page Bibliothèque
-│   ├── votes.html               Page Votes
+│   ├── votes.html               Page Votes (scrutins archivés + vote en cours)
+│   ├── vote.html                Bulletin de vote (déposer son vote)
 │   ├── membres.html             Page Membres
-│   ├── commentaires.html        Page Commentaires de lecture (par livre)
 │   ├── reunions.html            Page Réunions
-│   ├── stats.html               Page Statistiques du club
-│   ├── firebase-config.js       Initialisation Firebase + export `db`
+│   ├── statistiques.html        Page Statistiques
+│   ├── commentaires.html        Page Commentaires de lecture (par livre, ?livre=ID)
 │   ├── css/
-│   │   └── style.css            Tous les styles (dark theme, sidebar, composants)
+│   │   └── style.css            Tous les styles (thème clair crème/terracotta, sidebar, composants)
 │   └── js/
-│       ├── auth.js              Vérification mot de passe (SHA-256, sessionStorage)
-│       ├── nav.js               Injection sidebar + gestion page active
+│       ├── firebase-config.js   Initialisation Firebase + export `db`
+│       ├── auth.js              Auth (SHA-256, SESSION_KEY "cl_auth")
+│       ├── nav.js               Sidebar (thème forcé clair, pas de toggle mode sombre)
 │       ├── db.js                Toutes les fonctions Firestore (lecture + écriture)
-│       ├── utils.js             Helpers partagés (formatDate, initiales, showToast…)
-│       ├── accueil.js           Logique page Accueil
-│       ├── bibliotheque.js      Logique page Bibliothèque
-│       ├── votes.js             Logique page Votes
-│       ├── membres.js           Logique page Membres
-│       ├── commentaires.js      Logique page Commentaires de lecture
-│       ├── reunions.js          Logique page Réunions
-│       └── stats.js             Logique page Statistiques
+│       ├── utils.js             Helpers partagés (formatDate, formatMois, initiales, showToast…)
+│       ├── stats-helpers.js     Helpers graphiques partagés (window.SX : memberColor, lineChart…)
+│       ├── accueil.js           Logique Accueil (livre du mois, suivi, frise, palmarès)
+│       ├── bibliotheque.js      Logique Bibliothèque
+│       ├── votes.js             Logique Votes (résultats, ?open=VOTE_ID)
+│       ├── vote.js              Logique Bulletin de vote
+│       ├── membres.js           Logique Membres (?open=MEMBRE_ID)
+│       ├── reunions.js          Logique Réunions (?open=REUNION_ID)
+│       ├── statistiques.js      Logique Statistiques (14 panels)
+│       └── commentaires.js      Logique Commentaires (?livre=ID, ?new=1)
+│
+├── club-lecture/                ✗ Ancienne version — NE PLUS MODIFIER (redirigée vers lis-tes-ratures/)
+│   └── ...                      Conservé pour référence, accessible via _redirects → lis-tes-ratures/
 │
 ├── jdr/
 │   ├── index.html               Page d'accueil JDR (bienvenue + liens Archives/Outils)
@@ -131,32 +138,131 @@ Mon Site/
 **`index.html` (racine)** — Page visuelle de présentation du site.
 
 - **Hero** : pill "🔒 Accès privé", titre du site, courte description
-- **3 cartes sections** en grille (`repeat(auto-fill, minmax(250px, 1fr))`, `max-width: 860px`) :
-  - **Club de lecture** → lien `href="/club-lecture/"`, accent orange `#e8a44a`
-  - **Jeux de rôle** → lien `href="/jdr/"`, accent rose `#cf6679`
+- **5 cartes sections** en grille (`repeat(auto-fill, minmax(250px, 1fr))`, `max-width: 860px`) :
+  - **Lis tes ratures** → lien `href="/lis-tes-ratures/"`, accent terracotta `#b5572d`, badge "🔒 Mot de passe"
+  - **Jeux de rôle** → lien `href="/jdr/"`, accent rose `#cf6679`, badge "🔒 Mot de passe"
   - **Jeux** → lien `href="/Jeux/"`, accent indigo `#667eea`, badge "✨ Accès libre"
+  - **L'Atelier** → lien `href="/atelier/"`, accent ambre `#c49a3a`, badge "🔒 Mot de passe"
+  - (+ petit bouton discret en bas à droite → `/perso/`)
 - **Effets hover** sur les cartes : lift, glow coloré, ligne accent en haut, flèche `→` apparaît
 - Chaque carte a ses propres variables CSS `--card-accent` et `--card-glow`
 - Pas de JS, pas de mot de passe — page entièrement publique et statique
+- ~~Club de lecture (`/club-lecture/`)~~ : ancienne version retirée de l'accueil, redirigée via `_redirects`
 - ~~Recettes~~ : carte retirée (section non lancée)
 
 ---
 
-## Section Club de lecture
+## Section Lis tes ratures (`/lis-tes-ratures/`) — VERSION ACTIVE
+
+> **C'est la version en production.** Remplace `/club-lecture/` depuis juin 2026. DA "café littéraire × vieille bibliothèque" — crème `#fdf6ea`, terracotta `#b5572d`, serif Lora.
 
 ### Accès / Sécurité
+
+- Mot de passe partagé : **Piranèse** (même qu'avant)
+- Mécanisme : SHA-256 dans `auth.js`, `SESSION_KEY = "cl_auth"`, `sessionStorage`
+- Règles Firestore : `allow read, write: if true` (sécurité côté JS uniquement)
+
+### Design system
+
+- **Palette** : fond crème `#fdf6ea`, texte brun `#2c1a0e`, accent terracotta `#b5572d`, vert `#3f7a52`
+- **Typo** : Lora (serif) pour les titres, Segoe UI / system-ui pour le corps
+- **Thème** : uniquement clair — pas de mode sombre, pas de toggle (supprimé)
+- **Variables CSS** : `--surface`, `--ink`, `--text`, `--accent`, `--border`, `--muted`, `--card`
+- **Composants** : papier modal (`.paper`, `.pf-*`), sceaux conic-gradient, frise fil cousu
+
+### Collections Firebase (projet `mon-site-e253f`)
+
+| Collection | Description |
+|---|---|
+| `membres` | Membres du club (nom, date_arrivee) |
+| `livres` | Livres (titre, auteur, statut : `en_proposition`/`elu`/`refuse`, progression_unite/total) |
+| `votes` | Scrutins archivés (resultats, livre_elu, tour2 si 2e tour) |
+| `votes_actifs` | Vote en cours (livre_ids, membre_ids, bulletins, expires_at) |
+| `reunions` | Séances (notes_finales, participant_ids, lecteurs_ids, compte_rendu, lien_video) |
+| `statuts_lecture` | Suivi de lecture par membre × livre (statut, page_actuelle, pages_totales) |
+| `progression_lecture` | Historique horodaté des avancements (pour le graphique en courbes) |
+| `commentaires_lecture` | Commentaires (livre_id, membre_id, avancement, titre, contenu) |
+
+### Navigation — pattern `?open=ID`
+
+Toutes les pages principales gèrent un paramètre URL `?open=ID` pour auto-ouvrir un élément spécifique au chargement. Utilisé par la frise "Notre parcours" de l'accueil :
+
+| Page | Paramètre | Effet |
+|---|---|---|
+| `bibliotheque.html?open=LIVRE_ID` | Ouvre la fiche du livre |
+| `membres.html?open=MEMBRE_ID` | Ouvre la fiche du membre |
+| `votes.html?open=VOTE_ID` | Ouvre le détail du scrutin |
+| `reunions.html?open=REUNION_ID` | Ouvre la fiche réunion |
+| `commentaires.html?livre=LIVRE_ID` | Charge les commentaires du livre |
+| `commentaires.html?new=1` | Ouvre directement le formulaire d'ajout |
+
+### Pages et fonctionnalités
+
+#### Accueil (`index.html` + `accueil.js`)
+1. **Livre du mois** — livre élu le plus récent, barres de progression par membre, boutons "Voir commentaires" / "Laisser un commentaire". **Bouton "Ajouter au suivi"** : select + bouton pour les membres sans entrée dans `statuts_lecture`. Bouton "⚙️ Configurer le suivi" → modal pour définir `progression_unite` / `progression_total` / `progression_mode` (simple ou hiérarchique par parties).
+2. **Graphique d'évolution** — sparkline SVG des avancements du mois en cours (depuis `progression_lecture`). Clic → modal graphique complet.
+3. **Frise "Notre parcours"** — deux variantes (Fil cousu / Carnet). Événements : arrivées membres, propositions, votes, élus, réunions. Chaque événement cliquable → navigue vers la page correspondante avec `?open=ID`. Les votes "Élu" ouvrent `votes.html?open=VOTE_ID` (pas la fiche livre).
+4. **Palmarès** — top livres par note finale (moyenne `notes_finales` des réunions).
+
+#### Bibliothèque (`bibliotheque.html` + `bibliotheque.js`)
+- **Vue visuelle** (défaut) + **Vue DB** (tableau filtrable/triable)
+- Statuts : `en_proposition` / `elu` / `refuse` (affiché "Éliminé")
+- **Fiche livre** : historique votes, section avancements membres (statut `termine` OU note présente dans `reunions.notes_finales`), section réunion associée, lien commentaires. Unité d'avancement adaptée au `progression_unite` du livre (p./ch./par.).
+- **Bouton "Copier la liste"** : format Discord prêt à coller
+- `?open=LIVRE_ID` : auto-ouverture de la fiche
+
+#### Votes (`votes.html` + `votes.js`)
+- Scrutins archivés : dépouillement barres verticales, tableau émargement, détail par livre/votant
+- Vote actif en cours : émargement live, compte à rebours, lien vers bulletin
+- `?open=VOTE_ID` : auto-ouverture du détail
+- **Note** : fonctions admin (lancer/clôturer/annuler vote) existent dans `db.js` mais se gèrent via la console Firebase — pas d'UI dédiée (opérations rares et sensibles)
+
+#### Bulletin de vote (`vote.html` + `vote.js`)
+- Vote actif : identification membre → notation 1-5 par livre → soumettre
+- Preview (pas de vote en cours) : aperçu des propositions, cases "déjà lu, je passe" visibles mais **disabled**
+- Clôture automatique à expiration ou à 100% de participation
+
+#### Membres (`membres.html` + `membres.js`)
+- Fiches membres (grille de "cartes de lecteur")
+- Add membre / Edit membre (nom + date d'arrivée)
+- Profil membre : propositions, commentaires par livre (avec unité adaptée), votes, réunions
+- Lien "Voir tous les commentaires →" depuis chaque groupe de commentaires → `commentaires.html?livre=ID`
+- `?open=MEMBRE_ID` : auto-ouverture du profil
+
+#### Réunions (`reunions.html` + `reunions.js`)
+- Registre des séances passées + prévues
+- Fiche réunion : tampons tour de table, notes, compte rendu, vidéo, flèches liens proportionnées au texte
+- Formulaire d'ajout : checklist membres **horizontale et compacte** (dot + nom sur une ligne, flex-wrap)
+- `?open=REUNION_ID` : auto-ouverture de la fiche
+
+#### Statistiques (`statistiques.html` + `statistiques.js`)
+14 panels répartis en 3 chapitres. Voir entrées historique 2026-06-09 pour le détail complet.
+- Tooltip histogramme "Évolution des propositions" : fond clair `var(--surface)` + texte `var(--ink)`
+
+#### Commentaires (`commentaires.html` + `commentaires.js`)
+- Par livre (`?livre=LIVRE_ID`)
+- Anneau de progression CSS conic-gradient par commentaire
+- Add / Edit commentaire — pas de système spoiler (tous les commentaires en contiennent, c'est voulu)
+
+---
+
+## Section Club de lecture (`/club-lecture/`) — ARCHIVÉE
+
+> ⚠️ **Ancienne version.** Redirigée automatiquement vers `/lis-tes-ratures/` via `_redirects`. Ne plus modifier. Conservée dans le repo pour référence uniquement.
+
+### Accès / Sécurité (ancienne version)
 
 - Mot de passe partagé : **Piranèse**
 - Mécanisme : `auth.js` calcule SHA-256 du mot de passe saisi, compare au hash stocké en dur dans le fichier. Si correct → `sessionStorage.setItem("cl_auth", "1")`. Chaque page appelle `await requireAuth()` avant tout.
 - Pas de système de comptes/login — tout le club partage le même mot de passe.
 - Les règles Firestore sont `allow read, write: if true` (accès public à la base). Le mot de passe JS empêche l'accès via le site ; les données ne sont pas sensibles.
 
-### Sidebar
+### Sidebar (ancienne version)
 
-- **Bouton "🏠 Accueil du site"** en bas de la sidebar (`nav.js`), au-dessus du bouton de bascule de thème. Lien `href="/"`. Style `.sidebar-home-link`.
-- `.sidebar-bottom` : `display:flex; flex-direction:column; gap:.5rem` — les éléments du bas s'empilent verticalement.
+- **Bouton "🏠 Accueil du site"** en bas de la sidebar, lien `href="/"`. Style `.sidebar-home-link`.
+- ~~Bouton bascule de thème~~ — supprimé dans la nouvelle version (thème forcé clair)
 
-### Pages et fonctionnalités
+### Pages et fonctionnalités (ancienne version)
 
 #### Accueil (`index.html` + `accueil.js`)
 1. **Frise chronologique horizontale** (scrollable, glissable à la souris) — affiche tous les événements du club dans l'ordre chronologique : arrivées de membres (👤 gris), propositions de livres (📚 orange), votes sans élu (🗳️ violet), votes avec livre élu (🏆 vert), réunions passées (📝 bleu), réunions à venir (📅 gris, bordure en pointillés). Les événements alternent au-dessus/en dessous d'une ligne d'axe avec flèche. S'ouvre positionnée sur les événements les plus récents (droite). **Chaque événement est cliquable** : navigue vers la page correspondante avec `?open=ID` pour auto-ouvrir l'élément concerné. Le drag (glisser) annule le clic. Les votes sont positionnés à leur vraie date si renseignée (champ `date` du document vote), fallback = 15 du mois.
@@ -331,11 +437,11 @@ Page dédiée aux commentaires de lecture pour un livre donné. URL : `commentai
 
 ---
 
-### Design
+### Design (ancienne version)
 
 - **Thème sombre** (défaut) : `#0f0f0f` fond, `#1a1a1a` cartes, orange `#e8a44a` accent
-- **Thème clair** ("été fleuri") : lavande `#f5f0fe` fond, cartes blanches, violet foncé `#1e1540` texte, ambre `#c87800` accent, vert émeraude, violet, rose
-- **Bascule de thème** : bouton en bas de la sidebar (`☀️ / 🌙`), persisté via `localStorage` clé `"cl_theme"` (`"light"` ou `"dark"`). Le thème est appliqué par `nav.js` avant tout rendu (attribut `data-theme="light"` sur `<html>`).
+- **Thème clair** ("été fleuri") : lavande `#f5f0fe` fond, cartes blanches, violet foncé `#1e1540` texte, ambre `#c87800` accent
+- ~~Bascule de thème~~ : supprimée dans `/lis-tes-ratures/` (thème clair uniquement)
 - Toutes les couleurs passent par des **variables CSS** dans `style.css` (`:root` + `[data-theme="light"]`). Les couleurs inline en JS utilisent `var(--nom)` pour être automatiquement mises à jour au changement de thème sans re-render.
 - Sidebar fixe à gauche (240px), responsive mobile
 - Polices système (`Segoe UI`, `system-ui`)
@@ -1594,6 +1700,37 @@ Pages `lis-tes-ratures/` (nouvelle DA café-bibliothèque) :
 
 **Accueil — frise chronologique :**
 - `lis-tes-ratures/js/accueil.js` : `buildFriseEvents()` — filtre des propositions corrigé de `l.statut === 'en_proposition'` → `l.date_proposition`. Tous les livres ayant une date de proposition (élus, éliminés, en attente) apparaissent désormais comme événements "Proposition" dans les vues Fil cousu et Carnet.
+
+### 2026-06-09 (suite 4)
+**Refonte club de lecture — 10 corrections + mise en ligne officielle**
+
+`lis-tes-ratures/` :
+
+**10 corrections UI/UX :**
+- `nav.js` : suppression du bouton mode sombre et de son listener — thème forcé à `"light"` en permanence (Tom ne veut pas de mode sombre dans le club de lecture)
+- `vote.js` : checkboxes "déjà lu, je passe" — attribut `disabled` ajouté quand `preview=true` (avant ouverture du vote, elles étaient cliquables à tort)
+- `bibliotheque.js` : 
+  - Nouveau helper `unitAbbr(u)` — mappe `progression_unite` vers l'abréviation : `"chapitres"` → `"ch."`, `"parties"` → `"par."`, défaut `"p."`
+  - Section "Avancements membres" : affiche "Terminé" si le membre a une note dans `reunions.notes_finales` (même sans statut `"termine"` dans `statuts_lecture`)
+  - Label "En cours" : utilise `unitAbbr()` au lieu du `p` codé en dur
+- `membres.js` :
+  - Paramètre `?open=MEMBRE_ID` : auto-ouvre le profil au chargement (utilisé par la frise "Notre parcours")
+  - `IC.chat` : `width="1em" height="1em" style="vertical-align:middle"` — l'icône bulle dans "Voir tous les commentaires →" était à taille pleine SVG
+  - Label d'avancement dans les commentaires : utilise `livreById[livreId]?.progression_unite` au lieu du préfixe `p.` codé en dur
+- `votes.js` : paramètre `?open=VOTE_ID` — auto-ouvre le détail du scrutin au chargement
+- `reunions.js` :
+  - Paramètre `?open=REUNION_ID` — auto-ouvre la fiche réunion au chargement
+  - `IC.arrowR` : `width="0.75em" height="0.75em"` dans la définition — les flèches de "Voir la fiche du livre" et "Revoir la séance en vidéo" étaient trop grandes
+  - Checklist membres (formulaire ajout réunion) : labels passés en `inline-flex` horizontal (checkbox + dot + nom sur une ligne), conteneur `.pf-checklist` en `flex-wrap`. Plus de stacking vertical.
+- `accueil.js` :
+  - Frise "Élu" : `navId: v.id, navPage: 'votes'` au lieu de `navId: v.livre_elu, navPage: 'bibliotheque'` — le clic sur un événement "Élu" ouvre désormais le vote correspondant, pas la fiche du livre
+  - Section "Livre du mois" : bouton "Ajouter au suivi" (select + bouton) pour les membres sans entrée dans `statuts_lecture`. Appelle `upsertStatutLecture` avec `statut: 'pas_commence'`.
+- `statistiques.js` : tooltip histogramme "Évolution des propositions" — `background:var(--surface,#fdf6ea)` + `color:var(--ink,#2c1a0e)` au lieu du fond sombre `var(--card,#1c1916)` qui rendait le texte invisible en thème clair
+
+**Mise en ligne officielle :**
+- `index.html` : la carte "Club de lecture" pointe désormais vers `/lis-tes-ratures/` (terracotta `#b5572d`). L'ancienne carte `/club-lecture/` et la carte "bêta" ont été fusionnées en une seule entrée propre, sans badge "En construction".
+- `_redirects` (nouveau fichier) : `/club-lecture/stats.html` → `/lis-tes-ratures/statistiques.html` (301, règle spécifique en premier car le nom a changé) ; `/club-lecture/*` → `/lis-tes-ratures/:splat` (301, toutes les autres pages) ; `/club-lecture` → `/lis-tes-ratures/` (301).
+- `_headers` : ajout des règles `Cache-Control: no-cache` pour `/lis-tes-ratures/js/*` et `/lis-tes-ratures/*.html` (même pattern que l'atelier — évite les versions cachées en navigateur).
 
 ### 2026-06-09 (suite 3)
 **Refonte club de lecture — Corrections UI statistiques (suite) + page commentaires**
