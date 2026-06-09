@@ -25,6 +25,12 @@
     .sx-taux strong { color: var(--text); }
     /* Badge "En attente" pour durée de vie */
     .sx-badge-prop { background: rgba(120,90,50,.1); color: var(--muted); }
+    /* Info-tip ⓘ sur les en-têtes de tableau */
+    .sx-info-tip { font-size: .72rem; color: var(--muted); cursor: help; font-family: system-ui; font-weight: 400; margin-left: .15rem; vertical-align: middle; }
+    /* Légende interactive courbe notes */
+    .sx-legend-item { display: inline-flex; align-items: center; gap: .4rem; cursor: pointer; padding: .18rem .5rem; border-radius: 4px; transition: opacity .2s, background .15s; }
+    .sx-legend-item:hover { background: rgba(181,87,45,.07); }
+    .sx-legend-item.dim { opacity: .3; }
   </style>
 </head>
 <body>
@@ -130,9 +136,10 @@
         <thead><tr>
           <th>Membre</th><th>Livres finis</th><th>Réunions</th>
           <th>Propositions</th><th>Votes</th><th>Commentaires</th>
+          <th>Score <span class="sx-info-tip" title="Livres finis ×4 + Réunions ×3 + Propositions ×2 + Votes ×1 + Commentaires ×1">ⓘ</span></th>
         </tr></thead>
         <tbody id="tbl-actifs">
-          <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1.5rem">Chargement…</td></tr>
+          <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1.5rem">Chargement…</td></tr>
         </tbody>
       </table>
     </div>

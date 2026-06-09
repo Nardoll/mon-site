@@ -152,13 +152,14 @@ function renderKPIs({ livres, statuts, reunions, passees }) {
   // Livres cumulés lus = livres élus ayant eu une réunion passée
   const nbLivresLus = livresElus.filter(l => elusPassesIds.has(l.id)).length;
 
-  // Pages cumulées = pour chaque livre élu passé : nb_pages × nb lecteurs qui ont terminé
-  let pagesCum = 0;
+  // Lectures cumulées (Σ membres ayant terminé) + pages cumulées
+  let lecturesCum = 0, pagesCum = 0;
   livresElus.forEach(l => {
     if (!elusPassesIds.has(l.id)) return;
     const reusLivre = reunions.filter(r => r.livre_id === l.id);
     const finishers = membersWhoFinishedBook(l.id, statuts, reusLivre);
-    pagesCum += finishers.size * (Number(l.nb_pages) || 0);
+    lecturesCum += finishers.size;
+    pagesCum    += finishers.size * (Number(l.nb_pages) || 0);
   });
 
   // Note moyenne générale /10
@@ -171,14 +172,11 @@ function renderKPIs({ livres, statuts, reunions, passees }) {
   });
   const noteMoy = avg(allNotes10);
 
-  // Propositions en attente
-  const enAttente = livres.filter(l => l.statut === "propose").length;
-
   const kpis = [
     { num: nbLivresLus, label: "Livres lus", sub: "depuis le début" },
+    { num: lecturesCum, label: "Lectures cumulées", sub: "total membre × livre" },
     { num: pagesCum > 0 ? pagesCum.toLocaleString("fr-FR") : "0", label: "Pages lues", sub: "cumulées membres" },
     { num: noteMoy !== null ? fmtFr(noteMoy) + "/10" : "—", label: "Note moyenne", sub: `sur ${allNotes10.length} note${allNotes10.length !== 1 ? "s" : ""}` },
-    { num: enAttente, label: "En attente", sub: "propositions actives" },
   ];
 
   document.getElementById("kpis-root").innerHTML = kpis.map(k => `
@@ -376,8 +374,8 @@ function renderColsLecteurs({ passees, statuts }) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// 6. Courbe évolution des notes (Archétype 4)
-//    lineChart(host, { series:[{name,color,values}], xLabels, yMax, yStep })
+// 6. Courbe évolution des notes (Archétype 4) — légende cliquable
+//    SVG custom avec <g data-sid> par série pour le toggle
 // ════════════════════════════════════════════════════════════════════
 function renderPlotNotes({ passees, membreById }) {
   const plotEl   = document.getElementById("plot-notes");
@@ -393,8 +391,9 @@ function renderPlotNotes({ passees, membreById }) {
   const series = memIds.map(id => {
     const nom = membreById[id]?.nom ?? id;
     return {
-      name:   nom,
-      color:  memberColor(nom),     // memberColor prend le NOM
+      id,
+      nom,
+      color:  memberColor(nom),
       values: passees.map(r => {
         const n = Number((r.notes_finales || {})[id]);
         return isFinite(n) && n > 0 ? n : null;
@@ -409,11 +408,72 @@ function renderPlotNotes({ passees, membreById }) {
     return d ? d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" }) : "?";
   });
 
-  // lineChart modifie host.innerHTML directement (pas de valeur de retour)
-  lineChart(plotEl, { series, xLabels, yMax: 10, yStep: 2 });
+  // ── SVG custom (reproduit SX.lineChart mais avec <g data-sid> par série) ──
+  const yMax = 10, yStep = 2, H = 300, W = 920;
+  const pL = 34, pR = 14, pT = 14, pB = 36;
+  const iw = W - pL - pR, ih = H - pT - pB;
+  const n  = xLabels.length;
+  const Xf = i => pL + (n <= 1 ? iw / 2 : (i * iw) / (n - 1));
+  const Yf = v => pT + ih - (v / yMax) * ih;
 
-  // legend items = [{name, color}]
-  legendEl.innerHTML = legend(series.map(s => ({ name: s.name, color: s.color })));
+  let svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" style="width:100%;height:auto;display:block">`;
+
+  // Grille
+  for (let g = 0; g <= yMax; g += yStep) {
+    const yy = Yf(g).toFixed(1);
+    svg += `<line x1="${pL}" y1="${yy}" x2="${W - pR}" y2="${yy}" class="sx-grid-line"/>`;
+    svg += `<text x="${pL - 6}" y="${(Number(yy) + 3.5).toFixed(1)}" class="sx-axis-lab sx-ylab">${g}</text>`;
+  }
+  xLabels.forEach((lb, i) => {
+    const xx = Xf(i).toFixed(1);
+    svg += `<line x1="${xx}" y1="${pT}" x2="${xx}" y2="${pT + ih}" class="sx-grid-line minor"/>`;
+    svg += `<text x="${xx}" y="${H - 12}" class="sx-axis-lab sx-xlab">${esc(lb)}</text>`;
+  });
+
+  // Séries — chacune dans un <g data-sid="...">
+  series.forEach(se => {
+    svg += `<g class="sx-series-group" data-sid="${se.id}" style="transition:opacity .2s">`;
+    let seg = [];
+    const flush = () => {
+      if (seg.length > 1) svg += `<polyline points="${seg.join(" ")}" stroke="${se.color}" class="sx-line"/>`;
+      seg = [];
+    };
+    se.values.forEach((v, i) => {
+      if (v == null) flush();
+      else seg.push(`${Xf(i).toFixed(1)},${Yf(v).toFixed(1)}`);
+    });
+    flush();
+    se.values.forEach((v, i) => {
+      if (v != null) svg += `<circle cx="${Xf(i).toFixed(1)}" cy="${Yf(v).toFixed(1)}" r="4" fill="${se.color}"/>`;
+    });
+    svg += `</g>`;
+  });
+
+  svg += `</svg>`;
+  plotEl.innerHTML = svg;
+
+  // ── Légende interactive ─────────────────────────────────────────
+  const legendHtml = series.map(s =>
+    `<span class="sx-legend-item" data-sid="${s.id}">
+      <i style="background:${s.color};width:12px;height:12px;border-radius:3px;flex-shrink:0;display:inline-block"></i>
+      ${esc(s.nom)}
+    </span>`
+  ).join("");
+
+  legendEl.innerHTML = `
+    <div class="sx-legend" style="gap:.3rem .6rem">${legendHtml}</div>
+    <p style="font-size:.72rem;color:var(--muted);margin-top:.4rem;font-style:italic">Cliquer sur un nom pour afficher / masquer</p>`;
+
+  // Toggle : clic sur un item
+  legendEl.querySelectorAll(".sx-legend-item").forEach(item => {
+    item.addEventListener("click", () => {
+      const sid   = item.dataset.sid;
+      const group = plotEl.querySelector(`[data-sid="${sid}"]`);
+      if (!group) return;
+      const dimmed = item.classList.toggle("dim");
+      group.style.opacity = dimmed ? ".1" : "1";
+    });
+  });
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -449,11 +509,12 @@ function renderTblActifs({ membres, livres, votes, reunions, statuts, commentair
     const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "";
     return `<tr>
       <td>${medal} <span style="color:${mColor(row.m)};font-weight:600">${esc(row.m.nom)}</span></td>
-      <td style="text-align:center">${row.livresFinis}</td>
-      <td style="text-align:center">${row.nbReunions}</td>
-      <td style="text-align:center">${row.nbProps}</td>
-      <td style="text-align:center">${row.nbVotes}</td>
-      <td style="text-align:center">${row.nbComms}</td>
+      <td>${row.livresFinis}</td>
+      <td>${row.nbReunions}</td>
+      <td>${row.nbProps}</td>
+      <td>${row.nbVotes}</td>
+      <td>${row.nbComms}</td>
+      <td style="font-weight:700;color:var(--accent)">${row.score}</td>
     </tr>`;
   }).join("");
 }
@@ -506,15 +567,22 @@ function renderBilanProps({ membres, livres, votes, reunions, livreById }) {
     return;
   }
 
-  tbody.innerHTML = rows.map(row => `<tr>
-    <td><span style="color:${mColor(row.m)};font-weight:600">${esc(row.m.nom)}</span></td>
-    <td style="text-align:center;font-weight:600">${row.total}</td>
-    <td class="elu"  style="text-align:center">${row.elus}</td>
-    <td class="elim" style="text-align:center">${row.elimines}</td>
-    <td style="text-align:center;color:var(--muted)">${row.attente}</td>
-    <td class="note" style="text-align:center">${row.noteVote   !== null ? fmtFr(row.noteVote)   + "/5"  : "—"}</td>
-    <td class="note" style="text-align:center">${row.noteFinale !== null ? fmtFr(row.noteFinale) + "/10" : "—"}</td>
-  </tr>`).join("");
+  tbody.innerHTML = rows.map(row => {
+    // Ratio + pourcentage : "3/10 (30%)"
+    const ratio = (v) => {
+      const p = row.total > 0 ? Math.round(v / row.total * 100) : 0;
+      return `${v}/${row.total} <span style="color:var(--muted);font-size:.8em">(${p}&nbsp;%)</span>`;
+    };
+    return `<tr>
+      <td><span style="color:${mColor(row.m)};font-weight:600">${esc(row.m.nom)}</span></td>
+      <td style="font-weight:600">${row.total}</td>
+      <td class="elu">${ratio(row.elus)}</td>
+      <td class="elim">${ratio(row.elimines)}</td>
+      <td style="color:var(--muted)">${ratio(row.attente)}</td>
+      <td class="note">${row.noteVote   !== null ? fmtFr(row.noteVote)   + "/5"  : "—"}</td>
+      <td class="note">${row.noteFinale !== null ? fmtFr(row.noteFinale) + "/10" : "—"}</td>
+    </tr>`;
+  }).join("");
 }
 
 // ════════════════════════════════════════════════════════════════════
