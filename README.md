@@ -1581,6 +1581,20 @@ Pages `lis-tes-ratures/` (nouvelle DA café-bibliothèque) :
 - API SX utilisée correctement : `lineChart(hostEl, { series:[{name,color,values}], xLabels, yMax, yStep })` ; `legend([{name,color}])` ; `memberColor(nom)` (prend le nom, pas l'id Firebase).
 - `isPasse()` robuste : notes_finales non vides OU statut contient "pass"/"termin" OU date dans le passé.
 
+### 2026-06-09 (suite 2)
+**Refonte club de lecture — Corrections UI statistiques + frise accueil**
+
+**Statistiques — 4 corrections UI :**
+- `lis-tes-ratures/statistiques.html` : KPI 4 renommé de "En attente" → "Lectures cumulées" (Σ membres ayant terminé × livre). Thead `tbl-actifs` : `colspan` corrigé à 7, colonne Score ajoutée avec `<span class="sx-info-tip">ⓘ</span>` tooltip formule.
+- `lis-tes-ratures/js/statistiques.js` :
+  - `renderKPIs()` : calcul des "Lectures cumulées" via `membersWhoFinishedBook()` — `lecturesCum += finishers.size` sur chaque livre élu passé.
+  - `renderPlotNotes()` : légende interactive — clic sur un item toggle la classe `.dim` et met `opacity:0.1` sur le groupe SVG `<g data-sid>` correspondant. Génération SVG inline avec `<g class="sx-series-group" data-sid>` par série pour permettre le ciblage DOM.
+  - `renderTblActifs()` : suppression des `style="text-align:center"` inline sur les `<td>` (alignement CSS uniquement via `stats.css`). Ajout colonne Score en 7e avec `style="font-weight:700;color:var(--accent)"`.
+  - `renderBilanProps()` : helper `ratio(v)` → `"N/total (P %)"` avec le pourcentage en muted. Suppression des `style="text-align:center"` inline pour aligner les colonnes.
+
+**Accueil — frise chronologique :**
+- `lis-tes-ratures/js/accueil.js` : `buildFriseEvents()` — filtre des propositions corrigé de `l.statut === 'en_proposition'` → `l.date_proposition`. Tous les livres ayant une date de proposition (élus, éliminés, en attente) apparaissent désormais comme événements "Proposition" dans les vues Fil cousu et Carnet.
+
 ### 2026-05-27
 **Nouvelle section Jeux + Club de lecture Stats + nb_pages**
 - `index.html` : ajout de la 3e carte "Jeux" (accent indigo `#667eea`, badge "✨ Accès libre"). Grille passée de `repeat(2, 1fr)` à `repeat(auto-fill, minmax(250px, 1fr))` avec `max-width: 860px`.
