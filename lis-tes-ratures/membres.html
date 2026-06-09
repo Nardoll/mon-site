@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Membres — Lis tes ratures</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* ════════════ En-tête ════════════ */
+    .members-actions { display: flex; align-items: center; gap: .8rem; }
+    .btn-add { display: inline-flex; align-items: center; gap: .5rem; background: var(--accent); color: var(--accent-text); border: none; border-radius: 8px; padding: .6rem 1.05rem; font-size: .88rem; font-weight: 600; font-family: inherit; cursor: pointer; transition: background .15s, transform .15s; }
+    .btn-add:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-add svg { width: 16px; height: 16px; }
+    .members-intro { font-size: .88rem; color: var(--muted); margin: -1rem 0 1.7rem; max-width: 64ch; line-height: 1.6; }
+    .members-intro b { color: var(--text); font-weight: 600; }
+
+    /* ════════════ Casier — grille de fiches ════════════ */
+    .rack { display: grid; grid-template-columns: repeat(auto-fill, minmax(266px, 1fr)); gap: 1.5rem 1.35rem; }
+
+    /* ── Fiche de prêt ── */
+    .fp {
+      position: relative;
+      background:
+        repeating-linear-gradient(180deg, transparent 0 27px, rgba(120,90,50,.10) 27px 28px),
+        linear-gradient(158deg, #f3e7cd, #e9d7b4);
+      border: 1px solid rgba(120,90,50,.30);
+      border-radius: 3px 3px 4px 4px;
+      padding: 1.5rem 1.25rem 1.1rem;
+      cursor: pointer;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,.5) inset,
+        0 10px 24px -16px rgba(60,40,20,.7),
+        0 2px 5px -3px rgba(60,40,20,.4);
+      transition: transform .22s cubic-bezier(.33,1.1,.5,1), box-shadow .22s;
+      overflow: hidden;
+    }
+    /* filet rouge d'imprimerie */
+    .fp::after { content: ""; position: absolute; left: 0; right: 0; top: 46px; height: 1.5px; background: rgba(176,72,52,.45); }
+    /* encoche de pouce */
+    .fp-notch { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); width: 46px; height: 26px; background: var(--bg); border-radius: 0 0 40px 40px; box-shadow: inset 0 -1px 0 rgba(120,90,50,.25); }
+
+    .fp:hover { transform: translateY(-7px) rotate(0deg) !important; box-shadow: 0 1px 0 rgba(255,255,255,.5) inset, 0 22px 40px -20px rgba(60,40,20,.75), 0 4px 9px -4px rgba(60,40,20,.45); }
+    .fp:hover .fp-stamp { transform: rotate(-7deg) scale(1.04); }
+
+    /* désalignement « pile faite main » */
+    .rack .fp:nth-child(3n+1) { transform: rotate(-.5deg); }
+    .rack .fp:nth-child(3n+2) { transform: rotate(.35deg); }
+    .rack .fp:nth-child(3n)   { transform: rotate(-.2deg); }
+
+    .fp-head { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; position: relative; z-index: 1; }
+    .fp-libname { font-size: .58rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #9a7a4e; }
+    .fp-no { font-family: 'Courier New', monospace; font-size: .68rem; font-weight: 700; color: #b0623a; letter-spacing: .04em; }
+
+    .fp-stamp-row { display: flex; align-items: center; gap: .85rem; margin-top: .9rem; position: relative; z-index: 1; }
+    .fp-stamp {
+      width: 52px; height: 52px; flex-shrink: 0; border-radius: 50%;
+      display: grid; place-items: center; transform: rotate(-7deg);
+      color: var(--mc, #8a4a2a); border: 2.5px solid currentColor;
+      box-shadow: inset 0 0 0 2px rgba(255,250,240,.35);
+      font-family: var(--serif); font-weight: 700; font-size: 1.15rem; letter-spacing: .02em;
+      position: relative; transition: transform .22s; opacity: .9;
+    }
+    .fp-stamp::before { content: ""; position: absolute; inset: 4px; border-radius: 50%; border: 1px solid currentColor; opacity: .55; }
+    .fp-stamp span { color: var(--mc, #8a4a2a); }
+    .fp-id { min-width: 0; }
+    .fp-name { font-family: var(--serif); font-size: 1.32rem; font-weight: 600; color: #2c2015; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fp-since { font-size: .74rem; color: #8a6b46; font-style: italic; margin-top: .15rem; }
+
+    .fp-dates-label { font-size: .56rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #a98a5c; margin: 1.05rem 0 .5rem; display: flex; align-items: center; gap: .4rem; position: relative; z-index: 1; }
+    .fp-dates-label::after { content: ""; flex: 1; height: 1px; background: rgba(120,90,50,.22); }
+    .fp-stamps { display: flex; flex-wrap: wrap; gap: .35rem; min-height: 24px; position: relative; z-index: 1; }
+    .fp-datestamp {
+      font-family: 'Courier New', monospace; font-size: .64rem; font-weight: 700;
+      color: #b0623a; border: 1.5px solid rgba(176,72,52,.5); border-radius: 3px;
+      padding: .12rem .34rem; transform: rotate(var(--rot, 0deg)); letter-spacing: .02em;
+      background: rgba(176,72,52,.04);
+    }
+    .fp-datestamp.elu  { color: #1a7a4e; border-color: rgba(26,138,85,.5); background: rgba(26,138,85,.05); }
+    .fp-datestamp.more { color: #9a7a4e; border-style: dashed; border-color: rgba(120,90,50,.4); background: transparent; }
+    .fp-empty { font-size: .76rem; color: #a98a5c; font-style: italic; }
+
+    .fp-foot { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1rem; padding-top: .85rem; border-top: 1px dashed rgba(120,90,50,.3); position: relative; z-index: 1; }
+    .fp-stat { display: inline-flex; align-items: baseline; gap: .28rem; font-size: .73rem; color: #6a513a; }
+    .fp-stat b { font-family: var(--serif); font-size: .96rem; font-weight: 700; color: #b0623a; line-height: 1; }
+    .fp-stat.g b { color: #1a7a4e; }
+    .fp-newtag { display: inline-flex; align-items: center; gap: .35rem; font-size: .64rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #9a7a4e; border: 1.5px dashed rgba(120,90,50,.45); border-radius: 999px; padding: .18rem .55rem; transform: rotate(-3deg); }
+
+    /* ════════════ Overlay papier (fiche + formulaire) ════════════ */
+    .paper-overlay .modal { padding: 0; background: transparent; border: none; max-width: 640px; max-height: none; overflow: visible; }
+    .paper {
+      position: relative; width: 100%; background: linear-gradient(180deg,#fcf6e8,#f4e8cf);
+      border-radius: 5px; padding: 1.9rem 2.2rem 1.8rem 2.6rem; color: #3a2b1c;
+      box-shadow: 0 40px 80px -30px rgba(0,0,0,.55), inset 0 0 0 1px rgba(120,90,50,.12);
+      max-height: 90vh; overflow-y: auto; font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    .paper::before { content: ""; position: absolute; left: 1.65rem; top: 0; bottom: 0; width: 1.5px; background: rgba(176,72,52,.3); pointer-events: none; }
+    .paper-close { position: absolute; top: .85rem; right: 1rem; background: none; border: none; font-size: 1.25rem; color: #8a7560; cursor: pointer; line-height: 1; padding: .05rem .25rem; z-index: 2; }
+    .paper-close:hover { color: #3a2b1c; }
+
+    /* en-tête fiche lecteur */
+    .rf-head { display: flex; align-items: flex-start; gap: 1.05rem; }
+    .rf-stamp {
+      width: 66px; height: 66px; flex-shrink: 0; border-radius: 50%; display: grid; place-items: center;
+      transform: rotate(-6deg); color: var(--mc, #8a4a2a); border: 3px solid currentColor;
+      box-shadow: inset 0 0 0 2px rgba(255,250,240,.4); font-family: var(--serif); font-weight: 700; font-size: 1.5rem; opacity: .92; position: relative;
+    }
+    .rf-stamp::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; border: 1px solid currentColor; opacity: .5; }
+    .rf-head-info { flex: 1; min-width: 0; padding-top: .15rem; }
+    .rf-name { font-family: var(--serif); font-size: 1.65rem; font-weight: 600; color: #2c2015; line-height: 1.05; }
+    .rf-since { font-size: .82rem; color: #8a6b46; margin-top: .25rem; }
+    .rf-meta { font-size: .82rem; color: #6a513a; margin-top: .35rem; font-weight: 600; }
+    .rf-meta .sep { color: #c0a878; margin: 0 .45rem; }
+    .rf-edit { display: inline-flex; align-items: center; gap: .4rem; background: rgba(255,255,255,.5); border: 1px solid rgba(120,90,50,.3); color: #8a5a2a; border-radius: 7px; padding: .4rem .75rem; font-size: .8rem; font-weight: 600; font-family: inherit; cursor: pointer; transition: background .15s, color .15s; flex-shrink: 0; }
+    .rf-edit:hover { background: rgba(181,87,45,.1); color: #b5572d; }
+    .rf-edit svg { width: 14px; height: 14px; }
+
+    .rf-divider { height: 1px; background: rgba(120,90,50,.22); margin: 1.4rem 0; }
+    .rf-sec-title { font-family: var(--serif); font-size: 1.1rem; font-weight: 600; color: #2c2015; margin-bottom: .85rem; display: flex; align-items: center; gap: .5rem; }
+    .rf-sec-title svg { width: 16px; height: 16px; color: #b5572d; }
+    .rf-empty { font-size: .84rem; color: #a08768; font-style: italic; }
+
+    /* livres proposés */
+    .rf-props { display: flex; flex-direction: column; }
+    .rf-prop { display: flex; align-items: center; gap: .75rem; padding: .5rem 0; border-bottom: 1px solid rgba(120,90,50,.14); }
+    .rf-prop:last-child { border-bottom: none; }
+    .rf-prop-cover { width: 22px; height: 31px; border-radius: 1px 3px 3px 1px; flex-shrink: 0; background: linear-gradient(155deg, var(--g1,#5a4636), var(--g2,#382a20)); position: relative; box-shadow: 0 4px 8px -5px rgba(0,0,0,.5); }
+    .rf-prop-cover::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: rgba(0,0,0,.28); }
+    .rf-prop-main { flex: 1; min-width: 0; }
+    .rf-prop-title { font-family: var(--serif); font-weight: 600; font-size: .96rem; color: #2c2015; line-height: 1.15; }
+    .rf-prop-author { font-size: .78rem; color: #8a6b46; font-style: italic; }
+    .rf-prop-date { font-size: .74rem; color: #a98a5c; font-family: 'Courier New', monospace; white-space: nowrap; flex-shrink: 0; }
+    .rf-tag { font-size: .68rem; font-weight: 700; letter-spacing: .03em; padding: .14rem .45rem; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
+    .rf-tag.prop { color: #b0623a; background: rgba(176,72,52,.1); }
+    .rf-tag.elu  { color: #1a7a4e; background: rgba(26,138,85,.12); }
+    .rf-tag.elim { color: #a06a6a; background: rgba(180,90,90,.12); }
+
+    /* lignes repliables */
+    .rf-row { border: 1px solid rgba(120,90,50,.2); border-radius: 8px; overflow: hidden; margin-bottom: .45rem; background: rgba(255,255,255,.35); }
+    .rf-row-head { display: flex; align-items: center; gap: .7rem; padding: .6rem .85rem; cursor: pointer; transition: background .14s; }
+    .rf-row-head:hover, .rf-row-head.open { background: rgba(176,72,52,.06); }
+    .rf-row-title { flex: 1; font-family: var(--serif); font-weight: 600; font-size: .94rem; color: #2c2015; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rf-row-sub { font-size: .76rem; color: #8a6b46; flex-shrink: 0; }
+    .rf-row-chev { font-size: .72rem; color: #a98a5c; transition: transform .2s; flex-shrink: 0; }
+    .rf-row-chev.open { transform: rotate(90deg); }
+    .rf-row-body { padding: .3rem .85rem .8rem; border-top: 1px solid rgba(120,90,50,.16); display: flex; flex-direction: column; gap: .5rem; }
+
+    /* commentaires (anti-spoiler) */
+    .rf-cmt { border-radius: 6px; background: rgba(255,250,240,.55); border: 1px solid rgba(120,90,50,.16); overflow: hidden; }
+    .rf-cmt-head { display: flex; align-items: center; gap: .55rem; padding: .5rem .7rem; cursor: pointer; transition: background .14s; }
+    .rf-cmt-head:hover, .rf-cmt-head.open { background: rgba(176,72,52,.05); }
+    .rf-cmt-label { flex: 1; min-width: 0; font-size: .84rem; color: #3a2b1c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rf-cmt-label b { font-weight: 600; }
+    .rf-cmt-adv { color: #b5572d; font-weight: 700; margin-left: .4rem; }
+    .rf-cmt-date { font-size: .71rem; color: #a98a5c; font-family: 'Courier New', monospace; flex-shrink: 0; }
+    .rf-cmt-chev { font-size: .68rem; color: #a98a5c; transition: transform .2s; flex-shrink: 0; }
+    .rf-cmt-chev.open { transform: rotate(90deg); }
+    .rf-cmt-detail { padding: 0 .7rem .65rem; }
+    .rf-cmt-text { font-size: .85rem; line-height: 1.6; color: #4a3826; }
+
+    /* réunions */
+    .rf-reunions { display: flex; flex-direction: column; gap: .4rem; }
+    .rf-reunion { display: flex; align-items: center; gap: .85rem; padding: .55rem .85rem; border: 1px solid rgba(120,90,50,.2); border-radius: 8px; background: rgba(255,255,255,.35); }
+    .rf-reunion-mois { font-family: var(--serif); font-weight: 700; font-size: .88rem; color: #2c2015; min-width: 92px; flex-shrink: 0; }
+    .rf-reunion-livre { flex: 1; font-size: .85rem; color: #6a513a; font-style: italic; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rf-reunion-note { font-family: var(--serif); font-weight: 700; font-size: 1.02rem; color: #b5572d; flex-shrink: 0; }
+    .rf-reunion-note small { font-size: .68rem; font-weight: 400; color: #a98a5c; }
+    .rf-reunion.absent .rf-reunion-note { color: #b09c80; font-size: .82rem; font-style: italic; }
+
+    /* votes */
+    .rf-search { width: 100%; background: rgba(255,255,255,.55); border: 1px solid rgba(120,90,50,.28); color: #3a2b1c; border-radius: 7px; padding: .5rem .8rem; font-size: .86rem; margin-bottom: .7rem; font-family: inherit; }
+    .rf-search:focus { outline: none; border-color: #b5572d; }
+    .rf-search::placeholder { color: #a98a5c; }
+    .rf-vote-premier { color: #6a513a; }
+    .rf-vote-premier b { color: #2c2015; }
+    .rf-ballot { display: grid; grid-template-columns: 1fr auto; gap: .3rem .8rem; }
+    .rf-ballot-book { font-size: .83rem; color: #4a3826; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rf-ballot-book.elu { color: #1a7a4e; font-weight: 600; }
+    .rf-ballot-stars { font-size: .78rem; color: #b5572d; letter-spacing: -.04em; white-space: nowrap; text-align: right; }
+
+    /* ════════════ Formulaire (papier) ════════════ */
+    .pf-group { margin-bottom: 1.1rem; }
+    .pf-group label { display: block; font-size: .8rem; font-weight: 600; color: #8a5a2a; margin-bottom: .35rem; }
+    .pf-group label .req { color: #b0444a; }
+    .pf-input { width: 100%; background: rgba(255,255,255,.6); border: 1px solid rgba(120,90,50,.3); border-radius: 7px; color: #3a2b1c; padding: .58rem .8rem; font-size: .9rem; font-family: inherit; box-sizing: border-box; }
+    .pf-input:focus { outline: none; border-color: #b5572d; }
+    .pf-foot { display: flex; justify-content: flex-end; gap: .6rem; margin-top: 1.6rem; padding-top: 1.1rem; border-top: 1px solid rgba(120,90,50,.22); }
+    .pf-btn { border-radius: 7px; padding: .55rem 1.15rem; font-size: .87rem; font-weight: 600; font-family: inherit; cursor: pointer; border: 1px solid transparent; transition: background .15s; }
+    .pf-btn.cancel { background: transparent; border-color: rgba(120,90,50,.3); color: #6a513a; }
+    .pf-btn.cancel:hover { background: rgba(120,90,50,.08); }
+    .pf-btn.ok { background: #b5572d; color: #fff7ee; }
+    .pf-btn.ok:hover { background: #c46b41; }
+    .pf-eyebrow { font-size: .66rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #a07c4e; margin-bottom: .15rem; }
+    .pf-title { font-family: var(--serif); font-size: 1.5rem; font-weight: 600; color: #2c2015; margin-bottom: 1.4rem; }
+
+    /* toast */
+    .mtoast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(1rem); background: #2c2015; color: #fdf6ea; border-radius: 9px; padding: .7rem 1.3rem; font-size: .86rem; z-index: 999; opacity: 0; transition: all .25s; pointer-events: none; box-shadow: 0 18px 40px -18px rgba(0,0,0,.6); }
+    .mtoast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 600px) {
+      .paper { padding: 1.6rem 1.4rem 1.5rem 1.8rem; }
+      .paper::before { left: 1.1rem; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main class="main">
+    <div class="page-header">
+      <h1>Membres</h1>
+      <div class="members-actions">
+        <button class="btn-add" id="btn-add">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          Ajouter un membre
+        </button>
+      </div>
+    </div>
+
+    <p class="members-intro">Le <b>casier des lecteurs</b> du club. Chaque fiche de prêt récapitule les propositions d'un membre — <b>cliquez sur une fiche</b> pour ouvrir le dossier complet (livres proposés, commentaires, réunions, votes).</p>
+
+    <div class="rack" id="rack">
+      <p style="color:var(--muted)">Chargement…</p>
+    </div>
+  </main>
+
+  <!-- Fiche lecteur -->
+  <div class="overlay paper-overlay hidden" id="member-overlay">
+    <div class="modal">
+      <div class="paper" id="member-paper"></div>
+    </div>
+  </div>
+
+  <!-- Ajouter / modifier un membre -->
+  <div class="overlay paper-overlay hidden" id="add-overlay">
+    <div class="modal" style="max-width:460px">
+      <div class="paper" id="add-paper"></div>
+    </div>
+  </div>
+
+  <div class="mtoast" id="mtoast"></div>
+
+  <script type="module" src="js/membres.js"></script>
+</body>
+</html>
