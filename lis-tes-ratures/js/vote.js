@@ -65,6 +65,7 @@ function renderUpcoming(root) {
   const nom   = MOIS_FR[next.getMonth()];
   const nomCap = nom.charAt(0).toUpperCase() + nom.slice(1);
   const jours = Math.max(1, Math.ceil((next - today) / 86400000));
+  const proposalIds = livres.filter(l => l.statut === "en_proposition").map(l => l.id);
 
   root.innerHTML = `
     <div class="ballot-letterhead">
@@ -93,7 +94,7 @@ function renderUpcoming(root) {
     <div class="preview-note">${IC.cal}<span>Le vote s'ouvrira <b>automatiquement le 1ᵉʳ ${nom}</b>. Voici à quoi ressemblera le bulletin — la notation sera alors active et vous pourrez vous identifier.</span></div>
     <div class="rules">Notez chaque livre de <b>1 à 5</b> selon votre envie de le lire. Le score d'un livre = <span class="key">(moyenne + médiane) ÷ 2</span>, ce qui atténue les notes extrêmes. Le plus haut score est <b>élu</b> ; tout score <span class="key">≤ 2,9</span> élimine le livre.</div>
     <div class="grade-scale"><span><b>1</b> — envie minimale</span><span><b>5</b> — envie maximale</span></div>
-    ${buildVoteTable([], true)}`;
+    ${buildVoteTable(proposalIds, true)}`;
 
   bindInfosToggle();
   renderBooks();
@@ -156,7 +157,10 @@ function bindInfosToggle() {
 
 // ── Grille de livres ───────────────────────────────────────────────────────
 function renderBooks() {
-  const livreIds = voteActif?.livre_ids || [];
+  // Mode actif → livres du vote ; Mode à venir → propositions en cours
+  const livreIds = voteActif
+    ? (voteActif.livre_ids || [])
+    : livres.filter(l => l.statut === "en_proposition").map(l => l.id);
   const books = livreIds.map(id => livreById[id]).filter(Boolean);
 
   document.getElementById("vbooks").innerHTML = books.map(b => `
@@ -263,9 +267,10 @@ function renderVote() {
 
 function buildVoteTable(livreIds, preview) {
   const books = livreIds.map(id => livreById[id]).filter(Boolean);
-  // For preview (à venir), show placeholder rows
-  const rows = preview
-    ? `<tr class="vrow"><td class="bkc" colspan="7" style="color:var(--muted);font-size:.82rem;padding:.8rem .4rem">Les livres seront affichés à l'ouverture du scrutin.</td></tr>`
+  // En mode preview : afficher les vrais livres (dots grisés par CSS .vtable2.preview)
+  // Si aucun livre disponible, afficher un placeholder
+  const rows = (preview && books.length === 0)
+    ? `<tr class="vrow"><td class="bkc" colspan="7" style="color:var(--muted);font-size:.82rem;padding:.8rem .4rem">Aucune proposition pour l'instant.</td></tr>`
     : books.map(b => {
         const dots = [1,2,3,4,5].map(n =>
           `<td class="numcol"><span class="dot" data-bk="${b.id}" data-n="${n}" role="button" aria-label="${n} sur 5" tabindex="0"></span></td>`

@@ -305,11 +305,13 @@ function buildDepChart(resultats, vote) {
       <span class="dep-legend-item"><span class="dep-legend-dot" style="background:#6840d8"></span>Conservé (&gt; ${SEUIL})</span>
       <span class="dep-legend-item"><span class="dep-legend-dot" style="background:#a89a82"></span>Éliminé (≤ ${SEUIL})</span>
     </div>
-    <div class="dep-chart-wrap"><div class="dep-chart">
-      <div class="dep-threshold" style="bottom:${tBottom}px"><span>Seuil ${SEUIL}</span></div>
-      ${cols}
-    </div></div>
-    <div class="dep-labels">${labels}</div>`;
+    <div class="dep-chart-wrap">
+      <div class="dep-chart">
+        <div class="dep-threshold" style="bottom:${tBottom}px"><span>Seuil ${SEUIL}</span></div>
+        ${cols}
+      </div>
+      <div class="dep-labels">${labels}</div>
+    </div>`;
 }
 
 function buildTour2(vote) {
