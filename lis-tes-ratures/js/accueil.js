@@ -342,8 +342,8 @@ async function renderLivreMois() {
         <div class="lm-bars" id="lm-bars">${bars}</div>
         ${membresAvecSuivi.length === 0 ? `<p style="font-size:.82rem;color:var(--muted);margin:.5rem 0 1rem">Aucun suivi enregistré pour l'instant.</p>` : ''}
         ${(() => {
-          const tracked = new Set(membresAvecSuivi.map(m => m.id));
-          const untracked = allMembres.filter(m => !tracked.has(m.id));
+          // Untracked = aucune entrée dans statutByMembre (pas simplement hors des barres)
+          const untracked = allMembres.filter(m => !statutByMembre[m.id]);
           return untracked.length ? `
           <div class="lm-add-row" id="lm-add-row" style="display:flex;align-items:center;gap:.5rem;margin-top:.6rem;flex-wrap:wrap">
             <select id="lm-add-sel" style="font-size:.8rem;padding:.3rem .5rem;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);flex:1;min-width:0">
@@ -377,16 +377,16 @@ async function renderLivreMois() {
   });
   document.getElementById('lm-graph-card')?.addEventListener('click', openGraphModal);
 
-  // Ajouter un membre au suivi
+  // Ajouter un membre au suivi → ouvrir directement le modal d'édition
   document.getElementById('lm-add-btn')?.addEventListener('click', async () => {
     const sel = document.getElementById('lm-add-sel');
     const membreId = sel?.value;
     if (!membreId || !currentLivreId) return;
     try {
       await upsertStatutLecture({ membre_id: membreId, livre_id: currentLivreId, statut: 'pas_commence', page_actuelle: '', pages_totales: '' });
-      showToast('Membre ajouté au suivi', 'success');
       await reloadStatuts();
       await renderLivreMois();
+      openMembreEdit(membreId);
     } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
   });
 }
