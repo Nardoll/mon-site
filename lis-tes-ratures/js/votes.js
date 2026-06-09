@@ -1,436 +1,458 @@
 import { requireAuth } from "./auth.js";
-import { initNav } from "./nav.js";
 import { getVotes, getMembres, getLivres, getVoteActif } from "./db.js";
-import { formatMois, MOIS_NOMS, showToast } from "./utils.js";
+import { initNav } from "./nav.js";
+import { formatMois } from "./utils.js";
 
 await requireAuth();
 initNav("votes");
 
-let votes = [], membres = [], livres = [];
-let voteActif = null;
-let currentVoteId = null;
-let countdownInterval = null;
-let nextCountdownInterval = null;
+// ── Constantes ─────────────────────────────────────────────────────────────
+const SEUIL = 2.9;
+const MOIS_FR = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+const PALETTE = ["#b5572d","#3f7a52","#6840d8","#bf8a2f","#5a7d8c","#a8503f","#3f5340","#8a5a6b","#46708a","#9a6a2f"];
+const COVERS = [
+  ["#3f5340","#273829"],["#39505c","#25363d"],["#6b4a52","#432d36"],
+  ["#5a4636","#382a20"],["#8a6a2f","#5b4420"],["#5a4326","#3a2b18"],
+  ["#2f2822","#1d1814"],["#3a3a40","#222227"],["#7a3b2e","#56281f"],
+];
 
-function esc(s) {
-  return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const IC = {
+  check:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  laurel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3M9 19h6M12 13v6"/></svg>',
+  users:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M17.5 19a5.5 5.5 0 0 0-2.7-4.7"/></svg>',
+  bars:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V4M4 20h16"/><rect x="8" y="11" width="3" height="6" rx=".5"/><rect x="14" y="7" width="3" height="10" rx=".5"/></svg>',
+  grid:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>',
+  arrowR: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  repeat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
+  cal:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg>',
+};
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function esc(s) { return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function ini(nom) { return (nom || "?").slice(0, 2); }
+function stars(n) { const k = Math.round(Math.max(0, Math.min(5, n))); return "★".repeat(k) + "☆".repeat(5 - k); }
+function avaColor(i) { return PALETTE[i % PALETTE.length]; }
+function coverColor(i) { return COVERS[i % COVERS.length]; }
+
+// Couleur de couverture stable par livre_id (initialisée dans init via index)
+const _coverCache = new Map();
+function getBookCover(livreId) {
+  return _coverCache.get(livreId) || COVERS[0];
 }
-function toDate(ts) { return ts ? (ts.toDate ? ts.toDate() : new Date(ts)) : null; }
 
-// ── Init ──────────────────────────────────────────────────────────────
+// ── État global ────────────────────────────────────────────────────────────
+let voteActif = null, membres = [], livres = [], votes = [];
+const membreById = {}, livreById = {};
+let _timer = null;
+
+// ── Init ───────────────────────────────────────────────────────────────────
 async function init() {
-  [votes, membres, livres] = await Promise.all([getVotes(), getMembres(), getLivres()]);
-  voteActif = await getVoteActif();
+  [voteActif, membres, livres, votes] = await Promise.all([
+    getVoteActif(), getMembres(), getLivres(), getVotes(),
+  ]);
+  membres.forEach((m, i) => { m._color = avaColor(i); membreById[m.id] = m; });
+  livres.forEach((l, i) => { livreById[l.id] = l; _coverCache.set(l.id, coverColor(i)); });
 
-  // Clôture auto si expiré
-  if (voteActif && voteActif.expires_at?.toMillis() < Date.now()) {
-    voteActif = await getVoteActif(); // re-fetch au cas où déjà clos depuis vote.html
-  }
-
-  renderStatusCard();
-  renderList();
-  if (voteActif) startCountdown();
-
-  const openId = new URLSearchParams(window.location.search).get("open");
-  if (openId) openDetail(openId);
+  renderStatus();
+  renderScrutins();
+  bindOverlay();
 }
 
-// ── Encart statut ─────────────────────────────────────────────────────
-function renderStatusCard() {
-  const card = document.getElementById("vote-status-card");
-  if (!card) return;
-  if (nextCountdownInterval) { clearInterval(nextCountdownInterval); nextCountdownInterval = null; }
+// ── Statut (vote actif ou à venir) ────────────────────────────────────────
+function renderStatus() {
+  if (voteActif) renderLive();
+  else renderUpcoming();
+}
 
-  if (voteActif) {
-    const bulletins = voteActif.bulletins || {};
-    const isTour2   = voteActif.tour === 2;
-    const livreIds  = voteActif.livre_ids || [];
-    const membreIds = voteActif.membre_ids || [];
+function renderLive() {
+  const livreIds  = voteActif.livre_ids  || [];
+  const membreIds = voteActif.membre_ids || [];
+  const bulletins = voteActif.bulletins  || {};
+  const nbVotes   = Object.keys(bulletins).length;
+  const total     = membreIds.length;
+  const pct       = total ? Math.round(nbVotes / total * 100) : 0;
 
-    const hasVoted = id => {
-      const b = bulletins[id];
-      return isTour2 ? (b != null && b !== "") : (b && Object.keys(b).length > 0);
-    };
-    const nbVoted   = membreIds.filter(hasVoted).length;
-    const nbMembres = membreIds.length;
+  const emarge = membreIds.map(id => {
+    const m = membreById[id] || { nom: id, _color: "#888" };
+    const v = !!bulletins[id];
+    return `<span class="emarge-tag ${v ? "voted" : "pending"}">
+      <span class="ava" style="background:${m._color}">${ini(m.nom)}</span>${esc(m.nom)}
+      <span class="ck">${IC.check}</span>
+    </span>`;
+  }).join("");
 
-    const booksHtml = livreIds.map(id => {
-      const l = livres.find(b => b.id === id);
-      return `<div class="vs-book">
-        <div class="vs-book-title">${esc(l?.titre ?? id)}</div>
-        ${l?.auteur ? `<div class="vs-book-author">${esc(l.auteur)}</div>` : ''}
-      </div>`;
-    }).join('');
+  const chips = livreIds.map(id => {
+    const l = livreById[id];
+    return `<span class="live-chip">${esc(l?.titre ?? id)}</span>`;
+  }).join("");
 
-    const bilanHtml = membreIds.map(id => {
-      const m = membres.find(x => x.id === id);
-      const voted = hasVoted(id);
-      return `<div class="vs-bilan-row">
-        <span class="vs-dot ${voted ? 'done' : 'todo'}"></span>
-        <span>${esc(m?.nom ?? id)}</span>
-        ${voted ? '<span class="vs-tick">✓</span>' : ''}
-      </div>`;
-    }).join('');
-
-    card.innerHTML = `
-      <div class="vs-card">
-        <div class="vs-row">
-          <div class="vs-left">
-            <div class="vs-icon">${isTour2 ? '⚖️' : '🗳️'}</div>
-            <div>
-              <div class="vs-title">${isTour2 ? 'Deuxième tour' : 'Vote en cours'} — ${formatMois(voteActif.mois, voteActif.annee)}</div>
-              <div class="vs-meta">${livreIds.length} livre${livreIds.length > 1 ? 's' : ''} · ${nbVoted}/${nbMembres} bulletins soumis</div>
-              <div class="vs-countdown" id="vsc-countdown"></div>
-              <div class="vs-books">${booksHtml}</div>
-              <div class="vs-bilan">${bilanHtml}</div>
-            </div>
-          </div>
-          <div class="vs-right">
-            <a href="vote.html" class="btn btn-primary">🗳️ Mon bulletin →</a>
-          </div>
+  document.getElementById("live-mount").innerHTML = `
+    <div class="live">
+      <div class="live-grid">
+        <div class="live-main">
+          <span class="live-eyebrow"><span class="pulse"></span>Vote ouvert</span>
+          <div class="live-title">Scrutin de ${formatMois(voteActif.mois, voteActif.annee)}</div>
+          <div class="live-meta"><b>${livreIds.length} livre${livreIds.length !== 1 ? "s" : ""}</b> en compétition · notation de 1 à ${voteActif.echelle || 5}</div>
+          <div class="live-count" id="live-countdown">${IC.users}${nbVotes} / ${total} bulletins reçus</div>
+          <div class="live-books">${chips}</div>
         </div>
-      </div>`;
-
-    updateCountdown();
-
-  } else {
-    const now      = new Date();
-    const nextVote = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const moisStr  = MOIS_NOMS[nextVote.getMonth()] + " " + nextVote.getFullYear();
-    const props    = livres.filter(l => l.statut === "en_proposition");
-
-    card.innerHTML = `
-      <a href="vote.html" class="vs-next-link">
-        <div class="vs-card">
-          <div class="vs-row">
-            <div class="vs-left">
-              <div class="vs-icon">📅</div>
-              <div>
-                <div class="vs-title">Prochain vote — ${moisStr}</div>
-                <div class="vs-meta">${props.length} livre${props.length !== 1 ? 's' : ''} en compétition · Ouverture le 1er du mois</div>
-                <div class="vs-countdown" id="vsc-next-countdown"></div>
-              </div>
-            </div>
-            <div class="vs-right" style="font-size:1.5rem;color:var(--muted)">›</div>
+        <div class="live-side">
+          <div class="ring" style="--pct:${pct}">
+            <span class="ring-txt"><b>${nbVotes}</b><span>sur ${total}</span></span>
           </div>
+          <div class="live-side-label">Participation</div>
+          <a class="live-cta" href="vote.html">Accéder au bulletin ${IC.arrowR}</a>
         </div>
-      </a>`;
+      </div>
+      <div class="emarge">${emarge}</div>
+    </div>`;
 
-    startNextCountdown(nextVote);
+  if (voteActif.expires_at) {
+    const expiry = voteActif.expires_at.toDate ? voteActif.expires_at.toDate() : new Date(voteActif.expires_at);
+    startCountdown(expiry, nbVotes, total);
   }
 }
 
-function startCountdown() {
-  if (countdownInterval) clearInterval(countdownInterval);
-  updateCountdown();
-  countdownInterval = setInterval(() => {
-    if (!voteActif) { clearInterval(countdownInterval); return; }
-    updateCountdown();
-  }, 1000);
+function startCountdown(expiry, nbVotes, total) {
+  if (_timer) clearInterval(_timer);
+  function tick() {
+    const el = document.getElementById("live-countdown");
+    if (!el) { clearInterval(_timer); return; }
+    const diff = expiry - Date.now();
+    if (diff <= 0) {
+      el.innerHTML = `${IC.users}${nbVotes} / ${total} bulletins · vote clos`;
+      clearInterval(_timer); return;
+    }
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor(diff % 3600000 / 60000);
+    const s = Math.floor(diff % 60000 / 1000);
+    const t = h > 0 ? `${h} h ${String(m).padStart(2,"0")} min` : `${m} min ${String(s).padStart(2,"0")} s`;
+    el.innerHTML = `${IC.users}${nbVotes} / ${total} bulletins · clôture dans ${t}`;
+  }
+  tick();
+  _timer = setInterval(tick, 1000);
 }
 
-function updateCountdown() {
-  const el = document.getElementById("vsc-countdown");
-  if (!el || !voteActif?.expires_at) return;
-  const ms = voteActif.expires_at.toMillis() - Date.now();
-  if (ms <= 0) { el.textContent = "Vote expiré…"; return; }
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
-  const parts = [];
-  if (h > 0) parts.push(`${h}h`);
-  if (m > 0 || h > 0) parts.push(`${m}min`);
-  parts.push(`${s}s`);
-  el.textContent = `Se termine dans ${parts.join(" ")}`;
+function renderUpcoming() {
+  const today = new Date();
+  const next  = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  const nom   = MOIS_FR[next.getMonth()];
+  const nomCap = nom.charAt(0).toUpperCase() + nom.slice(1);
+  const jours = Math.max(1, Math.ceil((next - today) / 86400000));
+
+  document.getElementById("live-mount").innerHTML = `
+    <div class="live up">
+      <div class="live-grid">
+        <div class="live-main">
+          <span class="live-eyebrow up">${IC.cal}À venir</span>
+          <div class="live-title">Prochain scrutin — ${nomCap} ${next.getFullYear()}</div>
+          <div class="live-meta">Ouverture automatique le 1ᵉʳ ${nom}</div>
+          <div class="live-count up">${IC.cal}Dans ${jours} jour${jours > 1 ? "s" : ""}</div>
+        </div>
+        <div class="live-side">
+          <div class="up-cal">
+            <div class="up-cal-top"></div>
+            <div class="up-cal-body"><span class="up-cal-d">1ᵉʳ</span><span class="up-cal-m">${nom}</span></div>
+          </div>
+          <div class="live-side-label">Ouverture du scrutin</div>
+          <a class="live-cta" href="vote.html">Voir le bulletin ${IC.arrowR}</a>
+        </div>
+      </div>
+    </div>`;
 }
 
-function startNextCountdown(target) {
-  if (nextCountdownInterval) clearInterval(nextCountdownInterval);
-  updateNextCountdown(target);
-  nextCountdownInterval = setInterval(() => updateNextCountdown(target), 1000);
-}
+// ── Registre des scrutins ─────────────────────────────────────────────────
+function renderScrutins() {
+  document.getElementById("scrutins-count").textContent = votes.length
+    ? `${votes.length} scrutin${votes.length !== 1 ? "s" : ""} archivé${votes.length !== 1 ? "s" : ""}`
+    : "";
 
-function updateNextCountdown(target) {
-  const el = document.getElementById("vsc-next-countdown");
-  if (!el) { clearInterval(nextCountdownInterval); return; }
-  const ms = target - Date.now();
-  if (ms <= 0) { el.textContent = "C'est aujourd'hui !"; clearInterval(nextCountdownInterval); return; }
-  const j = Math.floor(ms / 86400000);
-  const h = Math.floor((ms % 86400000) / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
-  const parts = [];
-  if (j > 0) parts.push(`${j}j`);
-  parts.push(`${String(h).padStart(2,"0")}h`);
-  parts.push(`${String(m).padStart(2,"0")}min`);
-  parts.push(`${String(s).padStart(2,"0")}s`);
-  el.textContent = parts.join(" ");
-}
-
-// ── Liste historique ──────────────────────────────────────────────────
-function renderList() {
-  const container = document.getElementById("votes-list");
   if (!votes.length) {
-    container.innerHTML = `<div style="color:var(--muted);font-size:.85rem;padding:.3rem 0">Aucun vote archivé pour l'instant.</div>`;
+    document.getElementById("scrutins-mount").innerHTML =
+      `<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0">Aucun scrutin archivé pour le moment.</div>`;
     return;
   }
-  container.innerHTML = `<div class="vl-list">${votes.map(v => {
-    const eluR     = (v.resultats || []).find(r => r.livre_id === v.livre_elu);
-    const eluLivre = livres.find(l => l.id === v.livre_elu);
-    const eluTitre = eluR?.titre ?? eluLivre?.titre ?? null;
-    const eluHtml  = eluTitre
-      ? `📖 <strong>${esc(eluTitre)}</strong>`
-      : `<span style="color:var(--muted);font-style:italic">Aucun élu</span>`;
-    return `<div class="vl-item" data-id="${v.id}">
-      <div class="vl-mois">${formatMois(v.mois, v.annee)}</div>
-      <div class="vl-elu">${eluHtml}</div>
-      <div class="vl-cnt">${(v.resultats || []).length} livre${(v.resultats||[]).length > 1 ? 's' : ''}</div>
-      <div class="vl-arr">›</div>
-    </div>`;
-  }).join('')}</div>`;
 
-  container.querySelectorAll(".vl-item[data-id]").forEach(el => {
-    el.addEventListener("click", () => openDetail(el.dataset.id));
+  document.getElementById("scrutins-mount").innerHTML = votes.map(v => {
+    const eluL = livreById[v.livre_elu];
+    const eluR = (v.resultats || []).find(r => r.livre_id === v.livre_elu);
+    const score = eluR?.score ?? eluR?.moyenne ?? null;
+    const nb    = (v.resultats || []).length;
+    const elim  = (v.resultats || []).filter(r => (r.score ?? r.moyenne ?? 0) <= SEUIL).length;
+    const [g1, g2] = getBookCover(v.livre_elu);
+
+    return `
+    <button class="scrutin" data-id="${esc(v.id)}" style="--g1:${g1};--g2:${g2}">
+      <span class="scrutin-month">${formatMois(v.mois, v.annee)}</span>
+      <span class="scrutin-cover"></span>
+      <span class="scrutin-info">
+        <span class="scrutin-elu-label">${IC.laurel} Élu</span>
+        <span class="scrutin-title">${esc(eluL?.titre ?? "—")}</span>
+        <span class="scrutin-author">${esc(eluL?.auteur ?? "")}</span>
+      </span>
+      <span class="scrutin-right">
+        <span class="scrutin-tags">
+          ${score != null ? `<span class="scrutin-score">${Number(score).toFixed(2)}<small>/5</small></span>` : ""}
+          <span class="scrutin-sub">${nb} livre${nb !== 1 ? "s" : ""}${elim ? ` · ${elim} éliminé${elim > 1 ? "s" : ""}` : ""}</span>
+          ${v.tour2 ? `<span class="scrutin-2tours">${IC.repeat} 2 tours</span>` : ""}
+        </span>
+        <span class="scrutin-chev">›</span>
+      </span>
+    </button>`;
+  }).join("");
+
+  document.querySelectorAll(".scrutin").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const v = votes.find(x => x.id === btn.dataset.id);
+      if (v) openResult(v);
+    });
   });
 }
 
-// ── Détail vote ───────────────────────────────────────────────────────
-function openDetail(id) {
-  currentVoteId = id;
-  const vote = votes.find(v => v.id === id);
-  if (!vote) return;
-  document.getElementById("detail-title").textContent = `Vote — ${formatMois(vote.mois, vote.annee)}`;
-  document.getElementById("detail-content").innerHTML = renderDetailContent(vote);
-  document.getElementById("detail-overlay").classList.remove("hidden");
-  attachChartInteraction(vote);
-}
+// ── Fiche résultats ───────────────────────────────────────────────────────
+function openResult(vote) {
+  const eluL  = livreById[vote.livre_elu];
+  const eluR  = (vote.resultats || []).find(r => r.livre_id === vote.livre_elu);
+  const score = eluR?.score ?? eluR?.moyenne ?? null;
+  const [g1, g2] = getBookCover(vote.livre_elu);
+  const hasTour2 = !!vote.tour2;
 
-function renderDetailContent(vote) {
-  const resultats = vote.resultats || [];
-  if (!resultats.length) return `<div style="color:var(--muted);font-size:.85rem;padding:1rem 0">Aucune donnée disponible.</div>`;
+  const resultats = [...(vote.resultats || [])].sort(
+    (a, b) => (b.score ?? b.moyenne ?? 0) - (a.score ?? a.moyenne ?? 0)
+  );
+  const elim = resultats.filter(r => (r.score ?? r.moyenne ?? 0) <= SEUIL).length;
+  const hasNotes = resultats.some(r => r.notes && Object.keys(r.notes).length > 0);
+  const votants  = hasNotes
+    ? [...new Set(resultats.flatMap(r => Object.keys(r.notes || {})))]
+    : [];
 
-  const sorted   = [...resultats].sort((a, b) => (b.moyenne ?? 0) - (a.moyenne ?? 0));
-  const allNotes = resultats.flatMap(r => Object.values(r.notes || {})).map(Number).filter(n => !isNaN(n));
-  const scale    = allNotes.length && Math.max(...allNotes) <= 5 ? 5 : 10;
-  const eluId    = vote.livre_elu;
-  const tour1Elu = vote.tour2 ? null : eluId;
+  const depTitle = hasTour2 ? "Premier tour — égalité" : "Dépouillement";
+  const depSub   = hasTour2
+    ? `Score de chaque livre : <b>(moyenne + médiane) ÷ 2</b>. Deux titres arrivent à égalité en tête — d'où le second tour ci-dessous.`
+    : `Score de chaque livre : <b>(moyenne + médiane) ÷ 2</b> — ce qui atténue les notes extrêmes. Le plus haut score est élu ; tout score <b>≤ ${SEUIL}</b> élimine le livre.`;
 
-  let html = '';
-  if (vote.tour2) html += `<div class="vd-tour-label">Tour 1 — Résultats (égalité au premier tour)</div>`;
-
-  html += renderBarChart(sorted, scale, 2.5, tour1Elu);
-  html += `<div class="vd-divider"></div>`;
-  html += `<div class="vd-sec-title">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-    Votes individuels${vote.tour2 ? ' — Tour 1' : ''}
-  </div>`;
-  html += renderNotesTable(sorted, scale, tour1Elu);
-
-  if (vote.tour2) {
-    html += `<div class="vd-divider"></div>`;
-    html += renderTour2(vote.tour2, eluId);
-  }
-
-  html += renderMemberChartSection(sorted);
-  return html;
-}
-
-function renderBarChart(sorted, scale, threshold, eluId) {
-  const areaH = 200;
-  const thresholdPx = Math.round((threshold / scale) * areaH);
-  const bars = sorted.map(r => {
-    const moy    = r.moyenne ?? 0;
-    const barH   = Math.max(3, Math.round((moy / scale) * areaH));
-    const isElu  = r.livre_id === eluId;
-    const isElim = !isElu && moy < threshold;
-    const color  = isElu ? 'var(--green)' : isElim ? 'var(--elim)' : 'var(--purple)';
-    return `<div class="vchart-col">
-      <div class="vchart-val" style="color:${color}">${Number(moy).toFixed(2)}</div>
-      <div class="vchart-bar" style="height:${barH}px;background:${color}"></div>
-    </div>`;
-  }).join('');
-  const labels = sorted.map(r => `<div class="vchart-label-col">${esc(r.titre ?? '?')}</div>`).join('');
-  return `
-    <div class="vchart-legend">
-      <div class="vchart-legend-item"><div class="vchart-legend-dot" style="background:var(--green)"></div>Gagnant</div>
-      <div class="vchart-legend-item"><div class="vchart-legend-dot" style="background:var(--purple)"></div>Conservé (≥ ${threshold})</div>
-      <div class="vchart-legend-item"><div class="vchart-legend-dot" style="background:var(--elim)"></div>Éliminé (&lt; ${threshold})</div>
-    </div>
-    <div class="vchart-outer">
-      <div class="vchart-wrap">
-        <div class="vchart-bars-area" style="height:${areaH}px">
-          <div class="vchart-threshold" style="bottom:${thresholdPx}px">
-            <span class="vchart-threshold-label">Seuil : ${threshold}</span>
-          </div>
-          ${bars}
-        </div>
-        <div class="vchart-labels">${labels}</div>
+  document.getElementById("result-paper").innerHTML = `
+    <button class="paper-close" id="result-close" aria-label="Fermer">✕</button>
+    <div class="paper-eyebrow">Scrutin · ${formatMois(vote.mois, vote.annee)}</div>
+    <div class="paper-title">Résultats du vote</div>
+    <div class="paper-winner" style="--g1:${g1};--g2:${g2}">
+      <span class="wcover"></span>
+      <div class="winfo">
+        <div class="wlabel">${IC.laurel} Livre élu${hasTour2 ? " · 2ᵉ tour" : ""}</div>
+        <div class="wtitle">${esc(eluL?.titre ?? "—")}</div>
+        <div class="wauthor">${esc(eluL?.auteur ?? "")}</div>
       </div>
-    </div>`;
+      ${score != null ? `<div class="wscore"><b>${Number(score).toFixed(2)}</b><small>score /5</small></div>` : ""}
+    </div>
+
+    <div class="paper-divider"></div>
+    <div class="paper-sec-title">${IC.bars} ${depTitle}</div>
+    <div class="paper-sec-sub">${depSub}</div>
+    ${buildDepChart(resultats, vote)}
+    ${hasTour2 ? buildTour2(vote) : ""}
+
+    ${hasNotes ? `
+      <div class="paper-divider"></div>
+      <div class="paper-sec-title">${IC.grid} Émargement — bulletins individuels${hasTour2 ? " (1ᵉʳ tour)" : ""}</div>
+      <div class="paper-sec-sub">${votants.length} votants · une note de 1 à 5 par livre${elim ? ` · <b>${elim}</b> livre${elim > 1 ? "s" : ""} sous le seuil` : ""}.</div>
+      ${buildTallyTable(resultats, vote, votants)}
+      <div class="paper-divider"></div>
+      <div class="detail-head">
+        <div class="paper-sec-title" style="margin:0">${IC.bars} Détail</div>
+        <div class="seg-tabs">
+          <button class="seg-tab active" data-tab="livre">Par livre</button>
+          <button class="seg-tab" data-tab="votant">Par votant</button>
+        </div>
+      </div>
+      <select class="detail-select" id="detail-select"></select>
+      <div id="detail-chart"></div>
+    ` : ""}`;
+
+  document.getElementById("result-overlay").classList.remove("hidden");
+  document.getElementById("result-paper").scrollTop = 0;
+  document.getElementById("result-close").addEventListener("click", closeResult);
+  if (hasNotes) wireDetail(resultats, vote, votants);
 }
 
-function renderNotesTable(sorted, scale, eluId) {
-  const headers = sorted.map(r => {
-    const isElu  = r.livre_id === eluId;
-    const isElim = !isElu && (r.moyenne ?? 0) < 2.5;
-    return `<th class="${isElu ? 'winner-col' : isElim ? 'elim-col' : ''}">${esc(r.titre ?? '?')}</th>`;
-  }).join('');
+function buildDepChart(resultats, vote) {
+  const H = 200;
+  const tBottom = Math.round(SEUIL / 5 * H);
+  const cols = resultats.map(r => {
+    const sc     = r.score ?? r.moyenne ?? 0;
+    const isWin  = r.livre_id === vote.livre_elu && !vote.tour2;
+    const isTie  = vote.tour2 && (vote.tour2.enLice || []).includes(r.livre_id);
+    const isElim = sc <= SEUIL;
+    const col    = isWin ? "#1a8a55" : isTie ? "#b5572d" : isElim ? "#a89a82" : "#6840d8";
+    const h      = Math.max(3, Math.round(sc / 5 * H));
+    return `<div class="dep-col">
+      <div class="dep-val" style="color:${col}">${sc != null ? Number(sc).toFixed(2) : "—"}</div>
+      <div class="dep-bar" style="height:${h}px;background:${col}"></div>
+    </div>`;
+  }).join("");
 
-  const rows = membres.map(m => {
-    const cells = sorted.map(r => {
-      const note = r.notes?.[m.id];
-      if (note === undefined || note === null || note === '') return `<td>—</td>`;
-      const n    = Number(note);
-      const isElu  = r.livre_id === eluId;
-      const isElim = !isElu && (r.moyenne ?? 0) < 2.5;
-      return `<td class="${isElu ? 'winner-cell' : isElim ? 'elim-cell' : ''}">${n}/${scale}<br><span class="stars">${renderStars(n, scale)}</span></td>`;
-    }).join('');
-    const myNotes = sorted.map(r => r.notes?.[m.id]).filter(n => n !== undefined && n !== null && n !== '').map(Number).filter(n => !isNaN(n));
-    const myAvg   = myNotes.length ? myNotes.reduce((a, b) => a + b, 0) / myNotes.length : null;
-    return `<tr><td class="col-member">${esc(m.nom)}</td>${cells}<td class="${myAvg !== null ? 'winner-avg' : ''}">${myAvg !== null ? myAvg.toFixed(2) : '—'}</td></tr>`;
-  }).join('');
+  const labels = resultats.map(r => {
+    const l = livreById[r.livre_id];
+    return `<div class="dep-label">${esc(l?.titre ?? r.livre_id)}</div>`;
+  }).join("");
 
-  const avgCells = sorted.map(r => {
-    const isElu = r.livre_id === eluId;
-    return `<td class="${isElu ? 'winner-avg' : 'book-avg'}">${r.moyenne !== null && r.moyenne !== undefined ? Number(r.moyenne).toFixed(2) : '—'}</td>`;
-  }).join('');
+  const legend = vote.tour2
+    ? `<span class="dep-legend-item"><span class="dep-legend-dot" style="background:#b5572d"></span>Ex æquo en tête</span>`
+    : `<span class="dep-legend-item"><span class="dep-legend-dot" style="background:#1a8a55"></span>Élu</span>`;
 
-  return `<div class="vtable-wrap"><table class="vtable">
-    <thead><tr><th class="col-member">Votant</th>${headers}<th>Moy.</th></tr></thead>
+  return `
+    <div class="dep-legend">
+      ${legend}
+      <span class="dep-legend-item"><span class="dep-legend-dot" style="background:#6840d8"></span>Conservé (&gt; ${SEUIL})</span>
+      <span class="dep-legend-item"><span class="dep-legend-dot" style="background:#a89a82"></span>Éliminé (≤ ${SEUIL})</span>
+    </div>
+    <div class="dep-chart-wrap"><div class="dep-chart">
+      <div class="dep-threshold" style="bottom:${tBottom}px"><span>Seuil ${SEUIL}</span></div>
+      ${cols}
+    </div></div>
+    <div class="dep-labels">${labels}</div>`;
+}
+
+function buildTour2(vote) {
+  const t2 = vote.tour2;
+  if (!t2?.enLice) return "";
+  const counts = {};
+  t2.enLice.forEach(id => { counts[id] = 0; });
+  if (t2.choix) Object.values(t2.choix).forEach(id => { if (id in counts) counts[id]++; });
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  const maxV  = Math.max(...Object.values(counts), 1);
+
+  const rows = [...t2.enLice]
+    .sort((a, b) => (counts[b] || 0) - (counts[a] || 0))
+    .map(id => {
+      const l = livreById[id];
+      const v = counts[id] || 0;
+      const isWin = id === vote.livre_elu;
+      const pct = Math.round(v / maxV * 100);
+      return `<div class="t2-row">
+        <div class="t2-name">${esc(l?.titre ?? id)}<span class="au">${esc(l?.auteur ?? "")}</span></div>
+        <div class="t2-track"><div class="t2-fill ${isWin ? "win" : ""}" style="width:${pct}%"></div></div>
+        <div class="t2-count" style="color:${isWin ? "#177a4a" : "#5b3bb0"}">${v} voix${isWin ? " " + IC.laurel : ""}</div>
+      </div>`;
+    }).join("");
+
+  return `
+    <div class="paper-divider"></div>
+    <div class="paper-sec-title">${IC.repeat} Second tour — départage</div>
+    <div class="t2-note">Égalité parfaite en tête du 1ᵉʳ tour entre <b>${t2.enLice.length} livres</b>. Chaque membre choisit <b>un seul</b> titre — celui qui réunit le plus de voix l'emporte. <b>${total} bulletin${total !== 1 ? "s" : ""}</b> exprimé${total !== 1 ? "s" : ""}.</div>
+    ${rows}`;
+}
+
+function buildTallyTable(resultats, vote, votants) {
+  const heads = resultats.map(r => {
+    const isWin  = r.livre_id === vote.livre_elu && !vote.tour2;
+    const isElim = (r.score ?? r.moyenne ?? 0) <= SEUIL;
+    const l = livreById[r.livre_id];
+    return `<th class="${isWin ? "win" : isElim ? "elim" : ""}">${esc(l?.titre ?? r.livre_id)}</th>`;
+  }).join("");
+
+  const rows = votants.map(mId => {
+    const m = membreById[mId] || { nom: mId, _color: "#888" };
+    const cells = resultats.map(r => {
+      const isWin  = r.livre_id === vote.livre_elu && !vote.tour2;
+      const isElim = (r.score ?? r.moyenne ?? 0) <= SEUIL;
+      const n = r.notes?.[mId];
+      if (n == null) return `<td class="skip">passe</td>`;
+      return `<td class="${isWin ? "win" : isElim ? "elim" : ""}">${Number(n)}/5<span class="stars">${stars(Number(n))}</span></td>`;
+    }).join("");
+    const mNotes = resultats.map(r => r.notes?.[mId]).filter(n => n != null);
+    const mAvg = mNotes.length ? (mNotes.reduce((a, b) => a + Number(b), 0) / mNotes.length).toFixed(1) : "—";
+    return `<tr><td class="who"><span style="display:inline-flex;align-items:center;gap:.4rem">
+      <span style="width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;font-size:.56rem;font-weight:700;color:#fff;background:${m._color}">${ini(m.nom)}</span>${esc(m.nom)}
+    </span></td>${cells}<td class="moy-col">${mAvg}</td></tr>`;
+  }).join("");
+
+  const foot = resultats.map(r => {
+    const isWin  = r.livre_id === vote.livre_elu && !vote.tour2;
+    const sc     = r.score ?? r.moyenne ?? null;
+    const isElim = sc !== null && sc <= SEUIL;
+    return `<td class="${isWin ? "win" : isElim ? "elim" : ""}">${sc != null ? Number(sc).toFixed(2) : "—"}</td>`;
+  }).join("");
+
+  return `<div class="tally-wrap"><table class="tally">
+    <thead><tr><th class="who">Votant</th>${heads}<th class="moy-col">Moy.</th></tr></thead>
     <tbody>${rows}</tbody>
-    <tfoot><tr class="vtable-foot-row"><td class="col-member">Moyenne</td>${avgCells}<td></td></tr></tfoot>
+    <tfoot><tr><td class="who">Score (moy+méd)÷2</td>${foot}<td class="moy-col"></td></tr></tfoot>
   </table></div>`;
 }
 
-function renderTour2(tour2, eluId) {
-  const sorted   = [...(tour2.resultats || [])].sort((a, b) => b.votes - a.votes);
-  const maxVotes = Math.max(0, ...sorted.map(r => r.votes));
-  const bars = sorted.map(r => {
-    const isW  = r.livre_id === eluId;
-    const pct  = maxVotes > 0 ? Math.round(r.votes / maxVotes * 100) : 0;
-    const color = isW ? 'var(--green)' : 'var(--purple)';
-    return `<div class="vt2-row">
-      <div class="vt2-label">${esc(r.titre)}</div>
-      <div class="vt2-bar-wrap"><div class="vt2-bar" style="width:${pct}%;background:${color}">${r.votes}</div></div>
-      <div class="vt2-count" style="color:${color}">${r.votes} vote${r.votes !== 1 ? 's' : ''}${isW ? ' 🏆' : ''}</div>
-    </div>`;
-  }).join('');
-  return `
-    <div class="vd-tour-label">Tour 2 — Vote par choix unique${tour2.tirage_au_sort ? ' · tirage au sort' : ''}</div>
-    ${tour2.tirage_au_sort ? `<div class="vt2-tirage">🎲 Égalité au 2ème tour — gagnant désigné par tirage au sort.</div>` : ''}
-    <div class="vt2-detail">${bars}</div>`;
-}
+function wireDetail(resultats, vote, votants) {
+  const sel   = document.getElementById("detail-select");
+  const chart = document.getElementById("detail-chart");
+  const tabs  = document.querySelectorAll(".seg-tab");
+  let mode = "livre";
 
-function renderMemberChartSection(sorted) {
-  const votantIds = new Set();
-  sorted.forEach(r => Object.keys(r.notes || {}).forEach(id => votantIds.add(id)));
-  if (!votantIds.size) return '';
-
-  const memOpts = [...votantIds]
-    .map(id => membres.find(m => m.id === id)).filter(Boolean)
-    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
-    .map(m => `<option value="${m.id}">${esc(m.nom)}</option>`).join('');
-  const livOpts = sorted.map(r => `<option value="${r.livre_id}">${esc(r.titre ?? r.livre_id)}</option>`).join('');
-
-  return `
-    <div class="vd-divider"></div>
-    <div class="vd-chart-head">
-      <div class="vd-sec-title" style="margin-bottom:0">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-        Détail des votes
-      </div>
-      <div class="vd-chart-tabs">
-        <button class="vd-tab on" data-tab="membre">Par votant</button>
-        <button class="vd-tab" data-tab="livre">Par livre</button>
-      </div>
-    </div>
-    <select class="vd-member-select" id="vd-mem-sel">${memOpts}</select>
-    <select class="vd-member-select hidden" id="vd-liv-sel">${livOpts}</select>
-    <div id="vd-chart-area"></div>`;
-}
-
-function attachChartInteraction(vote) {
-  const memSel  = document.getElementById("vd-mem-sel");
-  const livSel  = document.getElementById("vd-liv-sel");
-  const area    = document.getElementById("vd-chart-area");
-  const tabs    = document.querySelectorAll(".vd-tab");
-  if (!memSel || !livSel || !area) return;
-
-  const resultats = vote.resultats || [];
-  const allNotes  = resultats.flatMap(r => Object.values(r.notes || {})).map(Number).filter(n => !isNaN(n));
-  const scale     = allNotes.length && Math.max(...allNotes) <= 5 ? 5 : 10;
-
-  function avgLine(avg) {
-    return `<div style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem">Moyenne : <strong style="color:var(--accent)">${avg.toFixed(2)}/${scale}</strong></div>`;
-  }
-
-  function renderMembre(memId) {
-    const rows = resultats
-      .filter(r => r.notes?.[memId] !== undefined && r.notes[memId] !== null && r.notes[memId] !== '')
-      .sort((a, b) => Number(b.notes[memId]) - Number(a.notes[memId]));
-    if (!rows.length) { area.innerHTML = `<div style="color:var(--muted);font-size:.83rem">Aucun vote pour ce membre.</div>`; return; }
-    const avg = rows.reduce((s, r) => s + Number(r.notes[memId]), 0) / rows.length;
-    area.innerHTML = avgLine(avg) + `<div class="chart">${rows.map((r, i) => {
-      const note = Number(r.notes[memId]);
-      const pct  = Math.round((note / scale) * 100);
-      return `<div class="chart-row">
-        <div class="chart-label"><span style="opacity:.45;margin-right:.3rem">${i+1}.</span>${esc(r.titre ?? '?')}</div>
-        <div class="chart-bar-wrap"><div class="chart-bar ${vote.livre_elu === r.livre_id ? 'best' : ''}" style="width:${pct}%">${note}/${scale}</div></div>
-      </div>`;
-    }).join('')}</div>`;
-  }
-
-  function renderLivre(livId) {
-    const result = resultats.find(r => r.livre_id === livId);
-    if (!result) { area.innerHTML = ''; return; }
-    const memberNotes = Object.entries(result.notes || {})
-      .map(([mid, note]) => ({ m: membres.find(mb => mb.id === mid), note: Number(note) }))
-      .filter(x => x.m && !isNaN(x.note))
-      .sort((a, b) => b.note - a.note);
-    if (!memberNotes.length) { area.innerHTML = `<div style="color:var(--muted);font-size:.83rem">Aucun vote pour ce livre.</div>`; return; }
-    const avg = memberNotes.reduce((s, x) => s + x.note, 0) / memberNotes.length;
-    area.innerHTML = avgLine(avg) + `<div class="chart">${memberNotes.map((x, i) => {
-      const pct = Math.round((x.note / scale) * 100);
-      return `<div class="chart-row">
-        <div class="chart-label"><span style="opacity:.45;margin-right:.3rem">${i+1}.</span>${esc(x.m.nom)}</div>
-        <div class="chart-bar-wrap"><div class="chart-bar" style="width:${pct}%">${x.note}/${scale}</div></div>
-      </div>`;
-    }).join('')}</div>`;
-  }
-
-  function switchTab(tab) {
-    tabs.forEach(t => t.classList.toggle("on", t.dataset.tab === tab));
-    if (tab === "membre") {
-      memSel.classList.remove("hidden");
-      livSel.classList.add("hidden");
-      renderMembre(memSel.value);
+  const fillOptions = () => {
+    if (mode === "livre") {
+      sel.innerHTML = resultats.map((r, i) => {
+        const l = livreById[r.livre_id];
+        return `<option value="${i}">${esc(l?.titre ?? r.livre_id)}</option>`;
+      }).join("");
     } else {
-      memSel.classList.add("hidden");
-      livSel.classList.remove("hidden");
-      renderLivre(livSel.value);
+      sel.innerHTML = votants.map(id => {
+        const m = membreById[id] || { nom: id };
+        return `<option value="${id}">${esc(m.nom)}</option>`;
+      }).join("");
     }
-  }
+  };
 
-  tabs.forEach(t => t.addEventListener("click", () => switchTab(t.dataset.tab)));
-  memSel.addEventListener("change", () => renderMembre(memSel.value));
-  livSel.addEventListener("change", () => renderLivre(livSel.value));
-  renderMembre(memSel.value);
+  const renderByLivre = idx => {
+    const r = resultats[idx];
+    if (!r?.notes) { chart.innerHTML = `<div class="detail-avg">Aucune note individuelle.</div>`; return; }
+    const sc = r.score ?? r.moyenne ?? null;
+    const entries = Object.entries(r.notes).map(([id, n]) => ({ id, n: Number(n) })).sort((a, b) => b.n - a.n);
+    chart.innerHTML = (sc != null ? `<div class="detail-avg">Score <b>${Number(sc).toFixed(2)}/5</b></div>` : "") +
+      entries.map(e => {
+        const m = membreById[e.id] || { nom: e.id };
+        const pct = Math.round(e.n / 5 * 100);
+        return `<div class="dbar-row"><div class="dbar-label">${esc(m.nom)}</div><div class="dbar-track"><div class="dbar-fill" style="width:${pct}%">${e.n}/5</div></div></div>`;
+      }).join("");
+  };
+
+  const renderByVotant = mId => {
+    const m = membreById[mId] || { nom: mId };
+    const items = resultats
+      .filter(r => r.notes?.[mId] != null)
+      .map(r => ({ id: r.livre_id, n: Number(r.notes[mId]), elu: r.livre_id === vote.livre_elu && !vote.tour2 }))
+      .sort((a, b) => b.n - a.n);
+    if (!items.length) { chart.innerHTML = `<div class="detail-avg">N'a pas voté.</div>`; return; }
+    const avg = items.reduce((s, x) => s + x.n, 0) / items.length;
+    chart.innerHTML = `<div class="detail-avg">Moyenne de ${esc(m.nom)} : <b>${avg.toFixed(2)}/5</b></div>` +
+      items.map((x, i) => {
+        const l = livreById[x.id];
+        const pct = Math.round(x.n / 5 * 100);
+        return `<div class="dbar-row"><div class="dbar-label"><span class="rk">${i + 1}.</span>${esc(l?.titre ?? x.id)}</div><div class="dbar-track"><div class="dbar-fill ${x.elu ? "win" : ""}" style="width:${pct}%">${x.n}/5</div></div></div>`;
+      }).join("");
+  };
+
+  const refresh = () => mode === "livre" ? renderByLivre(+sel.value) : renderByVotant(sel.value);
+
+  tabs.forEach(tab => tab.addEventListener("click", () => {
+    tabs.forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    mode = tab.dataset.tab;
+    fillOptions();
+    refresh();
+  }));
+  sel.addEventListener("change", refresh);
+  fillOptions();
+  refresh();
 }
 
-function renderStars(note, scale) {
-  const n = Math.round((note / scale) * 5);
-  return "★".repeat(n) + "☆".repeat(5 - n);
+// ── Overlay ────────────────────────────────────────────────────────────────
+function closeResult() {
+  document.getElementById("result-overlay").classList.add("hidden");
 }
 
-// ── Fermer détail ─────────────────────────────────────────────────────
-document.getElementById("detail-close").addEventListener("click", () => {
-  document.getElementById("detail-overlay").classList.add("hidden");
-});
-document.getElementById("detail-overlay").addEventListener("click", e => {
-  if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
-});
-document.addEventListener("keydown", e => {
-  if (e.key === "Escape") document.getElementById("detail-overlay").classList.add("hidden");
-});
+function bindOverlay() {
+  document.getElementById("result-overlay").addEventListener("click", e => {
+    if (e.target.id === "result-overlay") closeResult();
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeResult(); });
+}
 
 init().catch(console.error);
