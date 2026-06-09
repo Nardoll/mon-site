@@ -540,8 +540,8 @@ function renderBilanProps({ membres, livres, votes, reunions, livreById }) {
     if (!mLivres.length) return null;
     const mIds     = new Set(mLivres.map(l => l.id));
     const elus     = mLivres.filter(l => l.statut === "elu").length;
-    const elimines = mLivres.filter(l => l.statut === "elimine").length;
-    const attente  = mLivres.filter(l => l.statut === "propose").length;
+    const elimines = mLivres.filter(l => l.statut === "refuse").length;
+    const attente  = mLivres.filter(l => l.statut === "en_proposition").length;
 
     // Note vote reçue = moy des votes d'autrui sur ses livres (hors auto-vote)
     const votePool = [];
