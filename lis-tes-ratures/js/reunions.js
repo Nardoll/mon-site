@@ -211,7 +211,7 @@ function renderMeeting() {
   const livre  = livreById[r.livre_id];
   const titre  = livre?.titre || "—";
   const [g1, g2] = coverOf(r.livre_id);
-  const prevue = r.statut !== "passée" && r.statut !== "Passée";
+  const prevue = !isPasse(r);
 
   const notes  = r.notes_finales || {};
   const avg    = calcAvg(notes);
