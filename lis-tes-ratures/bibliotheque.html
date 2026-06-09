@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bibliothèque — Lis tes ratures</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* ════ Fiche livre (papier) ════ */
+    .fiche-paper { position:relative; width:100%; max-width:600px; background:linear-gradient(180deg,#fcf6e8,#f4e8cf); border-radius:5px; padding:2.1rem 2.4rem 1.7rem 3rem; box-shadow:0 40px 80px -30px rgba(0,0,0,.55), inset 0 0 0 1px rgba(120,90,50,.12); color:#3a2b1c; font-family:'Segoe UI',system-ui,sans-serif; max-height:90vh; overflow-y:auto; }
+    .fiche-paper::before { content:""; position:absolute; left:1.85rem; top:0; bottom:0; width:1.5px; background:rgba(176,72,52,.3); }
+    .fiche-top { position:absolute; top:.85rem; right:1rem; display:flex; gap:.5rem; align-items:center; }
+    .fiche-modif { display:inline-flex; align-items:center; gap:.35rem; background:transparent; border:1px solid rgba(120,90,50,.3); border-radius:7px; padding:.28rem .65rem; font-size:.75rem; color:#6a513a; cursor:pointer; font-family:inherit; }
+    .fiche-modif:hover { border-color:#b5572d; color:#b5572d; }
+    .fiche-modif svg { width:13px; height:13px; }
+    .fiche-close { background:none; border:none; font-size:1.25rem; color:#8a7560; cursor:pointer; line-height:1; padding:.05rem .25rem; }
+    .fiche-close:hover { color:#3a2b1c; }
+    .fiche-head { display:flex; gap:1.3rem; align-items:flex-start; margin-bottom:1.4rem; padding-right:5.5rem; }
+    .fiche-cover { width:64px; height:94px; flex-shrink:0; border-radius:3px 6px 6px 3px; background:linear-gradient(158deg,var(--g1,#7a3b2e),var(--g2,#56281f)); box-shadow:0 10px 18px -10px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.08); position:relative; overflow:hidden; }
+    .fiche-cover::before { content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:rgba(0,0,0,.25); }
+    .fiche-cover span { position:absolute; inset:0; font-family:var(--serif); font-size:.55rem; color:#fdf6ea; padding:.45rem .3rem .3rem .62rem; line-height:1.15; font-weight:600; }
+    .fiche-htext { padding-top:.15rem; }
+    .fiche-title { font-family:var(--serif); font-size:1.55rem; font-weight:600; line-height:1.1; color:#2c2015; }
+    .fiche-author { font-family:var(--serif); font-style:italic; font-size:1rem; color:#6a513a; margin-top:.2rem; }
+    .fiche-badge { display:inline-block; padding:.18em .62em; border-radius:5px; font-size:.72rem; font-weight:700; white-space:nowrap; }
+    .fiche-badge.prop { background:rgba(181,87,45,.15); color:#a8501f; }
+    .fiche-badge.elu  { background:rgba(26,138,85,.16); color:#177a4a; }
+    .fiche-badge.elim { background:rgba(192,71,63,.14); color:#a8392f; }
+    .fiche-dl { display:grid; grid-template-columns:130px 1fr; row-gap:.5rem; column-gap:1rem; margin-bottom:1.3rem; }
+    .fiche-dl dt { font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#a07c4e; align-self:center; }
+    .fiche-dl dd { font-size:.92rem; color:#3a2b1c; }
+    .fiche-ia { border:1px solid rgba(120,90,50,.25); border-radius:8px; margin-bottom:1.3rem; background:rgba(255,255,255,.28); }
+    .fiche-ia summary { list-style:none; cursor:pointer; padding:.6rem .9rem; display:flex; align-items:center; gap:.5rem; font-size:.84rem; font-weight:600; color:#6a513a; }
+    .fiche-ia summary::-webkit-details-marker { display:none; }
+    .fiche-ia .chev { font-size:.7rem; transition:transform .2s; color:#a07c4e; }
+    .fiche-ia summary svg { width:14px; height:14px; color:#b5572d; }
+    .fiche-ia-body { padding:.1rem .9rem .85rem; }
+    .fiche-ia-body .fiche-dl { margin-bottom:.55rem; }
+    .fiche-ia-warn { font-size:.72rem; color:#a8501f; display:flex; align-items:center; gap:.35rem; }
+    .fiche-ia-warn svg { width:13px; height:13px; flex-shrink:0; }
+    .fiche-divider { height:1px; background:rgba(120,90,50,.2); margin:1.3rem 0; }
+    .fiche-sec-title { font-family:var(--serif); font-size:1.12rem; font-weight:600; color:#2c2015; margin-bottom:.9rem; display:flex; align-items:center; gap:.5rem; }
+    .fiche-sec-title svg { width:16px; height:16px; color:#b5572d; }
+    .fiche-av { margin-bottom:.5rem; }
+    .fiche-av-row { display:flex; align-items:center; justify-content:space-between; padding:.4rem 0; border-bottom:1px solid rgba(120,90,50,.13); font-size:.86rem; }
+    .fiche-av-row:last-child { border-bottom:none; }
+    .fiche-av-done { color:#177a4a; font-weight:600; display:inline-flex; align-items:center; gap:.3rem; }
+    .fiche-av-done svg { width:14px; height:14px; }
+    .fiche-av-none { color:#b3a187; }
+    .fiche-tl { position:relative; padding-left:1.4rem; }
+    .fiche-tl::before { content:""; position:absolute; left:4px; top:5px; bottom:5px; width:1.5px; background:rgba(120,90,50,.25); }
+    .fiche-tl-item { position:relative; margin-bottom:.85rem; }
+    .fiche-tl-item:last-child { margin-bottom:0; }
+    .fiche-tl-item::before { content:""; position:absolute; left:-1.4rem; top:.28rem; width:9px; height:9px; border-radius:50%; background:#b59470; box-shadow:0 0 0 2px #f7ecd6; }
+    .fiche-tl-item.is-elu::before  { background:#1a8a55; }
+    .fiche-tl-item.is-elim::before { background:#c0473f; }
+    .fiche-tl-label { font-size:.88rem; font-weight:600; color:#3a2b1c; }
+    .fiche-tl-label.is-elu  { color:#177a4a; }
+    .fiche-tl-label.is-elim { color:#a8392f; }
+    .fiche-tl-sub { font-size:.78rem; color:#8a7560; }
+    .fiche-reunion-head { display:flex; align-items:baseline; justify-content:space-between; gap:1rem; margin-bottom:.55rem; }
+    .fiche-reunion-meta { font-size:.82rem; color:#8a7560; }
+    .fiche-reunion-note { font-family:var(--serif); font-size:1.3rem; font-weight:700; color:#b5572d; white-space:nowrap; }
+    .fiche-reunion-notes { font-size:.82rem; color:#6a513a; line-height:1.85; }
+    .fiche-reunion-notes b { color:#3a2b1c; }
+    .fiche-reunion-abs { font-size:.66rem; border:1px solid rgba(120,90,50,.3); border-radius:4px; padding:0 .3rem; color:#8a7560; }
+    .fiche-reunion-cta { margin-top:.85rem; }
+    .fiche-btn { display:inline-flex; align-items:center; gap:.4rem; background:transparent; border:1px solid rgba(120,90,50,.32); border-radius:8px; padding:.45rem 1rem; font-size:.82rem; color:#6a513a; cursor:pointer; font-family:inherit; text-decoration:none; }
+    .fiche-btn:hover { border-color:#b5572d; color:#b5572d; }
+    .fiche-btn svg { width:14px; height:14px; }
+    .fiche-actions { display:flex; justify-content:center; margin-top:1.3rem; }
+    #fiche-overlay { z-index:300; }
+
+    /* ════ Proposer un livre (papier) ════ */
+    .propose-paper { position:relative; background:linear-gradient(180deg,#fcf6e8,#f4e8cf); color:#3a2b1c; border:none; border-radius:5px; padding:2.2rem 2.5rem 1.8rem 3.1rem; box-shadow:0 40px 80px -30px rgba(0,0,0,.55), inset 0 0 0 1px rgba(120,90,50,.12); max-width:600px; }
+    .propose-paper::before { content:""; position:absolute; left:1.95rem; top:0; bottom:0; width:1.5px; background:rgba(176,72,52,.32); }
+    .propose-paper .modal-header h2 { font-family:var(--serif); font-size:1.55rem; font-weight:600; color:#2c2015; }
+    .propose-paper .modal-close { color:#8a7560; }
+    .propose-paper .modal-close:hover { color:#3a2b1c; }
+    .propose-paper .prop-form-intro { font-size:.85rem; color:#6a513a; line-height:1.55; margin:.35rem 0 1.6rem; }
+    .propose-paper .form-group label { color:#a07c4e; font-size:.7rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+    .propose-paper input[type="text"], .propose-paper input[type="number"], .propose-paper select {
+      background:rgba(255,255,255,.55); border:1px solid rgba(120,90,50,.28); color:#3a2b1c; border-radius:6px;
+    }
+    .propose-paper input::placeholder { color:#b3a187; }
+    .propose-paper input:focus, .propose-paper select:focus { border-color:#b5572d; outline:none; }
+    .propose-paper .form-section-label { font-size:.68rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:#a07c4e; margin:1.5rem 0 .8rem; display:flex; align-items:center; gap:.6rem; }
+    .propose-paper .form-section-label::after { content:""; flex:1; height:1px; background:rgba(120,90,50,.22); }
+    .propose-paper .prop-form-hint { font-size:.74rem; color:#a8501f; margin-top:.4rem; display:flex; align-items:center; gap:.35rem; line-height:1.4; }
+    .propose-paper .prop-form-hint svg { width:13px; height:13px; color:#b5572d; flex-shrink:0; }
+    .propose-paper .modal-footer { border-top:1px solid rgba(120,90,50,.2); }
+    .propose-paper .btn-secondary { background:transparent; border:1px solid rgba(120,90,50,.32); color:#6a513a; }
+    .propose-paper .btn-secondary:hover { border-color:#b5572d; color:#b5572d; background:rgba(181,87,45,.05); }
+
+    /* ════ Base de données ════ */
+    .db-head { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1.6rem; }
+    .db-head h1 { font-family:var(--serif); font-size:1.7rem; font-weight:600; color:var(--text); }
+    .db-spacer { flex:1; }
+    .db-back { display:inline-flex; align-items:center; gap:.3rem; color:var(--muted); text-decoration:none; font-size:.85rem; font-weight:600; border:1px solid var(--border); border-radius:8px; padding:.42rem .75rem .42rem .6rem; transition:color .15s, border-color .15s, background .15s; }
+    .db-back svg { width:15px; height:15px; }
+    .db-back:hover { color:var(--accent); border-color:var(--accent); background:rgba(181,87,45,.06); }
+    .db-panel { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1.4rem 1.5rem 1.1rem; box-shadow:0 16px 40px -28px rgba(60,40,20,.5); }
+    .db-toolbar { display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; margin-bottom:1.2rem; }
+    .db-toolbar select { width:auto; min-width:160px; }
+    .db-search { position:relative; flex:1; min-width:230px; }
+    .db-search svg { position:absolute; left:.7rem; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--muted); pointer-events:none; }
+    .db-search input { padding-left:2.2rem; }
+    .db-count { font-size:.8rem; color:var(--muted); white-space:nowrap; margin-left:auto; }
+    .db-tablewrap { overflow-x:auto; }
+    .db-table { width:100%; border-collapse:collapse; font-size:.88rem; }
+    .db-table th, .db-table td { padding:.72rem .8rem; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+    .db-table thead th { position:sticky; top:0; z-index:1; background:var(--surface); font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); cursor:pointer; user-select:none; box-shadow:inset 0 -1.5px 0 var(--border); transition:color .12s; }
+    .db-table thead th:hover { color:var(--text); }
+    .db-table thead th .sort-ind { margin-left:.3rem; font-size:.64rem; opacity:0; }
+    .db-table thead th.sorted { color:var(--accent); }
+    .db-table thead th.sorted .sort-ind { opacity:1; }
+    .db-table thead th.num, .db-table td.num { text-align:right; }
+    .db-table tbody tr { cursor:pointer; transition:background .1s; }
+    .db-table tbody tr:hover { background:var(--surface2); }
+    .db-table tbody tr:last-child td { border-bottom:none; }
+    .db-table td.col-title { font-family:var(--serif); font-weight:600; font-size:.96rem; color:var(--text); white-space:normal; min-width:190px; }
+    .db-table td.col-author { color:var(--text); white-space:normal; min-width:130px; }
+    .db-table td.col-genre { font-style:italic; color:var(--muted); white-space:normal; min-width:140px; }
+    .db-table td .none { color:var(--muted); opacity:.6; }
+    .db-badge { display:inline-block; padding:.2em .65em; border-radius:20px; font-size:.72rem; font-weight:700; white-space:nowrap; }
+    .db-badge.proposition { background:rgba(181,87,45,.14); color:#a8501f; }
+    .db-badge.elu  { background:rgba(26,138,85,.15); color:#177a4a; }
+    .db-badge.elim { background:rgba(192,71,63,.13); color:#a8392f; }
+    .db-empty { padding:3rem; text-align:center; color:var(--muted); font-size:.9rem; }
+  </style>
+</head>
+<body>
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <main class="main">
+
+    <!-- ── Vue visuelle ─────────────────────────────────────────── -->
+    <div id="bib-view">
+      <div class="page-header">
+        <h1>Bibliothèque</h1>
+        <button class="btn btn-primary" id="open-propose">+ Proposer un livre</button>
+      </div>
+
+      <!-- Toggle infos IA -->
+      <div class="ai-toggle-bar">
+        <div class="ai-toggle-info">
+          <span class="ai-toggle-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2.5px;margin-right:.3rem;color:var(--accent)"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/></svg>Infos complémentaires
+          </span>
+          <span class="ai-toggle-desc">Activez, puis survolez un livre pour l'ouvrir : genre, nombre de pages, description en 3 mots — fournis par IA, potentiellement inexacts.</span>
+        </div>
+        <label class="toggle-switch"><input type="checkbox" id="infos-toggle" /><span class="toggle-slider"></span></label>
+      </div>
+
+      <!-- En proposition -->
+      <div class="bib-section">
+        <div class="sec-head">
+          <span class="sec-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h6v16H6a1 1 0 0 1-1-1z"/><path d="M11 4h2.5l3.5.6-2.2 14-3.8-.6z"/></svg>En proposition
+          </span>
+          <span class="sec-rule"></span>
+          <span class="sec-actions">
+            <button class="btn btn-sm btn-ghost" id="btn-copy">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>Copier la liste
+            </button>
+          </span>
+        </div>
+        <div class="prop-grid" id="prop-grid">
+          <div style="color:var(--muted);font-size:.85rem">Chargement…</div>
+        </div>
+      </div>
+
+      <!-- Livres élus -->
+      <div class="bib-section">
+        <div class="sec-head">
+          <span class="sec-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3M9 19h6M12 13v6"/></svg>Livres élus
+          </span>
+          <span class="sec-rule"></span>
+          <span class="sec-actions seg-toggle" id="elus-tri">
+            <button class="seg is-active" data-sort="chron">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 9h16M8 3v4M16 3v4"/></svg>Chronologique
+            </button>
+            <button class="seg" data-sort="note">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.6 5.6 6 .8-4.4 4.2 1.1 6L12 17l-5.3 2.6 1.1-6L3.4 9.4l6-.8z"/></svg>Note finale
+            </button>
+          </span>
+        </div>
+        <div class="bib-elu-list" id="elus-list">
+          <div style="color:var(--muted);font-size:.85rem">Chargement…</div>
+        </div>
+      </div>
+
+      <!-- Éliminés -->
+      <div class="bib-section">
+        <div class="sec-head">
+          <span class="sec-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>Éliminés
+          </span>
+          <span class="sec-rule"></span>
+        </div>
+        <div class="elim-grid" id="elim-grid">
+          <div style="color:var(--muted);font-size:.85rem">Chargement…</div>
+        </div>
+      </div>
+
+      <div style="text-align:center;padding-bottom:2.5rem">
+        <a href="#" class="btn btn-secondary" id="open-db">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/></svg>Base de données complète →
+        </a>
+      </div>
+    </div><!-- /#bib-view -->
+
+    <!-- ── Vue base de données ──────────────────────────────────── -->
+    <div id="db-view" class="hidden">
+      <div class="db-head">
+        <a href="#" class="db-back" id="db-back">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Retour
+        </a>
+        <h1>Base de données</h1>
+        <span class="db-spacer"></span>
+        <button class="btn btn-primary" id="open-propose-2">+ Proposer un livre</button>
+      </div>
+      <div class="db-panel">
+        <div class="db-toolbar">
+          <div class="db-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" id="db-search" placeholder="Rechercher un titre, un auteur…" />
+          </div>
+          <select id="db-filter">
+            <option value="all">Tous les statuts</option>
+            <option value="proposition">En proposition</option>
+            <option value="elu">Élus</option>
+            <option value="elim">Éliminés</option>
+          </select>
+          <select id="db-genre"><option value="all">Tous les genres</option></select>
+          <select id="db-member"><option value="all">Tous les membres</option></select>
+          <span class="db-count" id="db-count"></span>
+        </div>
+        <div class="db-tablewrap">
+          <table class="db-table" id="db-table"></table>
+        </div>
+      </div>
+    </div><!-- /#db-view -->
+
+  </main>
+
+  <!-- Fiche livre (overlay papier) -->
+  <div class="overlay hidden" id="fiche-overlay">
+    <div class="fiche-paper" id="fiche"></div>
+  </div>
+
+  <!-- Proposer un livre (overlay papier) -->
+  <div class="overlay hidden" id="propose-overlay">
+    <div class="modal propose-paper">
+      <div class="modal-header">
+        <h2>Proposer un livre</h2>
+        <button class="modal-close" id="pf-close" aria-label="Fermer">✕</button>
+      </div>
+      <p class="prop-form-intro">Le livre rejoindra la liste <strong>« En proposition »</strong>. Il pourra être retenu lors d'un prochain vote du club.</p>
+      <div class="form-row">
+        <div class="form-group"><label>Titre du livre *</label><input type="text" id="pf-titre" placeholder="Ex. Le Comte de Monte-Cristo" /></div>
+        <div class="form-group"><label>Auteur *</label><input type="text" id="pf-auteur" placeholder="Ex. Alexandre Dumas" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Année de parution</label><input type="number" id="pf-annee" placeholder="1844" /></div>
+        <div class="form-group"><label>Proposé par</label><select id="pf-par"></select></div>
+      </div>
+      <div class="form-section-label">Infos complémentaires · facultatif</div>
+      <div class="form-row">
+        <div class="form-group"><label>Genre</label><input type="text" id="pf-genre" placeholder="Roman d'aventure" /></div>
+        <div class="form-group"><label>Nombre de pages</label><input type="number" id="pf-pages" placeholder="1400" /></div>
+      </div>
+      <div class="form-group">
+        <label>Description en 3 mots</label>
+        <input type="text" id="pf-desc" placeholder="vengeance, évasion, trésor" />
+        <span class="prop-form-hint">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/></svg>
+          Laissez vide : l'IA pourra compléter genre, pages et description automatiquement.
+        </span>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="pf-cancel">Annuler</button>
+        <button class="btn btn-primary" id="pf-submit">Proposer le livre</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/bibliotheque.js"></script>
+</body>
+</html>
