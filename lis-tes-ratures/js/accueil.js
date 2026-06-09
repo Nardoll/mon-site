@@ -707,7 +707,7 @@ function buildFriseEvents() {
     events.push({ d: d.toISOString().split('T')[0], type: 'arrivee', title: m.nom, who: 'rejoint le club', navId: m.id, navPage: 'membres' });
   });
 
-  allLivres.filter(l => l.statut === 'en_proposition').forEach(l => {
+  allLivres.filter(l => l.date_proposition).forEach(l => {
     const d = toDate(l.date_proposition);
     if (!d) return;
     events.push({ d: d.toISOString().split('T')[0], type: 'proposition', title: l.titre, who: `par ${memNom(l.propose_par)}`, navId: l.id, navPage: 'bibliotheque' });
