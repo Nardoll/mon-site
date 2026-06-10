@@ -208,6 +208,99 @@
       .sections-grid { grid-template-columns: 1fr 1fr; max-width: 620px; }
     }
 
+    /* ── Carte Lis tes ratures (DA café-bibliothèque) ── */
+    .ltr-card {
+      background: linear-gradient(160deg, #fdf6ea 0%, #ede0c4 100%);
+      border-color: rgba(150,110,65,.3);
+      color: #2c1a0e;
+      padding-left: 1.9rem;
+    }
+    .ltr-card::after {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 6px;
+      background: #b5572d;
+      border-radius: 13px 0 0 13px;
+    }
+    a.ltr-card:hover {
+      background: linear-gradient(160deg, #fffbf3 0%, #f3e7d0 100%) !important;
+      border-color: rgba(181,87,45,.55) !important;
+    }
+    .ltr-eyebrow {
+      font-size: .6rem;
+      font-weight: 700;
+      letter-spacing: .17em;
+      text-transform: uppercase;
+      color: #b5572d;
+      font-family: Georgia, serif;
+    }
+    .ltr-title {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 1.28rem;
+      font-weight: 700;
+      color: #2c1a0e;
+      line-height: 1.15;
+      margin-top: .1rem;
+    }
+    .ltr-rature {
+      position: relative;
+      white-space: nowrap;
+    }
+    .ltr-rature::after {
+      content: '';
+      position: absolute;
+      left: -1%; right: -1%;
+      top: 56%;
+      height: 2.5px;
+      background: #b5572d;
+      border-radius: 2px;
+      transform: rotate(-1.2deg);
+      opacity: .9;
+    }
+    .ltr-rule {
+      height: 1px;
+      background: linear-gradient(90deg, rgba(181,87,45,.5), transparent);
+      margin: .05rem 0;
+    }
+    .ltr-desc {
+      font-size: .8rem;
+      color: #5a3f26;
+      line-height: 1.57;
+    }
+    .ltr-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .5rem;
+    }
+    .ltr-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      padding: .28em .68em;
+      border-radius: 5px;
+      background: rgba(181,87,45,.12);
+      color: #b5572d;
+      border: 1px solid rgba(181,87,45,.3);
+      font-family: Georgia, serif;
+    }
+    .ltr-shelf {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+    }
+    .ltr-book {
+      width: 8px;
+      border-radius: 1px 2px 0 0;
+      flex-shrink: 0;
+      box-shadow: inset 1.5px 0 0 rgba(0,0,0,.2);
+    }
+    .ltr-card .card-arrow { color: #b5572d; }
+
     /* ── Bouton personnel discret ─────────── */
     .perso-btn {
       position: fixed;
@@ -251,16 +344,28 @@
 
   <div class="sections-grid">
 
-    <!-- Lis tes ratures -->
+    <!-- Lis tes ratures — DA café-bibliothèque -->
     <a href="/lis-tes-ratures/"
-       class="section-card"
-       style="--card-accent:#b5572d;--card-glow:rgba(181,87,45,.15)">
-      <div class="card-icon">📚</div>
-      <div class="card-body">
-        <div class="card-name">Lis tes ratures</div>
-        <div class="card-desc">Club de lecture — bibliothèque, votes mensuels, suivi des lectures, réunions et statistiques.</div>
+       class="section-card ltr-card"
+       style="--card-accent:#b5572d;--card-glow:rgba(181,87,45,.18)">
+      <div class="ltr-eyebrow">Club de lecture</div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:.42rem">
+        <div class="ltr-title">Lis tes <span class="ltr-rature">ratures</span></div>
+        <div class="ltr-rule"></div>
+        <div class="ltr-desc">Bibliothèque, votes mensuels, suivi des lectures, réunions et statistiques.</div>
       </div>
-      <span class="card-badge badge-locked">🔒 Mot de passe</span>
+      <div class="ltr-foot">
+        <span class="ltr-badge">🔒 Mot de passe</span>
+        <div class="ltr-shelf" aria-hidden="true">
+          <div class="ltr-book" style="height:21px;background:#8b3a2a"></div>
+          <div class="ltr-book" style="height:16px;background:#4a6a3a"></div>
+          <div class="ltr-book" style="height:24px;background:#3a5870"></div>
+          <div class="ltr-book" style="height:18px;background:#7a5530"></div>
+          <div class="ltr-book" style="height:20px;background:#6b4570"></div>
+          <div class="ltr-book" style="height:14px;background:#4a6040"></div>
+          <div class="ltr-book" style="height:22px;background:#8a4e2e"></div>
+        </div>
+      </div>
       <span class="card-arrow">→</span>
     </a>
 
