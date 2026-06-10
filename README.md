@@ -1159,6 +1159,18 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 - `statistiques.html` : skeletons dans `#kpis-root` (4 KPI), `#hist10-bars` (histogramme 10 colonnes), `#hist5-bars` (histogramme 5 colonnes), `#participation-content` (3 barres horizontales avec labels).
 - `commentaires.html` : skeletons dans `#reading` (3 entrées `.com` avec anneau et carte accordéon).
 
+**Page d'accueil — carte Lis tes ratures redessinée :**
+- `index.html` : la carte "Lis tes ratures" a été entièrement redessinée dans la DA du club de lecture ("café littéraire × vieille bibliothèque"). Les 3 autres cartes (JDR, Jeux, Atelier) restent inchangées.
+  - Fond parchemin `linear-gradient(160deg, #fdf6ea, #ede0c4)` — contraste immédiat avec le fond sombre `#0a0a0a` de la page
+  - Reliure terracotta `#b5572d` (6px, `::after` arrondi à gauche) — effet dos de livre
+  - Eyebrow "Club de lecture" en petites majuscules serif Georgia, terracotta
+  - Titre "Lis tes **ratures**" en serif Georgia avec la rature oblique signature (barre terracotta 2.5px, `rotate(-1.2deg)`) sur "ratures"
+  - Filet de séparation `linear-gradient(90deg, rgba(181,87,45,.5), transparent)` sous le titre
+  - Description en brun chaud `#5a3f26` au lieu du gris générique
+  - Pied de carte : badge terracotta à gauche + mini étagère de 7 livres colorés à droite (rectangles CSS, hauteurs variées, `box-shadow` interne simulant l'épaisseur du dos)
+  - Hover : parchemin légèrement éclairci + bordure terracotta + flèche `→` en terracotta
+  - Classes ajoutées : `.ltr-card`, `.ltr-eyebrow`, `.ltr-title`, `.ltr-rature`, `.ltr-rule`, `.ltr-desc`, `.ltr-foot`, `.ltr-badge`, `.ltr-shelf`, `.ltr-book`
+
 ### 2026-06-04 (suite 13)
 
 **JDR — Carte : zone pleine hauteur**
