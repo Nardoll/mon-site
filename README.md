@@ -1132,6 +1132,12 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-06-10 (suite)
+**Lis tes ratures — Bulletin de vote : colonnes de notes colorées**
+
+- `lis-tes-ratures/js/vote.js` — `buildVoteTable()` : attribut `data-n="1"` à `"5"` ajouté sur les `<th class="numcol">` et `<td class="numcol">`.
+- `lis-tes-ratures/vote.html` — 5 règles CSS : fond très pâle par colonne de note (1 rouge brique → 2 orange → 3 jaune ocre → 4 vert clair → 5 vert soutenu, opacités 6,5 % à 12 %) pour marquer visuellement l'impact d'un vote, comme dans l'ancienne version. Tons chauds compatibles DA parchemin. S'applique au bulletin actif et à l'aperçu.
+
 ### 2026-06-10
 **Lis tes ratures — Favicon, correctifs accueil/stats, skeleton loading**
 

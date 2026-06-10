@@ -99,6 +99,12 @@
     .vrow.read { opacity: .5; }
     .vrow.read .vt-titre { text-decoration: line-through; }
     .numcol { width: 56px; text-align: center; }
+    /* teinte pâle par colonne de note : 1 rouge → 5 vert */
+    .vtable2 .numcol[data-n="1"] { background: rgba(191, 54, 42, .065); }
+    .vtable2 .numcol[data-n="2"] { background: rgba(213, 118, 35, .07); }
+    .vtable2 .numcol[data-n="3"] { background: rgba(199, 158, 24, .09); }
+    .vtable2 .numcol[data-n="4"] { background: rgba(118, 164, 62, .10); }
+    .vtable2 .numcol[data-n="5"] { background: rgba(47, 122, 74, .12); }
     .dot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; display: inline-grid; place-items: center; transition: all .14s; background: var(--surface); margin: 0 auto; }
     .dot:hover { border-color: var(--accent); transform: scale(1.1); }
     .dot.on { background: var(--accent); border-color: var(--accent); box-shadow: 0 3px 8px -2px rgba(181,87,45,.5); }

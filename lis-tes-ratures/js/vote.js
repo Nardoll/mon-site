@@ -273,7 +273,7 @@ function buildVoteTable(livreIds, preview) {
     ? `<tr class="vrow"><td class="bkc" colspan="7" style="color:var(--muted);font-size:.82rem;padding:.8rem .4rem">Aucune proposition pour l'instant.</td></tr>`
     : books.map(b => {
         const dots = [1,2,3,4,5].map(n =>
-          `<td class="numcol"><span class="dot" data-bk="${b.id}" data-n="${n}" role="button" aria-label="${n} sur 5" tabindex="0"></span></td>`
+          `<td class="numcol" data-n="${n}"><span class="dot" data-bk="${b.id}" data-n="${n}" role="button" aria-label="${n} sur 5" tabindex="0"></span></td>`
         ).join("");
         return `<tr class="vrow" data-bk="${b.id}">
           <td class="bkc"><span class="vt-titre">${esc(b.titre)}</span> <span class="vt-auteur">— ${esc(b.auteur ?? "")}</span></td>
@@ -286,7 +286,7 @@ function buildVoteTable(livreIds, preview) {
     <table class="vtable2${preview ? " preview" : ""}">
       <thead><tr>
         <th class="bkc"></th>
-        ${[1,2,3,4,5].map(n => `<th class="numcol"><span class="n">${n}</span>${n <= 2 ? '<span class="elim">élim.</span>' : ""}</th>`).join("")}
+        ${[1,2,3,4,5].map(n => `<th class="numcol" data-n="${n}"><span class="n">${n}</span>${n <= 2 ? '<span class="elim">élim.</span>' : ""}</th>`).join("")}
         <th class="readcol"></th>
       </tr></thead>
       <tbody>${rows}</tbody>
