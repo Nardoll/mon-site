@@ -1132,6 +1132,12 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-06-10 (suite 2)
+**Lis tes ratures — Graphique d'évolution : axe horizontal des jours**
+
+- `lis-tes-ratures/js/accueil.js` — `buildChartSVG()` : ajout de l'axe X (jours du mois, du 1ᵉʳ au dernier jour). Repères aux jours 1, 5, 10, 15, 20, 25 et dernier jour du mois (calculé depuis `currentVote` ou le mois courant). Labels `.axis-lbl` sous le graphique + lignes verticales pointillées `.grid-line.vday`.
+- `lis-tes-ratures/index.html` — règle CSS `svg.chart .grid-line.vday` (pointillés `2 5`, opacité .65) — même style discret que la grille horizontale existante.
+
 ### 2026-06-10 (suite)
 **Lis tes ratures — Bulletin de vote : colonnes de notes colorées**
 

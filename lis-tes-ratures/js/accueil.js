@@ -153,6 +153,17 @@ function buildChartSVG(series, opts = {}) {
     g += `<line class="grid-line${v === 0 ? ' zero' : ''}" x1="${padL}" y1="${yFn(v)}" x2="${W - padR}" y2="${yFn(v)}"/>`;
     g += `<text class="axis-lbl" x="${padL - 8}" y="${yFn(v) + 4}" text-anchor="end">${v}%</text>`;
   });
+  // axe horizontal — jours du mois (1 → dernier jour)
+  const _now = new Date();
+  const mStart = currentVote
+    ? new Date(currentVote.annee, currentVote.mois - 1, 1)
+    : new Date(_now.getFullYear(), _now.getMonth(), 1);
+  const nbJours = new Date(mStart.getFullYear(), mStart.getMonth() + 1, 0).getDate();
+  [...new Set([1, 5, 10, 15, 20, 25, nbJours])].forEach(d => {
+    const x = xFn((d - 1) / nbJours);
+    if (d > 1) g += `<line class="grid-line vday" x1="${x.toFixed(1)}" y1="${padT}" x2="${x.toFixed(1)}" y2="${yFn(0)}"/>`;
+    g += `<text class="axis-lbl" x="${x.toFixed(1)}" y="${H - padB + 17}" text-anchor="middle">${d}</text>`;
+  });
   const ends = [];
   series.forEach(s => {
     const pts = s.points.map(p => ({ x: xFn(p.frac), y: yFn(p.pct) }));
