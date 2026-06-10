@@ -309,9 +309,10 @@ function buildReadBlock(r, notes, avg, presents) {
   const rows = sorted.map(({ mid, n }) => {
     const nom = membreById[mid]?.nom || mid;
     const absent = !presents.has(mid);
+    const full = Math.max(0, Math.min(10, Math.round(n)));
     return `<div class="mtg-note-row">
       <span class="mtg-note-name">${esc(nom)}${absent ? '<span class="abs"> (absent·e)</span>' : ""}</span>
-      <span class="mtg-note-track"><span class="mtg-note-fill" style="width:${n * 10}%"></span></span>
+      <span class="mtg-note-stars">${"★".repeat(full)}${"☆".repeat(10 - full)}</span>
       <span class="mtg-note-val">${n}<span>/10</span></span>
     </div>`;
   }).join("");

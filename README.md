@@ -1132,6 +1132,12 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-06-10 (suite 3)
+**Lis tes ratures — Fiche réunion : étoiles à la place des barres dans "Notes du club"**
+
+- `lis-tes-ratures/js/reunions.js` — `buildReadBlock()` : la barre de progression (`.mtg-note-track`/`.mtg-note-fill`) est remplacée par 10 étoiles `★`/`☆` remplies selon la note (arrondie à l'entier, bornée 0–10).
+- `lis-tes-ratures/reunions.html` — CSS : `.mtg-note-stars` reprend la DA des étoiles des fiches membres (`.rf-ballot-stars` : terracotta `#b5572d`, `letter-spacing: -.04em`), taille `.92rem`. Règles `.mtg-note-track`/`.mtg-note-fill` supprimées.
+
 ### 2026-06-10 (suite 2)
 **Lis tes ratures — Graphique d'évolution : axe horizontal des jours**
 
