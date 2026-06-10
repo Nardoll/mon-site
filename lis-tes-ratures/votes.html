@@ -205,7 +205,28 @@
         <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m9 13 2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2.5"/></svg>Scrutin en cours</h2>
         <span class="rule"></span>
       </div>
-      <div id="live-mount"><div style="color:var(--muted);font-size:.85rem">Chargement…</div></div>
+      <div id="live-mount">
+        <div class="live" style="pointer-events:none">
+          <div class="live-grid">
+            <div class="live-main">
+              <div class="sk" style="height:.65rem;width:120px;border-radius:4px"></div>
+              <div class="sk" style="height:1.55rem;width:64%;margin-top:.55rem"></div>
+              <div class="sk" style="height:.7rem;width:42%;margin-top:.4rem"></div>
+              <div class="sk" style="height:2.2rem;width:210px;border-radius:10px;margin-top:1rem"></div>
+              <div style="display:flex;gap:.4rem;margin-top:1.1rem">
+                <div class="sk" style="height:1.4rem;width:70px;border-radius:999px"></div>
+                <div class="sk" style="height:1.4rem;width:82px;border-radius:999px"></div>
+                <div class="sk" style="height:1.4rem;width:60px;border-radius:999px"></div>
+              </div>
+            </div>
+            <div class="live-side">
+              <div class="sk" style="width:104px;height:104px;border-radius:50%;opacity:.35"></div>
+              <div class="sk" style="height:.6rem;width:80px;opacity:.3;margin-top:.3rem"></div>
+              <div class="sk" style="height:2.2rem;width:100%;border-radius:9px;opacity:.35;margin-top:.4rem"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ═══ Registre des scrutins ═══ -->
@@ -215,7 +236,49 @@
         <span class="rule"></span>
         <span class="aside" id="scrutins-count"></span>
       </div>
-      <div class="scrutins" id="scrutins-mount"><div style="color:var(--muted);font-size:.85rem">Chargement…</div></div>
+      <div class="scrutins" id="scrutins-mount">
+        <div style="display:flex;flex-direction:column;gap:.6rem">
+          <div style="display:grid;grid-template-columns:96px 38px 1fr auto;align-items:center;gap:1rem;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:var(--r);padding:.85rem 1.2rem">
+            <div class="sk" style="height:.7rem;width:72px"></div>
+            <div class="sk" style="width:30px;height:42px;border-radius:3px;flex-shrink:0"></div>
+            <div style="display:flex;flex-direction:column;gap:.42rem">
+              <div class="sk" style="height:.6rem;width:32%"></div>
+              <div class="sk" style="height:.95rem;width:58%"></div>
+              <div class="sk" style="height:.58rem;width:38%"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.35rem">
+              <div class="sk" style="height:1.2rem;width:54px"></div>
+              <div class="sk" style="height:.55rem;width:60px"></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:96px 38px 1fr auto;align-items:center;gap:1rem;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:var(--r);padding:.85rem 1.2rem;opacity:.75">
+            <div class="sk" style="height:.7rem;width:72px"></div>
+            <div class="sk" style="width:30px;height:42px;border-radius:3px;flex-shrink:0"></div>
+            <div style="display:flex;flex-direction:column;gap:.42rem">
+              <div class="sk" style="height:.6rem;width:28%"></div>
+              <div class="sk" style="height:.95rem;width:66%"></div>
+              <div class="sk" style="height:.58rem;width:44%"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.35rem">
+              <div class="sk" style="height:1.2rem;width:54px"></div>
+              <div class="sk" style="height:.55rem;width:60px"></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:96px 38px 1fr auto;align-items:center;gap:1rem;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:var(--r);padding:.85rem 1.2rem;opacity:.5">
+            <div class="sk" style="height:.7rem;width:72px"></div>
+            <div class="sk" style="width:30px;height:42px;border-radius:3px;flex-shrink:0"></div>
+            <div style="display:flex;flex-direction:column;gap:.42rem">
+              <div class="sk" style="height:.6rem;width:26%"></div>
+              <div class="sk" style="height:.95rem;width:50%"></div>
+              <div class="sk" style="height:.58rem;width:35%"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.35rem">
+              <div class="sk" style="height:1.2rem;width:54px"></div>
+              <div class="sk" style="height:.55rem;width:60px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 

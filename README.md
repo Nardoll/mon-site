@@ -1132,6 +1132,33 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Historique des modifications
 
+### 2026-06-10
+**Lis tes ratures — Favicon, correctifs accueil/stats, skeleton loading**
+
+`lis-tes-ratures/` :
+
+**Favicon :**
+- Ajout de `<link rel="icon" type="image/png" href="/lis-tes-ratures-ltr.png" />` dans le `<head>` des 8 pages HTML (`index.html`, `bibliotheque.html`, `votes.html`, `vote.html`, `membres.html`, `reunions.html`, `statistiques.html`, `commentaires.html`). Favicon `lis-tes-ratures-ltr.png` placé à la racine du repo.
+
+**3 correctifs Accueil & Statistiques :**
+- `js/statistiques.js` — `renderBilanProps()` : les filtres utilisaient les mauvais statuts Firestore (`"elimine"` / `"propose"` inexistants) → colonne "Éliminés" toujours à 0. Corrigé : `"refuse"` et `"en_proposition"`.
+- `js/accueil.js` — Bouton "Ajouter au suivi" : après `upsertStatutLecture()`, le membre créé (statut `pas_commence`) disparaissait du dropdown sans apparaître dans les barres. Deux causes corrigées :
+  1. `membresAvecSuivi` filtrait les membres avec `pas_commence` + page vide → ils n'apparaissaient pas dans les barres. Filtre simplifié : tout membre avec une entrée dans `statutByMembre` est inclus.
+  2. `untracked` (dropdown) était calculé depuis `membresAvecSuivi` au lieu de `!statutByMembre[m.id]` → les membres fraîchement ajoutés restaient visibles dans le select.
+  3. Après ajout, la modal d'édition s'ouvre immédiatement (`openMembreEdit(membreId)`) pour que l'utilisateur complète les infos.
+- `js/accueil.js` — État fantôme (membre ayant une entrée `pas_commence` mais invisible partout) : résolu par les corrections ci-dessus. Les membres `pas_commence` s'affichent maintenant avec le label "Pas commencé" dans les barres.
+
+**Skeleton loading — toutes les pages :**
+- `css/style.css` : ajout de `@keyframes sk-shimmer` et de la classe `.sk` (gradient shimmer animé 1.4s, couleurs `var(--border)` / `var(--surface2)`). Un seul fichier CSS, aucun JS modifié — les skeletons disparaissent automatiquement quand le JS remplace le `innerHTML`.
+- `index.html` : skeletons dans `#lm-mount` (carte livre + barres membres), `#frise-mount` (5 tuiles en opacité dégressive), `#podium` (3 livres façon podium), `#rank-list` (2 lignes de classement).
+- `bibliotheque.html` : skeletons dans `#prop-grid` (3 cartes proposition), `#elus-list` (2 lignes élu avec couverture + notes), `#elim-grid` (4 chips éliminé).
+- `votes.html` : skeletons dans `#live-mount` (carte `.live` 2 colonnes avec anneau droit), `#scrutins-mount` (3 lignes `.scrutin` en grille).
+- `vote.html` : skeleton dans `#ballot-root` (en-tête lettre + bannière + 3 lignes de table de vote avec dots).
+- `membres.html` : skeletons dans `#rack` (3 fiches `.fp` papier avec cachet, nom, datestamps, stats, rotations).
+- `reunions.html` : skeletons dans `#reg-rows` (3 lignes `.reg-row` ledger avec cachet date, titre, pips présence, sceau note).
+- `statistiques.html` : skeletons dans `#kpis-root` (4 KPI), `#hist10-bars` (histogramme 10 colonnes), `#hist5-bars` (histogramme 5 colonnes), `#participation-content` (3 barres horizontales avec labels).
+- `commentaires.html` : skeletons dans `#reading` (3 entrées `.com` avec anneau et carte accordéon).
+
 ### 2026-06-04 (suite 13)
 
 **JDR — Carte : zone pleine hauteur**

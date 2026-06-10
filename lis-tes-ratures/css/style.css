@@ -1498,4 +1498,22 @@ h1, h2, h3,
 .prop-grid.infos-on .bk:hover { z-index: 6; }
 .prop-grid.infos-on .bk:hover .bk-cover { transform: rotateY(-112deg); box-shadow: -20px 16px 30px -18px rgba(0,0,0,.45); }
 
+/* ════════════════ Skeleton loading ════════════════ */
+@keyframes sk-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.sk {
+  display: block;
+  background: linear-gradient(
+    90deg,
+    var(--border)   25%,
+    var(--surface2) 50%,
+    var(--border)   75%
+  );
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.4s ease-in-out infinite;
+  border-radius: 5px;
+}
+
 @media (prefers-reduced-motion: reduce) { .bk-cover { transition: none; } }
