@@ -476,12 +476,24 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 .covers-toggle.is-on .covers-switch { background: var(--accent); }
 .covers-toggle.is-on .covers-knob { transform: translateX(13px); background: var(--accent-text); }
 
-/* Couverture réelle superposée sur l'illustration générique */
+/* Couverture réelle superposée sur l'illustration générique.
+   Couverture entière (object-fit: contain) sur un fond flou de la même
+   image → remplit la boîte sans rogner le titre, sans bandes vides. */
 .real-cover {
+  position: absolute; inset: 0; border-radius: inherit;
+  overflow: hidden; z-index: 3;
+  opacity: 0; transition: opacity .35s ease;
+  background-size: cover; background-position: center;
+}
+.real-cover::before { /* extension floue du fond pour combler les bords */
+  content: ""; position: absolute; inset: -8%;
+  background-image: inherit; background-size: cover; background-position: center;
+  filter: blur(16px) brightness(.55) saturate(.9);
+  z-index: 0;
+}
+.real-cover-img {
   position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: cover; border-radius: inherit; display: block;
-  z-index: 3; opacity: 0; transition: opacity .35s ease;
-  background: var(--surface2);
+  object-fit: contain; z-index: 1; display: block;
 }
 .real-cover.loaded { opacity: 1; }
 

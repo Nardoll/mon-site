@@ -844,6 +844,7 @@ Jeu de déduction multijoueur (mots à faire deviner) avec parties partageables 
 | `genre` | string \| null | Genre littéraire (optionnel, fourni par IA) |
 | `description_3_mots` | string \| null | Description en 3 mots (optionnel, fourni par IA) |
 | `couverture_url` | string \| null | URL de la vraie couverture (Open Library / Google Books). `null` = jamais cherché · `""` = cherché sans résultat · URL = trouvée ou saisie manuellement. Voir [Couvertures réelles](#couvertures-réelles) |
+| `couv_v` | number \| null | Version de l'algo de recherche ayant produit le résultat. Bumper `SEARCH_V` dans `covers.js` relance la recherche sur les livres restés sans couverture (`couverture_url === ""` et `couv_v < SEARCH_V`) |
 
 > **Attention :** dans l'UI, `refuse` s'affiche toujours "Éliminé" (jamais "Refusé").  
 > `progression_unite` et `progression_total` sont configurables depuis l'accueil (livre du mois) **et** depuis la page commentaires (livres avec statut `elu`).  
@@ -1136,9 +1137,14 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 Toggle **« Vraies couvertures »** en bas de la sidebar (`nav.js`) — bascule entre les illustrations génériques (dégradés colorés) et les vraies couvertures des livres récupérées en ligne. Persisté en `localStorage` clé `ltr_covers` (OFF par défaut), valable pour toute la section.
 
 - **Module `js/covers.js`** : `coversOn()`, `setCovers()`, `resolveCover(livre)`, `hydrateCover(el, livre)`.
-- **Sources** (gratuites, sans clé, CORS ouvert) : **Open Library** d'abord (`openlibrary.org/search.json` → `covers.openlibrary.org/b/id/{cover_i}-L.jpg`), **Google Books** en repli (`googleapis.com/books/v1/volumes` → `imageLinks.thumbnail`).
-- **Aucune image stockée** : seule l'URL trouvée est mémorisée dans `livres.couverture_url` (cache Firestore) pour ne pas réinterroger les API et permettre une correction manuelle.
-- **Surfaces couvertes** : cartes propositions (`.bk-face`), cartes éliminés (`.elim-card`), livre du mois de l'accueil (`.lm-cover`), fiches détail (`.fiche-cover` — accueil + bibliothèque). La couverture réelle est superposée via un `<img class="real-cover">` (fondu au chargement) ; si aucune couverture n'est trouvée, l'illustration générique reste affichée. **La liste des élus reste en métaphore « tranches de livres »** (non couverte).
+- **Sources** (gratuites, sans clé, CORS ouvert) : recherche en **cascade de stratégies**, première qui aboutit retenue —
+  1. Open Library titre + auteur (`openlibrary.org/search.json`, 5 résultats, premier avec `cover_i` → `covers.openlibrary.org/b/id/{id}-L.jpg`)
+  2. Google Books ciblé (`intitle:… inauthor:…`)
+  3. Google Books requête souple (`titre auteur`) — capte les éditions traduites
+  4. Open Library titre seul
+  Google Books : `imageLinks.thumbnail`, `&zoom=2` pour un cran de résolution. Pas de traduction auto FR↔EN (pas d'API fiable gratuite).
+- **Aucune image stockée** : seule l'URL trouvée est mémorisée dans `livres.couverture_url` (cache Firestore) pour ne pas réinterroger les API et permettre une correction manuelle. `livres.couv_v` mémorise la version de l'algo : bumper `SEARCH_V` relance la recherche sur les livres restés sans couverture, sans retoucher les couvertures déjà trouvées ni les URL manuelles.
+- **Surfaces couvertes** : cartes propositions (`.bk-face`), cartes éliminés (`.elim-card`), livre du mois de l'accueil (`.lm-cover`), fiches détail (`.fiche-cover` — accueil + bibliothèque). La couverture est superposée via `<div class="real-cover">` (fond flou de l'image + `<img class="real-cover-img">` en `object-fit: contain` → couverture **entière**, jamais rognée, sans bandes vides ; fondu au chargement). Si aucune couverture n'est trouvée, l'illustration générique reste affichée. **La liste des élus reste en métaphore « tranches de livres »** (non couverte).
 - **Correction manuelle** : champ « URL de couverture (manuel) » dans le formulaire d'édition d'un livre (bibliothèque). Vide = recherche auto réactivée.
 - **Re-render** : chaque page écoute l'événement `ltr-covers-change` (dispatché par le toggle) pour rafraîchir ses couvertures sans rechargement.
 - **Note** : le matching titre+auteur n'est pas fiable à 100 % (édition rare, livre peu connu) → repli générique + correction manuelle possible.
@@ -1146,6 +1152,13 @@ Toggle **« Vraies couvertures »** en bas de la sidebar (`nav.js`) — bascule 
 ---
 
 ## Historique des modifications
+
+### 2026-06-11 (suite)
+**Lis tes ratures — Couvertures : meilleure recherche + cadrage entier**
+
+- `lis-tes-ratures/js/covers.js` — recherche en cascade (Open Library titre+auteur, Google Books ciblé, Google Books souple, Open Library titre seul ; 5 résultats au lieu d'1, `&zoom=2`) → bien plus de couvertures trouvées, dont éditions traduites. Ajout d'un numéro de version `SEARCH_V` (champ `couv_v`) pour relancer la recherche sur les livres restés sans couverture. `hydrateCover()` génère désormais un `<div class="real-cover">` (fond flou + image entière).
+- `lis-tes-ratures/css/style.css` — `.real-cover` : couverture en `object-fit: contain` sur un fond flou (`::before`) → plus de titres rognés ni de bandes vides.
+- Nouveau champ Firestore `livres.couv_v`.
 
 ### 2026-06-11
 **Lis tes ratures — Vraies couvertures de livres (toggle sidebar)**
