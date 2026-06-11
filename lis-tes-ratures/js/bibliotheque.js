@@ -5,7 +5,7 @@ import {
   getStatutsForLivre, updateLivreInfos, getReunions,
 } from "./db.js";
 import { formatDate, formatMois, showToast } from "./utils.js";
-import { hydrateCover, coversOn, isAutoUrl } from "./covers.js";
+import { hydrateCover, coversOn, isAutoUrl, invalidateCoverCache } from "./covers.js";
 
 await requireAuth();
 initNav("bibliotheque");
@@ -471,6 +471,7 @@ function showFicheEditForm(livre) {
         couverture_url: document.getElementById("el-cover").value.trim(),
         isbn13: document.getElementById("el-isbn").value.trim(),
       });
+      invalidateCoverCache(currentFicheId); // oublie l'ancienne couverture en mémoire
       showToast("Livre modifié !", "success");
       livres = await getLivres();
       renderVisual();

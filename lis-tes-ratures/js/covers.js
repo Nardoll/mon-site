@@ -132,6 +132,11 @@ async function searchCover(titre, auteur) {
 const AUTO_URL_RE = /covers\.openlibrary\.org|googleapis\.com|googleusercontent\.com|books\.google/i;
 export function isAutoUrl(u) { return !!u && AUTO_URL_RE.test(u); }
 
+// Oublie la couverture mise en cache en mémoire pour ce livre (à appeler après
+// une édition : sans ça, l'ancienne couverture resterait affichée jusqu'au
+// rechargement complet de la page).
+export function invalidateCoverCache(livreId) { sessionCache.delete(livreId); }
+
 // Renvoie l'URL de couverture d'un livre, ou null.
 // Priorité : (1) couverture MANUELLE (URL collée par l'utilisateur dans
 // `couverture_url`) → (2) couverture AUTO en cache (`couv_cache`, versionnée
