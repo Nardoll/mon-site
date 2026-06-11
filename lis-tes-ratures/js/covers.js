@@ -25,7 +25,7 @@ export function setCovers(on) {
 // Version de l'algo de recherche. Bumper ce nombre relance la recherche sur
 // les livres cherchés sans succès par une version antérieure (les couvertures
 // déjà trouvées et les URL manuelles ne sont jamais retouchées).
-const SEARCH_V = 4; // v4 : couvertures validées contre le titre/auteur (ISBN + recherche floue)
+const SEARCH_V = 5; // v5 : couverture auto séparée (couv_cache) de l'override manuel (couverture_url)
 
 // Cache de session (évite de re-chercher un même livre dans la même page
 // avant que le champ Firestore ne soit relu)
@@ -127,39 +127,39 @@ async function searchCover(titre, auteur) {
   return null;
 }
 
-// Renvoie l'URL de couverture d'un livre (cache Firestore + session) ou null.
-// Persiste le résultat (URL trouvée, ou "" + version si infructueux) pour
-// éviter de réinterroger les API aux visites suivantes.
+// Une URL est dite « auto » si elle provient d'une source de couvertures
+// (Open Library / Google Books) — par opposition à une URL collée à la main.
+const AUTO_URL_RE = /covers\.openlibrary\.org|googleapis\.com|googleusercontent\.com|books\.google/i;
+export function isAutoUrl(u) { return !!u && AUTO_URL_RE.test(u); }
+
+// Renvoie l'URL de couverture d'un livre, ou null.
+// Priorité : (1) couverture MANUELLE (URL collée par l'utilisateur dans
+// `couverture_url`) → (2) couverture AUTO en cache (`couv_cache`, versionnée
+// par `couv_v`) → (3) re-résolution (ISBN validé, puis recherche floue validée).
 export async function resolveCover(livre) {
   if (!livre?.id) return null;
 
-  // Couverture déjà trouvée ou saisie à la main → on la garde telle quelle
-  if (typeof livre.couverture_url === "string" && livre.couverture_url) {
-    return livre.couverture_url;
-  }
+  // 1) Override manuel : une couverture_url qui n'est PAS une URL auto
+  const cu = livre.couverture_url;
+  if (cu && !isAutoUrl(cu)) return cu;
+
+  // 2) Cache auto à jour (couv_cache ; ou ancienne couverture_url auto = legacy)
+  let cached;
+  if (livre.couv_cache !== undefined && livre.couv_cache !== null) cached = livre.couv_cache; // peut être "" (rien trouvé)
+  else cached = isAutoUrl(cu) ? cu : null;
+  if ((livre.couv_v || 0) >= SEARCH_V) return cached || null;
+
   if (sessionCache.has(livre.id)) return sessionCache.get(livre.id);
 
-  // 1) ISBN (fourni par l'IA), validé contre le titre/auteur → couverture fiable
-  if (livre.isbn13) {
-    const isbnUrl = await isbnCover(livre.isbn13, livre.titre, livre.auteur);
-    if (isbnUrl) {
-      sessionCache.set(livre.id, isbnUrl);
-      livre.couverture_url = isbnUrl;
-      livre.couv_v = SEARCH_V;
-      try { await updateLivre(livre.id, { couverture_url: isbnUrl, couv_v: SEARCH_V }); } catch { /* lecture seule possible */ }
-      return isbnUrl;
-    }
-  }
+  // 3) Re-résolution : ISBN validé d'abord, puis recherche floue validée
+  let url = null;
+  if (livre.isbn13) url = await isbnCover(livre.isbn13, livre.titre, livre.auteur);
+  if (!url) url = await searchCover(livre.titre, livre.auteur);
 
-  // Déjà cherché sans succès par l'algo actuel (et pas d'ISBN exploitable) → rien
-  if (typeof livre.couverture_url === "string" && (livre.couv_v || 0) >= SEARCH_V) return null;
-
-  // 2) Recherche floue par titre + auteur (repli)
-  const url = await searchCover(livre.titre, livre.auteur);
   sessionCache.set(livre.id, url);
-  livre.couverture_url = url || ""; // maj de l'objet en mémoire
+  livre.couv_cache = url || "";   // "" = cherché, rien trouvé
   livre.couv_v = SEARCH_V;
-  try { await updateLivre(livre.id, { couverture_url: url || "", couv_v: SEARCH_V }); } catch { /* lecture seule possible */ }
+  try { await updateLivre(livre.id, { couv_cache: url || "", couv_v: SEARCH_V }); } catch { /* lecture seule possible */ }
   return url;
 }
 

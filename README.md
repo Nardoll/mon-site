@@ -849,8 +849,9 @@ Jeu de déduction multijoueur (mots à faire deviner) avec parties partageables 
 | `nb_pages` | number \| null | Nombre de pages du livre (optionnel, fourni par IA, à vérifier quand le livre est élu) |
 | `genre` | string \| null | Genre littéraire (optionnel, fourni par IA) |
 | `description_3_mots` | string \| null | Description en 3 mots (optionnel, fourni par IA) |
-| `couverture_url` | string \| null | URL de la vraie couverture (Open Library / Google Books). `null` = jamais cherché · `""` = cherché sans résultat · URL = trouvée ou saisie manuellement. Voir [Couvertures réelles](#couvertures-réelles) |
-| `couv_v` | number \| null | Version de l'algo de recherche ayant produit le résultat. Bumper `SEARCH_V` dans `covers.js` relance la recherche sur les livres restés sans couverture (`couverture_url === ""` et `couv_v < SEARCH_V`) |
+| `couverture_url` | string \| null | **Override manuel** : URL de couverture collée à la main (prioritaire). Vide/null = couverture auto. (Legacy : d'anciennes valeurs auto Open Library/Google peuvent y subsister — détectées via `isAutoUrl()` et traitées comme cache.) |
+| `couv_cache` | string \| null | **Couverture auto** mise en cache (`""` = cherché sans résultat). Recalculée par `covers.js` (ISBN validé puis recherche floue validée). Séparée de `couverture_url` pour qu'un changement d'ISBN relance le calcul. |
+| `couv_v` | number \| null | Version de l'algo (`SEARCH_V`). `couv_v < SEARCH_V` → re-résolution. Mis à `null` à l'édition d'une fiche pour forcer le recalcul. |
 | `isbn13` | string \| null | ISBN-13 (13 chiffres) fourni par l'enrichissement IA. Sert à récupérer la couverture **exacte** (`covers.openlibrary.org/b/isbn/{isbn}-L.jpg`) avant la recherche floue. Voir [Enrichissement IA](#enrichissement-ia) |
 
 > **Attention :** dans l'UI, `refuse` s'affiche toujours "Éliminé" (jamais "Refusé").  
@@ -1185,6 +1186,14 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 ---
 
 ## Historique des modifications
+
+### 2026-06-11 (suite 8)
+**Couvertures — séparation auto / manuel (changer l'ISBN relance le calcul)**
+
+- Problème : `couverture_url` servait à la fois de cache auto ET d'override manuel → changer l'ISBN d'un livre ne changeait pas sa couverture (l'ancienne, stockée au même endroit, restait prioritaire).
+- `lis-tes-ratures/js/covers.js` (`SEARCH_V` → 5) — nouveau champ `couv_cache` (couverture auto, versionnée) distinct de `couverture_url` (override manuel uniquement). `isAutoUrl()` détecte les URL Open Library/Google (gère les anciennes valeurs auto en legacy). Le bump force le **recalcul de toutes les couvertures existantes** → répare les fausses au passage.
+- `lis-tes-ratures/js/db.js` — `updateLivreInfos()` met `couv_cache`/`couv_v` à `null` (recalcul si l'ISBN change).
+- `lis-tes-ratures/js/bibliotheque.js` — le champ « URL de couverture (manuel) » de l'édition ne se pré-remplit qu'avec une **vraie** URL manuelle (pas l'auto).
 
 ### 2026-06-11 (suite 7)
 **Bibliothèque — enrichissement uniquement à l'ajout (toujours par l'IA)**
