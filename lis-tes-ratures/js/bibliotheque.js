@@ -87,18 +87,8 @@ function notesFinalesMap() {
   return map;
 }
 
-// ── Toggle infos IA ───────────────────────────────────────────────
-const AI_KEY = "ltr_bib_ai";
-const aiToggle = document.getElementById("infos-toggle");
-if (localStorage.getItem(AI_KEY) === "1") {
-  aiToggle.checked = true;
-  document.getElementById("prop-grid").classList.add("infos-on");
-}
-aiToggle.addEventListener("change", () => {
-  const on = aiToggle.checked;
-  localStorage.setItem(AI_KEY, on ? "1" : "0");
-  document.getElementById("prop-grid").classList.toggle("infos-on", on);
-});
+// ── Ouverture des livres au survol : toujours active ──────────────
+document.getElementById("prop-grid").classList.add("infos-on");
 
 // ── Vue bib ↔ DB ──────────────────────────────────────────────────
 document.getElementById("open-db").addEventListener("click", e => { e.preventDefault(); showDbView(); });
@@ -134,8 +124,10 @@ function renderProps() {
       <div class="bk-page">
         <div class="bk-page-title">${esc(l.titre)}</div>
         <div class="bk-meta">
+          <div class="bk-meta-row"><span class="bk-meta-k">Auteur</span><span class="bk-meta-v">${esc(l.auteur || '—')}</span></div>
           <div class="bk-meta-row"><span class="bk-meta-k">Genre</span><span class="bk-meta-v">${esc(l.genre || '—')}</span></div>
           <div class="bk-meta-row"><span class="bk-meta-k">Pages</span><span class="bk-meta-v">${l.nb_pages ? l.nb_pages + ' p.' : '—'}</span></div>
+          <div class="bk-meta-row"><span class="bk-meta-k">Proposé par</span><span class="bk-meta-v">${esc(memNom(l.propose_par))}</span></div>
         </div>
         ${l.description_3_mots ? `<div class="bk-desc">« ${esc(l.description_3_mots)} »</div>` : ''}
         <div class="bk-ai">${ICON_AI} généré par IA · peut être inexact</div>

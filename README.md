@@ -1187,6 +1187,12 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 
 ## Historique des modifications
 
+### 2026-06-11 (suite 12)
+**Bibliothèque — ouverture des livres toujours active + auteur/proposant à l'intérieur**
+
+- `lis-tes-ratures/bibliotheque.html` — retrait de la barre toggle « Infos complémentaires » (`.ai-toggle-bar`).
+- `lis-tes-ratures/js/bibliotheque.js` — `#prop-grid` reçoit toujours la classe `infos-on` (ouverture au survol permanente, plus de localStorage `ltr_bib_ai`). Les cartes propositions affichent désormais **Auteur** et **Proposé par** à l'intérieur (`.bk-page`), visibles même quand la vraie couverture masque la façade.
+
 ### 2026-06-11 (suite 11)
 **Couvertures — fiche bilan des votes + médaille podium au premier plan**
 
