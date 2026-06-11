@@ -2,7 +2,7 @@ import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
 import {
   getLivres, getMembres, addLivre, getVotes,
-  getStatutsForLivre, updateLivreInfos, updateLivre, getReunions,
+  getStatutsForLivre, updateLivreInfos, getReunions,
 } from "./db.js";
 import { formatDate, formatMois, showToast } from "./utils.js";
 import { hydrateCover, coversOn } from "./covers.js";
@@ -595,7 +595,7 @@ function openProposeModal() {
 
 function closeProposeModal() {
   document.getElementById("propose-overlay").classList.add("hidden");
-  ["pf-titre","pf-auteur","pf-annee","pf-genre","pf-pages","pf-desc"].forEach(id => {
+  ["pf-titre","pf-auteur","pf-annee"].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
 }
@@ -661,21 +661,18 @@ document.getElementById("pf-submit").addEventListener("click", async () => {
   const oldLabel = btn.textContent;
   btn.disabled = true; btn.textContent = "Enrichissement…";
 
-  let genre = document.getElementById("pf-genre").value.trim();
-  let nb_pages = document.getElementById("pf-pages").value;
-  let description_3_mots = document.getElementById("pf-desc").value.trim();
   let annee = document.getElementById("pf-annee").value;
-  let isbn13 = null;
+  let genre = null, nb_pages = null, description_3_mots = null, isbn13 = null;
 
   try {
-    // L'IA complète les champs laissés vides + fournit l'ISBN (pour la couverture)
+    // Genre / pages / description / ISBN sont toujours fournis par l'IA
     const enr = await fetchEnrichment(titre, auteur);
     if (enr && plausibleMatch(titre, auteur, enr)) {
-      if (!genre && enr.genre) genre = enr.genre;
-      if (!nb_pages && enr.nb_pages) nb_pages = enr.nb_pages;
-      if (!description_3_mots && enr.description_3_mots) description_3_mots = enr.description_3_mots;
-      if (!annee && enr.annee) annee = enr.annee;
+      genre = enr.genre || null;
+      nb_pages = enr.nb_pages || null;
+      description_3_mots = enr.description_3_mots || null;
       isbn13 = enr.isbn13 || null;
+      if (!annee && enr.annee) annee = enr.annee;
     }
 
     await addLivre({
@@ -692,98 +689,6 @@ document.getElementById("pf-submit").addEventListener("click", async () => {
   } finally {
     btn.disabled = false; btn.textContent = oldLabel;
   }
-});
-
-// ── Enrichir la bibliothèque (panneau de contrôle) ────────────────
-// Champs proposés : clé d'option ↔ propriété Firestore ↔ champ renvoyé par l'IA
-const ENRICH_FIELDS = [
-  { opt: "enr-f-genre", prop: "genre",              from: "genre" },
-  { opt: "enr-f-pages", prop: "nb_pages",           from: "nb_pages",           num: true },
-  { opt: "enr-f-desc",  prop: "description_3_mots", from: "description_3_mots" },
-  { opt: "enr-f-isbn",  prop: "isbn13",             from: "isbn13" },
-];
-
-// Livres qui seraient traités selon la sélection courante
-function enrichTargets(fields, overwrite) {
-  return livres.filter(l => {
-    if (!l.titre) return false;
-    if (overwrite) return true;                       // écraser → tous
-    return fields.some(f => !l[f.prop]);              // champs vides → au moins un manquant
-  });
-}
-
-function refreshEnrichCount() {
-  const overwrite = document.querySelector('input[name="enr-scope"]:checked')?.value === "all";
-  const fields = ENRICH_FIELDS.filter(f => document.getElementById(f.opt).checked);
-  document.getElementById("enr-warn").style.display = overwrite ? "" : "none";
-  const n = fields.length ? enrichTargets(fields, overwrite).length : 0;
-  const countEl = document.getElementById("enr-count");
-  if (!fields.length) { countEl.textContent = "Sélectionnez au moins un champ."; return; }
-  countEl.textContent = n
-    ? `${n} livre${n > 1 ? "s" : ""} seront interrogés (1 appel IA chacun).`
-    : "Aucun livre à mettre à jour avec ces réglages.";
-}
-
-function openEnrichModal() {
-  document.getElementById("enrich-overlay").classList.remove("hidden");
-  refreshEnrichCount();
-}
-function closeEnrichModal() {
-  document.getElementById("enrich-overlay").classList.add("hidden");
-}
-
-document.getElementById("btn-enrich").addEventListener("click", openEnrichModal);
-document.getElementById("enr-close").addEventListener("click", closeEnrichModal);
-document.getElementById("enr-cancel").addEventListener("click", closeEnrichModal);
-document.getElementById("enrich-overlay").addEventListener("click", e => { if (e.target === e.currentTarget) closeEnrichModal(); });
-ENRICH_FIELDS.forEach(f => document.getElementById(f.opt).addEventListener("change", refreshEnrichCount));
-document.querySelectorAll('input[name="enr-scope"]').forEach(r => r.addEventListener("change", refreshEnrichCount));
-
-document.getElementById("enr-run").addEventListener("click", async () => {
-  const overwrite = document.querySelector('input[name="enr-scope"]:checked')?.value === "all";
-  const fields = ENRICH_FIELDS.filter(f => document.getElementById(f.opt).checked);
-  if (!fields.length) { showToast("Sélectionnez au moins un champ.", "error"); return; }
-
-  const targets = enrichTargets(fields, overwrite);
-  if (!targets.length) { showToast("Aucun livre à mettre à jour.", "success"); closeEnrichModal(); return; }
-
-  const wantsIsbn = fields.some(f => f.prop === "isbn13");
-  const runBtn = document.getElementById("enr-run");
-  const oldLabel = runBtn.textContent;
-  runBtn.disabled = true;
-  document.getElementById("enr-cancel").disabled = true;
-  let done = 0, updated = 0, ignored = 0;
-
-  for (const l of targets) {
-    runBtn.textContent = `Enrichissement ${++done}/${targets.length}…`;
-    const enr = await fetchEnrichment(l.titre, l.auteur);
-    if (!enr || !plausibleMatch(l.titre, l.auteur, enr)) { ignored++; continue; } // livre non identifié → on ne touche pas
-
-    const upd = {};
-    for (const f of fields) {
-      if (!overwrite && l[f.prop]) continue;          // mode "vides" : ne pas toucher l'existant
-      const val = enr[f.from];
-      if (val === null || val === undefined || val === "") continue; // l'IA n'a rien → on ne vide pas
-      upd[f.prop] = f.num ? Number(val) : val;
-    }
-    // En mode écrasement avec ISBN coché : on force la ré-évaluation de la couverture
-    if (overwrite && wantsIsbn) { upd.couverture_url = null; upd.couv_v = null; }
-
-    if (Object.keys(upd).length) {
-      try { await updateLivre(l.id, upd); updated++; } catch { /* on continue */ }
-    }
-  }
-
-  runBtn.textContent = oldLabel;
-  runBtn.disabled = false;
-  document.getElementById("enr-cancel").disabled = false;
-  closeEnrichModal();
-  showToast(
-    `Enrichissement terminé : ${updated}/${targets.length} mis à jour${ignored ? ` · ${ignored} non identifié${ignored > 1 ? "s" : ""} (ignorés)` : ""}.`,
-    "success"
-  );
-  livres = await getLivres();
-  renderVisual();
 });
 
 // ── Copier la liste des propositions ──────────────────────────────

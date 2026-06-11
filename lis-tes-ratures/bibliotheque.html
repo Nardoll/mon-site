@@ -139,12 +139,7 @@
     <div id="bib-view">
       <div class="page-header">
         <h1>Bibliothèque</h1>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-          <button class="btn btn-sm btn-ghost" id="btn-enrich" title="Récupère couvertures + infos manquantes pour les livres déjà en base (via IA)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2.5px;margin-right:.3rem"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/></svg>Enrichir la bibliothèque
-          </button>
-          <button class="btn btn-primary" id="open-propose">+ Proposer un livre</button>
-        </div>
+        <button class="btn btn-primary" id="open-propose">+ Proposer un livre</button>
       </div>
 
       <!-- Toggle infos IA -->
@@ -323,59 +318,16 @@
         <div class="form-group"><label>Année de parution</label><input type="number" id="pf-annee" placeholder="1844" /></div>
         <div class="form-group"><label>Proposé par</label><select id="pf-par"></select></div>
       </div>
-      <div class="form-section-label">Infos complémentaires · facultatif</div>
-      <div class="form-row">
-        <div class="form-group"><label>Genre</label><input type="text" id="pf-genre" placeholder="Roman d'aventure" /></div>
-        <div class="form-group"><label>Nombre de pages</label><input type="number" id="pf-pages" placeholder="1400" /></div>
-      </div>
-      <div class="form-group">
-        <label>Description en 3 mots</label>
-        <input type="text" id="pf-desc" placeholder="vengeance, évasion, trésor" />
-        <span class="prop-form-hint">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/></svg>
-          Laissez vide : l'IA pourra compléter genre, pages et description automatiquement.
-        </span>
-      </div>
+      <p class="prop-form-hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/></svg>
+        Le genre, le nombre de pages, la description et la couverture sont remplis automatiquement par l'IA. (Modifiables ensuite via la fiche.)
+      </p>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="pf-cancel">Annuler</button>
         <button class="btn btn-primary" id="pf-submit">Proposer le livre</button>
       </div>
     </div>
   </div>
-
-  <!-- Enrichir la bibliothèque (panneau de contrôle) -->
-  <div class="overlay hidden" id="enrich-overlay">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>Enrichir la bibliothèque</h2>
-        <button class="modal-close" id="enr-close" aria-label="Fermer">✕</button>
-      </div>
-      <p class="prop-form-intro">L'IA complète les infos des livres à partir de leur titre + auteur. Choisissez ce qu'il faut mettre à jour.</p>
-
-      <div class="form-section-label">Champs à mettre à jour</div>
-      <label class="enr-opt"><input type="checkbox" id="enr-f-genre" checked> Genre</label>
-      <label class="enr-opt"><input type="checkbox" id="enr-f-pages" checked> Nombre de pages</label>
-      <label class="enr-opt"><input type="checkbox" id="enr-f-desc" checked> Description en 3 mots</label>
-      <label class="enr-opt"><input type="checkbox" id="enr-f-isbn" checked> ISBN + couverture</label>
-
-      <div class="form-section-label">Portée</div>
-      <label class="enr-opt"><input type="radio" name="enr-scope" value="missing" checked> Seulement les champs vides</label>
-      <label class="enr-opt"><input type="radio" name="enr-scope" value="all"> Écraser même les valeurs déjà remplies</label>
-      <p class="prop-form-hint" id="enr-warn" style="display:none;margin-top:.5rem">⚠️ Mode « écraser » : remplace aussi les couvertures (y compris celles corrigées à la main).</p>
-
-      <p class="prop-form-hint" id="enr-count" style="margin-top:.6rem"></p>
-
-      <div class="modal-footer">
-        <button class="btn btn-secondary" id="enr-cancel">Annuler</button>
-        <button class="btn btn-primary" id="enr-run">Lancer l'enrichissement</button>
-      </div>
-    </div>
-  </div>
-
-  <style>
-    .enr-opt { display:flex; align-items:center; gap:.55rem; margin:.4rem 0; cursor:pointer; font-size:.92rem; }
-    .enr-opt input { width:auto; margin:0; flex-shrink:0; }
-  </style>
 
   <script type="module" src="js/bibliotheque.js"></script>
 </body>

@@ -1177,13 +1177,20 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 
 ### Côté client
 
-- **Ajout d'un livre** (`bibliotheque.js`, `fetchEnrichment()`) : à la soumission, appelle `/api/enrich`, remplit uniquement les champs laissés vides + stocke `isbn13`.
-- **Bouton « Enrichir la bibliothèque »** (`#btn-enrich`) → ouvre un **panneau de contrôle** (`#enrich-overlay`) : on choisit **quels champs** mettre à jour (genre, pages, description, ISBN+couverture) et la **portée** — « seulement les champs vides » (défaut, ne touche pas l'existant) ou « écraser même les valeurs déjà remplies ». Le compteur indique le nombre de livres concernés avant de lancer. En mode écrasement avec ISBN coché, `couverture_url`/`couv_v` sont réinitialisés pour forcer la ré-évaluation des couvertures. Rien ne se lance sans clic explicite sur « Lancer ».
-- **Champs manuels** dans le formulaire d'édition : `ISBN-13` et `URL de couverture` (pour corriger un cas raté).
+- **Ajout d'un livre** (`bibliotheque.js`, `fetchEnrichment()`) : le formulaire ne demande que **titre / auteur / année / proposé par**. Le **genre, le nombre de pages, la description en 3 mots et l'ISBN (→ couverture)** sont **toujours** remplis par l'IA à la soumission (validés par `plausibleMatch`). Pas de saisie manuelle de ces champs à la création.
+- **Correction manuelle** : tout reste modifiable ensuite via la fiche (bouton ✏️), y compris les champs `ISBN-13` et `URL de couverture`.
+
+> Le bouton « Enrichir la bibliothèque » (panneau de rattrapage des livres existants) a été retiré une fois la base nettoyée — l'enrichissement se fait désormais uniquement à l'ajout.
 
 ---
 
 ## Historique des modifications
+
+### 2026-06-11 (suite 7)
+**Bibliothèque — enrichissement uniquement à l'ajout (toujours par l'IA)**
+
+- `lis-tes-ratures/bibliotheque.html` — retrait du bouton « Enrichir la bibliothèque » et de son panneau ; retrait des champs IA (genre/pages/description) du formulaire de proposition (remplacés par une note « remplis automatiquement par l'IA »).
+- `lis-tes-ratures/js/bibliotheque.js` — suppression de tout le code du panneau de rattrapage ; le formulaire d'ajout remplit **toujours** genre/pages/description/ISBN via l'IA (plus de saisie manuelle à la création). Correction toujours possible via la fiche.
 
 ### 2026-06-11 (suite 6)
 **Couvertures — validation titre/auteur (anti-mauvaise-couverture)**
