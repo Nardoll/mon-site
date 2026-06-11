@@ -1185,6 +1185,13 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 
 ## Historique des modifications
 
+### 2026-06-11 (suite 6)
+**Couvertures — validation titre/auteur (anti-mauvaise-couverture)**
+
+- `lis-tes-ratures/js/covers.js` (`SEARCH_V` → 4) — une couverture n'est retenue **que si le livre derrière partage un mot du titre OU de l'auteur** (`candMatches`). S'applique à l'**ISBN** (validé via `openlibrary.org/api/books` avant usage — l'IA peut donner un ISBN d'un autre livre) **et** à la recherche floue (Open Library / Google Books vérifient `title`/`author` du résultat). Sinon → illustration générique.
+- Symptôme corrigé : « Harry Potter » affiché sur « La Vague », « La religieuse » sur « Le maître du haut château ».
+- ⚠️ Les couvertures **déjà** enregistrées (fausses) restent en base : pour les réévaluer, relancer l'enrichissement en mode « écraser » avec **ISBN + couverture** coché (réinitialise `couverture_url`/`couv_v` → recalcul validé).
+
 ### 2026-06-11 (suite 5)
 **Enrichissement — garde-fou anti-mauvais-livre + modèle Sonnet + cache HTML**
 
