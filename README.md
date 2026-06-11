@@ -1178,12 +1178,18 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 ### Côté client
 
 - **Ajout d'un livre** (`bibliotheque.js`, `fetchEnrichment()`) : à la soumission, appelle `/api/enrich`, remplit uniquement les champs laissés vides + stocke `isbn13`.
-- **Bouton « Enrichir la bibliothèque »** (`#btn-enrich`) : parcourt les livres en base auxquels il manque ISBN/genre/pages/description, les enrichit un par un (confirmation + progression), sans écraser les valeurs existantes ni les couvertures manuelles.
+- **Bouton « Enrichir la bibliothèque »** (`#btn-enrich`) → ouvre un **panneau de contrôle** (`#enrich-overlay`) : on choisit **quels champs** mettre à jour (genre, pages, description, ISBN+couverture) et la **portée** — « seulement les champs vides » (défaut, ne touche pas l'existant) ou « écraser même les valeurs déjà remplies ». Le compteur indique le nombre de livres concernés avant de lancer. En mode écrasement avec ISBN coché, `couverture_url`/`couv_v` sont réinitialisés pour forcer la ré-évaluation des couvertures. Rien ne se lance sans clic explicite sur « Lancer ».
 - **Champs manuels** dans le formulaire d'édition : `ISBN-13` et `URL de couverture` (pour corriger un cas raté).
 
 ---
 
 ## Historique des modifications
+
+### 2026-06-11 (suite 4)
+**Lis tes ratures — Enrichissement : panneau de contrôle (champs + portée)**
+
+- `lis-tes-ratures/bibliotheque.html` — modal `#enrich-overlay` : cases à cocher (genre / pages / description / ISBN+couverture) + radios de portée (champs vides · écraser).
+- `lis-tes-ratures/js/bibliotheque.js` — le bouton ouvre le panneau au lieu d'un `confirm`. Mise à jour sélective par champ, mode « écraser » optionnel, compteur de cibles en direct, réinitialisation des couvertures en mode écrasement+ISBN. Aucun lancement automatique.
 
 ### 2026-06-11 (suite 3)
 **Infra — passage de la convention Pages `functions/` à un vrai Worker**
