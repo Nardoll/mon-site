@@ -5,6 +5,7 @@ import {
 } from "./db.js";
 import { initNav } from "./nav.js";
 import { formatMois, formatDate, initiales } from "./utils.js";
+import { hydrateCover } from "./covers.js";
 
 await requireAuth();
 
@@ -288,6 +289,7 @@ function renderMeeting() {
     ${videoBlock}`;
 
   document.getElementById("mtg-close").addEventListener("click", closeMeeting);
+  hydrateCover(document.querySelector("#mtg-paper .mtg-cover"), livre);
   if (editMode) {
     wireEditMode();
   } else {
@@ -298,6 +300,9 @@ function renderMeeting() {
     });
   }
 }
+
+// Toggle « vraies couvertures » : re-render de la fiche réunion ouverte
+document.addEventListener("ltr-covers-change", () => { if (curReunion) renderMeeting(); });
 
 function buildReadBlock(r, notes, avg, presents) {
   const sorted = Object.entries(notes)

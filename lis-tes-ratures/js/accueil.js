@@ -505,7 +505,7 @@ function openFicheCurrent() {
 function closeFiche() { document.getElementById('fiche-overlay').classList.add('hidden'); }
 
 // Basculement du toggle « vraies couvertures » (sidebar) → re-render
-document.addEventListener('ltr-covers-change', () => { renderLivreMois().catch(console.error); });
+document.addEventListener('ltr-covers-change', () => { renderLivreMois().catch(console.error); renderPalmares(); });
 
 // ── Modal : édition suivi membre ──────────────────────────────────
 function openMembreEdit(membreId) {
@@ -947,9 +947,18 @@ function renderPalmares() {
       <div class="rank-note">${b.noteFinale.toFixed(1)}<span> / 10</span></div>
     </div>`).join('');
 
-  const nav = id => window.location.href = `bibliotheque.html?open=${id}`;
-  document.getElementById('podium').addEventListener('click', e => { const el = e.target.closest('[data-id]'); if (el) nav(el.dataset.id); });
-  document.getElementById('rank-list').addEventListener('click', e => { const el = e.target.closest('[data-id]'); if (el) nav(el.dataset.id); });
+  // Vraies couvertures sur le podium
+  document.querySelectorAll('#podium .pp[data-id]').forEach(el => {
+    hydrateCover(el.querySelector('.pp-cover'), allLivres.find(l => l.id === el.dataset.id));
+  });
+
+  // Clic → fiche livre (attaché une seule fois, résiste aux re-renders)
+  if (!renderPalmares._wired) {
+    renderPalmares._wired = true;
+    const nav = id => window.location.href = `bibliotheque.html?open=${id}`;
+    document.getElementById('podium').addEventListener('click', e => { const el = e.target.closest('[data-id]'); if (el) nav(el.dataset.id); });
+    document.getElementById('rank-list').addEventListener('click', e => { const el = e.target.closest('[data-id]'); if (el) nav(el.dataset.id); });
+  }
 }
 
 // ── Fiche overlay — click overlay / Escape ────────────────────────

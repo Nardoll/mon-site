@@ -181,8 +181,10 @@ function renderElusList() {
     const moy = r?.moyenne ?? null;
     const nf = nfMap[v.livre_elu] ?? null;
     const livre = livres.find(l => l.id === v.livre_elu);
+    const [eg1, eg2] = bookTint(v.livre_elu);
     return `<div class="bib-elu-item" data-id="${v.livre_elu}">
       <div class="bib-elu-month">${esc(formatMois(v.mois, v.annee))}</div>
+      ${coversOn() ? `<div class="bib-elu-cover" style="--g1:${eg1};--g2:${eg2}"></div>` : ''}
       <div class="bib-elu-info">
         <div class="bib-elu-title">${esc(r?.titre ?? livre?.titre ?? v.livre_elu)}</div>
         <div class="bib-elu-author">${esc(r?.auteur ?? livre?.auteur ?? '')}</div>
@@ -196,6 +198,10 @@ function renderElusList() {
       </div>
     </div>`;
   }).join('');
+
+  if (coversOn()) list.querySelectorAll(".bib-elu-item[data-id]").forEach(item => {
+    hydrateCover(item.querySelector(".bib-elu-cover"), livres.find(l => l.id === item.dataset.id));
+  });
 }
 
 // ── Rendu éliminés ────────────────────────────────────────────────

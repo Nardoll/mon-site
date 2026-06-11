@@ -137,6 +137,12 @@ export function isAutoUrl(u) { return !!u && AUTO_URL_RE.test(u); }
 // rechargement complet de la page).
 export function invalidateCoverCache(livreId) { sessionCache.delete(livreId); }
 
+// Retire toutes les vraies couvertures du DOM (à appeler quand on désactive le
+// toggle, pour revenir aux illustrations génériques sans tout re-render).
+export function removeAllCovers(root = document) {
+  root.querySelectorAll(".real-cover").forEach(el => el.remove());
+}
+
 // Renvoie l'URL de couverture d'un livre, ou null.
 // Priorité : (1) couverture MANUELLE (URL collée par l'utilisateur dans
 // `couverture_url`) → (2) couverture AUTO en cache (`couv_cache`, versionnée

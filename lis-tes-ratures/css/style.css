@@ -1402,6 +1402,15 @@ h1, h2, h3,
   padding: .3rem .55rem; font-size: .68rem; letter-spacing: .04em;
   text-transform: uppercase;
 }
+/* vignette de vraie couverture sur la tranche (visible si le toggle est ON) */
+.bib-elu-cover {
+  position: relative; z-index: 1; flex-shrink: 0;
+  width: 34px; height: 50px; border-radius: 2px 4px 4px 2px; overflow: hidden;
+  background: linear-gradient(158deg, var(--g1, #7a3b2e), var(--g2, #56281f));
+  box-shadow: 0 4px 10px -5px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.08);
+}
+.bib-elu-cover::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: rgba(0,0,0,.28); }
+
 .bib-elu-info { position: relative; z-index: 1; }
 .bib-elu-title { font-family: var(--serif); font-weight: 600; font-size: 1.04rem; color: #fdf6ea; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
 .bib-elu-author { color: rgba(253,246,234,.8) !important; font-style: italic; }

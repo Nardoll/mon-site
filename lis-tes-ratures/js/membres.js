@@ -5,6 +5,7 @@ import {
 } from "./db.js";
 import { initNav } from "./nav.js";
 import { formatMois, formatDate, initiales } from "./utils.js";
+import { hydrateCover, coversOn, removeAllCovers } from "./covers.js";
 
 await requireAuth();
 
@@ -195,7 +196,7 @@ async function openMember(membreId) {
           en_proposition: ["prop", "En proposition"],
         };
         const [cls, label] = tagMap[l.statut] || ["prop", "En proposition"];
-        return `<div class="rf-prop">
+        return `<div class="rf-prop" data-id="${esc(l.id)}">
           <span class="rf-prop-cover" style="--g1:${g1};--g2:${g2}"></span>
           <div class="rf-prop-main">
             <div class="rf-prop-title">${esc(l.titre)}</div>
@@ -320,7 +321,24 @@ async function openMember(membreId) {
   });
 
   wireVoteSearch(votesArr);
+
+  // Vraies couvertures sur les livres proposés
+  if (coversOn()) paper.querySelectorAll(".rf-prop[data-id]").forEach(row => {
+    hydrateCover(row.querySelector(".rf-prop-cover"), livreById[row.dataset.id]);
+  });
 }
+
+// Toggle « vraies couvertures » : ré-hydrate ou retire sur la fiche ouverte
+document.addEventListener("ltr-covers-change", e => {
+  const paper = document.getElementById("member-paper");
+  if (e.detail?.on) {
+    paper.querySelectorAll(".rf-prop[data-id]").forEach(row => {
+      hydrateCover(row.querySelector(".rf-prop-cover"), livreById[row.dataset.id]);
+    });
+  } else {
+    removeAllCovers(paper);
+  }
+});
 
 function toggleRow(h) {
   const body = h.nextElementSibling;

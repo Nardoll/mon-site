@@ -2,6 +2,7 @@ import { requireAuth } from "./auth.js";
 import { getVotes, getMembres, getLivres, getVoteActif } from "./db.js";
 import { initNav } from "./nav.js";
 import { formatMois } from "./utils.js";
+import { hydrateCover, coversOn } from "./covers.js";
 
 await requireAuth();
 initNav("votes");
@@ -213,8 +214,15 @@ function renderScrutins() {
       const v = votes.find(x => x.id === btn.dataset.id);
       if (v) openResult(v);
     });
+    if (coversOn()) {
+      const v = votes.find(x => x.id === btn.dataset.id);
+      hydrateCover(btn.querySelector(".scrutin-cover"), v && livreById[v.livre_elu]);
+    }
   });
 }
+
+// Vraies couvertures : re-render du registre au basculement du toggle
+document.addEventListener("ltr-covers-change", () => renderScrutins());
 
 // ── Fiche résultats ───────────────────────────────────────────────────────
 function openResult(vote) {

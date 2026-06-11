@@ -1152,7 +1152,7 @@ Toggle **« Vraies couvertures »** en bas de la sidebar (`nav.js`) — bascule 
   4. Open Library titre seul
   Google Books : `imageLinks.thumbnail`, `&zoom=2` pour un cran de résolution. Pas de traduction auto FR↔EN (pas d'API fiable gratuite).
 - **Aucune image stockée** : seule l'URL trouvée est mémorisée dans `livres.couverture_url` (cache Firestore) pour ne pas réinterroger les API et permettre une correction manuelle. `livres.couv_v` mémorise la version de l'algo : bumper `SEARCH_V` relance la recherche sur les livres restés sans couverture, sans retoucher les couvertures déjà trouvées ni les URL manuelles.
-- **Surfaces couvertes** : cartes propositions (`.bk-face`), cartes éliminés (`.elim-card`), livre du mois de l'accueil (`.lm-cover`), fiches détail (`.fiche-cover` — accueil + bibliothèque). La couverture est superposée via `<div class="real-cover">` (fond flou de l'image + `<img class="real-cover-img">` en `object-fit: contain` → couverture **entière**, jamais rognée, sans bandes vides ; fondu au chargement). Si aucune couverture n'est trouvée, l'illustration générique reste affichée. **La liste des élus reste en métaphore « tranches de livres »** (non couverte).
+- **Surfaces couvertes** : cartes propositions (`.bk-face`), cartes éliminés (`.elim-card`), livre du mois de l'accueil (`.lm-cover`), **podium accueil** (`.pp-cover`), **tranches des livres élus** (`.bib-elu-cover`, vignette ajoutée quand le toggle est ON), **registre des scrutins** page Votes (`.scrutin-cover`), **livres proposés** dans les fiches membres (`.rf-prop-cover`), **fiches réunions** (`.mtg-cover`), et fiches détail (`.fiche-cover` — accueil + bibliothèque). Chaque page écoute `ltr-covers-change` pour ré-hydrater / retirer les couvertures (`removeAllCovers`). La couverture est superposée via `<div class="real-cover">` (fond flou de l'image + `<img class="real-cover-img">` en `object-fit: contain` → couverture **entière**, jamais rognée, sans bandes vides ; fondu au chargement). Si aucune couverture n'est trouvée, l'illustration générique reste affichée. **La liste des élus reste en métaphore « tranches de livres »** (non couverte).
 - **Correction manuelle** : champ « URL de couverture (manuel) » dans le formulaire d'édition d'un livre (bibliothèque). Vide = recherche auto réactivée.
 - **Re-render** : chaque page écoute l'événement `ltr-covers-change` (dispatché par le toggle) pour rafraîchir ses couvertures sans rechargement.
 - **Note** : le matching titre+auteur n'est pas fiable à 100 % (édition rare, livre peu connu) → repli générique + correction manuelle possible.
@@ -1186,6 +1186,16 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 ---
 
 ## Historique des modifications
+
+### 2026-06-11 (suite 10)
+**Vraies couvertures étendues à 5 nouvelles surfaces**
+
+- `lis-tes-ratures/js/covers.js` — `removeAllCovers()` (retire les couvertures du DOM au décochage).
+- `accueil.js` — couvertures sur le **podium** (`.pp-cover`) ; listeners du podium attachés une seule fois ; re-render au toggle.
+- `bibliotheque.js` + `css/style.css` — vignette `.bib-elu-cover` sur la **tranche des livres élus** (uniquement si toggle ON).
+- `votes.js` — couvertures dans le **registre des scrutins** (`.scrutin-cover`) + re-render au toggle.
+- `membres.js` — couvertures des **livres proposés** dans les fiches membres (`.rf-prop-cover`) + ré-hydratation/retrait au toggle.
+- `reunions.js` — couverture de la **fiche réunion** (`.mtg-cover`) + re-render au toggle.
 
 ### 2026-06-11 (suite 9)
 **Couvertures — vider le cache mémoire à l'édition**
