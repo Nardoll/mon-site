@@ -59,7 +59,7 @@ Mon Site/
 ├── wrangler.toml                Config du Worker (nom, assets, compatibilité) — déployé via `npx wrangler deploy`
 ├── .assetsignore                Fichiers exclus du service public (worker.js, api/, wrangler.toml…)
 ├── api/
-│   └── enrich.js                Logique /api/enrich — enrichissement IA d'un livre (Claude Haiku, clé en secret serveur)
+│   └── enrich.js                Logique /api/enrich — enrichissement IA d'un livre (Claude Sonnet, clé en secret serveur)
 │
 ├── lis-tes-ratures/             ★ Club de lecture — VERSION EN PRODUCTION (DA café-bibliothèque)
 │   ├── index.html               Page Accueil
@@ -1169,10 +1169,10 @@ Au moment d'ajouter un livre (et via le bouton **« Enrichir la bibliothèque »
 Le site est statique : **impossible de mettre la clé API Claude dans le JS du navigateur** (elle serait publique). La clé vit côté serveur dans le Worker.
 
 - **`worker.js`** (racine) — point d'entrée. Route `/api/enrich` vers `handleEnrich()`, délègue tout le reste aux fichiers statiques via `env.ASSETS.fetch()`.
-- **`api/enrich.js`** — `handleEnrich(request, env)` : appelle l'API Claude (`claude-haiku-4-5`) en sortie structurée (`output_config.format` json_schema) et renvoie `{ trouve, titre_exact, auteur_exact, annee, genre, nb_pages, description_3_mots, isbn13 }`.
+- **`api/enrich.js`** — `handleEnrich(request, env)` : appelle l'API Claude (`claude-sonnet-4-6` — fiable sur l'identification ; Haiku confondait des livres) en sortie structurée (`output_config.format` json_schema) et renvoie `{ trouve, titre_exact, auteur_exact, annee, genre, nb_pages, description_3_mots, isbn13 }`.
 - **`wrangler.toml`** — config du Worker : `name = "nardoll"`, `main = "worker.js"`, binding `[assets] directory = "./"`. **`.assetsignore`** exclut `worker.js`/`api/`/`wrangler.toml` du service public.
 - **Secret Cloudflare `ANTHROPIC_API_KEY`** : à définir dans le dashboard (Worker → Settings → Variables et secrets, en « Encrypt »). La section se débloque une fois que le Worker n'est plus « statique seul » (c.-à-d. après déploiement de `worker.js`). Si le secret manque, `/api/enrich` renvoie une erreur 503 propre sans casser le site.
-- **Coût** : Haiku 4.5 ≈ 1 $/M tokens entrée, 5 $/M sortie → ~0,001–0,005 $ par livre. Un plafond de dépense est réglable côté console Anthropic.
+- **Coût** : Sonnet 4.6 ≈ 3 $/M tokens entrée, 15 $/M sortie → ~0,003–0,008 $ par livre. Un plafond de dépense est réglable côté console Anthropic.
 - **Garde-fous** : consigne stricte « n'invente jamais un ISBN » ; l'ISBN est de toute façon validé côté client par chargement réel de l'image (`covers.js` → `imageOk`) avant d'être retenu — sinon repli sur la recherche floue puis l'illustration générique. Genre/pages/description restent marqués « fournis par IA ».
 
 ### Côté client
@@ -1184,6 +1184,13 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 ---
 
 ## Historique des modifications
+
+### 2026-06-11 (suite 5)
+**Enrichissement — garde-fou anti-mauvais-livre + modèle Sonnet + cache HTML**
+
+- `api/enrich.js` — passage de **Haiku → Sonnet 4.6** : Haiku confondait des livres (« 1984 » identifié comme « Fondation »), ce qui, en mode « écraser », remplaçait des données manuelles par les mauvaises.
+- `lis-tes-ratures/js/bibliotheque.js` — `plausibleMatch()` : on n'écrit les infos IA que si le livre identifié partage un mot du **titre OU de l'auteur**. Appliqué à l'ajout et au panneau ; les livres non identifiés sont comptés et ignorés (« N non identifiés »).
+- `worker.js` — force `Cache-Control: no-cache` sur les pages HTML (corrige « la nouvelle fonctionnalité n'apparaît pas » dû au cache navigateur en mode Worker).
 
 ### 2026-06-11 (suite 4)
 **Lis tes ratures — Enrichissement : panneau de contrôle (champs + portée)**

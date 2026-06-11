@@ -16,6 +16,16 @@ export default {
     }
 
     // Tout le reste : fichiers statiques (index.html, /lis-tes-ratures/…, etc.)
-    return env.ASSETS.fetch(request);
+    const res = await env.ASSETS.fetch(request);
+
+    // Les pages HTML ne doivent jamais être servies depuis un cache navigateur
+    // périmé (sinon une nouvelle fonctionnalité « n'apparaît pas »).
+    const isHtml = url.pathname.endsWith("/") || url.pathname.endsWith(".html");
+    if (isHtml) {
+      const fresh = new Response(res.body, res);
+      fresh.headers.set("Cache-Control", "no-cache");
+      return fresh;
+    }
+    return res;
   },
 };

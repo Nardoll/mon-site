@@ -621,7 +621,7 @@ document.getElementById("pf-cancel").addEventListener("click", closeProposeModal
 document.getElementById("propose-overlay").addEventListener("click", e => { if (e.target === e.currentTarget) closeProposeModal(); });
 
 // Enrichissement IA via la Cloudflare Function (/api/enrich). Renvoie un objet
-// { genre, nb_pages, description_3_mots, annee, isbn13, ... } ou null.
+// { trouve, titre_exact, auteur_exact, genre, nb_pages, description_3_mots, annee, isbn13 } ou null.
 async function fetchEnrichment(titre, auteur) {
   try {
     const r = await fetch(`/api/enrich?titre=${encodeURIComponent(titre)}&auteur=${encodeURIComponent(auteur || "")}`);
@@ -629,6 +629,25 @@ async function fetchEnrichment(titre, auteur) {
     if (!r.ok || !d || d.error) return null;
     return d;
   } catch { return null; }
+}
+
+// Garde-fou : on n'écrit les infos QUE si le livre identifié par l'IA correspond
+// vraiment (un mot du titre OU de l'auteur en commun). Évite d'écraser « 1984 »
+// avec les infos de « Fondation » si l'IA se trompe de livre.
+function normWords(s) {
+  return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(Boolean);
+}
+function plausibleMatch(titre, auteur, enr) {
+  if (!enr || !enr.trouve) return false;
+  const exTitle = normWords(enr.titre_exact);
+  const exAuthor = normWords(enr.auteur_exact);
+  if (!exTitle.length && !exAuthor.length) return false;
+  const inTitle = normWords(titre).filter(w => w.length >= 3 || /^[0-9]+$/.test(w));
+  const inAuthor = normWords(auteur).filter(w => w.length >= 3);
+  const titleOk = inTitle.some(w => exTitle.includes(w));
+  const authorOk = inAuthor.some(w => exAuthor.includes(w));
+  return titleOk || authorOk;
 }
 
 document.getElementById("pf-submit").addEventListener("click", async () => {
@@ -651,7 +670,7 @@ document.getElementById("pf-submit").addEventListener("click", async () => {
   try {
     // L'IA complète les champs laissés vides + fournit l'ISBN (pour la couverture)
     const enr = await fetchEnrichment(titre, auteur);
-    if (enr) {
+    if (enr && plausibleMatch(titre, auteur, enr)) {
       if (!genre && enr.genre) genre = enr.genre;
       if (!nb_pages && enr.nb_pages) nb_pages = enr.nb_pages;
       if (!description_3_mots && enr.description_3_mots) description_3_mots = enr.description_3_mots;
@@ -733,12 +752,12 @@ document.getElementById("enr-run").addEventListener("click", async () => {
   const oldLabel = runBtn.textContent;
   runBtn.disabled = true;
   document.getElementById("enr-cancel").disabled = true;
-  let done = 0, updated = 0;
+  let done = 0, updated = 0, ignored = 0;
 
   for (const l of targets) {
     runBtn.textContent = `Enrichissement ${++done}/${targets.length}…`;
     const enr = await fetchEnrichment(l.titre, l.auteur);
-    if (!enr) continue;
+    if (!enr || !plausibleMatch(l.titre, l.auteur, enr)) { ignored++; continue; } // livre non identifié → on ne touche pas
 
     const upd = {};
     for (const f of fields) {
@@ -759,7 +778,10 @@ document.getElementById("enr-run").addEventListener("click", async () => {
   runBtn.disabled = false;
   document.getElementById("enr-cancel").disabled = false;
   closeEnrichModal();
-  showToast(`Enrichissement terminé : ${updated}/${targets.length} mis à jour.`, "success");
+  showToast(
+    `Enrichissement terminé : ${updated}/${targets.length} mis à jour${ignored ? ` · ${ignored} non identifié${ignored > 1 ? "s" : ""} (ignorés)` : ""}.`,
+    "success"
+  );
   livres = await getLivres();
   renderVisual();
 });

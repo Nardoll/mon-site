@@ -9,7 +9,7 @@
 //  Elle n'est jamais exposée au navigateur.
 // ─────────────────────────────────────────────────────────────────────
 
-const MODEL = "claude-haiku-4-5"; // simple + bon marché pour de l'extraction de métadonnées
+const MODEL = "claude-sonnet-4-6"; // identification fiable des livres (Haiku se trompait trop)
 
 const SCHEMA = {
   type: "object",
