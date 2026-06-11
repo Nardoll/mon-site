@@ -5,7 +5,7 @@ import {
   getStatutsForLivre, updateLivreInfos, getReunions,
 } from "./db.js";
 import { formatDate, formatMois, showToast } from "./utils.js";
-import { hydrateCover, coversOn, isAutoUrl, invalidateCoverCache } from "./covers.js";
+import { hydrateCover, coversOn, invalidateCoverCache } from "./covers.js";
 
 await requireAuth();
 initNav("bibliotheque");
@@ -444,7 +444,7 @@ function showFicheEditForm(livre) {
     <div style="margin-bottom:.85rem"><label style="${labelStyle}">Description en 3 mots</label><input type="text" id="el-desc" value="${esc(livre.description_3_mots || '')}" placeholder="ex : amour, guerre, trahison" style="${inputStyle}"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1.2rem">
       <div><label style="${labelStyle}">ISBN-13</label><input type="text" id="el-isbn" value="${esc(livre.isbn13 || '')}" placeholder="ex : 9782070413119" style="${inputStyle}"></div>
-      <div><label style="${labelStyle}">URL de couverture (manuel)</label><input type="text" id="el-cover" value="${esc(isAutoUrl(livre.couverture_url) ? '' : (livre.couverture_url || ''))}" placeholder="vide = auto (ISBN puis recherche)" style="${inputStyle}"></div>
+      <div><label style="${labelStyle}">URL de couverture (manuel)</label><input type="text" id="el-cover" value="${esc(livre.couv_manuelle ? (livre.couverture_url || '') : '')}" placeholder="vide = auto (ISBN puis recherche)" style="${inputStyle}"></div>
     </div>
     <div style="border-top:1px solid rgba(120,90,50,.2);padding-top:1rem;display:flex;justify-content:flex-end;gap:.7rem">
       <button id="el-cancel" style="background:transparent;border:1px solid rgba(120,90,50,.32);border-radius:8px;padding:.45rem 1rem;font-size:.82rem;color:#6a513a;cursor:pointer;font-family:inherit">Annuler</button>

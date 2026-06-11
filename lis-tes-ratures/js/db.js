@@ -75,8 +75,9 @@ export async function updateLivreInfos(id, { titre, auteur, annee, propose_par, 
     nb_pages: nb_pages ? Number(nb_pages) : null,
     genre: genre || null,
     description_3_mots: description_3_mots || null,
-    // URL non vide = couverture manuelle ; vide = null → couverture auto
+    // URL non vide = couverture manuelle (marquée explicitement) ; vide = auto
     couverture_url: couverture_url ? couverture_url : null,
+    couv_manuelle: !!couverture_url,
     isbn13: isbn13 ? String(isbn13).replace(/[^0-9]/g, "") || null : null,
     // Invalide le cache de couverture auto → recalcul (utile si l'ISBN change)
     couv_cache: null,

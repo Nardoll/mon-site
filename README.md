@@ -852,7 +852,8 @@ Jeu de déduction multijoueur (mots à faire deviner) avec parties partageables 
 | `nb_pages` | number \| null | Nombre de pages du livre (optionnel, fourni par IA, à vérifier quand le livre est élu) |
 | `genre` | string \| null | Genre littéraire (optionnel, fourni par IA) |
 | `description_3_mots` | string \| null | Description en 3 mots (optionnel, fourni par IA) |
-| `couverture_url` | string \| null | **Override manuel** : URL de couverture collée à la main (prioritaire). Vide/null = couverture auto. (Legacy : d'anciennes valeurs auto Open Library/Google peuvent y subsister — détectées via `isAutoUrl()` et traitées comme cache.) |
+| `couverture_url` | string \| null | **Override manuel** : URL de couverture collée à la main. Prioritaire **si `couv_manuelle === true`** (quelle que soit la source, y compris Open Library/Google). Vide/null = couverture auto. |
+| `couv_manuelle` | boolean \| null | `true` si `couverture_url` est une vraie saisie manuelle (posé par le formulaire d'édition). Distingue un override manuel d'une ancienne valeur auto legacy. |
 | `couv_cache` | string \| null | **Couverture auto** mise en cache (`""` = cherché sans résultat). Recalculée par `covers.js` (ISBN validé puis recherche floue validée). Séparée de `couverture_url` pour qu'un changement d'ISBN relance le calcul. |
 | `couv_v` | number \| null | Version de l'algo (`SEARCH_V`). `couv_v < SEARCH_V` → re-résolution. Mis à `null` à l'édition d'une fiche pour forcer le recalcul. |
 | `isbn13` | string \| null | ISBN-13 (13 chiffres) fourni par l'enrichissement IA. Sert à récupérer la couverture **exacte** (`covers.openlibrary.org/b/isbn/{isbn}-L.jpg`) avant la recherche floue. Voir [Enrichissement IA](#enrichissement-ia) |
@@ -1189,6 +1190,14 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 ---
 
 ## Historique des modifications
+
+### 2026-06-11 (suite 13)
+**Couvertures — override manuel fiable (n'importe quelle URL d'image)**
+
+- Problème : une URL Open Library/Google collée dans « URL de couverture (manuel) » était prise pour de l'auto (`isAutoUrl`) et pouvait être écrasée.
+- `lis-tes-ratures/js/db.js` — `updateLivreInfos()` pose `couv_manuelle: true` quand une URL est saisie.
+- `lis-tes-ratures/js/covers.js` — l'override manuel est respecté dès que `couv_manuelle` est vrai (n'importe quelle source). `isAutoUrl` ne sert plus qu'au fallback legacy.
+- `lis-tes-ratures/js/bibliotheque.js` — pré-remplissage du champ basé sur `couv_manuelle`. → On peut coller n'importe quelle URL d'image (Babelio, OL `b/id/…`, etc.) et elle reste.
 
 ### 2026-06-11 (suite 12)
 **Bibliothèque — ouverture des livres toujours active + auteur/proposant à l'intérieur**

@@ -150,9 +150,10 @@ export function removeAllCovers(root = document) {
 export async function resolveCover(livre) {
   if (!livre?.id) return null;
 
-  // 1) Override manuel : une couverture_url qui n'est PAS une URL auto
+  // 1) Override manuel explicite (couv_manuelle) → on respecte l'URL, quelle
+  //    que soit sa source (y compris Open Library / Google)
   const cu = livre.couverture_url;
-  if (cu && !isAutoUrl(cu)) return cu;
+  if (cu && livre.couv_manuelle) return cu;
 
   // 2) Cache auto à jour (couv_cache ; ou ancienne couverture_url auto = legacy)
   let cached;
