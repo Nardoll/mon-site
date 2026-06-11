@@ -1187,6 +1187,12 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 
 ## Historique des modifications
 
+### 2026-06-11 (suite 11)
+**Couvertures — fiche bilan des votes + médaille podium au premier plan**
+
+- `lis-tes-ratures/js/votes.js` — couverture en haut de la **fiche bilan d'un scrutin** (`.wcover`) + ré-hydratation/retrait au toggle (suivi via `curResultVote`).
+- `lis-tes-ratures/index.html` — `.pp-rank` (numéro/médaille du podium) passe en `z-index:5` pour rester **au-dessus** de la vraie couverture.
+
 ### 2026-06-11 (suite 10)
 **Vraies couvertures étendues à 5 nouvelles surfaces**
 

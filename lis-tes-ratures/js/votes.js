@@ -2,7 +2,7 @@ import { requireAuth } from "./auth.js";
 import { getVotes, getMembres, getLivres, getVoteActif } from "./db.js";
 import { initNav } from "./nav.js";
 import { formatMois } from "./utils.js";
-import { hydrateCover, coversOn } from "./covers.js";
+import { hydrateCover, coversOn, removeAllCovers } from "./covers.js";
 
 await requireAuth();
 initNav("votes");
@@ -221,8 +221,15 @@ function renderScrutins() {
   });
 }
 
-// Vraies couvertures : re-render du registre au basculement du toggle
-document.addEventListener("ltr-covers-change", () => renderScrutins());
+// Vraies couvertures : re-render du registre + ré-hydratation de la fiche bilan ouverte
+let curResultVote = null;
+document.addEventListener("ltr-covers-change", e => {
+  renderScrutins();
+  const wcover = document.querySelector("#result-paper .wcover");
+  if (!wcover) return;
+  if (e.detail?.on && curResultVote) hydrateCover(wcover, livreById[curResultVote.livre_elu]);
+  else removeAllCovers(document.getElementById("result-paper"));
+});
 
 // ── Fiche résultats ───────────────────────────────────────────────────────
 function openResult(vote) {
@@ -287,6 +294,9 @@ function openResult(vote) {
   document.getElementById("result-paper").scrollTop = 0;
   document.getElementById("result-close").addEventListener("click", closeResult);
   if (hasNotes) wireDetail(resultats, vote, votants);
+
+  curResultVote = vote;
+  hydrateCover(document.querySelector("#result-paper .wcover"), eluL);
 }
 
 function buildDepChart(resultats, vote) {
@@ -462,6 +472,7 @@ function wireDetail(resultats, vote, votants) {
 
 // ── Overlay ────────────────────────────────────────────────────────────────
 function closeResult() {
+  curResultVote = null;
   document.getElementById("result-overlay").classList.add("hidden");
 }
 
