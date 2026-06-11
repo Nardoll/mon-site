@@ -6,6 +6,7 @@ import {
   updateLivre, addProgressionPoint, getProgressionForLivre,
 } from "./db.js";
 import { formatMois, MOIS_NOMS, showToast } from "./utils.js";
+import { hydrateCover } from "./covers.js";
 
 await requireAuth();
 initNav("accueil");
@@ -371,6 +372,7 @@ async function renderLivreMois() {
     </div>`;
 
   // Wiring livre du mois
+  hydrateCover(document.getElementById('lm-cover'), currentLivre);
   document.getElementById('lm-cover').addEventListener('click', openFicheCurrent);
   document.getElementById('lm-cfg').addEventListener('click', openCfgModal);
   document.getElementById('lm-voir-comments').addEventListener('click', () => {
@@ -496,10 +498,14 @@ function openFicheCurrent() {
 
   const ov = document.getElementById('fiche-overlay');
   ov.classList.remove('hidden');
+  hydrateCover(ov.querySelector('.fiche-cover'), currentLivre);
   document.getElementById('fiche-close').addEventListener('click', closeFiche);
 }
 
 function closeFiche() { document.getElementById('fiche-overlay').classList.add('hidden'); }
+
+// Basculement du toggle « vraies couvertures » (sidebar) → re-render
+document.addEventListener('ltr-covers-change', () => { renderLivreMois().catch(console.error); });
 
 // ── Modal : édition suivi membre ──────────────────────────────────
 function openMembreEdit(membreId) {

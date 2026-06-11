@@ -5,6 +5,7 @@ import {
   getStatutsForLivre, updateLivreInfos, getReunions,
 } from "./db.js";
 import { formatDate, formatMois, showToast } from "./utils.js";
+import { hydrateCover, coversOn } from "./covers.js";
 
 await requireAuth();
 initNav("bibliotheque");
@@ -149,6 +150,10 @@ function renderProps() {
       </div>
     </div>`;
   }).join('');
+
+  if (coversOn()) grid.querySelectorAll(".bk[data-id]").forEach(bk => {
+    hydrateCover(bk.querySelector(".bk-face"), livres.find(l => l.id === bk.dataset.id));
+  });
 }
 
 // ── Rendu élus ────────────────────────────────────────────────────
@@ -216,6 +221,10 @@ function renderElim() {
       </div>
     </div>`;
   }).join('');
+
+  if (coversOn()) grid.querySelectorAll(".elim-card[data-id]").forEach(card => {
+    hydrateCover(card, livres.find(l => l.id === card.dataset.id));
+  });
 }
 
 function renderVisual() {
@@ -223,6 +232,14 @@ function renderVisual() {
   renderElusList();
   renderElim();
 }
+
+// Basculement du toggle « vraies couvertures » (sidebar) → re-render
+document.addEventListener("ltr-covers-change", () => {
+  renderVisual();
+  if (currentFicheId && !document.getElementById("fiche-overlay").classList.contains("hidden")) {
+    openFiche(currentFicheId);
+  }
+});
 
 // ── Sort toggle élus ──────────────────────────────────────────────
 function updateTriBtns() {
@@ -376,6 +393,7 @@ async function openFiche(id) {
 
   document.getElementById("fiche-close-btn").addEventListener("click", closeFiche);
   document.getElementById("fiche-modif").addEventListener("click", () => showFicheEditForm(livre));
+  hydrateCover(fiche.querySelector(".fiche-cover"), livre);
 
   fiche.querySelectorAll(".fiche-ia summary").forEach(s => {
     s.addEventListener("click", () => {
@@ -425,7 +443,8 @@ function showFicheEditForm(livre) {
       <div><label style="${labelStyle}">Genre</label><input type="text" id="el-genre" value="${esc(livre.genre || '')}" placeholder="ex : Roman" style="${inputStyle}"></div>
       <div><label style="${labelStyle}">Pages</label><input type="number" id="el-pages" value="${livre.nb_pages || ''}" placeholder="ex : 320" style="${inputStyle}"></div>
     </div>
-    <div style="margin-bottom:1.2rem"><label style="${labelStyle}">Description en 3 mots</label><input type="text" id="el-desc" value="${esc(livre.description_3_mots || '')}" placeholder="ex : amour, guerre, trahison" style="${inputStyle}"></div>
+    <div style="margin-bottom:.85rem"><label style="${labelStyle}">Description en 3 mots</label><input type="text" id="el-desc" value="${esc(livre.description_3_mots || '')}" placeholder="ex : amour, guerre, trahison" style="${inputStyle}"></div>
+    <div style="margin-bottom:1.2rem"><label style="${labelStyle}">URL de couverture (manuel)</label><input type="text" id="el-cover" value="${esc(livre.couverture_url || '')}" placeholder="laisser vide = recherche auto en ligne" style="${inputStyle}"></div>
     <div style="border-top:1px solid rgba(120,90,50,.2);padding-top:1rem;display:flex;justify-content:flex-end;gap:.7rem">
       <button id="el-cancel" style="background:transparent;border:1px solid rgba(120,90,50,.32);border-radius:8px;padding:.45rem 1rem;font-size:.82rem;color:#6a513a;cursor:pointer;font-family:inherit">Annuler</button>
       <button id="el-save" style="background:#b5572d;border:none;border-radius:8px;padding:.45rem 1.1rem;font-size:.82rem;color:#fff;cursor:pointer;font-family:inherit;font-weight:600">Enregistrer</button>
@@ -446,6 +465,7 @@ function showFicheEditForm(livre) {
         nb_pages: document.getElementById("el-pages").value,
         genre: document.getElementById("el-genre").value.trim(),
         description_3_mots: document.getElementById("el-desc").value.trim(),
+        couverture_url: document.getElementById("el-cover").value.trim(),
       });
       showToast("Livre modifié !", "success");
       livres = await getLivres();

@@ -64,7 +64,7 @@ export async function updateLivre(id, data) {
   return updateDoc(doc(db, "livres", id), data);
 }
 
-export async function updateLivreInfos(id, { titre, auteur, annee, propose_par, date_proposition, nb_pages, genre, description_3_mots }) {
+export async function updateLivreInfos(id, { titre, auteur, annee, propose_par, date_proposition, nb_pages, genre, description_3_mots, couverture_url }) {
   return updateDoc(doc(db, "livres", id), {
     titre,
     auteur: auteur || "",
@@ -74,6 +74,8 @@ export async function updateLivreInfos(id, { titre, auteur, annee, propose_par, 
     nb_pages: nb_pages ? Number(nb_pages) : null,
     genre: genre || null,
     description_3_mots: description_3_mots || null,
+    // URL non vide = couverture manuelle ; vide = null → recherche auto réactivée
+    couverture_url: couverture_url ? couverture_url : null,
   });
 }
 
