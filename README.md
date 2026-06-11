@@ -34,7 +34,7 @@ Site **personnel et privé** de Tom. Multi-sections indépendantes. La page d'ac
 | Langages | HTML / CSS / JS vanilla uniquement |
 | Framework | Aucun — pas de React, Vue, bundler, ni npm |
 | Base de données | Firebase Firestore v10.12.2 via CDN (ES modules natifs) |
-| Hébergement | Cloudflare Pages — déploiement automatique à chaque push sur `main` |
+| Hébergement | Cloudflare **Worker** (Worker + fichiers statiques) — `npx wrangler deploy`, auto à chaque push sur `main`. Domaine `nardoll.monsiteinternet.workers.dev`. Voir [Enrichissement IA](#enrichissement-ia) |
 | Repo GitHub | `https://github.com/Nardoll/mon-site` (branche `main`) |
 
 **Contrainte importante :** ES modules natifs dans le navigateur. Ça fonctionne en HTTPS (Cloudflare Pages) ou via l'extension Live Server de VS Code. Pas de `file://`.
@@ -55,9 +55,11 @@ Mon Site/
 ├── netlify.toml                 Config héritage (Cloudflare Pages utilisé à la place)
 ├── README.md                    Ce fichier
 │
-├── functions/                   ★ Cloudflare Pages Functions (serverless)
-│   └── api/
-│       └── enrich.js            Endpoint /api/enrich — enrichissement IA d'un livre (Claude Haiku, clé en secret serveur)
+├── worker.js                    ★ Point d'entrée Cloudflare Worker (route /api/* → code, reste → fichiers statiques)
+├── wrangler.toml                Config du Worker (nom, assets, compatibilité) — déployé via `npx wrangler deploy`
+├── .assetsignore                Fichiers exclus du service public (worker.js, api/, wrangler.toml…)
+├── api/
+│   └── enrich.js                Logique /api/enrich — enrichissement IA d'un livre (Claude Haiku, clé en secret serveur)
 │
 ├── lis-tes-ratures/             ★ Club de lecture — VERSION EN PRODUCTION (DA café-bibliothèque)
 │   ├── index.html               Page Accueil
@@ -1160,12 +1162,16 @@ Toggle **« Vraies couvertures »** en bas de la sidebar (`nav.js`) — bascule 
 
 Au moment d'ajouter un livre (et via le bouton **« Enrichir la bibliothèque »** pour le rattrapage des livres existants), une IA complète automatiquement les infos manquantes (genre, nombre de pages, description en 3 mots) **et** fournit l'**ISBN-13**, qui sert à récupérer la vraie couverture de façon exacte.
 
-### Architecture — Cloudflare Pages Function
+### Architecture — Cloudflare Worker
 
-Le site est statique : **impossible de mettre la clé API Claude dans le JS du navigateur** (elle serait publique). La clé vit côté serveur dans une **Cloudflare Pages Function**.
+> ⚠️ **Le site est déployé comme un Cloudflare *Worker* (Worker + fichiers statiques), pas comme un projet *Pages*.** Domaine `nardoll.monsiteinternet.workers.dev`, déploiement via `npx wrangler deploy` (connecté au repo GitHub). La convention Pages `functions/` n'est donc **pas** détectée — il faut un vrai point d'entrée Worker.
 
-- **`functions/api/enrich.js`** — endpoint `/api/enrich?titre=…&auteur=…`. Détecté automatiquement par Cloudflare Pages (dossier `functions/`, aucune config ni build). Appelle l'API Claude (`claude-haiku-4-5`) en sortie structurée (`output_config.format` json_schema) et renvoie `{ trouve, titre_exact, auteur_exact, annee, genre, nb_pages, description_3_mots, isbn13 }`.
-- **Secret Cloudflare `ANTHROPIC_API_KEY`** : à définir dans le dashboard (Pages → projet → Settings → Variables et secrets, en « Encrypt »). ⚠️ Cloudflare ne permet d'ajouter des secrets **qu'une fois qu'une Function existe** dans le projet (sinon « variables ne peuvent pas être ajoutées à un Worker statique »). Ordre : pousser la Function d'abord, puis ajouter le secret. Si le secret manque, la Function renvoie une erreur 503 propre sans casser le site.
+Le site est statique : **impossible de mettre la clé API Claude dans le JS du navigateur** (elle serait publique). La clé vit côté serveur dans le Worker.
+
+- **`worker.js`** (racine) — point d'entrée. Route `/api/enrich` vers `handleEnrich()`, délègue tout le reste aux fichiers statiques via `env.ASSETS.fetch()`.
+- **`api/enrich.js`** — `handleEnrich(request, env)` : appelle l'API Claude (`claude-haiku-4-5`) en sortie structurée (`output_config.format` json_schema) et renvoie `{ trouve, titre_exact, auteur_exact, annee, genre, nb_pages, description_3_mots, isbn13 }`.
+- **`wrangler.toml`** — config du Worker : `name = "nardoll"`, `main = "worker.js"`, binding `[assets] directory = "./"`. **`.assetsignore`** exclut `worker.js`/`api/`/`wrangler.toml` du service public.
+- **Secret Cloudflare `ANTHROPIC_API_KEY`** : à définir dans le dashboard (Worker → Settings → Variables et secrets, en « Encrypt »). La section se débloque une fois que le Worker n'est plus « statique seul » (c.-à-d. après déploiement de `worker.js`). Si le secret manque, `/api/enrich` renvoie une erreur 503 propre sans casser le site.
 - **Coût** : Haiku 4.5 ≈ 1 $/M tokens entrée, 5 $/M sortie → ~0,001–0,005 $ par livre. Un plafond de dépense est réglable côté console Anthropic.
 - **Garde-fous** : consigne stricte « n'invente jamais un ISBN » ; l'ISBN est de toute façon validé côté client par chargement réel de l'image (`covers.js` → `imageOk`) avant d'être retenu — sinon repli sur la recherche floue puis l'illustration générique. Genre/pages/description restent marqués « fournis par IA ».
 
@@ -1178,6 +1184,16 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 ---
 
 ## Historique des modifications
+
+### 2026-06-11 (suite 3)
+**Infra — passage de la convention Pages `functions/` à un vrai Worker**
+
+- Constat : le site est un **Cloudflare Worker** (`npx wrangler deploy`, domaine `*.workers.dev`), pas un projet Pages → `functions/api/enrich.js` n'était jamais servi (404).
+- `worker.js` (nouveau) — point d'entrée Worker : route `/api/enrich`, délègue le reste à `env.ASSETS`.
+- `api/enrich.js` (déplacé depuis `functions/`) — exporte `handleEnrich(request, env)`.
+- `wrangler.toml` (nouveau) — `name = "nardoll"`, `main = "worker.js"`, `[assets] directory = "./"`, `nodejs_compat`.
+- `.assetsignore` (nouveau) — exclut le code Worker du service public.
+- `functions/` supprimé.
 
 ### 2026-06-11 (suite 2)
 **Lis tes ratures — Enrichissement IA (couvertures exactes par ISBN + infos auto)**

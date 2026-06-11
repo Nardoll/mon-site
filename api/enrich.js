@@ -1,15 +1,12 @@
 // ─────────────────────────────────────────────────────────────────────
-//  Cloudflare Pages Function — /api/enrich
+//  api/enrich.js — Logique d'enrichissement IA d'un livre
 //
-//  Enrichit un livre à partir de son titre + auteur via Claude (Haiku) :
-//  renvoie genre, nombre de pages, description en 3 mots, et surtout l'ISBN
-//  d'une édition courante — l'ISBN permet ensuite de récupérer la VRAIE
-//  couverture de façon exacte (covers.openlibrary.org/b/isbn/...).
+//  Appelée par worker.js sur la route /api/enrich?titre=…&auteur=…
+//  Renvoie genre, nombre de pages, description en 3 mots, et l'ISBN-13
+//  (qui sert à récupérer la VRAIE couverture de façon exacte).
 //
-//  La clé API vit côté serveur, dans le secret Cloudflare ANTHROPIC_API_KEY.
+//  La clé API vit côté serveur dans le secret Cloudflare ANTHROPIC_API_KEY.
 //  Elle n'est jamais exposée au navigateur.
-//
-//  Appel : GET /api/enrich?titre=La%20Vague&auteur=Todd%20Strasser
 // ─────────────────────────────────────────────────────────────────────
 
 const MODEL = "claude-haiku-4-5"; // simple + bon marché pour de l'extraction de métadonnées
@@ -40,8 +37,7 @@ Règles :
 - "isbn13" : l'ISBN-13 (13 chiffres, sans tirets) d'une édition existante, de préférence l'édition française la plus répandue. N'INVENTE JAMAIS un ISBN : si tu n'es pas certain qu'il existe réellement, mets null. Un ISBN faux est pire qu'un ISBN absent.
 - Renvoie uniquement les données structurées, rien d'autre.`;
 
-export async function onRequest(context) {
-  const { request, env } = context;
+export async function handleEnrich(request, env) {
   const url = new URL(request.url);
   const titre = (url.searchParams.get("titre") || "").trim();
   const auteur = (url.searchParams.get("auteur") || "").trim();

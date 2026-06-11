@@ -1,0 +1,9 @@
+# Fichiers à NE PAS servir publiquement comme assets statiques
+worker.js
+api/
+wrangler.toml
+.assetsignore
+README.md
+netlify.toml
+.git
+node_modules

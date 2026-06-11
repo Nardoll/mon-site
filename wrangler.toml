@@ -1,0 +1,13 @@
+# Config Cloudflare Worker — site Mon Site (Worker + fichiers statiques)
+# Le nom doit correspondre au Worker existant (domaine nardoll.monsiteinternet.workers.dev).
+name = "nardoll"
+main = "worker.js"
+compatibility_date = "2026-06-11"
+compatibility_flags = ["nodejs_compat"]
+
+# Fichiers statiques du site servis via le binding ASSETS.
+# Le Worker ne s'exécute que pour les requêtes ne correspondant à aucun fichier
+# (ex : /api/enrich). Les fichiers exclus du public sont listés dans .assetsignore.
+[assets]
+directory = "./"
+binding = "ASSETS"
