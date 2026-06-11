@@ -213,7 +213,10 @@ Toutes les pages principales gèrent un paramètre URL `?open=ID` pour auto-ouvr
 #### Bibliothèque (`bibliotheque.html` + `bibliotheque.js`)
 - **Vue visuelle** (défaut) + **Vue DB** (tableau filtrable/triable)
 - Statuts : `en_proposition` / `elu` / `refuse` (affiché "Éliminé")
-- **Fiche livre** : historique votes, section avancements membres (statut `termine` OU note présente dans `reunions.notes_finales`), section réunion associée, lien commentaires. Unité d'avancement adaptée au `progression_unite` du livre (p./ch./par.).
+- **Cartes propositions** : ouverture au survol **toujours active** (plus de toggle). La façade montre le titre/couverture ; l'intérieur (page crème) montre Auteur · Genre · Pages · Proposé par · description IA.
+- **Ajout d'un livre** : titre + auteur uniquement requis ; genre / pages / description / ISBN (→ couverture) **remplis automatiquement par l'IA**. Voir [Enrichissement IA](#enrichissement-ia).
+- **Vraies couvertures** : toggle global dans la sidebar (genériques ↔ vraies couvertures par ISBN). Voir [Couvertures réelles](#couvertures-réelles).
+- **Fiche livre** : historique votes, section avancements membres (statut `termine` OU note présente dans `reunions.notes_finales`), section réunion associée, lien commentaires. Bouton ✏️ : édition (dont `ISBN-13` et `URL de couverture` manuels). Unité d'avancement adaptée au `progression_unite` du livre (p./ch./par.).
 - **Bouton "Copier la liste"** : format Discord prêt à coller
 - `?open=LIVRE_ID` : auto-ouverture de la fiche
 
