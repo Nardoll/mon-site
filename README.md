@@ -1187,6 +1187,12 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 
 ## Historique des modifications
 
+### 2026-06-11 (suite 9)
+**Couvertures — vider le cache mémoire à l'édition**
+
+- `lis-tes-ratures/js/covers.js` — `invalidateCoverCache(livreId)` (supprime l'entrée du `sessionCache` en mémoire).
+- `lis-tes-ratures/js/bibliotheque.js` — appelé après l'enregistrement d'une fiche. Sans ça, changer l'ISBN d'un livre **qui avait déjà une couverture** ne la mettait pas à jour (l'ancienne restait en mémoire jusqu'au rechargement complet de la page).
+
 ### 2026-06-11 (suite 8)
 **Couvertures — séparation auto / manuel (changer l'ISBN relance le calcul)**
 
