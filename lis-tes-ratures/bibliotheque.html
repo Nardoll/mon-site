@@ -139,7 +139,12 @@
     <div id="bib-view">
       <div class="page-header">
         <h1>Bibliothèque</h1>
-        <button class="btn btn-primary" id="open-propose">+ Proposer un livre</button>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <button class="btn btn-sm btn-ghost" id="btn-enrich" title="Récupère couvertures + infos manquantes pour les livres déjà en base (via IA)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2.5px;margin-right:.3rem"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/></svg>Enrichir la bibliothèque
+          </button>
+          <button class="btn btn-primary" id="open-propose">+ Proposer un livre</button>
+        </div>
       </div>
 
       <!-- Toggle infos IA -->

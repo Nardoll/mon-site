@@ -2,7 +2,7 @@ import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
 import {
   getLivres, getMembres, addLivre, getVotes,
-  getStatutsForLivre, updateLivreInfos, getReunions,
+  getStatutsForLivre, updateLivreInfos, updateLivre, getReunions,
 } from "./db.js";
 import { formatDate, formatMois, showToast } from "./utils.js";
 import { hydrateCover, coversOn } from "./covers.js";
@@ -444,7 +444,10 @@ function showFicheEditForm(livre) {
       <div><label style="${labelStyle}">Pages</label><input type="number" id="el-pages" value="${livre.nb_pages || ''}" placeholder="ex : 320" style="${inputStyle}"></div>
     </div>
     <div style="margin-bottom:.85rem"><label style="${labelStyle}">Description en 3 mots</label><input type="text" id="el-desc" value="${esc(livre.description_3_mots || '')}" placeholder="ex : amour, guerre, trahison" style="${inputStyle}"></div>
-    <div style="margin-bottom:1.2rem"><label style="${labelStyle}">URL de couverture (manuel)</label><input type="text" id="el-cover" value="${esc(livre.couverture_url || '')}" placeholder="laisser vide = recherche auto en ligne" style="${inputStyle}"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1.2rem">
+      <div><label style="${labelStyle}">ISBN-13</label><input type="text" id="el-isbn" value="${esc(livre.isbn13 || '')}" placeholder="ex : 9782070413119" style="${inputStyle}"></div>
+      <div><label style="${labelStyle}">URL de couverture (manuel)</label><input type="text" id="el-cover" value="${esc(livre.couverture_url || '')}" placeholder="vide = auto (ISBN puis recherche)" style="${inputStyle}"></div>
+    </div>
     <div style="border-top:1px solid rgba(120,90,50,.2);padding-top:1rem;display:flex;justify-content:flex-end;gap:.7rem">
       <button id="el-cancel" style="background:transparent;border:1px solid rgba(120,90,50,.32);border-radius:8px;padding:.45rem 1rem;font-size:.82rem;color:#6a513a;cursor:pointer;font-family:inherit">Annuler</button>
       <button id="el-save" style="background:#b5572d;border:none;border-radius:8px;padding:.45rem 1.1rem;font-size:.82rem;color:#fff;cursor:pointer;font-family:inherit;font-weight:600">Enregistrer</button>
@@ -466,6 +469,7 @@ function showFicheEditForm(livre) {
         genre: document.getElementById("el-genre").value.trim(),
         description_3_mots: document.getElementById("el-desc").value.trim(),
         couverture_url: document.getElementById("el-cover").value.trim(),
+        isbn13: document.getElementById("el-isbn").value.trim(),
       });
       showToast("Livre modifié !", "success");
       livres = await getLivres();
@@ -616,27 +620,92 @@ document.getElementById("pf-close").addEventListener("click", closeProposeModal)
 document.getElementById("pf-cancel").addEventListener("click", closeProposeModal);
 document.getElementById("propose-overlay").addEventListener("click", e => { if (e.target === e.currentTarget) closeProposeModal(); });
 
+// Enrichissement IA via la Cloudflare Function (/api/enrich). Renvoie un objet
+// { genre, nb_pages, description_3_mots, annee, isbn13, ... } ou null.
+async function fetchEnrichment(titre, auteur) {
+  try {
+    const r = await fetch(`/api/enrich?titre=${encodeURIComponent(titre)}&auteur=${encodeURIComponent(auteur || "")}`);
+    const d = await r.json().catch(() => null);
+    if (!r.ok || !d || d.error) return null;
+    return d;
+  } catch { return null; }
+}
+
 document.getElementById("pf-submit").addEventListener("click", async () => {
   const titre = document.getElementById("pf-titre").value.trim();
   if (!titre) { showToast("Le titre est obligatoire.", "error"); return; }
   const propose_par = document.getElementById("pf-par").value;
   if (!propose_par) { showToast("Choisissez un membre.", "error"); return; }
+  const auteur = document.getElementById("pf-auteur").value.trim();
+
+  const btn = document.getElementById("pf-submit");
+  const oldLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = "Enrichissement…";
+
+  let genre = document.getElementById("pf-genre").value.trim();
+  let nb_pages = document.getElementById("pf-pages").value;
+  let description_3_mots = document.getElementById("pf-desc").value.trim();
+  let annee = document.getElementById("pf-annee").value;
+  let isbn13 = null;
+
   try {
+    // L'IA complète les champs laissés vides + fournit l'ISBN (pour la couverture)
+    const enr = await fetchEnrichment(titre, auteur);
+    if (enr) {
+      if (!genre && enr.genre) genre = enr.genre;
+      if (!nb_pages && enr.nb_pages) nb_pages = enr.nb_pages;
+      if (!description_3_mots && enr.description_3_mots) description_3_mots = enr.description_3_mots;
+      if (!annee && enr.annee) annee = enr.annee;
+      isbn13 = enr.isbn13 || null;
+    }
+
     await addLivre({
-      titre,
-      auteur: document.getElementById("pf-auteur").value.trim(),
-      annee: document.getElementById("pf-annee").value,
-      propose_par,
+      titre, auteur, annee, propose_par,
       date_proposition: new Date().toISOString().split("T")[0],
-      genre: document.getElementById("pf-genre").value.trim(),
-      nb_pages: document.getElementById("pf-pages").value,
-      description_3_mots: document.getElementById("pf-desc").value.trim(),
+      genre, nb_pages, description_3_mots, isbn13,
     });
     showToast("Livre proposé !", "success");
     closeProposeModal();
     livres = await getLivres();
     renderVisual();
-  } catch (e) { showToast("Erreur : " + e.message, "error"); }
+  } catch (e) {
+    showToast("Erreur : " + e.message, "error");
+  } finally {
+    btn.disabled = false; btn.textContent = oldLabel;
+  }
+});
+
+// ── Enrichir la bibliothèque (rattrapage IA des livres existants) ──
+document.getElementById("btn-enrich").addEventListener("click", async () => {
+  const needs = livres.filter(l => !l.isbn13 || !l.genre || !l.nb_pages || !l.description_3_mots);
+  if (!needs.length) { showToast("Tout est déjà renseigné !", "success"); return; }
+  if (!confirm(`Enrichir ${needs.length} livre(s) via l'IA ?\n(récupère couvertures + genre/pages/description manquants)`)) return;
+
+  const btn = document.getElementById("btn-enrich");
+  const oldLabel = btn.textContent;
+  btn.disabled = true;
+  let done = 0, updated = 0;
+
+  for (const l of needs) {
+    btn.textContent = `Enrichissement ${++done}/${needs.length}…`;
+    const enr = await fetchEnrichment(l.titre, l.auteur);
+    if (!enr) continue;
+    const upd = {};
+    if (!l.genre && enr.genre) upd.genre = enr.genre;
+    if (!l.nb_pages && enr.nb_pages) upd.nb_pages = Number(enr.nb_pages);
+    if (!l.description_3_mots && enr.description_3_mots) upd.description_3_mots = enr.description_3_mots;
+    if (!l.annee && enr.annee) upd.annee = Number(enr.annee);
+    if (!l.isbn13 && enr.isbn13) upd.isbn13 = enr.isbn13;
+    if (Object.keys(upd).length) {
+      try { await updateLivre(l.id, upd); updated++; } catch { /* on continue */ }
+    }
+  }
+
+  btn.textContent = oldLabel;
+  btn.disabled = false;
+  showToast(`Enrichissement terminé : ${updated}/${needs.length} mis à jour.`, "success");
+  livres = await getLivres();
+  renderVisual();
 });
 
 // ── Copier la liste des propositions ──────────────────────────────

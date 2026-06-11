@@ -43,7 +43,7 @@ export async function getLivreById(id) {
   return d.exists() ? { id: d.id, ...d.data() } : null;
 }
 
-export async function addLivre({ titre, auteur, annee, propose_par, date_proposition, statut = "en_proposition", nb_pages, genre, description_3_mots }) {
+export async function addLivre({ titre, auteur, annee, propose_par, date_proposition, statut = "en_proposition", nb_pages, genre, description_3_mots, isbn13 }) {
   return addDoc(collection(db, "livres"), {
     titre,
     auteur: auteur || "",
@@ -56,6 +56,7 @@ export async function addLivre({ titre, auteur, annee, propose_par, date_proposi
     nb_pages: nb_pages ? Number(nb_pages) : null,
     genre: genre || null,
     description_3_mots: description_3_mots || null,
+    isbn13: isbn13 || null,
     cree_le: serverTimestamp()
   });
 }
@@ -64,7 +65,7 @@ export async function updateLivre(id, data) {
   return updateDoc(doc(db, "livres", id), data);
 }
 
-export async function updateLivreInfos(id, { titre, auteur, annee, propose_par, date_proposition, nb_pages, genre, description_3_mots, couverture_url }) {
+export async function updateLivreInfos(id, { titre, auteur, annee, propose_par, date_proposition, nb_pages, genre, description_3_mots, couverture_url, isbn13 }) {
   return updateDoc(doc(db, "livres", id), {
     titre,
     auteur: auteur || "",
@@ -76,6 +77,7 @@ export async function updateLivreInfos(id, { titre, auteur, annee, propose_par, 
     description_3_mots: description_3_mots || null,
     // URL non vide = couverture manuelle ; vide = null → recherche auto réactivée
     couverture_url: couverture_url ? couverture_url : null,
+    isbn13: isbn13 ? String(isbn13).replace(/[^0-9]/g, "") || null : null,
   });
 }
 

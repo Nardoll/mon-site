@@ -25,7 +25,7 @@ export function setCovers(on) {
 // Version de l'algo de recherche. Bumper ce nombre relance la recherche sur
 // les livres cherchés sans succès par une version antérieure (les couvertures
 // déjà trouvées et les URL manuelles ne sont jamais retouchées).
-const SEARCH_V = 2;
+const SEARCH_V = 3; // v3 : tentative par ISBN exact avant la recherche floue
 
 // Cache de session (évite de re-chercher un même livre dans la même page
 // avant que le champ Firestore ne soit relu)
@@ -40,6 +40,16 @@ async function openLibrary(titre, auteur) {
   const data = await res.json();
   const doc = (data.docs || []).find(d => d.cover_i);
   return doc ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null;
+}
+
+// Vérifie qu'une URL pointe vers une vraie image (pas un placeholder 1×1 ni un 404)
+function imageOk(url) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve(img.naturalWidth > 1 && img.naturalHeight > 1);
+    img.onerror = () => resolve(false);
+    img.src = url;
+  });
 }
 
 async function googleBooks(q) {
@@ -84,13 +94,28 @@ async function searchCover(titre, auteur) {
 export async function resolveCover(livre) {
   if (!livre?.id) return null;
 
-  if (typeof livre.couverture_url === "string") {
-    if (livre.couverture_url) return livre.couverture_url;       // trouvé / saisi à la main → on garde
-    if ((livre.couv_v || 0) >= SEARCH_V) return null;            // déjà cherché par l'algo actuel, rien trouvé
-    // sinon : recherche infructueuse d'une version antérieure → on retente
+  // Couverture déjà trouvée ou saisie à la main → on la garde telle quelle
+  if (typeof livre.couverture_url === "string" && livre.couverture_url) {
+    return livre.couverture_url;
   }
   if (sessionCache.has(livre.id)) return sessionCache.get(livre.id);
 
+  // 1) ISBN exact (fourni par l'enrichissement IA) → couverture fiable
+  if (livre.isbn13) {
+    const isbnUrl = `https://covers.openlibrary.org/b/isbn/${livre.isbn13}-L.jpg?default=false`;
+    if (await imageOk(isbnUrl)) {
+      sessionCache.set(livre.id, isbnUrl);
+      livre.couverture_url = isbnUrl;
+      livre.couv_v = SEARCH_V;
+      try { await updateLivre(livre.id, { couverture_url: isbnUrl, couv_v: SEARCH_V }); } catch { /* lecture seule possible */ }
+      return isbnUrl;
+    }
+  }
+
+  // Déjà cherché sans succès par l'algo actuel (et pas d'ISBN exploitable) → rien
+  if (typeof livre.couverture_url === "string" && (livre.couv_v || 0) >= SEARCH_V) return null;
+
+  // 2) Recherche floue par titre + auteur (repli)
   const url = await searchCover(livre.titre, livre.auteur);
   sessionCache.set(livre.id, url);
   livre.couverture_url = url || ""; // maj de l'objet en mémoire

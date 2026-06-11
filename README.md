@@ -55,6 +55,10 @@ Mon Site/
 ├── netlify.toml                 Config héritage (Cloudflare Pages utilisé à la place)
 ├── README.md                    Ce fichier
 │
+├── functions/                   ★ Cloudflare Pages Functions (serverless)
+│   └── api/
+│       └── enrich.js            Endpoint /api/enrich — enrichissement IA d'un livre (Claude Haiku, clé en secret serveur)
+│
 ├── lis-tes-ratures/             ★ Club de lecture — VERSION EN PRODUCTION (DA café-bibliothèque)
 │   ├── index.html               Page Accueil
 │   ├── bibliotheque.html        Page Bibliothèque
@@ -845,6 +849,7 @@ Jeu de déduction multijoueur (mots à faire deviner) avec parties partageables 
 | `description_3_mots` | string \| null | Description en 3 mots (optionnel, fourni par IA) |
 | `couverture_url` | string \| null | URL de la vraie couverture (Open Library / Google Books). `null` = jamais cherché · `""` = cherché sans résultat · URL = trouvée ou saisie manuellement. Voir [Couvertures réelles](#couvertures-réelles) |
 | `couv_v` | number \| null | Version de l'algo de recherche ayant produit le résultat. Bumper `SEARCH_V` dans `covers.js` relance la recherche sur les livres restés sans couverture (`couverture_url === ""` et `couv_v < SEARCH_V`) |
+| `isbn13` | string \| null | ISBN-13 (13 chiffres) fourni par l'enrichissement IA. Sert à récupérer la couverture **exacte** (`covers.openlibrary.org/b/isbn/{isbn}-L.jpg`) avant la recherche floue. Voir [Enrichissement IA](#enrichissement-ia) |
 
 > **Attention :** dans l'UI, `refuse` s'affiche toujours "Éliminé" (jamais "Refusé").  
 > `progression_unite` et `progression_total` sont configurables depuis l'accueil (livre du mois) **et** depuis la page commentaires (livres avec statut `elu`).  
@@ -1151,7 +1156,38 @@ Toggle **« Vraies couvertures »** en bas de la sidebar (`nav.js`) — bascule 
 
 ---
 
+## Enrichissement IA
+
+Au moment d'ajouter un livre (et via le bouton **« Enrichir la bibliothèque »** pour le rattrapage des livres existants), une IA complète automatiquement les infos manquantes (genre, nombre de pages, description en 3 mots) **et** fournit l'**ISBN-13**, qui sert à récupérer la vraie couverture de façon exacte.
+
+### Architecture — Cloudflare Pages Function
+
+Le site est statique : **impossible de mettre la clé API Claude dans le JS du navigateur** (elle serait publique). La clé vit côté serveur dans une **Cloudflare Pages Function**.
+
+- **`functions/api/enrich.js`** — endpoint `/api/enrich?titre=…&auteur=…`. Détecté automatiquement par Cloudflare Pages (dossier `functions/`, aucune config ni build). Appelle l'API Claude (`claude-haiku-4-5`) en sortie structurée (`output_config.format` json_schema) et renvoie `{ trouve, titre_exact, auteur_exact, annee, genre, nb_pages, description_3_mots, isbn13 }`.
+- **Secret Cloudflare `ANTHROPIC_API_KEY`** : à définir dans le dashboard (Pages → projet → Settings → Variables et secrets, en « Encrypt »). ⚠️ Cloudflare ne permet d'ajouter des secrets **qu'une fois qu'une Function existe** dans le projet (sinon « variables ne peuvent pas être ajoutées à un Worker statique »). Ordre : pousser la Function d'abord, puis ajouter le secret. Si le secret manque, la Function renvoie une erreur 503 propre sans casser le site.
+- **Coût** : Haiku 4.5 ≈ 1 $/M tokens entrée, 5 $/M sortie → ~0,001–0,005 $ par livre. Un plafond de dépense est réglable côté console Anthropic.
+- **Garde-fous** : consigne stricte « n'invente jamais un ISBN » ; l'ISBN est de toute façon validé côté client par chargement réel de l'image (`covers.js` → `imageOk`) avant d'être retenu — sinon repli sur la recherche floue puis l'illustration générique. Genre/pages/description restent marqués « fournis par IA ».
+
+### Côté client
+
+- **Ajout d'un livre** (`bibliotheque.js`, `fetchEnrichment()`) : à la soumission, appelle `/api/enrich`, remplit uniquement les champs laissés vides + stocke `isbn13`.
+- **Bouton « Enrichir la bibliothèque »** (`#btn-enrich`) : parcourt les livres en base auxquels il manque ISBN/genre/pages/description, les enrichit un par un (confirmation + progression), sans écraser les valeurs existantes ni les couvertures manuelles.
+- **Champs manuels** dans le formulaire d'édition : `ISBN-13` et `URL de couverture` (pour corriger un cas raté).
+
+---
+
 ## Historique des modifications
+
+### 2026-06-11 (suite 2)
+**Lis tes ratures — Enrichissement IA (couvertures exactes par ISBN + infos auto)**
+
+- `functions/api/enrich.js` (nouveau) — Cloudflare Pages Function : enrichissement d'un livre via Claude Haiku (genre, pages, description, **ISBN-13**), clé en secret serveur `ANTHROPIC_API_KEY`. Le projet passe de « 100 % statique » à « statique + 1 fonction ».
+- `lis-tes-ratures/js/covers.js` — `SEARCH_V` → 3 : tentative de couverture par **ISBN exact** (validée par `imageOk()`) avant la recherche floue.
+- `lis-tes-ratures/js/bibliotheque.js` — `fetchEnrichment()` à l'ajout (remplit les champs vides + ISBN) ; bouton « Enrichir la bibliothèque » (rattrapage des livres existants) ; champ ISBN manuel dans l'édition.
+- `lis-tes-ratures/js/db.js` — `addLivre()` et `updateLivreInfos()` gèrent `isbn13`.
+- `lis-tes-ratures/bibliotheque.html` — bouton « Enrichir la bibliothèque » dans l'en-tête.
+- Nouveau champ Firestore `livres.isbn13`. Voir section [Enrichissement IA](#enrichissement-ia).
 
 ### 2026-06-11 (suite)
 **Lis tes ratures — Couvertures : meilleure recherche + cadrage entier**
