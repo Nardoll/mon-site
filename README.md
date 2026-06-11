@@ -1192,6 +1192,7 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 
 - `lis-tes-ratures/bibliotheque.html` — retrait de la barre toggle « Infos complémentaires » (`.ai-toggle-bar`).
 - `lis-tes-ratures/js/bibliotheque.js` — `#prop-grid` reçoit toujours la classe `infos-on` (ouverture au survol permanente, plus de localStorage `ltr_bib_ai`). Les cartes propositions affichent désormais **Auteur** et **Proposé par** à l'intérieur (`.bk-page`), visibles même quand la vraie couverture masque la façade.
+- `lis-tes-ratures/css/style.css` — `.bk` rallongée (262 → 300 px, proportion couverture ~2:3) et espacements de `.bk-page` resserrés pour que les 4 lignes d'infos + description tiennent sans déborder.
 
 ### 2026-06-11 (suite 11)
 **Couvertures — fiche bilan des votes + médaille podium au premier plan**

@@ -1489,7 +1489,7 @@ h1, h2, h3,
    ═══════════════════════════════════════════════════════════ */
 .prop-grid { grid-template-columns: repeat(auto-fill, minmax(188px, 1fr)); gap: 1.6rem 1.4rem; }
 
-.bk { position: relative; perspective: 1500px; height: 262px; }
+.bk { position: relative; perspective: 1500px; height: 300px; }
 .bk-page, .bk-cover { position: absolute; inset: 0; border-radius: 5px 11px 11px 5px; }
 
 /* ── Page intérieure (crème) ── */
@@ -1498,7 +1498,7 @@ h1, h2, h3,
     linear-gradient(90deg, rgba(76,52,28,.16), rgba(76,52,28,0) 8%),
     linear-gradient(165deg, #fbf4e4, #f1e4cb);
   color: #463422;
-  padding: 1.15rem 1.1rem 1rem 1.5rem;
+  padding: .95rem 1rem .85rem 1.4rem;
   display: flex; flex-direction: column;
   box-shadow: inset 0 0 0 1px rgba(120,90,50,.12);
   overflow: hidden;
@@ -1508,13 +1508,13 @@ h1, h2, h3,
   background: repeating-linear-gradient(180deg, transparent 0 17px, rgba(120,90,50,.10) 17px 18px);
   pointer-events: none;
 }
-.bk-page-title { font-family: var(--serif); font-weight: 600; font-size: 1.04rem; line-height: 1.16; margin-bottom: .65rem; }
-.bk-meta { display: flex; flex-direction: column; gap: .45rem; margin-bottom: .7rem; }
-.bk-meta-row { display: flex; flex-direction: column; gap: .05rem; }
-.bk-meta-k { font-size: .6rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #9a7a4e; }
-.bk-meta-v { font-size: .84rem; color: #463422; }
-.bk-desc { position: relative; z-index: 1; font-family: var(--serif); font-style: italic; font-size: .9rem; line-height: 1.35; color: #5a4326; margin-top: auto; }
-.bk-ai { font-size: .62rem; color: #a98e63; margin-top: .55rem; display: inline-flex; align-items: center; gap: .3rem; }
+.bk-page-title { font-family: var(--serif); font-weight: 600; font-size: 1rem; line-height: 1.14; margin-bottom: .5rem; }
+.bk-meta { display: flex; flex-direction: column; gap: .3rem; margin-bottom: .5rem; }
+.bk-meta-row { display: flex; flex-direction: column; gap: .02rem; }
+.bk-meta-k { font-size: .58rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #9a7a4e; }
+.bk-meta-v { font-size: .8rem; line-height: 1.15; color: #463422; }
+.bk-desc { position: relative; z-index: 1; font-family: var(--serif); font-style: italic; font-size: .82rem; line-height: 1.25; color: #5a4326; margin-top: auto; }
+.bk-ai { font-size: .58rem; color: #a98e63; margin-top: .4rem; display: inline-flex; align-items: center; gap: .3rem; }
 .bk-ai svg { width: 11px; height: 11px; flex-shrink: 0; }
 
 /* ── Couverture (pivote) ── */
