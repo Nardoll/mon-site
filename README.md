@@ -145,7 +145,7 @@ Mon Site/
 
 - **Hero** : pill "🔒 Accès privé", titre du site, courte description
 - **5 cartes sections** en grille (`repeat(auto-fill, minmax(250px, 1fr))`, `max-width: 860px`) :
-  - **Lis tes ratures** → lien `href="/lis-tes-ratures/"`, accent terracotta `#b5572d`, badge "🔒 Mot de passe"
+  - **Lis tes ratures** → lien `href="/lis-tes-ratures/"`, accent terracotta `#b5572d`, badge "✨ Accès libre" (mot de passe retiré)
   - **Jeux de rôle** → lien `href="/jdr/"`, accent rose `#cf6679`, badge "🔒 Mot de passe"
   - **Jeux** → lien `href="/Jeux/"`, accent indigo `#667eea`, badge "✨ Accès libre"
   - **L'Atelier** → lien `href="/atelier/"`, accent ambre `#c49a3a`, badge "🔒 Mot de passe"
@@ -164,9 +164,10 @@ Mon Site/
 
 ### Accès / Sécurité
 
-- Mot de passe partagé : **Piranèse** (même qu'avant)
-- Mécanisme : SHA-256 dans `auth.js`, `SESSION_KEY = "cl_auth"`, `sessionStorage`
-- Règles Firestore : `allow read, write: if true` (sécurité côté JS uniquement)
+- **Accès libre — mot de passe retiré** (juin 2026). Le mot de passe n'apportait qu'une sécurité de façade (vérification côté navigateur, base Firestore ouverte) ; il a été supprimé sur cette section.
+- `js/auth.js` : `requireAuth()` est désormais un **no-op** (résout immédiatement). Les pages l'appellent toujours, mais aucune saisie n'est demandée.
+- Les autres sections (JDR, Atelier) gardent leur propre mot de passe.
+- Règles Firestore : `allow read, write: if true` (inchangé).
 
 ### Design system
 
@@ -1190,6 +1191,12 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 ---
 
 ## Historique des modifications
+
+### 2026-06-11 (suite 14)
+**Lis tes ratures — accès libre (mot de passe retiré)**
+
+- `lis-tes-ratures/js/auth.js` — `requireAuth()` devient un no-op (plus de gate). JDR/Atelier non touchés (auth.js séparés).
+- `index.html` (racine) — badge de la carte « Lis tes ratures » : 🔒 Mot de passe → ✨ Accès libre.
 
 ### 2026-06-11 (suite 13)
 **Couvertures — override manuel fiable (n'importe quelle URL d'image)**
