@@ -23,11 +23,17 @@ function toDate(ts) {
 
 function smoothPath(pts) {
   if (pts.length < 2) return '';
+  const clamp = (v, a, b) => { const lo = Math.min(a, b), hi = Math.max(a, b); return v < lo ? lo : v > hi ? hi : v; };
   let d = `M ${pts[0].x} ${pts[0].y}`;
   for (let i = 0; i < pts.length - 1; i++) {
     const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
-    const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
-    const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
+    let c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
+    let c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
+    // Anti-overshoot : on garde les points de contrôle à l'intérieur de la
+    // boîte du segment [p1, p2]. Sans ça, un point isolé après une longue ligne
+    // droite (espacement très inégal) crée une tangente énorme → grande boucle.
+    c1x = clamp(c1x, p1.x, p2.x); c1y = clamp(c1y, p1.y, p2.y);
+    c2x = clamp(c2x, p1.x, p2.x); c2y = clamp(c2y, p1.y, p2.y);
     d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
   }
   return d;
@@ -39,10 +45,6 @@ export function buildSeries(points, membres, monthStart) {
   if (!points || !points.length) return [];
   const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0, 23, 59, 59);
   const totalMs = monthEnd - monthStart;
-  // Mois déjà terminé : on prolonge la dernière valeur connue de chaque membre
-  // jusqu'au bord droit (courbe « finie » plutôt que tronquée au milieu). Pour
-  // le mois en cours, on s'arrête au dernier point réel (graphe accueil inchangé).
-  const isPastMonth = monthEnd.getTime() < Date.now();
 
   const byMembre = {};
   points.forEach(p => {
@@ -62,15 +64,12 @@ export function buildSeries(points, membres, monthStart) {
     .filter(([, pts]) => pts.length > 0)
     .map(([id, pts]) => {
       pts.sort((a, b) => a.ts - b.ts);
-      // Points réels (real:true) = vraies entrées Firestore, survolables. Le
-      // point de départ (jour 1 à 0 %) et l'éventuel prolongement de fin de
-      // mois sont synthétiques (real:false), sans tooltip.
+      // Points réels (real:true) = vraies entrées Firestore, survolables. Seul
+      // le point de départ (jour 1 à 0 %) est synthétique (real:false, sans tooltip).
       const series = [
         { frac: 0, pct: 0, real: false },
         ...pts.map(p => ({ frac: Math.min(1, (p.ts - monthStart) / totalMs), pct: p.pct, real: true, page: p.page, total: p.total, dateMs: p.ts.getTime() })),
       ];
-      const last = series[series.length - 1];
-      if (isPastMonth && last.frac < 1) series.push({ frac: 1, pct: last.pct, real: false });
       return { id, nom: nom(id), color: memberColor(membres, id), points: series };
     });
 }
