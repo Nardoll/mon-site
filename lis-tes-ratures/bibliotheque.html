@@ -73,6 +73,13 @@
     #fiche-overlay { z-index:300; }
 
     /* ════ Graphe d'évolution dans la fiche (élus) ════ */
+    .fiche-graph-head { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:.9rem; }
+    .fiche-graph-zoom { display:inline-flex; align-items:center; gap:.35rem; background:transparent; border:1px solid rgba(120,90,50,.32); border-radius:8px; padding:.32rem .7rem; font-size:.78rem; color:#6a513a; cursor:pointer; font-family:inherit; white-space:nowrap; }
+    .fiche-graph-zoom:hover { border-color:#b5572d; color:#b5572d; }
+    .fiche-graph-zoom svg { width:14px; height:14px; }
+    .modal.graph-modal { max-width:1320px; width:94vw; }
+    #fgraph-overlay { z-index:400; }
+    #fgraph-sub { font-size:.8rem; color:var(--muted); margin-bottom:1rem; }
     .fiche-graph-note { font-size:.78rem; color:#8a7560; margin:-.3rem 0 .85rem; }
     .fiche-graph { margin-bottom:.3rem; }
     .fiche-graph .legend { display:flex; flex-wrap:wrap; gap:.35rem .75rem; margin-bottom:.6rem; }
@@ -312,6 +319,18 @@
   <!-- Fiche livre (overlay papier) -->
   <div class="overlay hidden" id="fiche-overlay">
     <div class="fiche-paper" id="fiche"></div>
+  </div>
+
+  <!-- Graphe d'évolution agrandi (depuis la fiche) -->
+  <div class="overlay hidden" id="fgraph-overlay">
+    <div class="modal graph-modal">
+      <div class="modal-header">
+        <h2>Évolution des lectures</h2>
+        <button class="modal-close" id="fgraph-close" aria-label="Fermer">✕</button>
+      </div>
+      <p id="fgraph-sub"></p>
+      <div id="fgraph-mount" class="fiche-graph"></div>
+    </div>
   </div>
 
   <!-- Proposer un livre (overlay papier) -->

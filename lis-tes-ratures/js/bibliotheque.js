@@ -29,11 +29,13 @@ const ICON_CHECK   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 const ICON_COMMENT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 21l1.9-5.4A8.5 8.5 0 1 1 21 11.5z"/></svg>';
 const ICON_COPY    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>';
 const ICON_CHART   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="m7 14 3-4 3 3 4-6"/></svg>';
+const ICON_EXPAND  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>';
 
 // ── State ─────────────────────────────────────────────────────────
 let livres = [], membres = [], votes = [], reunions = [];
 let eluSortMode = "chron";
 let currentFicheId = null;
+let ficheGraphData = null;  // données du graphe de la fiche courante (pour le zoom)
 let dbSort = { key: "date_proposition", dir: -1 };
 
 const params = new URLSearchParams(window.location.search);
@@ -329,10 +331,16 @@ async function openFiche(id) {
     const points = await getProgressionForLivre(id);
     graphSeries = buildSeries(points, membres, graphMonthStart);
     if (graphSeries.length) {
+      ficheGraphData = { series: graphSeries, monthStart: graphMonthStart, mois: graphMoisLabel, unite: livre.progression_unite || '' };
       graphHtml = `<div class="fiche-divider"></div>
-        <div class="fiche-sec-title">${ICON_CHART} Évolution des lectures</div>
-        <p class="fiche-graph-note">Progression de chaque membre au fil de ${esc(graphMoisLabel)} — survolez un nom pour l'isoler.</p>
+        <div class="fiche-graph-head">
+          <div class="fiche-sec-title" style="margin-bottom:0">${ICON_CHART} Évolution des lectures</div>
+          <button class="fiche-graph-zoom" id="fiche-graph-zoom" title="Ouvrir en grand">${ICON_EXPAND} Agrandir</button>
+        </div>
+        <p class="fiche-graph-note">Progression de chaque membre au fil de ${esc(graphMoisLabel)} — survolez un nom pour l'isoler, un point pour le détail.</p>
         <div class="fiche-graph" id="fiche-graph"></div>`;
+    } else {
+      ficheGraphData = null;
     }
   }
 
@@ -425,6 +433,7 @@ async function openFiche(id) {
     gm.innerHTML = buildLegendHTML(graphSeries) + buildChartSVG(graphSeries, graphMonthStart, { h: 300, unite: livre.progression_unite || '' });
     wireHighlight(gm);
     wireTooltip(gm);
+    document.getElementById("fiche-graph-zoom")?.addEventListener("click", openFicheGraphZoom);
   }
 
   fiche.querySelectorAll(".fiche-ia summary").forEach(s => {
@@ -438,6 +447,28 @@ async function openFiche(id) {
 function closeFiche() {
   document.getElementById("fiche-overlay").classList.add("hidden");
 }
+
+// ── Graphe agrandi (depuis la fiche) ──────────────────────────────
+function openFicheGraphZoom() {
+  if (!ficheGraphData) return;
+  document.getElementById("fgraph-sub").textContent =
+    `Progression de chaque membre au fil de ${ficheGraphData.mois} — survolez un nom pour l'isoler, un point pour le détail.`;
+  const mount = document.getElementById("fgraph-mount");
+  mount.innerHTML = buildLegendHTML(ficheGraphData.series)
+    + buildChartSVG(ficheGraphData.series, ficheGraphData.monthStart, { h: 420, unite: ficheGraphData.unite });
+  wireHighlight(mount);
+  wireTooltip(mount);
+  document.getElementById("fgraph-overlay").classList.remove("hidden");
+}
+
+function closeFicheGraphZoom() {
+  document.getElementById("fgraph-overlay").classList.add("hidden");
+}
+
+document.getElementById("fgraph-close").addEventListener("click", closeFicheGraphZoom);
+document.getElementById("fgraph-overlay").addEventListener("click", e => {
+  if (e.target === e.currentTarget) closeFicheGraphZoom();
+});
 
 document.getElementById("fiche-overlay").addEventListener("click", e => {
   if (e.target === e.currentTarget) closeFiche();

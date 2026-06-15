@@ -166,7 +166,12 @@ export function wireTooltip(root) {
   if (!tip) {
     tip = document.createElement('div');
     tip.className = 'chart-tip';
-    tip.style.display = 'none';
+    // Styles posés inline pour ne dépendre d'aucun CSS de page (sinon, sans la
+    // règle .chart-tip, le tooltip s'affiche en bloc pleine largeur non placé).
+    tip.style.cssText = 'position:absolute;z-index:30;display:none;pointer-events:none;' +
+      'background:#2c2015;color:#fcf6e8;border-radius:8px;padding:.45rem .6rem;' +
+      'font-size:.76rem;line-height:1.35;max-width:220px;' +
+      'box-shadow:0 10px 24px -10px rgba(0,0,0,.5);';
     root.appendChild(tip);
   }
 
@@ -190,7 +195,10 @@ export function wireTooltip(root) {
     const av = el.getAttribute('data-av') || '';
     const dateMs = Number(el.getAttribute('data-date'));
     const dateStr = dateMs ? fmt.format(new Date(dateMs)) : '';
-    tip.innerHTML = `<b>${escTxt(nom)}</b><span>${escTxt(av)}</span>${dateStr ? `<span class="ct-date">${escTxt(dateStr)}</span>` : ''}`;
+    tip.innerHTML =
+      `<div style="font-weight:700;font-size:.82rem">${escTxt(nom)}</div>` +
+      `<div>${escTxt(av)}</div>` +
+      (dateStr ? `<div style="opacity:.72;font-size:.7rem;margin-top:.15rem">${escTxt(dateStr)}</div>` : '');
     tip.style.display = 'block';
     place(ev);
   };
