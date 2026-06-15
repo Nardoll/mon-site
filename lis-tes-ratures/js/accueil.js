@@ -7,7 +7,7 @@ import {
 } from "./db.js";
 import { formatMois, MOIS_NOMS, showToast } from "./utils.js";
 import { hydrateCover } from "./covers.js";
-import { buildSeries, buildChartSVG, buildSparkSVG, buildLegendHTML, wireHighlight } from "./progression-chart.js";
+import { buildSeries, buildChartSVG, buildSparkSVG, buildLegendHTML, wireHighlight, wireTooltip } from "./progression-chart.js";
 
 await requireAuth();
 initNav("accueil");
@@ -614,8 +614,9 @@ async function openGraphModal() {
     mount.innerHTML = '<p style="color:var(--muted);font-size:.85rem;text-align:center;padding:2rem">Aucune donnée disponible.<br>Mettez à jour votre avancement pour voir les courbes apparaître.</p>';
     return;
   }
-  mount.innerHTML = buildLegendHTML(series) + buildChartSVG(series, currentMonthStart(), { h: 340 });
+  mount.innerHTML = buildLegendHTML(series) + buildChartSVG(series, currentMonthStart(), { h: 340, unite: currentLivre?.progression_unite || '' });
   wireHighlight(mount);
+  wireTooltip(mount);
 }
 
 document.getElementById('graph-close').addEventListener('click', () => document.getElementById('graph-overlay').classList.add('hidden'));

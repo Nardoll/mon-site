@@ -7,7 +7,7 @@ import {
 } from "./db.js";
 import { formatDate, formatMois, showToast } from "./utils.js";
 import { hydrateCover, coversOn, invalidateCoverCache } from "./covers.js";
-import { buildSeries, buildChartSVG, buildLegendHTML, wireHighlight } from "./progression-chart.js";
+import { buildSeries, buildChartSVG, buildLegendHTML, wireHighlight, wireTooltip } from "./progression-chart.js";
 
 await requireAuth();
 initNav("bibliotheque");
@@ -422,8 +422,9 @@ async function openFiche(id) {
   // Graphe d'évolution (livres élus) — injecté après le rendu de la fiche.
   if (graphSeries && graphSeries.length) {
     const gm = document.getElementById("fiche-graph");
-    gm.innerHTML = buildLegendHTML(graphSeries) + buildChartSVG(graphSeries, graphMonthStart, { h: 300 });
+    gm.innerHTML = buildLegendHTML(graphSeries) + buildChartSVG(graphSeries, graphMonthStart, { h: 300, unite: livre.progression_unite || '' });
     wireHighlight(gm);
+    wireTooltip(gm);
   }
 
   fiche.querySelectorAll(".fiche-ia summary").forEach(s => {

@@ -39,13 +39,22 @@ export function buildSeries(points, membres, monthStart) {
   if (!points || !points.length) return [];
   const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0, 23, 59, 59);
   const totalMs = monthEnd - monthStart;
+  // Mois déjà terminé : on prolonge la dernière valeur connue de chaque membre
+  // jusqu'au bord droit (courbe « finie » plutôt que tronquée au milieu). Pour
+  // le mois en cours, on s'arrête au dernier point réel (graphe accueil inchangé).
+  const isPastMonth = monthEnd.getTime() < Date.now();
 
   const byMembre = {};
   points.forEach(p => {
     const ts = toDate(p.horodatage);
     if (!ts || ts < monthStart) return;
     if (!byMembre[p.membre_id]) byMembre[p.membre_id] = [];
-    byMembre[p.membre_id].push({ ts, pct: p.pages_totales ? Math.min(100, Math.round(p.page_actuelle / p.pages_totales * 100)) : 0 });
+    byMembre[p.membre_id].push({
+      ts,
+      pct: p.pages_totales ? Math.min(100, Math.round(p.page_actuelle / p.pages_totales * 100)) : 0,
+      page: p.page_actuelle ?? null,
+      total: p.pages_totales ?? null,
+    });
   });
 
   const nom = id => membres.find(m => m.id === id)?.nom ?? '—';
@@ -53,7 +62,15 @@ export function buildSeries(points, membres, monthStart) {
     .filter(([, pts]) => pts.length > 0)
     .map(([id, pts]) => {
       pts.sort((a, b) => a.ts - b.ts);
-      const series = [{ frac: 0, pct: 0 }, ...pts.map(p => ({ frac: Math.min(1, (p.ts - monthStart) / totalMs), pct: p.pct }))];
+      // Points réels (real:true) = vraies entrées Firestore, survolables. Le
+      // point de départ (jour 1 à 0 %) et l'éventuel prolongement de fin de
+      // mois sont synthétiques (real:false), sans tooltip.
+      const series = [
+        { frac: 0, pct: 0, real: false },
+        ...pts.map(p => ({ frac: Math.min(1, (p.ts - monthStart) / totalMs), pct: p.pct, real: true, page: p.page, total: p.total, dateMs: p.ts.getTime() })),
+      ];
+      const last = series[series.length - 1];
+      if (isPastMonth && last.frac < 1) series.push({ frac: 1, pct: last.pct, real: false });
       return { id, nom: nom(id), color: memberColor(membres, id), points: series };
     });
 }
@@ -61,6 +78,7 @@ export function buildSeries(points, membres, monthStart) {
 // Graphique complet — axe X = jours du mois (1 → dernier jour), axe Y = % avancement.
 export function buildChartSVG(series, monthStart, opts = {}) {
   const W = opts.w || 860, H = opts.h || 300;
+  const unite = opts.unite || '';
   const padL = 38, padR = 110, padT = 18, padB = 32;
   const xFn = frac => padL + frac * (W - padL - padR);
   const yFn = v => padT + (1 - v / 100) * (H - padT - padB);
@@ -77,6 +95,7 @@ export function buildChartSVG(series, monthStart, opts = {}) {
     g += `<text class="axis-lbl" x="${x.toFixed(1)}" y="${H - padB + 17}" text-anchor="middle">${d}</text>`;
   });
   const ends = [];
+  const hits = [];
   series.forEach(s => {
     const pts = s.points.map(p => ({ x: xFn(p.frac), y: yFn(p.pct) }));
     g += `<path class="series-line" data-m="${esc(s.id)}" d="${smoothPath(pts)}" stroke="${s.color}"/>`;
@@ -84,7 +103,18 @@ export function buildChartSVG(series, monthStart, opts = {}) {
     const last = pts[pts.length - 1];
     g += `<circle data-m="${esc(s.id)}" cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="4" fill="${s.color}"/>`;
     ends.push({ id: s.id, nom: s.nom, pct: s.points[s.points.length - 1].pct, col: s.color, x: last.x, y: last.y });
+    // Cibles de survol (points réels uniquement), dessinées en dernier pour
+    // capter le pointeur par-dessus les lignes.
+    s.points.forEach((src, i) => {
+      if (!src.real) return;
+      const p = pts[i];
+      const av = src.page != null
+        ? `${src.page}${src.total != null ? '/' + src.total : ''}${unite ? ' ' + unite : ''} · ${src.pct}%`
+        : `${src.pct}%`;
+      hits.push(`<circle class="dot-hit" data-nom="${esc(s.nom)}" data-av="${esc(av)}" data-date="${src.dateMs || ''}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="6" fill="transparent"/>`);
+    });
   });
+  g += hits.join('');
   // dé-collision des labels
   const GAP = 14, minY = padT + 4, maxY = H - padB;
   ends.sort((a, b) => a.y - b.y);
@@ -123,5 +153,52 @@ export function wireHighlight(root) {
       svg.classList.remove('dim');
       svg.querySelectorAll('.hl').forEach(e => e.classList.remove('hl'));
     });
+  });
+}
+
+// Tooltip au survol d'un point réel : membre · avancement au moment du point ·
+// date/heure de l'entrée. Utile pour repérer une entrée Firestore douteuse.
+export function wireTooltip(root) {
+  const svg = root.querySelector('svg.chart');
+  if (!svg) return;
+  if (getComputedStyle(root).position === 'static') root.style.position = 'relative';
+
+  let tip = root.querySelector('.chart-tip');
+  if (!tip) {
+    tip = document.createElement('div');
+    tip.className = 'chart-tip';
+    tip.style.display = 'none';
+    root.appendChild(tip);
+  }
+
+  const fmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  const escTxt = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  const place = ev => {
+    const r = root.getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let x = ev.clientX - r.left + 14;
+    let y = ev.clientY - r.top + 14;
+    if (x + tw > r.width)  x = ev.clientX - r.left - tw - 14;
+    if (y + th > r.height) y = ev.clientY - r.top - th - 14;
+    tip.style.left = Math.max(0, x) + 'px';
+    tip.style.top  = Math.max(0, y) + 'px';
+  };
+
+  const show = ev => {
+    const el = ev.currentTarget;
+    const nom = el.getAttribute('data-nom');
+    const av = el.getAttribute('data-av') || '';
+    const dateMs = Number(el.getAttribute('data-date'));
+    const dateStr = dateMs ? fmt.format(new Date(dateMs)) : '';
+    tip.innerHTML = `<b>${escTxt(nom)}</b><span>${escTxt(av)}</span>${dateStr ? `<span class="ct-date">${escTxt(dateStr)}</span>` : ''}`;
+    tip.style.display = 'block';
+    place(ev);
+  };
+
+  svg.querySelectorAll('.dot-hit').forEach(c => {
+    c.addEventListener('mouseenter', show);
+    c.addEventListener('mousemove', place);
+    c.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
   });
 }

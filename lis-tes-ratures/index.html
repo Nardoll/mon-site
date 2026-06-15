@@ -99,11 +99,15 @@
     svg.chart .grid-line.zero { stroke:var(--muted); stroke-opacity:.4; }
     svg.chart .grid-line.vday { stroke-dasharray:2 5; stroke-opacity:.65; }
     svg.chart .axis-lbl { fill:var(--muted); font-size:11px; font-family:'Segoe UI',system-ui,sans-serif; }
-    svg.chart .series-line { fill:none; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; transition:opacity .18s; }
-    svg.chart .series-dot { transition:opacity .18s; }
-    svg.chart .end-lbl { font-size:10.5px; font-weight:700; font-family:'Segoe UI',system-ui,sans-serif; transition:opacity .18s; }
+    svg.chart .series-line { fill:none; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; transition:opacity .18s; pointer-events:none; }
+    svg.chart .series-dot { transition:opacity .18s; pointer-events:none; }
+    svg.chart .end-lbl { font-size:10.5px; font-weight:700; font-family:'Segoe UI',system-ui,sans-serif; transition:opacity .18s; pointer-events:none; }
     svg.chart.dim .series-line, svg.chart.dim .series-dot, svg.chart.dim .end-lbl { opacity:.12; }
     svg.chart.dim .hl { opacity:1 !important; }
+    svg.chart .dot-hit { cursor:pointer; }
+    .chart-tip { position:absolute; z-index:10; pointer-events:none; background:var(--ink); color:var(--surface); border-radius:8px; padding:.45rem .6rem; font-size:.76rem; line-height:1.35; box-shadow:0 10px 24px -10px rgba(0,0,0,.45); max-width:220px; }
+    .chart-tip b { display:block; font-size:.82rem; }
+    .chart-tip .ct-date { display:block; opacity:.7; font-size:.7rem; margin-top:.15rem; }
 
     /* ════════════ Frise ════════════ */
     .frise-switch { display:inline-flex; gap:.2rem; background:var(--surface2); border:1px solid var(--border); border-radius:9px; padding:.2rem; }

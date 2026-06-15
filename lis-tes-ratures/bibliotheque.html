@@ -84,11 +84,15 @@
     .fiche-graph svg.chart .grid-line.zero { stroke:rgba(120,90,50,.45); }
     .fiche-graph svg.chart .grid-line.vday { stroke-dasharray:2 5; stroke-opacity:.65; }
     .fiche-graph svg.chart .axis-lbl { fill:#8a7560; font-size:11px; font-family:'Segoe UI',system-ui,sans-serif; }
-    .fiche-graph svg.chart .series-line { fill:none; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; transition:opacity .18s; }
-    .fiche-graph svg.chart .series-dot { transition:opacity .18s; }
-    .fiche-graph svg.chart .end-lbl { font-size:10.5px; font-weight:700; font-family:'Segoe UI',system-ui,sans-serif; transition:opacity .18s; }
+    .fiche-graph svg.chart .series-line { fill:none; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; transition:opacity .18s; pointer-events:none; }
+    .fiche-graph svg.chart .series-dot { transition:opacity .18s; pointer-events:none; }
+    .fiche-graph svg.chart .end-lbl { font-size:10.5px; font-weight:700; font-family:'Segoe UI',system-ui,sans-serif; transition:opacity .18s; pointer-events:none; }
     .fiche-graph svg.chart.dim .series-line, .fiche-graph svg.chart.dim .series-dot, .fiche-graph svg.chart.dim .end-lbl { opacity:.12; }
     .fiche-graph svg.chart.dim .hl { opacity:1 !important; }
+    .fiche-graph svg.chart .dot-hit { cursor:pointer; }
+    .fiche-graph .chart-tip { position:absolute; z-index:10; pointer-events:none; background:#2c2015; color:#fcf6e8; border-radius:8px; padding:.45rem .6rem; font-size:.76rem; line-height:1.35; box-shadow:0 10px 24px -10px rgba(0,0,0,.5); max-width:220px; }
+    .fiche-graph .chart-tip b { display:block; font-size:.82rem; }
+    .fiche-graph .chart-tip .ct-date { display:block; opacity:.72; font-size:.7rem; margin-top:.15rem; }
 
     /* ════ Proposer un livre (papier) ════ */
     .propose-paper { position:relative; background:linear-gradient(180deg,#fcf6e8,#f4e8cf); color:#3a2b1c; border:none; border-radius:5px; padding:2.2rem 2.5rem 1.8rem 3.1rem; box-shadow:0 40px 80px -30px rgba(0,0,0,.55), inset 0 0 0 1px rgba(120,90,50,.12); max-width:600px; }
