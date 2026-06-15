@@ -3,9 +3,11 @@ import { initNav } from "./nav.js";
 import {
   getLivres, getMembres, addLivre, getVotes,
   getStatutsForLivre, updateLivreInfos, getReunions,
+  getProgressionForLivre,
 } from "./db.js";
 import { formatDate, formatMois, showToast } from "./utils.js";
 import { hydrateCover, coversOn, invalidateCoverCache } from "./covers.js";
+import { buildSeries, buildChartSVG, buildLegendHTML, wireHighlight } from "./progression-chart.js";
 
 await requireAuth();
 initNav("bibliotheque");
@@ -26,6 +28,7 @@ const ICON_USERS   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 const ICON_CHECK   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 const ICON_COMMENT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 21l1.9-5.4A8.5 8.5 0 1 1 21 11.5z"/></svg>';
 const ICON_COPY    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>';
+const ICON_CHART   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="m7 14 3-4 3 3 4-6"/></svg>';
 
 // ── State ─────────────────────────────────────────────────────────
 let livres = [], membres = [], votes = [], reunions = [];
@@ -311,6 +314,28 @@ async function openFiche(id) {
       }).join('')}</div>`;
   }
 
+  // Évolution des lectures (livres élus) — même graphe que l'accueil, mais
+  // figé sur le mois d'élection du livre. Les points restent en base même
+  // pour les mois passés.
+  let graphHtml = '';
+  let graphSeries = null, graphMonthStart = null, graphMoisLabel = '';
+  if (livre.statut === 'elu') {
+    const vElu = votesDuLivre.find(v => v.livre_elu === id);
+    const now = new Date();
+    graphMonthStart = vElu
+      ? new Date(vElu.annee, vElu.mois - 1, 1)
+      : new Date(now.getFullYear(), now.getMonth(), 1);
+    graphMoisLabel = vElu ? formatMois(vElu.mois, vElu.annee) : '';
+    const points = await getProgressionForLivre(id);
+    graphSeries = buildSeries(points, membres, graphMonthStart);
+    if (graphSeries.length) {
+      graphHtml = `<div class="fiche-divider"></div>
+        <div class="fiche-sec-title">${ICON_CHART} Évolution des lectures</div>
+        <p class="fiche-graph-note">Progression de chaque membre au fil de ${esc(graphMoisLabel)} — survolez un nom pour l'isoler.</p>
+        <div class="fiche-graph" id="fiche-graph"></div>`;
+    }
+  }
+
   // Historique
   const hist = [];
   const d = toDate(livre.date_proposition);
@@ -383,6 +408,7 @@ async function openFiche(id) {
     </dl>
     ${iaHTML}
     ${avHtml}
+    ${graphHtml}
     ${histHtml}
     ${reunionHtml}
     <div class="fiche-actions">
@@ -392,6 +418,13 @@ async function openFiche(id) {
   document.getElementById("fiche-close-btn").addEventListener("click", closeFiche);
   document.getElementById("fiche-modif").addEventListener("click", () => showFicheEditForm(livre));
   hydrateCover(fiche.querySelector(".fiche-cover"), livre);
+
+  // Graphe d'évolution (livres élus) — injecté après le rendu de la fiche.
+  if (graphSeries && graphSeries.length) {
+    const gm = document.getElementById("fiche-graph");
+    gm.innerHTML = buildLegendHTML(graphSeries) + buildChartSVG(graphSeries, graphMonthStart, { h: 300 });
+    wireHighlight(gm);
+  }
 
   fiche.querySelectorAll(".fiche-ia summary").forEach(s => {
     s.addEventListener("click", () => {

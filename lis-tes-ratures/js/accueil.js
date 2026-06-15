@@ -7,6 +7,7 @@ import {
 } from "./db.js";
 import { formatMois, MOIS_NOMS, showToast } from "./utils.js";
 import { hydrateCover } from "./covers.js";
+import { buildSeries, buildChartSVG, buildSparkSVG, buildLegendHTML, wireHighlight } from "./progression-chart.js";
 
 await requireAuth();
 initNav("accueil");
@@ -23,6 +24,7 @@ const ICON_VOTE   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 const ICON_LAYERS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5M3 17l9 5 9-5"/></svg>';
 const ICON_GEAR   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
 const ICON_COMMENT= '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 21l1.9-5.4A8.5 8.5 0 1 1 21 11.5z"/></svg>';
+const ICON_OWNED  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H18a2 2 0 0 1 2 2v13a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2z"/><path d="M6 20a2 2 0 0 1-2-2 1.5 1.5 0 0 1 1.5-1.5H20"/></svg>';
 
 const MFR_SHORT = ['JANV','FÉVR','MARS','AVR','MAI','JUIN','JUIL','AOÛT','SEPT','OCT','NOV','DÉC'];
 const MFR_FULL  = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
@@ -100,6 +102,7 @@ function pctFromStatut(s) {
 
 function barState(s) {
   if (!s || s.statut === 'pas_commence') return { cls: 'none', html: 'Pas commencé' };
+  if (s.statut === 'achete') return { cls: 'owned', html: `${ICON_OWNED} Livre possédé` };
   if (s.statut === 'termine') return { cls: 'done', html: `${ICON_CHECK} Terminé` };
   const pct = pctFromStatut(s);
   if (isHierarchique() && s.page_actuelle) {
@@ -131,118 +134,20 @@ function computeNoteFinale(reunion) {
   return notes.length ? notes.reduce((a, b) => a + b, 0) / notes.length : null;
 }
 
-// ── Graphique SVG ─────────────────────────────────────────────────
-function smoothPath(pts) {
-  if (pts.length < 2) return '';
-  let d = `M ${pts[0].x} ${pts[0].y}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
-    const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
-    const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
-    d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
-  }
-  return d;
-}
-
-function buildChartSVG(series, opts = {}) {
-  const W = opts.w || 860, H = opts.h || 300;
-  const padL = 38, padR = 110, padT = 18, padB = 32;
-  const xFn = frac => padL + frac * (W - padL - padR);
-  const yFn = v => padT + (1 - v / 100) * (H - padT - padB);
-  let g = '';
-  [0, 25, 50, 75, 100].forEach(v => {
-    g += `<line class="grid-line${v === 0 ? ' zero' : ''}" x1="${padL}" y1="${yFn(v)}" x2="${W - padR}" y2="${yFn(v)}"/>`;
-    g += `<text class="axis-lbl" x="${padL - 8}" y="${yFn(v) + 4}" text-anchor="end">${v}%</text>`;
-  });
-  // axe horizontal — jours du mois (1 → dernier jour)
-  const _now = new Date();
-  const mStart = currentVote
+// ── Graphique SVG (module partagé progression-chart.js) ───────────
+// 1er jour du mois de lecture du livre du mois (sert d'axe X au graphe).
+function currentMonthStart() {
+  const now = new Date();
+  return currentVote
     ? new Date(currentVote.annee, currentVote.mois - 1, 1)
-    : new Date(_now.getFullYear(), _now.getMonth(), 1);
-  const nbJours = new Date(mStart.getFullYear(), mStart.getMonth() + 1, 0).getDate();
-  [...new Set([1, 5, 10, 15, 20, 25, nbJours])].forEach(d => {
-    const x = xFn((d - 1) / nbJours);
-    if (d > 1) g += `<line class="grid-line vday" x1="${x.toFixed(1)}" y1="${padT}" x2="${x.toFixed(1)}" y2="${yFn(0)}"/>`;
-    g += `<text class="axis-lbl" x="${x.toFixed(1)}" y="${H - padB + 17}" text-anchor="middle">${d}</text>`;
-  });
-  const ends = [];
-  series.forEach(s => {
-    const pts = s.points.map(p => ({ x: xFn(p.frac), y: yFn(p.pct) }));
-    g += `<path class="series-line" data-m="${esc(s.id)}" d="${smoothPath(pts)}" stroke="${s.color}"/>`;
-    pts.forEach(p => { g += `<circle class="series-dot" data-m="${esc(s.id)}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.6" fill="${s.color}"/>`; });
-    const last = pts[pts.length - 1];
-    g += `<circle data-m="${esc(s.id)}" cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="4" fill="${s.color}"/>`;
-    ends.push({ id: s.id, nom: s.nom, pct: s.points[s.points.length - 1].pct, col: s.color, x: last.x, y: last.y });
-  });
-  // dé-collision des labels
-  const GAP = 14, minY = padT + 4, maxY = H - padB;
-  ends.sort((a, b) => a.y - b.y);
-  for (let i = 1; i < ends.length; i++) { if (ends[i].y - ends[i - 1].y < GAP) ends[i].y = ends[i - 1].y + GAP; }
-  const ov = ends.length ? ends[ends.length - 1].y - maxY : 0;
-  if (ov > 0) ends.forEach(l => l.y = Math.max(minY, l.y - ov));
-  ends.forEach(l => { g += `<text class="end-lbl" data-m="${esc(l.id)}" x="${(l.x + 9).toFixed(1)}" y="${(l.y + 3.5).toFixed(1)}" fill="${l.col}">${esc(l.nom)} ${Math.round(l.pct)}%</text>`; });
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${g}</svg>`;
-}
-
-function buildSparkSVG(series) {
-  const W = 130, H = 46, padT = 4, padB = 4;
-  const xFn = frac => frac * W;
-  const yFn = v => padT + (1 - v / 100) * (H - padT - padB);
-  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-    ${series.slice(0, 5).map(s => {
-      const pts = s.points.map(p => ({ x: xFn(p.frac), y: yFn(p.pct) }));
-      return `<path d="${smoothPath(pts)}" fill="none" stroke="${s.color}" stroke-width="1.6" stroke-linecap="round"/>`;
-    }).join('')}
-  </svg>`;
-}
-
-function buildLegendHTML(series) {
-  return `<div class="legend">${series.map(s => `<span class="lg" data-m="${esc(s.id)}"><i style="background:${s.color}"></i>${esc(s.nom)}</span>`).join('')}</div>`;
-}
-
-function wireHighlight(root) {
-  const svg = root.querySelector('svg.chart');
-  if (!svg) return;
-  root.querySelectorAll('.lg').forEach(lg => {
-    lg.addEventListener('mouseenter', () => {
-      svg.classList.add('dim');
-      svg.querySelectorAll(`[data-m="${lg.dataset.m}"]`).forEach(e => e.classList.add('hl'));
-    });
-    lg.addEventListener('mouseleave', () => {
-      svg.classList.remove('dim');
-      svg.querySelectorAll('.hl').forEach(e => e.classList.remove('hl'));
-    });
-  });
+    : new Date(now.getFullYear(), now.getMonth(), 1);
 }
 
 async function buildProgressionSeries() {
   if (!currentLivreId) return [];
   const points = await getProgressionForLivre(currentLivreId);
   progressionData = points;
-  if (!points.length) return [];
-
-  const now = new Date();
-  const monthStart = currentVote
-    ? new Date(currentVote.annee, currentVote.mois - 1, 1)
-    : new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0, 23, 59, 59);
-  const totalMs = monthEnd - monthStart;
-
-  const byMembre = {};
-  points.forEach(p => {
-    const ts = toDate(p.horodatage);
-    if (!ts || ts < monthStart) return;
-    if (!byMembre[p.membre_id]) byMembre[p.membre_id] = [];
-    byMembre[p.membre_id].push({ ts, pct: p.pages_totales ? Math.min(100, Math.round(p.page_actuelle / p.pages_totales * 100)) : 0 });
-  });
-
-  return Object.entries(byMembre)
-    .filter(([, pts]) => pts.length > 0)
-    .map(([id, pts]) => {
-      pts.sort((a, b) => a.ts - b.ts);
-      const series = [{ frac: 0, pct: 0 }, ...pts.map(p => ({ frac: Math.min(1, (p.ts - monthStart) / totalMs), pct: p.pct }))];
-      return { id, nom: memNom(id), color: memColor(id), points: series };
-    });
+  return buildSeries(points, allMembres, currentMonthStart());
 }
 
 // ── En-tête hero ──────────────────────────────────────────────────
@@ -446,6 +351,7 @@ function openFicheCurrent() {
     return `<div class="fiche-av-row"><span>${esc(m.nom)}</span>${
       s.statut === 'termine' ? `<span class="fiche-av-done">${ICON_CHECK} Terminé</span>` :
       s.statut === 'en_cours' ? `<span class="fiche-av-prog">En cours · ${pctFromStatut(s)}%</span>` :
+      s.statut === 'achete' ? `<span class="fiche-av-owned">Livre possédé</span>` :
       `<span class="fiche-av-none">Pas commencé</span>`
     }</div>`;
   }).join('');
@@ -592,7 +498,8 @@ document.getElementById('me-save').addEventListener('click', async () => {
       pages_totales = totalChapitres(parties);
     }
   } else {
-    page_actuelle = document.getElementById('me-page').value;
+    // En dehors de « En cours », pas de page d'avancement (achete / pas_commence / termine).
+    page_actuelle = statut === 'en_cours' ? document.getElementById('me-page').value : '';
     pages_totales = document.getElementById('me-total').value;
   }
 
@@ -707,7 +614,7 @@ async function openGraphModal() {
     mount.innerHTML = '<p style="color:var(--muted);font-size:.85rem;text-align:center;padding:2rem">Aucune donnée disponible.<br>Mettez à jour votre avancement pour voir les courbes apparaître.</p>';
     return;
   }
-  mount.innerHTML = buildLegendHTML(series) + buildChartSVG(series, { h: 340 });
+  mount.innerHTML = buildLegendHTML(series) + buildChartSVG(series, currentMonthStart(), { h: 340 });
   wireHighlight(mount);
 }
 

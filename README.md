@@ -206,7 +206,7 @@ Toutes les pages principales gèrent un paramètre URL `?open=ID` pour auto-ouvr
 ### Pages et fonctionnalités
 
 #### Accueil (`index.html` + `accueil.js`)
-1. **Livre du mois** — livre élu le plus récent, barres de progression par membre, boutons "Voir commentaires" / "Laisser un commentaire". **Bouton "Ajouter au suivi"** : select + bouton pour les membres sans entrée dans `statuts_lecture`. Bouton "⚙️ Configurer le suivi" → modal pour définir `progression_unite` / `progression_total` / `progression_mode` (simple ou hiérarchique par parties).
+1. **Livre du mois** — livre élu le plus récent, barres de progression par membre (statuts : Pas commencé · **Livre possédé** · En cours · Terminé), boutons "Voir commentaires" / "Laisser un commentaire". **Bouton "Ajouter au suivi"** : select + bouton pour les membres sans entrée dans `statuts_lecture`. Bouton "⚙️ Configurer le suivi" → modal pour définir `progression_unite` / `progression_total` / `progression_mode` (simple ou hiérarchique par parties).
 2. **Graphique d'évolution** — sparkline SVG des avancements du mois en cours (depuis `progression_lecture`). Clic → modal graphique complet.
 3. **Frise "Notre parcours"** — deux variantes (Fil cousu / Carnet). Événements : arrivées membres, propositions, votes, élus, réunions. Chaque événement cliquable → navigue vers la page correspondante avec `?open=ID`. Les votes "Élu" ouvrent `votes.html?open=VOTE_ID` (pas la fiche livre).
 4. **Palmarès** — top livres par note finale (moyenne `notes_finales` des réunions).
@@ -217,7 +217,7 @@ Toutes les pages principales gèrent un paramètre URL `?open=ID` pour auto-ouvr
 - **Cartes propositions** : ouverture au survol **toujours active** (plus de toggle). La façade montre le titre/couverture ; l'intérieur (page crème) montre Auteur · Genre · Pages · Proposé par · description IA.
 - **Ajout d'un livre** : titre + auteur uniquement requis ; genre / pages / description / ISBN (→ couverture) **remplis automatiquement par l'IA**. Voir [Enrichissement IA](#enrichissement-ia).
 - **Vraies couvertures** : toggle global dans la sidebar (genériques ↔ vraies couvertures par ISBN). Voir [Couvertures réelles](#couvertures-réelles).
-- **Fiche livre** : historique votes, section avancements membres (statut `termine` OU note présente dans `reunions.notes_finales`), section réunion associée, lien commentaires. Bouton ✏️ : édition (dont `ISBN-13` et `URL de couverture` manuels). Unité d'avancement adaptée au `progression_unite` du livre (p./ch./par.).
+- **Fiche livre** : historique votes, section avancements membres (statut `termine` OU note présente dans `reunions.notes_finales`), **graphe d'évolution des lectures** (livres élus uniquement — même graphe que l'accueil, figé sur le mois d'élection), section réunion associée, lien commentaires. Bouton ✏️ : édition (dont `ISBN-13` et `URL de couverture` manuels). Unité d'avancement adaptée au `progression_unite` du livre (p./ch./par.).
 - **Bouton "Copier la liste"** : format Discord prêt à coller
 - `?open=LIVRE_ID` : auto-ouverture de la fiche
 
@@ -1191,6 +1191,18 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 ---
 
 ## Historique des modifications
+
+### 2026-06-15
+**Lis tes ratures — statut « Livre possédé » + graphe d'évolution sur la fiche des livres élus**
+
+- **Nouveau statut de suivi `achete` (« Livre possédé »)** : ajouté au sélecteur de statut du suivi (livre du mois, accueil) entre « Pas commencé » et « En cours ». Permet d'indiquer qu'on s'est procuré le livre sans l'avoir commencé. La valeur `achete` existait déjà dans le modèle (`statuts_lecture`) et l'ordre de tri ; elle est désormais exposée dans l'UI.
+  - `lis-tes-ratures/index.html` — `<option value="achete">Livre possédé</option>` + styles `.bar-state.owned` / `.fiche-av-owned` (brun chaud `#8a6d3f`).
+  - `lis-tes-ratures/js/accueil.js` — `barState()` gère `achete` (icône livre + label) ; fiche livre affiche « Livre possédé » ; garde-fou à la sauvegarde : la page d'avancement n'est conservée que pour le statut « En cours » (achete / pas_commence / termine → pas de page résiduelle).
+- **Graphe d'évolution des lectures réutilisable** : le graphe « course du club » de l'accueil est désormais aussi affiché dans la **fiche d'un livre élu** (bibliothèque), figé sur le **mois d'élection** du livre (axe X = jours de ce mois, libellé du mois en sous-titre). Les points de `progression_lecture` restent en base pour les mois passés → le graphe est donc consultable a posteriori.
+  - **Nouveau module partagé `lis-tes-ratures/js/progression-chart.js`** : `buildSeries(points, membres, monthStart)`, `buildChartSVG(series, monthStart, opts)`, `buildSparkSVG`, `buildLegendHTML`, `wireHighlight`, `memberColor`. Garantit un graphe strictement identique entre l'accueil et la fiche.
+  - `lis-tes-ratures/js/accueil.js` — utilise le module partagé (comportement inchangé) ; le mois est calculé via `currentMonthStart()`.
+  - `lis-tes-ratures/js/bibliotheque.js` — `openFiche()` charge `getProgressionForLivre(id)` pour les élus et injecte la section « Évolution des lectures » après les avancements membres.
+  - `lis-tes-ratures/bibliotheque.html` — CSS du graphe dans la fiche (adapté au fond papier crème).
 
 ### 2026-06-11 (suite 14)
 **Lis tes ratures — accès libre (mot de passe retiré)**
