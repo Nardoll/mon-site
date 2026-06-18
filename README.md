@@ -1147,7 +1147,7 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 
 ## Couvertures réelles
 
-Toggle **« Vraies couvertures »** en bas de la sidebar (`nav.js`) — bascule entre les illustrations génériques (dégradés colorés) et les vraies couvertures des livres récupérées en ligne. Persisté en `localStorage` clé `ltr_covers` (OFF par défaut), valable pour toute la section.
+Toggle **« Vraies couvertures »** en bas de la sidebar (`nav.js`) — bascule entre les illustrations génériques (dégradés colorés) et les vraies couvertures des livres récupérées en ligne. Stocké en **`sessionStorage`** clé `ltr_covers`, **ACTIVÉ par défaut à chaque connexion** : `coversOn()` renvoie vrai sauf `"0"` explicite. L'utilisateur peut désactiver — son choix tient pendant toute la visite (navigation entre pages comprise) puis se réinitialise sur ON à la prochaine session/onglet. (Avant juin 2026 : `localStorage`, OFF par défaut.)
 
 - **Module `js/covers.js`** : `coversOn()`, `setCovers()`, `resolveCover(livre)`, `hydrateCover(el, livre)`.
 - **Sources** (gratuites, sans clé, CORS ouvert) : recherche en **cascade de stratégies**, première qui aboutit retenue —
@@ -1191,6 +1191,11 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 ---
 
 ## Historique des modifications
+
+### 2026-06-18
+**Lis tes ratures — vraies couvertures activées par défaut à chaque connexion**
+
+- `lis-tes-ratures/js/covers.js` + `js/nav.js` — le toggle « Vraies couvertures » passe de `localStorage` (OFF par défaut, mémorisé pour toujours) à **`sessionStorage` (ON par défaut)**. `coversOn()` = vrai sauf `"0"` explicite. Résultat : chaque nouvelle connexion/onglet démarre avec les vraies couvertures ; l'utilisateur peut désactiver pour sa visite, mais ça revient sur ON à la session suivante.
 
 ### 2026-06-15
 **Lis tes ratures — statut « Livre possédé » + graphe d'évolution sur la fiche des livres élus**

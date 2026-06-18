@@ -9,9 +9,11 @@ const ICONS = {
   cover:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 3v18"/><path d="M12 7h4M12 11h4"/></svg>',
 };
 
-// Clé localStorage du basculement « illustrations génériques ↔ vraies couvertures »
-// (dupliquée depuis covers.js pour garder nav.js sans dépendance Firebase)
+// Clé sessionStorage du basculement « illustrations génériques ↔ vraies couvertures »
+// (dupliquée depuis covers.js pour garder nav.js sans dépendance Firebase).
+// ACTIVÉ par défaut à chaque session : on est « on » sauf "0" explicite.
 const COVERS_KEY = "ltr_covers";
+const coversIsOn = () => sessionStorage.getItem(COVERS_KEY) !== "0";
 
 const PAGES = [
   { id: "accueil",      href: "/lis-tes-ratures/",                       label: "Accueil" },
@@ -55,16 +57,16 @@ export function initNav(active) {
   // Toggle couvertures réelles
   const ct = document.getElementById("covers-toggle");
   if (ct) {
-    const sync = () => ct.classList.toggle("is-on", localStorage.getItem(COVERS_KEY) === "1");
+    const sync = () => ct.classList.toggle("is-on", coversIsOn());
     sync();
     ct.addEventListener("click", () => {
-      const on = localStorage.getItem(COVERS_KEY) !== "1";
-      localStorage.setItem(COVERS_KEY, on ? "1" : "0");
+      const on = !coversIsOn();
+      sessionStorage.setItem(COVERS_KEY, on ? "1" : "0");
       ct.setAttribute("aria-checked", on ? "true" : "false");
       sync();
       // Les pages écoutent cet événement pour re-render leurs couvertures
       document.dispatchEvent(new CustomEvent("ltr-covers-change", { detail: { on } }));
     });
-    ct.setAttribute("aria-checked", localStorage.getItem(COVERS_KEY) === "1" ? "true" : "false");
+    ct.setAttribute("aria-checked", coversIsOn() ? "true" : "false");
   }
 }

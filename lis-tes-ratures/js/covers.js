@@ -8,18 +8,22 @@
 //  la requête à chaque chargement et permettre une correction manuelle.
 //
 //  Le basculement « illustrations génériques ↔ vraies couvertures » est
-//  piloté par un toggle dans la sidebar (clé localStorage `ltr_covers`).
+//  piloté par un toggle dans la sidebar (clé sessionStorage `ltr_covers`).
+//  ACTIVÉ par défaut à chaque connexion : le stockage est en sessionStorage
+//  (pas localStorage) → l'option revient sur ON à chaque nouvelle session,
+//  tout en laissant l'utilisateur la désactiver pendant sa visite.
 // ─────────────────────────────────────────────────────────────────────
 import { updateLivre } from "./db.js";
 
 export const COVERS_KEY = "ltr_covers";
 
+// ON par défaut : seul un "0" explicite (désactivé cette session) le coupe.
 export function coversOn() {
-  return localStorage.getItem(COVERS_KEY) === "1";
+  return sessionStorage.getItem(COVERS_KEY) !== "0";
 }
 
 export function setCovers(on) {
-  localStorage.setItem(COVERS_KEY, on ? "1" : "0");
+  sessionStorage.setItem(COVERS_KEY, on ? "1" : "0");
 }
 
 // Version de l'algo de recherche. Bumper ce nombre relance la recherche sur
