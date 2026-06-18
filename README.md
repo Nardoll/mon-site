@@ -13,6 +13,12 @@
 
 ---
 
+## 🚧 Prochain gros chantier — version téléphone
+
+> **À reprendre en priorité à la prochaine session.** Le prochain grand chantier est l'**affichage mobile / version téléphone du site** : plusieurs ajustements responsive sont à faire (mise en page, tailles, éléments qui débordent ou mal adaptés sur petit écran). Claude doit le rappeler à Tom quand on reprend le travail. (Noté le 2026-06-18.)
+
+---
+
 ## Contexte général
 
 Site **personnel et privé** de Tom. Multi-sections indépendantes. La page d'accueil (`/`) présente le site et ses différentes sections avec des cartes visuelles. Chaque section n'est accessible qu'avec un mot de passe.
