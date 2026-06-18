@@ -1197,7 +1197,7 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 **Lis tes ratures — bibliothèque : toggle « Ouvrir tous les livres »**
 
 - `lis-tes-ratures/bibliotheque.html` — barre toggle (DA réutilisée de l'ancien `.ai-toggle-bar` + `.toggle-switch`) en haut de la vue visuelle.
-- `lis-tes-ratures/css/style.css` — état `.prop-grid.all-open .bk-cover` : applique l'ouverture (`rotateY(-112deg)`) à tous les livres, pas seulement au survol.
+- `lis-tes-ratures/css/style.css` — état `.prop-grid.all-open .bk-cover` : applique l'ouverture à tous les livres, pas seulement au survol. **Angle limité à `rotateY(-90deg)`** en mode « tout ouvert » pour que la couverture ne déborde pas sur le livre de gauche ; le **survol** garde l'ouverture complète (`-112deg`) via la règle plus spécifique `.prop-grid.infos-on .bk:hover .bk-cover`.
 - `lis-tes-ratures/js/bibliotheque.js` — toggle `#openall-toggle` qui ajoute/retire `all-open` sur `#prop-grid`, mémorisé en `localStorage` (`ltr_bib_open_all`, OFF par défaut).
 
 ### 2026-06-18
