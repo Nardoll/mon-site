@@ -1552,6 +1552,11 @@ h1, h2, h3,
 /* survol, infos activées : le livre s'ouvre */
 .prop-grid.infos-on .bk:hover { z-index: 6; }
 .prop-grid.infos-on .bk:hover .bk-cover { transform: rotateY(-112deg); box-shadow: -20px 16px 30px -18px rgba(0,0,0,.45); }
+/* option « ouvrir tous les livres » : tous ouverts en permanence (le survol
+   reste prioritaire pour passer au premier plan) */
+.prop-grid.all-open .bk { z-index: 2; }
+.prop-grid.all-open .bk-cover { transform: rotateY(-112deg); box-shadow: -20px 16px 30px -18px rgba(0,0,0,.45); }
+.prop-grid.all-open .bk:hover { z-index: 6; }
 
 /* ════════════════ Skeleton loading ════════════════ */
 @keyframes sk-shimmer {

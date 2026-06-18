@@ -214,7 +214,8 @@ Toutes les pages principales gèrent un paramètre URL `?open=ID` pour auto-ouvr
 #### Bibliothèque (`bibliotheque.html` + `bibliotheque.js`)
 - **Vue visuelle** (défaut) + **Vue DB** (tableau filtrable/triable)
 - Statuts : `en_proposition` / `elu` / `refuse` (affiché "Éliminé")
-- **Cartes propositions** : ouverture au survol **toujours active** (plus de toggle). La façade montre le titre/couverture ; l'intérieur (page crème) montre Auteur · Genre · Pages · Proposé par · description IA.
+- **Cartes propositions** : ouverture au survol **toujours active**. La façade montre le titre/couverture ; l'intérieur (page crème) montre Auteur · Genre · Pages · Proposé par · description IA.
+- **Toggle « Ouvrir tous les livres »** (barre `.ai-toggle-bar` en haut de la vue visuelle, clé `localStorage ltr_bib_open_all`, OFF par défaut) : ajoute la classe `all-open` au `#prop-grid` → **tous** les livres proposés affichent leur intérieur en permanence (même animation 3D que le survol), sans avoir à les survoler un par un. Le survol reste prioritaire (passe au premier plan).
 - **Ajout d'un livre** : titre + auteur uniquement requis ; genre / pages / description / ISBN (→ couverture) **remplis automatiquement par l'IA**. Voir [Enrichissement IA](#enrichissement-ia).
 - **Vraies couvertures** : toggle global dans la sidebar (genériques ↔ vraies couvertures par ISBN). Voir [Couvertures réelles](#couvertures-réelles).
 - **Fiche livre** : historique votes, section avancements membres (statut `termine` OU note présente dans `reunions.notes_finales`), **graphe d'évolution des lectures** (livres élus uniquement — même graphe que l'accueil, figé sur le mois d'élection), section réunion associée, lien commentaires. Bouton ✏️ : édition (dont `ISBN-13` et `URL de couverture` manuels). Unité d'avancement adaptée au `progression_unite` du livre (p./ch./par.).
@@ -1191,6 +1192,13 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 ---
 
 ## Historique des modifications
+
+### 2026-06-18 (suite)
+**Lis tes ratures — bibliothèque : toggle « Ouvrir tous les livres »**
+
+- `lis-tes-ratures/bibliotheque.html` — barre toggle (DA réutilisée de l'ancien `.ai-toggle-bar` + `.toggle-switch`) en haut de la vue visuelle.
+- `lis-tes-ratures/css/style.css` — état `.prop-grid.all-open .bk-cover` : applique l'ouverture (`rotateY(-112deg)`) à tous les livres, pas seulement au survol.
+- `lis-tes-ratures/js/bibliotheque.js` — toggle `#openall-toggle` qui ajoute/retire `all-open` sur `#prop-grid`, mémorisé en `localStorage` (`ltr_bib_open_all`, OFF par défaut).
 
 ### 2026-06-18
 **Lis tes ratures — vraies couvertures activées par défaut à chaque connexion**

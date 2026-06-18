@@ -95,6 +95,25 @@ function notesFinalesMap() {
 // ── Ouverture des livres au survol : toujours active ──────────────
 document.getElementById("prop-grid").classList.add("infos-on");
 
+// ── Option « Ouvrir tous les livres » ─────────────────────────────
+// Ajoute la classe `all-open` au grid → tous les livres proposés affichent
+// leur intérieur en permanence (même animation que le survol). Choix mémorisé.
+const OPENALL_KEY = "ltr_bib_open_all";
+const openallToggle = document.getElementById("openall-toggle");
+function applyOpenAll(on) {
+  document.getElementById("prop-grid").classList.toggle("all-open", on);
+}
+{
+  const on = localStorage.getItem(OPENALL_KEY) === "1";
+  if (openallToggle) openallToggle.checked = on;
+  applyOpenAll(on);
+}
+openallToggle?.addEventListener("change", () => {
+  const on = openallToggle.checked;
+  localStorage.setItem(OPENALL_KEY, on ? "1" : "0");
+  applyOpenAll(on);
+});
+
 // ── Vue bib ↔ DB ──────────────────────────────────────────────────
 document.getElementById("open-db").addEventListener("click", e => { e.preventDefault(); showDbView(); });
 document.getElementById("db-back").addEventListener("click", e => { e.preventDefault(); showBibView(); });
