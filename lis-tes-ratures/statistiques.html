@@ -36,6 +36,17 @@
     .sx-legend-item { display: inline-flex; align-items: center; gap: .4rem; cursor: pointer; padding: .18rem .5rem; border-radius: 4px; transition: opacity .2s, background .15s; }
     .sx-legend-item:hover { background: rgba(181,87,45,.07); }
     .sx-legend-item.dim { opacity: .3; }
+    /* Camembert répartition des livres */
+    .sx-pie-wrap { display: flex; align-items: center; gap: 2.2rem; flex-wrap: wrap; padding-top: .4rem; }
+    .sx-pie-svg { width: 196px; height: 196px; flex-shrink: 0; }
+    .sx-pie-svg circle.seg { transition: stroke-width .15s; }
+    .sx-pie-legend { display: flex; flex-direction: column; gap: .55rem; flex: 1; min-width: 230px; }
+    .sx-pie-li { display: flex; align-items: center; gap: .7rem; padding: .35rem .2rem; border-bottom: 1px solid var(--border); }
+    .sx-pie-li:last-child { border-bottom: none; }
+    .sx-pie-sw { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
+    .sx-pie-li-label { font-size: .9rem; color: var(--text); font-weight: 600; flex: 1; }
+    .sx-pie-li-count { font-family: var(--serif); font-weight: 700; font-size: 1.15rem; color: var(--text); font-variant-numeric: tabular-nums; }
+    .sx-pie-li-pct { font-size: .78rem; color: var(--muted); width: 48px; text-align: right; font-variant-numeric: tabular-nums; }
   </style>
 </head>
 <body>
@@ -67,6 +78,18 @@
         <div class="sk" style="height:2.2rem;width:40px;margin:0 auto .55rem"></div>
         <div class="sk" style="height:.65rem;width:64px;margin:0 auto"></div>
       </div>
+    </div>
+
+    <!-- Répartition des livres (camembert) -->
+    <div class="sx-panel">
+      <div class="sx-panel-head">
+        <span class="sx-panel-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M12 3v9h9a9 9 0 0 0-9-9z"/></svg>
+          Répartition des livres
+        </span>
+        <span class="sx-tag">Base de données</span>
+      </div>
+      <div id="pie-repartition"><p class="sx-note">Chargement…</p></div>
     </div>
 
     <!-- ════════ CHAPITRE : LECTURES & NOTES ════════ -->

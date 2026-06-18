@@ -127,6 +127,7 @@ async function init() {
 
   // ── Panels ──────────────────────────────────────────────────────
   renderKPIs({ livres, statuts, reunions, passees });
+  renderRepartition({ livres });
   renderHistNotes10({ passees, membres });
   renderHistNotes5({ votes: votesChron, membres });
   renderParticipation({ votes: votesChron, membres });
@@ -185,6 +186,64 @@ function renderKPIs({ livres, statuts, reunions, passees }) {
       <div class="sx-kpi-label">${k.label}</div>
       <div class="sx-kpi-sub">${k.sub}</div>
     </div>`).join("");
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Répartition des livres — camembert (donut) + légende chiffrée
+// ════════════════════════════════════════════════════════════════════
+function renderRepartition({ livres }) {
+  const host = document.getElementById("pie-repartition");
+  if (!host) return;
+
+  const total = livres.length;
+  if (!total) {
+    host.innerHTML = `<p class="sx-note">Aucun livre dans la base.</p>`;
+    return;
+  }
+
+  const defs = [
+    { key: "en_proposition", label: "En proposition", color: "#b5572d" },
+    { key: "elu",            label: "Élus",           color: "var(--green)" },
+    { key: "refuse",         label: "Éliminés",       color: "#c0473f" },
+  ];
+  const segs = defs.map(d => ({ ...d, count: livres.filter(l => l.statut === d.key).length }));
+  const known = segs.reduce((s, x) => s + x.count, 0);
+  const autre = total - known;
+  if (autre > 0) segs.push({ key: "autre", label: "Autre", color: "var(--muted)", count: autre });
+
+  // Anneau (donut) : un cercle par segment, dash-array proportionnel.
+  const CX = 100, CY = 100, R = 70, SW = 30;
+  const C = 2 * Math.PI * R;
+  let acc = 0;
+  const ring = segs.filter(s => s.count > 0).map(s => {
+    const len = (s.count / total) * C;
+    const gap = C - len;
+    const c = `<circle class="seg" cx="${CX}" cy="${CY}" r="${R}" fill="none"
+      style="stroke:${s.color}" stroke-width="${SW}"
+      stroke-dasharray="${len.toFixed(2)} ${gap.toFixed(2)}"
+      stroke-dashoffset="${(-acc).toFixed(2)}"
+      transform="rotate(-90 ${CX} ${CY})"><title>${esc(s.label)} : ${s.count}</title></circle>`;
+    acc += len;
+    return c;
+  }).join("");
+
+  const legend = segs.map(s => `
+    <div class="sx-pie-li">
+      <span class="sx-pie-sw" style="background:${s.color}"></span>
+      <span class="sx-pie-li-label">${esc(s.label)}</span>
+      <span class="sx-pie-li-count">${s.count}</span>
+      <span class="sx-pie-li-pct">${Math.round(s.count / total * 100)} %</span>
+    </div>`).join("");
+
+  host.innerHTML = `
+    <div class="sx-pie-wrap">
+      <svg class="sx-pie-svg" viewBox="0 0 200 200" role="img" aria-label="Répartition des livres">
+        ${ring}
+        <text x="${CX}" y="${CY - 4}" text-anchor="middle" style="font-family:var(--serif);font-weight:700;font-size:40px;fill:var(--text)">${total}</text>
+        <text x="${CX}" y="${CY + 20}" text-anchor="middle" style="font-size:13px;fill:var(--muted);letter-spacing:.04em">livre${total > 1 ? "s" : ""}</text>
+      </svg>
+      <div class="sx-pie-legend">${legend}</div>
+    </div>`;
 }
 
 // ════════════════════════════════════════════════════════════════════

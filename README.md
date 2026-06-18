@@ -247,7 +247,8 @@ Toutes les pages principales gèrent un paramètre URL `?open=ID` pour auto-ouvr
 - `?open=REUNION_ID` : auto-ouverture de la fiche
 
 #### Statistiques (`statistiques.html` + `statistiques.js`)
-14 panels répartis en 3 chapitres. Voir entrées historique 2026-06-09 pour le détail complet.
+Panels répartis en 3 chapitres. Voir entrées historique 2026-06-09 pour le détail complet.
+- **Répartition des livres** (juste sous les KPIs) : camembert/donut SVG (`renderRepartition`) montrant le **total de livres** au centre et la proportion **En proposition** (terracotta) / **Élus** (vert) / **Éliminés** (rouge), avec une **légende chiffrée** (compte + %). Classes `.sx-pie-*`.
 - Tooltip histogramme "Évolution des propositions" : fond clair `var(--surface)` + texte `var(--ink)`
 
 #### Commentaires (`commentaires.html` + `commentaires.js`)
@@ -1192,6 +1193,12 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 ---
 
 ## Historique des modifications
+
+### 2026-06-18 (suite 2)
+**Lis tes ratures — Statistiques : camembert de répartition des livres**
+
+- `lis-tes-ratures/statistiques.html` — nouveau panel « Répartition des livres » juste sous les KPIs (avant le chapitre « Lectures & notes ») + CSS `.sx-pie-*`.
+- `lis-tes-ratures/js/statistiques.js` — `renderRepartition({ livres })` : donut SVG (un `<circle>` par segment, `stroke-dasharray` proportionnel) avec le total au centre, et légende couleur + compte + pourcentage. Statuts : En proposition (terracotta `#b5572d`), Élus (`var(--green)`), Éliminés (`#c0473f`), + « Autre » si un livre a un statut inattendu.
 
 ### 2026-06-18 (suite)
 **Lis tes ratures — bibliothèque : toggle « Ouvrir tous les livres »**
