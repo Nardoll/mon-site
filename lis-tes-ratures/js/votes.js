@@ -62,7 +62,7 @@ async function init() {
   const openId = new URLSearchParams(location.search).get("open");
   if (openId) {
     const v = votes.find(x => x.id === openId);
-    if (v) openResult(v);
+    if (v) v.exceptionnel ? openExceptionnel(v) : openResult(v);
   }
 }
 
@@ -212,7 +212,9 @@ function renderScrutins() {
   document.querySelectorAll(".scrutin").forEach(btn => {
     btn.addEventListener("click", () => {
       const v = votes.find(x => x.id === btn.dataset.id);
-      if (v) openResult(v);
+      if (!v) return;
+      if (v.exceptionnel) openExceptionnel(v);
+      else openResult(v);
     });
     if (coversOn()) {
       const v = votes.find(x => x.id === btn.dataset.id);
@@ -230,6 +232,53 @@ document.addEventListener("ltr-covers-change", e => {
   if (e.detail?.on && curResultVote) hydrateCover(wcover, livreById[curResultVote.livre_elu]);
   else removeAllCovers(document.getElementById("result-paper"));
 });
+
+// ── Fiche vote exceptionnel (hors système de notation) ───────────────────
+function openExceptionnel(vote) {
+  const eluL = livreById[vote.livre_elu];
+  const [g1, g2] = getBookCover(vote.livre_elu);
+  const note = vote.note_exceptionnelle ?? null;
+  const desc = vote.description_exceptionnelle ?? "Ce livre a été choisi via un sondage extérieur au site.";
+
+  document.getElementById("result-paper").innerHTML = `
+    <button class="paper-close" id="result-close" aria-label="Fermer">✕</button>
+    <div class="paper-eyebrow">Scrutin · ${formatMois(vote.mois, vote.annee)}</div>
+    <div class="paper-title">Sélection exceptionnelle</div>
+    <div class="paper-winner" style="--g1:${g1};--g2:${g2}">
+      <span class="wcover"></span>
+      <div class="winfo">
+        <div class="wlabel">${IC.laurel} Livre élu</div>
+        <div class="wtitle">${esc(eluL?.titre ?? "—")}</div>
+        <div class="wauthor">${esc(eluL?.auteur ?? "")}</div>
+      </div>
+      ${note != null ? `<div class="wscore"><b>${Number(note).toFixed(1)}</b><small>note /10</small></div>` : ""}
+    </div>
+    <div class="paper-divider"></div>
+    <div style="background:rgba(181,87,45,.07);border:1px solid rgba(181,87,45,.22);border-radius:10px;padding:1.1rem 1.3rem;font-size:.9rem;line-height:1.6;color:#5a3c22">
+      <div style="font-weight:700;color:#b5572d;margin-bottom:.5rem;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase">⚠ Hors scrutin officiel</div>
+      ${esc(desc)}
+    </div>
+    ${vote.resultats?.length ? `
+    <div class="paper-divider"></div>
+    <div class="paper-sec-title">${IC.bars} Résultats du sondage</div>
+    <div style="display:flex;flex-direction:column;gap:.5rem">
+      ${[...(vote.resultats)].sort((a,b) => (b.score ?? b.moyenne ?? 0) - (a.score ?? a.moyenne ?? 0)).map(r => {
+        const l = livreById[r.livre_id];
+        const sc = r.score ?? r.moyenne ?? null;
+        const isElu = r.livre_id === vote.livre_elu;
+        return `<div style="display:flex;align-items:center;gap:.8rem;padding:.5rem .3rem;border-bottom:1px solid rgba(120,90,50,.15)">
+          <span style="flex:1;font-size:.9rem;color:${isElu ? "#1a8a55" : "#5a4326"};font-weight:${isElu ? "600" : "400"}">${esc(l?.titre ?? r.titre ?? r.livre_id)}${isElu ? " ✓" : ""}</span>
+          ${sc != null ? `<span style="font-size:.82rem;color:#8a6b46">${Number(sc).toFixed(2)}/5</span>` : ""}
+        </div>`;
+      }).join("")}
+    </div>` : ""}`;
+
+  document.getElementById("result-overlay").classList.remove("hidden");
+  document.getElementById("result-paper").scrollTop = 0;
+  document.getElementById("result-close").addEventListener("click", closeResult);
+  curResultVote = vote;
+  hydrateCover(document.querySelector("#result-paper .wcover"), eluL);
+}
 
 // ── Fiche résultats ───────────────────────────────────────────────────────
 function openResult(vote) {

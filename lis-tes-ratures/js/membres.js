@@ -76,8 +76,8 @@ async function init() {
     });
   });
 
-  // Regroupement votes par membre (via resultats.notes si présentes)
-  votes.forEach(v => {
+  // Regroupement votes par membre — hors votes exceptionnels (hors système /5)
+  votes.filter(v => !v.exceptionnel).forEach(v => {
     (v.resultats || []).forEach(r => {
       if (!r.notes) return;
       Object.entries(r.notes).forEach(([mid, note]) => {

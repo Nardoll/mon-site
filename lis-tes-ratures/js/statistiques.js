@@ -115,8 +115,12 @@ async function init() {
     .filter(r => isPasse(r))
     .sort((a, b) => toTs(a.date) - toTs(b.date));
 
-  // ── Votes triés chronologiquement ──────────────────────────────
-  const votesChron = [...votes].sort((a, b) => toTs(a.date) - toTs(b.date));
+  // ── Votes triés chronologiquement (hors votes exceptionnels) ──
+  // Les votes marqués `exceptionnel: true` en Firestore sont exclus de tous
+  // les calculs statistiques car ils ne suivent pas le système de notation /5.
+  const votesChron = [...votes]
+    .filter(v => !v.exceptionnel)
+    .sort((a, b) => toTs(a.date) - toTs(b.date));
 
   // ── Sous-titre page ─────────────────────────────────────────────
   const nbElus = livres.filter(l => l.statut === "elu").length;
