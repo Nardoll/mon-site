@@ -44,6 +44,8 @@ let curReunion = null;
 let editMode   = false;
 // Notes temporaires pendant l'édition : { membre_id: number }
 let editNotes  = {};
+// ID de la réunion en cours d'édition dans le formulaire (null = création)
+let editingReunionId = null;
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function esc(s) {
@@ -260,6 +262,7 @@ function renderMeeting() {
 
   document.getElementById("mtg-paper").innerHTML = `
     <button class="paper-close" id="mtg-close" aria-label="Fermer">✕</button>
+    <button class="rf-edit" id="mtg-modif-btn" style="position:absolute;top:.85rem;right:3rem">${IC.edit} Modifier la séance</button>
     <div class="mtg-head">
       <div class="mtg-cover" style="--g1:${g1};--g2:${g2}"><span>${esc(titre)}</span></div>
       <div class="mtg-head-info">
@@ -289,6 +292,10 @@ function renderMeeting() {
     ${videoBlock}`;
 
   document.getElementById("mtg-close").addEventListener("click", closeMeeting);
+  document.getElementById("mtg-modif-btn").addEventListener("click", () => {
+    closeMeeting();
+    openAdd(curReunion);
+  });
   hydrateCover(document.querySelector("#mtg-paper .mtg-cover"), livre);
   if (editMode) {
     wireEditMode();
@@ -414,41 +421,52 @@ function wireEditMode() {
   });
 }
 
-// ── Ajouter une réunion ──────────────────────────────────────────────────────
-function openAdd() {
+// ── Ajouter / Modifier une réunion ───────────────────────────────────────────
+// r = réunion existante (édition) ou undefined (création)
+function openAdd(r) {
+  editingReunionId = r?.id ?? null;
   const now    = new Date();
-  const curMois  = now.getMonth() + 1;
-  const curAnnee = now.getFullYear();
+  const curMois  = r ? r.mois : now.getMonth() + 1;
+  const curAnnee = r ? r.annee : now.getFullYear();
 
   const moisOpts = MOIS_NOMS.map((n, i) =>
     `<option value="${i + 1}" ${i + 1 === curMois ? "selected" : ""}>${n}</option>`
   ).join("");
 
+  // Pré-remplissage si édition
+  const presentsSet = new Set(r?.participant_ids || []);
+  const lecteursSet = new Set(r?.lecteurs_ids || []);
+  const dateVal = r?.date ? (r.date.toDate ? r.date.toDate() : new Date(r.date)).toISOString().split("T")[0] : '';
+  const crVal   = r?.compte_rendu || '';
+  const videoVal = r?.lien_video || '';
+  const statutVal = r?.statut || 'passée';
+
   // Checklist membres
-  const checklistHtml = (prefix, checked) => membres.map(m =>
-    `<label class="pf-check" style="display:inline-flex;align-items:center;gap:.35rem;flex-direction:row;padding:.25rem .45rem;margin:.2rem .2rem 0 0">
-      <input type="checkbox" data-mid="${esc(m.id)}" id="${prefix}-${esc(m.id)}" ${checked ? "checked" : ""} style="margin:0;flex-shrink:0" />
+  const checklistHtml = (prefix, defaultChecked, activeSet) => membres.map(m => {
+    const isChecked = activeSet ? activeSet.has(m.id) : defaultChecked;
+    return `<label class="pf-check" style="display:inline-flex;align-items:center;gap:.35rem;flex-direction:row;padding:.25rem .45rem;margin:.2rem .2rem 0 0">
+      <input type="checkbox" data-mid="${esc(m.id)}" id="${prefix}-${esc(m.id)}" ${isChecked ? "checked" : ""} style="margin:0;flex-shrink:0" />
       <span class="mc-dot" style="background:${m._color};width:1.3rem;height:1.3rem;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;color:#fff;flex-shrink:0">${initiales(m.nom)}</span>
       <span style="font-size:.82rem;white-space:nowrap">${esc(m.nom)}</span>
-    </label>`
-  ).join("");
+    </label>`;
+  }).join("");
 
   document.getElementById("add-paper").innerHTML = `
     <button class="paper-close" id="add-close" aria-label="Fermer">✕</button>
     <div class="pf-eyebrow">Registre des séances</div>
-    <div class="pf-title">Consigner une séance</div>
+    <div class="pf-title">${editingReunionId ? "Modifier la séance" : "Consigner une séance"}</div>
 
     <div class="pf-row">
       <div class="pf-group" style="margin-bottom:0">
         <label>Statut</label>
         <select class="pf-input" id="add-statut">
-          <option value="passée" selected>Passée</option>
-          <option value="prévue">Prévue</option>
+          <option value="passée" ${statutVal === "passée" ? "selected" : ""}>Passée</option>
+          <option value="prévue" ${statutVal === "prévue" ? "selected" : ""}>Prévue</option>
         </select>
       </div>
       <div class="pf-group" style="margin-bottom:0">
         <label>Date <span class="pf-hint">(optionnel)</span></label>
-        <input type="date" class="pf-input" id="add-date" />
+        <input type="date" class="pf-input" id="add-date" value="${dateVal}" />
       </div>
     </div>
 
@@ -465,12 +483,12 @@ function openAdd() {
 
     <div class="pf-group" style="margin-top:1.1rem">
       <label>Livre associé</label>
-      <div class="pf-livre" id="add-livre-box"></div>
+      <div class="pf-livre" id="add-livre-box" data-livre-id="${r?.livre_id || ''}"></div>
     </div>
 
     <div class="pf-group">
       <label>Présents à la réunion</label>
-      <div class="pf-checklist" id="add-presents" style="display:flex;flex-wrap:wrap;gap:.15rem">${checklistHtml("pre", true)}</div>
+      <div class="pf-checklist" id="add-presents" style="display:flex;flex-wrap:wrap;gap:.15rem">${checklistHtml("pre", true, editingReunionId ? presentsSet : null)}</div>
       <div class="pf-chk-tools">
         <button type="button" data-target="add-presents" data-val="true">Tout cocher</button>
         <button type="button" data-target="add-presents" data-val="false">Tout décocher</button>
@@ -479,7 +497,7 @@ function openAdd() {
 
     <div class="pf-group">
       <label>Ont lu le livre</label>
-      <div class="pf-checklist" id="add-lu" style="display:flex;flex-wrap:wrap;gap:.15rem">${checklistHtml("lu", false)}</div>
+      <div class="pf-checklist" id="add-lu" style="display:flex;flex-wrap:wrap;gap:.15rem">${checklistHtml("lu", false, editingReunionId ? lecteursSet : null)}</div>
       <div class="pf-chk-tools">
         <button type="button" data-target="add-lu" data-val="true">Tout cocher</button>
         <button type="button" data-target="add-lu" data-val="false">Tout décocher</button>
@@ -488,17 +506,17 @@ function openAdd() {
 
     <div class="pf-group">
       <label>Compte rendu <span class="pf-hint">(optionnel)</span></label>
-      <textarea class="pf-input" id="add-cr" placeholder="Notes, sujets abordés, impressions du groupe…"></textarea>
+      <textarea class="pf-input" id="add-cr" placeholder="Notes, sujets abordés, impressions du groupe…">${esc(crVal)}</textarea>
     </div>
 
     <div class="pf-group">
       <label>Lien vidéo <span class="pf-hint">(optionnel)</span></label>
-      <input type="url" class="pf-input" id="add-video" placeholder="https://youtube.com/…" />
+      <input type="url" class="pf-input" id="add-video" value="${esc(videoVal)}" placeholder="https://youtube.com/…" />
     </div>
 
     <div class="pf-foot">
       <button class="pf-btn cancel" id="add-cancel">Annuler</button>
-      <button class="pf-btn ok" id="add-ok">Enregistrer</button>
+      <button class="pf-btn ok" id="add-ok">${editingReunionId ? "Enregistrer les modifications" : "Enregistrer"}</button>
     </div>`;
 
   document.getElementById("add-overlay").classList.remove("hidden");
@@ -534,14 +552,15 @@ function updateAddLivre() {
     box.innerHTML = `${IC.book}<span><b>${esc(livre.titre)}</b> <span class="auth">— ${esc(livre.auteur || "")}</span></span>`;
     box.dataset.livreId = livre.id;
   } else {
-    // Fallback : select parmi les livres élus
+    // Fallback : select parmi les livres élus (pré-sélectionner si édition)
     const elus = livres.filter(l => l.statut === "elu");
+    const preselect = box.dataset.livreId || "";
     if (elus.length) {
       box.innerHTML = `${IC.book}<select class="pf-input" id="add-livre-select" style="border:none;background:transparent;padding:0;font-size:.9rem;color:#2c2015;width:auto">
         <option value="">— Aucun livre détecté, choisir manuellement —</option>
-        ${elus.map(l => `<option value="${esc(l.id)}">${esc(l.titre)}</option>`).join("")}
+        ${elus.map(l => `<option value="${esc(l.id)}" ${l.id === preselect ? "selected" : ""}>${esc(l.titre)}</option>`).join("")}
       </select>`;
-      box.dataset.livreId = "";
+      box.dataset.livreId = preselect;
       document.getElementById("add-livre-select").addEventListener("change", e => {
         box.dataset.livreId = e.target.value;
       });
@@ -572,33 +591,43 @@ async function submitAdd() {
 
   try {
     const livre = livreById[livreId];
-    await addReunion({
+    const data = {
       statut,
-      date:           dateVal || null,
+      date:            dateVal || null,
       mois,
       annee,
-      livre_id:       livreId || null,
+      livre_id:        livreId || null,
       participant_ids: presents,
-      lecteurs_ids:   lecteurs,
-      compte_rendu:   cr,
-      lien_video:     video || null,
-    });
+      lecteurs_ids:    lecteurs,
+      compte_rendu:    cr,
+      lien_video:      video || null,
+    };
 
-    // Recharger les réunions
+    if (editingReunionId) {
+      // Mise à jour d'une séance existante (on conserve notes_finales)
+      await updateReunion(editingReunionId, data);
+      toast(`Séance${livre ? ` « ${livre.titre} »` : ""} modifiée.`);
+    } else {
+      await addReunion(data);
+      toast(statut === "prévue"
+        ? `Séance prévue${livre ? ` « ${livre.titre} »` : ""} ajoutée.`
+        : `Séance${livre ? ` « ${livre.titre} »` : ""} consignée au registre.`);
+    }
+
+    editingReunionId = null;
     reunions = await getReunions();
     renderLedger();
     closeAdd();
-    toast(statut === "prévue"
-      ? `Séance prévue${livre ? ` « ${livre.titre} »` : ""} ajoutée.`
-      : `Séance${livre ? ` « ${livre.titre} »` : ""} consignée au registre.`);
   } catch (err) {
-    btn.disabled = false; btn.textContent = "Enregistrer";
+    btn.disabled = false;
+    btn.textContent = editingReunionId ? "Enregistrer les modifications" : "Enregistrer";
     toast("Erreur : " + err.message);
   }
 }
 
 function closeAdd() {
   document.getElementById("add-overlay").classList.add("hidden");
+  editingReunionId = null;
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
