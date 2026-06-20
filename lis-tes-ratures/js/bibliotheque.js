@@ -303,17 +303,23 @@ async function openFiche(id) {
   const SM = { en_proposition:['prop','En proposition'], elu:['elu','Élu'], refuse:['elim','Éliminé'] }[livre.statut] ?? ['prop','En proposition'];
 
   // Infos IA
-  const hasAI = livre.genre || livre.nb_pages || livre.description_3_mots;
-  const iaHTML = (livre.statut === 'en_proposition' && hasAI) ? `
+  // Pour les livres élus : nb_pages va dans le dl principal (vérifié manuellement) ;
+  // genre et description restent dans le bloc IA.
+  // Pour propositions et éliminés : tout est dans le bloc IA.
+  const isElu = livre.statut === 'elu';
+  const hasAIContent = isElu
+    ? (livre.genre || livre.description_3_mots)
+    : (livre.genre || livre.nb_pages || livre.description_3_mots);
+  const iaHTML = hasAIContent ? `
     <details class="fiche-ia">
       <summary><span class="chev">▶</span>${ICON_AI} Infos complémentaires (IA)</summary>
       <div class="fiche-ia-body">
         <dl class="fiche-dl">
-          ${livre.nb_pages ? `<dt>Pages</dt><dd>${livre.nb_pages} p.</dd>` : ''}
+          ${(!isElu && livre.nb_pages) ? `<dt>Pages</dt><dd>${livre.nb_pages} p.</dd>` : ''}
           ${livre.genre ? `<dt>Genre</dt><dd>${esc(livre.genre)}</dd>` : ''}
           ${livre.description_3_mots ? `<dt>En 3 mots</dt><dd>« ${esc(livre.description_3_mots)} »</dd>` : ''}
         </dl>
-        <div class="fiche-ia-warn">${ICON_WARN} Pages, genre et description fournis par IA — à vérifier.</div>
+        <div class="fiche-ia-warn">${ICON_WARN} Genre et description fournis par IA — à vérifier.</div>
       </div>
     </details>` : '';
 
@@ -429,6 +435,7 @@ async function openFiche(id) {
     <dl class="fiche-dl">
       ${livre.auteur ? `<dt>Auteur</dt><dd>${esc(livre.auteur)}</dd>` : ''}
       ${livre.annee ? `<dt>Année</dt><dd>${livre.annee}</dd>` : ''}
+      ${(isElu && livre.nb_pages) ? `<dt>Pages</dt><dd>${livre.nb_pages} p.</dd>` : ''}
       <dt>Proposé par</dt><dd>${esc(memNom(livre.propose_par))}</dd>
       <dt>Date</dt><dd>${d ? d.toLocaleDateString('fr-FR') : '—'}</dd>
       <dt>Statut</dt><dd><span class="fiche-badge ${SM[0]}">${SM[1]}</span></dd>
