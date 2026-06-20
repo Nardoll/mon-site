@@ -293,8 +293,9 @@ function renderMeeting() {
 
   document.getElementById("mtg-close").addEventListener("click", closeMeeting);
   document.getElementById("mtg-modif-btn").addEventListener("click", () => {
+    const r = curReunion;
     closeMeeting();
-    openAdd(curReunion);
+    openAdd(r);
   });
   hydrateCover(document.querySelector("#mtg-paper .mtg-cover"), livre);
   if (editMode) {
