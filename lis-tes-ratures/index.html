@@ -45,9 +45,10 @@
     .hs-cta.ghost-pur { color: var(--purple); border: 1px solid rgba(104,64,216,.28); background: none; }
     .hs-cta.ghost-pur:hover { background: rgba(104,64,216,.06); }
     /* Cachet date réunion */
-    .hs-cachet { display: inline-flex; align-items: center; gap: .5rem; padding: .28rem .6rem; background: rgba(181,87,45,.09); border: 1px solid rgba(181,87,45,.22); border-radius: 7px; color: var(--accent); width: fit-content; }
-    .hs-cachet .cach-j { font-family: var(--serif); font-size: 1.35rem; font-weight: 700; line-height: 1; }
-    .hs-cachet .cach-m { font-size: .6rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; line-height: 1.4; }
+    .hs-cachet { flex-shrink: 0; display: inline-flex; flex-direction: column; align-items: center; gap: .1rem; padding: .42rem .6rem; border: 1.5px solid rgba(181,87,45,.5); border-radius: 4px; color: var(--accent); background: rgba(181,87,45,.05); transform: rotate(-2.5deg); box-shadow: 0 4px 10px -7px rgba(181,87,45,.6); }
+    .hs-cachet small { font-size: .47rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; opacity: .85; }
+    .hs-cachet b { font-family: 'Courier New', monospace; font-size: 1.18rem; font-weight: 700; line-height: 1; }
+    .hs-cachet span { font-family: 'Courier New', monospace; font-size: .6rem; opacity: .8; }
     /* Anneau vote */
     .hs-ring-wrap { display: flex; align-items: center; gap: .65rem; }
     .hs-ring { width: 38px; height: 38px; flex-shrink: 0; overflow: visible; }

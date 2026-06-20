@@ -927,10 +927,7 @@ function buildReunionCard(r) {
   const d = toDate(r.date);
   const now = new Date();
   const jours = d ? Math.max(0, Math.ceil((d - now) / 86400000)) : null;
-  const cachet = d ? `<div class="hs-cachet">
-    <div class="cach-j">${d.getDate()}</div>
-    <div class="cach-m">${MFR_SHORT[d.getMonth()]}<br>${d.getFullYear()}</div>
-  </div>` : '';
+  const cachet = d ? `<div class="hs-cachet"><small>${MFR_SHORT[d.getMonth()]}</small><b>${d.getDate()}</b><span>${d.getFullYear()}</span></div>` : '';
   const meta = [
     d ? `${JOURS[d.getDay()]} ${d.getDate()} ${MFR_FULL[d.getMonth()]}` : null,
     jours === 0 ? "Aujourd'hui !" : jours === 1 ? 'Demain' : jours != null ? `Dans ${jours} jours` : null,
