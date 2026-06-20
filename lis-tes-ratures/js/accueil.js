@@ -915,7 +915,7 @@ function isReunionPrevue(r) {
 function buildReunionCard(r) {
   const JOURS = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
   if (!r) {
-    return `<div class="hs-card is-empty">
+    return `<div class="hs-card is-reunion is-empty">
       <div class="hs-eyebrow">${ICON_NOTE} Réunion</div>
       <div class="hs-title">Pas encore de séance prévue${currentLivre ? ` pour ${esc(currentLivre.titre)}` : ''}</div>
       <div class="hs-meta">Aucune réunion planifiée pour l'instant.</div>
