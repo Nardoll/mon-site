@@ -213,6 +213,8 @@ Toutes les pages principales gèrent un paramètre URL `?open=ID` pour auto-ouvr
 
 #### Accueil (`index.html` + `accueil.js`)
 1. **Livre du mois** — livre élu le plus récent, barres de progression par membre (statuts : Pas commencé · **Livre possédé** · En cours · Terminé), boutons "Voir commentaires" / "Laisser un commentaire". **Bouton "Ajouter au suivi"** : select + bouton pour les membres sans entrée dans `statuts_lecture`. Bouton "⚙️ Configurer le suivi" → modal pour définir `progression_unite` / `progression_total` / `progression_mode` (simple ou hiérarchique par parties).
+   - **Auto-fin de lecture** : si l'avancement saisi atteint le maximum du livre (`page_actuelle >= pages_totales`, ou dernier chapitre de la dernière partie en mode hiérarchique), le statut bascule automatiquement sur **Terminé** et le point de progression enregistré marque la fin (100 %) pour le graphe.
+   - **Lecteur auto sur la réunion** : tout passage en **Terminé** (manuel ou auto) inscrit le membre dans `lecteurs_ids` de la réunion associée au livre (rétrocompat : initialise `lecteurs_ids` depuis les `notes_finales` si l'ancien format est rencontré). Conséquence : le livre est aussitôt compté comme « lu » dans les statistiques.
 2. **Graphique d'évolution** — sparkline SVG des avancements du mois en cours (depuis `progression_lecture`). Clic → modal graphique complet.
 3. **Frise "Notre parcours"** — deux variantes (Fil cousu / Carnet). Événements : arrivées membres, propositions, votes, élus, réunions. Chaque événement cliquable → navigue vers la page correspondante avec `?open=ID`. Les votes "Élu" ouvrent `votes.html?open=VOTE_ID` (pas la fiche livre).
 4. **Palmarès** — top livres par note finale (moyenne `notes_finales` des réunions).
@@ -254,6 +256,7 @@ Toutes les pages principales gèrent un paramètre URL `?open=ID` pour auto-ouvr
 
 #### Statistiques (`statistiques.html` + `statistiques.js`)
 Panels répartis en 3 chapitres. Voir entrées historique 2026-06-09 pour le détail complet.
+- **KPIs (4 cartes)** : un livre compte comme **lu dès qu'au moins un membre l'a terminé** (statut `termine` OU présence dans `lecteurs_ids` d'une réunion) — pas besoin de réunion passée. **Livres lus** = livres distincts lus · **Lectures cumulées** = Σ lecteurs (un livre par lecteur) · **Pages lues (cumulées membres)** = pages × nb lecteurs · **Pages lues (livres lus)** = pages des livres lus, chaque livre une fois. (La note moyenne n'est plus un KPI — voir le graphe « Note moyenne du club » plus bas.)
 - **Répartition des livres** (juste sous les KPIs) : camembert/donut SVG (`renderRepartition`) montrant le **total de livres** au centre et la proportion **En proposition** (terracotta) / **Élus** (vert) / **Éliminés** (rouge), avec une **légende chiffrée** (compte + %). Classes `.sx-pie-*`.
 - Tooltip histogramme "Évolution des propositions" : fond clair `var(--surface)` + texte `var(--ink)`
 
@@ -1199,6 +1202,18 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 ---
 
 ## Historique des modifications
+
+### 2026-06-20
+**Lis tes ratures — auto-fin de lecture + KPIs statistiques recentrés sur les lectures réelles**
+
+- `lis-tes-ratures/js/accueil.js` (modal de suivi du livre du mois) :
+  - **Auto-passage en « Terminé »** : quand l'avancement saisi atteint (ou dépasse) le maximum du livre (`page_actuelle >= pages_totales`, valable aussi en mode hiérarchique avec dernier chapitre de la dernière partie), le statut bascule automatiquement sur `termine`. Le point de progression enregistré marque alors la fin (100 %) → le graphe d'évolution prend ce moment comme fin de lecture. Toast « Livre terminé ! 🎉 ».
+  - **Inscription auto comme lecteur sur la réunion** : tout passage en `termine` (manuel **ou** auto) appelle `ensureLecteurReunion()`, qui ajoute le membre à `lecteurs_ids` de la réunion associée au livre. Garde-fou rétrocompat : si la réunion n'a pas encore de `lecteurs_ids` (ancien format), on l'initialise à partir des `notes_finales > 0` existantes pour ne pas perdre de lecteurs déjà comptés. Sans réunion associée, rien à faire (le statut `termine` suffit aux stats).
+  - Import ajouté : `updateReunion` depuis `db.js`.
+- `lis-tes-ratures/js/statistiques.js` (`renderKPIs`) :
+  - Un livre est désormais **« lu » dès qu'au moins un membre l'a terminé** (statut `termine` OU présence dans `lecteurs_ids`), **sans exiger de réunion passée**. Conséquence directe : marquer « terminé » sur l'accueil suffit à faire compter le livre.
+  - **« Livres lus »** = livres distincts lus (chaque livre une fois). **« Lectures cumulées »** = Σ lecteurs (un livre compte par lecteur, +2 si deux personnes ont fini). **« Pages lues » (cumulées membres)** = pages × nombre de lecteurs. 
+  - **Note moyenne retirée** (déjà couverte par le graphe plus bas) et remplacée par une **4ᵉ carte « Pages lues » non cumulée** (= somme des pages des livres lus, chaque livre une fois — même logique que « Livres lus »).
 
 ### 2026-06-18 (suite 2)
 **Lis tes ratures — Statistiques : camembert de répartition des livres**

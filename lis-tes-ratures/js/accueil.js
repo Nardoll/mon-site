@@ -4,6 +4,7 @@ import {
   getMembres, getLivres, getVotes, getReunions,
   getStatutsForLivre, upsertStatutLecture, getLivreById,
   updateLivre, addProgressionPoint, getProgressionForLivre,
+  updateReunion,
 } from "./db.js";
 import { formatMois, MOIS_NOMS, showToast } from "./utils.js";
 import { hydrateCover } from "./covers.js";
@@ -503,21 +504,48 @@ document.getElementById('me-save').addEventListener('click', async () => {
     pages_totales = document.getElementById('me-total').value;
   }
 
+  // Auto-passage en « terminé » quand l'avancement atteint (ou dépasse) le maximum du livre.
+  let finalStatut = statut;
+  if (statut === 'en_cours' && page_actuelle !== '' && pages_totales !== '' &&
+      Number(pages_totales) > 0 && Number(page_actuelle) >= Number(pages_totales)) {
+    finalStatut = 'termine';
+  }
+  const autoTermine = finalStatut === 'termine' && statut !== 'termine';
+
   try {
-    await upsertStatutLecture({ membre_id: editMembreId, livre_id: currentLivreId, statut, page_actuelle, pages_totales });
+    await upsertStatutLecture({ membre_id: editMembreId, livre_id: currentLivreId, statut: finalStatut, page_actuelle, pages_totales });
     const pa = page_actuelle !== '' ? Number(page_actuelle) : null;
     const pt = pages_totales !== '' ? Number(pages_totales) : (currentLivre?.progression_total ?? null);
-    const effectivePa = (statut === 'termine' && (!pa || pa === 0) && pt) ? pt : pa;
+    // « Terminé » → le point de progression marque la fin du livre (100 %) pour le graphe.
+    const effectivePa = (finalStatut === 'termine' && (!pa || pa === 0) && pt) ? pt : pa;
     if (effectivePa !== null && effectivePa > 0) {
       await addProgressionPoint({ livre_id: currentLivreId, membre_id: editMembreId, page_actuelle: effectivePa, pages_totales: pt });
     }
-    showToast('Suivi mis à jour', 'success');
+    // Terminé (manuel ou auto) → inscrire le membre comme lecteur sur la réunion du livre.
+    if (finalStatut === 'termine') await ensureLecteurReunion(editMembreId);
+    showToast(autoTermine ? 'Livre terminé ! 🎉' : 'Suivi mis à jour', 'success');
     document.getElementById('me-overlay').classList.add('hidden');
     await reloadStatuts();
     refreshBars();
     renderHero();
   } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 });
+
+// Inscrit un membre dans `lecteurs_ids` de la réunion associée au livre courant.
+// Sans réunion, rien à faire (le statut « termine » suffit déjà aux statistiques).
+async function ensureLecteurReunion(membreId) {
+  const reunion = allReunions.find(r => r.livre_id === currentLivreId);
+  if (!reunion) return;
+  // Réunion ancienne sans `lecteurs_ids` : on initialise à partir des notes existantes
+  // pour ne pas perdre les lecteurs déjà comptés via notes_finales.
+  const base = Array.isArray(reunion.lecteurs_ids)
+    ? reunion.lecteurs_ids
+    : Object.entries(reunion.notes_finales || {}).filter(([, n]) => Number(n) > 0).map(([id]) => id);
+  if (base.includes(membreId)) return;
+  const arr = [...base, membreId];
+  await updateReunion(reunion.id, { lecteurs_ids: arr });
+  reunion.lecteurs_ids = arr; // maj du cache local
+}
 
 // ── Modal : configurer le suivi ───────────────────────────────────
 function renderPartiesList(parties) {

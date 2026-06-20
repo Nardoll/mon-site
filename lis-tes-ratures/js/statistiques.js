@@ -126,7 +126,7 @@ async function init() {
     `${membres.length} membre${membres.length !== 1 ? "s" : ""}`;
 
   // ── Panels ──────────────────────────────────────────────────────
-  renderKPIs({ livres, statuts, reunions, passees });
+  renderKPIs({ livres, statuts, reunions });
   renderRepartition({ livres });
   renderHistNotes10({ passees, membres });
   renderHistNotes5({ votes: votesChron, membres });
@@ -146,38 +146,31 @@ async function init() {
 // ════════════════════════════════════════════════════════════════════
 // 1. KPIs — corrigé : "termine" (sans accent) + membersWhoFinishedBook
 // ════════════════════════════════════════════════════════════════════
-function renderKPIs({ livres, statuts, reunions, passees }) {
+function renderKPIs({ livres, statuts, reunions }) {
   const livresElus = livres.filter(l => l.statut === "elu");
-  const elusPassesIds = new Set(passees.map(r => r.livre_id).filter(Boolean));
 
-  // Livres cumulés lus = livres élus ayant eu une réunion passée
-  const nbLivresLus = livresElus.filter(l => elusPassesIds.has(l.id)).length;
-
-  // Lectures cumulées (Σ membres ayant terminé) + pages cumulées
-  let lecturesCum = 0, pagesCum = 0;
+  // Un livre est « lu » dès qu'au moins un membre l'a terminé (statut « termine »
+  // sur l'accueil OU inscrit dans lecteurs_ids d'une réunion) — pas besoin de réunion passée.
+  let nbLivresLus = 0;   // livres distincts lus (chaque livre une seule fois)
+  let lecturesCum = 0;   // Σ membres ayant terminé (un livre compte par lecteur)
+  let pagesCum = 0;      // pages × nombre de lecteurs (cumulé)
+  let pagesTotal = 0;    // pages des livres lus (chaque livre une seule fois)
   livresElus.forEach(l => {
-    if (!elusPassesIds.has(l.id)) return;
     const reusLivre = reunions.filter(r => r.livre_id === l.id);
     const finishers = membersWhoFinishedBook(l.id, statuts, reusLivre);
+    if (finishers.size === 0) return;
+    const pages = Number(l.nb_pages) || 0;
+    nbLivresLus += 1;
     lecturesCum += finishers.size;
-    pagesCum    += finishers.size * (Number(l.nb_pages) || 0);
+    pagesCum    += finishers.size * pages;
+    pagesTotal  += pages;
   });
-
-  // Note moyenne générale /10
-  const allNotes10 = [];
-  passees.forEach(r => {
-    Object.values(r.notes_finales || {}).forEach(n => {
-      const v = Number(n);
-      if (v > 0) allNotes10.push(v);
-    });
-  });
-  const noteMoy = avg(allNotes10);
 
   const kpis = [
     { num: nbLivresLus, label: "Livres lus", sub: "depuis le début" },
     { num: lecturesCum, label: "Lectures cumulées", sub: "total membre × livre" },
     { num: pagesCum > 0 ? pagesCum.toLocaleString("fr-FR") : "0", label: "Pages lues", sub: "cumulées membres" },
-    { num: noteMoy !== null ? fmtFr(noteMoy) + "/10" : "—", label: "Note moyenne", sub: `sur ${allNotes10.length} note${allNotes10.length !== 1 ? "s" : ""}` },
+    { num: pagesTotal > 0 ? pagesTotal.toLocaleString("fr-FR") : "0", label: "Pages lues", sub: "livres lus" },
   ];
 
   document.getElementById("kpis-root").innerHTML = kpis.map(k => `
