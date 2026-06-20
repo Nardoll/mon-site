@@ -1215,6 +1215,25 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
   - **« Livres lus »** = livres distincts lus (chaque livre une fois). **« Lectures cumulées »** = Σ lecteurs (un livre compte par lecteur, +2 si deux personnes ont fini). **« Pages lues » (cumulées membres)** = pages × nombre de lecteurs. 
   - **Note moyenne retirée** (déjà couverte par le graphe plus bas) et remplacée par une **4ᵉ carte « Pages lues » non cumulée** (= somme des pages des livres lus, chaque livre une fois — même logique que « Livres lus »).
 
+### 2026-06-20 (suite 3)
+**Lis tes ratures — votes exceptionnels (Piranèse / sondage Discord)**
+
+- `lis-tes-ratures/js/votes.js` — les votes avec `exceptionnel: true` en Firestore ouvrent une fiche spéciale au clic (fonction `openExceptionnel()`) au lieu de la fiche de dépouillement standard. La fiche spéciale affiche : titre « Sélection exceptionnelle », encart orange « ⚠ Hors scrutin officiel » + `description_exceptionnelle`, note `/10` optionnelle (`note_exceptionnelle`) et liste simplifiée des résultats si `resultats` est présent. En dehors du clic, ces votes sont indiscernables des autres dans la liste des scrutins.
+- `lis-tes-ratures/js/statistiques.js` — les votes `exceptionnel: true` sont filtrés de `votesChron` : exclus de toutes les fonctions qui calculent des stats de votes (notes moyennes, participations, etc.).
+- `lis-tes-ratures/js/membres.js` — exclusion de la boucle de participation aux votes dans les fiches membres.
+- **Action Firestore à faire par Tom** : ouvrir la console Firebase → collection `votes` → document Piranèse → ajouter `exceptionnel: true`. Champs optionnels : `description_exceptionnelle` (texte affiché dans la fiche, ex : _"Ce livre a été élu via un sondage Discord avant la création du site."_) et `note_exceptionnelle` (nombre, si vous souhaitez afficher une note /10).
+
+### 2026-06-20 (suite 2)
+**Lis tes ratures — modification des séances de réunion**
+
+- `lis-tes-ratures/js/reunions.js` — ajout d'un bouton crayon discret (icône SVG inline 18×18) dans l'en-tête de la fiche séance, positionné sous la croix de fermeture. Au clic, ferme la fiche et rouvre le formulaire de saisie pré-rempli avec les données de la séance (`date`, `compte_rendu`, `lien_video`, `statut`, listes `present_ids` et `lecteurs_ids`). La soumission appelle `updateReunion()` (mise à jour partielle Firestore) au lieu de `addReunion()`. Deux corrections de bug : (1) SVG sans dimensions → rendu 0×0 corrigé par des attributs `width`/`height` inline ; (2) `closeMeeting()` annulait `curReunion` avant qu'on puisse le passer à `openAdd()` → corrigé en sauvegardant `const r = curReunion` avant d'appeler `closeMeeting()`.
+- `lis-tes-ratures/js/db.js` — `updateReunion(id, data)` : `updateDoc` partiel (champs existants non mentionnés préservés).
+
+### 2026-06-20 (suite)
+**Lis tes ratures — infos IA sur les fiches élus et éliminés**
+
+- `lis-tes-ratures/js/bibliotheque.js` (`openFiche()`) : le bloc infos IA (genre, description 3 mots) s'affiche désormais pour **tous** les statuts de livre (Élu, Éliminé, Proposition). Spécificité livres élus : `nb_pages` est placé dans le `<dl>` principal (données vérifiées à la main) et **non** dans le bloc IA, contrairement aux livres non élus où `nb_pages` (donnée automatique) reste dans le bloc IA. La variable `isElu` contrôle ce branchement.
+
 ### 2026-06-18 (suite 2)
 **Lis tes ratures — Statistiques : camembert de répartition des livres**
 
