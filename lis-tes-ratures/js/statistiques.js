@@ -168,9 +168,9 @@ function renderKPIs({ livres, statuts, reunions }) {
 
   const kpis = [
     { num: nbLivresLus, label: "Livres lus", sub: "depuis le début" },
+    { num: pagesTotal > 0 ? pagesTotal.toLocaleString("fr-FR") : "0", label: "Pages lues", sub: "depuis le début" },
     { num: lecturesCum, label: "Lectures cumulées", sub: "total membre × livre" },
-    { num: pagesCum > 0 ? pagesCum.toLocaleString("fr-FR") : "0", label: "Pages lues", sub: "cumulées membres" },
-    { num: pagesTotal > 0 ? pagesTotal.toLocaleString("fr-FR") : "0", label: "Pages lues", sub: "livres lus" },
+    { num: pagesCum > 0 ? pagesCum.toLocaleString("fr-FR") : "0", label: "Pages cumulées", sub: "total membre × pages" },
   ];
 
   document.getElementById("kpis-root").innerHTML = kpis.map(k => `
