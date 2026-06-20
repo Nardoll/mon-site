@@ -283,14 +283,22 @@ function openExceptionnel(vote) {
   hydrateCover(document.querySelector("#result-paper .wcover"), eluL);
 }
 
+function sondageVotes(sondage, mId) {
+  const v = sondage[mId];
+  return new Set(Array.isArray(v) ? v : (v ? [v] : []));
+}
+
 function buildSondageChart(vote) {
   const sondage = vote.sondage || {};
-  const livreIds = vote.livre_ids || [...new Set(Object.values(sondage))];
+  const livreIds = vote.livre_ids || [...new Set(Object.values(sondage).flat())];
   if (!livreIds.length) return `<p style="font-size:.83rem;color:var(--muted);margin:.3rem 0">Aucun livre enregistré.</p>`;
 
   const counts = {};
   livreIds.forEach(id => { counts[id] = 0; });
-  Object.values(sondage).forEach(lId => { if (lId in counts) counts[lId]++; });
+  Object.entries(sondage).forEach(([, choix]) => {
+    const arr = Array.isArray(choix) ? choix : (choix ? [choix] : []);
+    arr.forEach(lId => { if (lId in counts) counts[lId]++; });
+  });
 
   const H = 150;
   const maxCount = Math.max(1, ...Object.values(counts));
@@ -337,8 +345,8 @@ function buildSondageTable(vote) {
 
   const rows = membreIds.map(mId => {
     const m = membreById[mId] || { nom: mId, _color: "#888" };
-    const voted = sondage[mId];
-    const cells = livreIds.map(lId => lId === voted
+    const votedSet = sondageVotes(sondage, mId);
+    const cells = livreIds.map(lId => votedSet.has(lId)
       ? `<td style="text-align:center;background:rgba(26,138,85,.12);color:#1a8a55;font-weight:700;font-size:1rem">✓</td>`
       : `<td></td>`
     ).join("");
@@ -357,62 +365,76 @@ function buildSondageTable(vote) {
 }
 
 function openSondageEdit(vote) {
-  const livreIdsSet = new Set(vote.livre_ids || [...new Set(Object.values(vote.sondage || {}))]);
+  const livreIdsSet = new Set(vote.livre_ids || [...new Set(Object.values(vote.sondage || {}).flat())]);
   const sondage = vote.sondage || {};
-
   const livresSorted = [...livres].sort((a, b) => (a.titre ?? "").localeCompare(b.titre ?? ""));
 
-  const checkboxes = livresSorted.map(l => {
-    const checked = livreIdsSet.has(l.id) ? "checked" : "";
-    return `<label style="display:flex;align-items:center;gap:.55rem;padding:.3rem 0;cursor:pointer;font-size:.84rem">
-      <input type="checkbox" data-livre="${esc(l.id)}" ${checked} style="cursor:pointer;flex-shrink:0">
+  const paper = document.getElementById("result-paper");
+
+  const compCheckboxes = livresSorted.map(l => `
+    <label style="display:flex;align-items:center;gap:.55rem;padding:.3rem .4rem;cursor:pointer;font-size:.84rem">
+      <input type="checkbox" data-comp-livre="${esc(l.id)}" ${livreIdsSet.has(l.id) ? "checked" : ""} style="cursor:pointer;flex-shrink:0">
       ${esc(l.titre)}${l.auteur ? `<span style="color:var(--muted);font-size:.77rem;margin-left:.2rem">— ${esc(l.auteur)}</span>` : ""}
-    </label>`;
-  }).join("");
+    </label>`).join("");
 
-  const voteRows = membres.map(m => {
-    const current = sondage[m.id] || "";
-    const opts = livresSorted.map(l =>
-      `<option value="${esc(l.id)}" ${current === l.id ? "selected" : ""}>${esc(l.titre)}</option>`
-    ).join("");
-    return `<div style="display:flex;align-items:center;gap:.8rem;padding:.45rem 0;border-bottom:1px solid rgba(120,90,50,.1)">
-      <span style="min-width:90px;font-size:.85rem;flex-shrink:0">${esc(m.nom)}</span>
-      <select data-membre="${esc(m.id)}" style="flex:1;font-size:.82rem;padding:.3rem .5rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)">
-        <option value="">— N'a pas voté —</option>
-        ${opts}
-      </select>
-    </div>`;
-  }).join("");
-
-  document.getElementById("result-paper").innerHTML = `
+  paper.innerHTML = `
     <button class="paper-close" id="result-close" aria-label="Fermer">✕</button>
     <div class="paper-eyebrow">Sondage · ${formatMois(vote.mois, vote.annee)}</div>
     <div class="paper-title">Modifier les votes</div>
 
     <div class="paper-sec-title" style="margin-top:.8rem">${IC.grid} Livres en compétition</div>
-    <p style="font-size:.83rem;color:var(--muted);margin:.2rem 0 .7rem">Cocher les livres qui étaient dans le sondage Discord.</p>
-    <div style="display:flex;flex-direction:column;max-height:180px;overflow-y:auto;padding:.1rem .2rem;border:1px solid var(--border);border-radius:8px;margin-bottom:1.2rem">${checkboxes}</div>
+    <p style="font-size:.83rem;color:var(--muted);margin:.2rem 0 .6rem">Cocher les livres qui étaient dans le sondage Discord.</p>
+    <div id="sondage-comp" style="display:flex;flex-direction:column;max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:1.1rem">${compCheckboxes}</div>
 
     <div class="paper-sec-title">${IC.users} Votes individuels</div>
-    <p style="font-size:.83rem;color:var(--muted);margin:.2rem 0 .7rem">Indiquer quel livre chaque membre a choisi.</p>
-    <div style="display:flex;flex-direction:column;margin-bottom:1.2rem">${voteRows}</div>
+    <p style="font-size:.83rem;color:var(--muted);margin:.2rem 0 .6rem">Cocher tous les livres pour lesquels chaque membre a voté (choix multiples).</p>
+    <div id="sondage-votes" style="display:flex;flex-direction:column;margin-bottom:1.2rem"></div>
 
     <div style="display:flex;gap:.8rem;flex-wrap:wrap">
       <button id="sondage-save-btn" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.55rem 1.2rem;font-size:.88rem;font-weight:600;cursor:pointer">Enregistrer</button>
       <button id="sondage-cancel-btn" style="background:none;border:1px solid var(--border);border-radius:8px;padding:.55rem 1.2rem;font-size:.88rem;cursor:pointer;color:var(--text)">Annuler</button>
     </div>`;
 
-  document.getElementById("result-paper").scrollTop = 0;
+  const getCompIds = () => new Set(
+    [...paper.querySelectorAll("[data-comp-livre]:checked")].map(c => c.dataset.compLivre)
+  );
+
+  const renderVotes = () => {
+    const compIds = getCompIds();
+    const compLivres = livresSorted.filter(l => compIds.has(l.id));
+    const host = document.getElementById("sondage-votes");
+    if (!compLivres.length) {
+      host.innerHTML = `<p style="font-size:.82rem;color:var(--muted)">Sélectionne d'abord les livres en compétition ci-dessus.</p>`;
+      return;
+    }
+    host.innerHTML = membres.map(m => {
+      const votedSet = sondageVotes(sondage, m.id);
+      const cbs = compLivres.map(l => `
+        <label style="display:inline-flex;align-items:center;gap:.3rem;font-size:.8rem;cursor:pointer;white-space:nowrap;margin:.15rem .5rem .15rem 0">
+          <input type="checkbox" data-vote-membre="${esc(m.id)}" data-vote-livre="${esc(l.id)}" ${votedSet.has(l.id) ? "checked" : ""}>
+          ${esc(l.titre)}
+        </label>`).join("");
+      return `<div style="display:flex;align-items:flex-start;gap:.6rem;padding:.45rem 0;border-bottom:1px solid rgba(120,90,50,.1);flex-wrap:wrap">
+        <span style="min-width:90px;font-size:.85rem;flex-shrink:0;padding-top:.15rem">${esc(m.nom)}</span>
+        <div style="display:flex;flex-wrap:wrap;flex:1">${cbs}</div>
+      </div>`;
+    }).join("");
+  };
+
+  renderVotes();
+  paper.addEventListener("change", e => { if (e.target.dataset.compLivre !== undefined) renderVotes(); });
+  paper.scrollTop = 0;
   document.getElementById("result-close").addEventListener("click", closeResult);
   document.getElementById("sondage-cancel-btn").addEventListener("click", () => openExceptionnel(vote));
   document.getElementById("sondage-save-btn").addEventListener("click", async () => {
-    const newLivreIds = [];
-    document.getElementById("result-paper").querySelectorAll("[data-livre]").forEach(cb => {
-      if (cb.checked) newLivreIds.push(cb.dataset.livre);
-    });
+    const newLivreIds = [...getCompIds()];
     const newSondage = {};
-    document.getElementById("result-paper").querySelectorAll("[data-membre]").forEach(sel => {
-      if (sel.value) newSondage[sel.dataset.membre] = sel.value;
+    paper.querySelectorAll("[data-vote-membre]").forEach(cb => {
+      if (!cb.checked) return;
+      const mId = cb.dataset.voteMembre;
+      const lId = cb.dataset.voteLivre;
+      if (!newSondage[mId]) newSondage[mId] = [];
+      newSondage[mId].push(lId);
     });
     try {
       await updateVote(vote.id, { livre_ids: newLivreIds, sondage: newSondage });

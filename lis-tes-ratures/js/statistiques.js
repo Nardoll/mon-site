@@ -127,9 +127,12 @@ async function init() {
     if (!v.exceptionnel) return v;
     const fakRes = {};
     (v.livre_ids || []).forEach(lId => { fakRes[lId] = { livre_id: lId, notes: {} }; });
-    Object.entries(v.sondage || {}).forEach(([mId, lId]) => {
-      if (!fakRes[lId]) fakRes[lId] = { livre_id: lId, notes: {} };
-      fakRes[lId].notes[mId] = 1;
+    Object.entries(v.sondage || {}).forEach(([mId, choix]) => {
+      const arr = Array.isArray(choix) ? choix : (choix ? [choix] : []);
+      arr.forEach(lId => {
+        if (!fakRes[lId]) fakRes[lId] = { livre_id: lId, notes: {} };
+        fakRes[lId].notes[mId] = 1;
+      });
     });
     return { ...v, resultats: Object.values(fakRes) };
   }
