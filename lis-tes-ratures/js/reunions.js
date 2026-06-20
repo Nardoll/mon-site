@@ -97,6 +97,27 @@ function coverOf(livreId) {
   return l?._cover || COVERS[0];
 }
 
+// ── Sondage test (sessionStorage, jamais Firebase) ───────────────────────────
+const SD_TEST_KEY = 'ltr_sondage_test';
+
+function saveTestSondage(s) {
+  sessionStorage.setItem(SD_TEST_KEY, JSON.stringify({
+    ...s,
+    cloture: s.cloture?.toDate ? s.cloture.toDate().toISOString() : s.cloture,
+  }));
+}
+
+function loadTestSondage() {
+  try {
+    const raw = sessionStorage.getItem(SD_TEST_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    const cloture = new Date(s.cloture);
+    if (cloture < new Date()) { sessionStorage.removeItem(SD_TEST_KEY); return null; }
+    return { ...s, cloture: { toDate: () => cloture } };
+  } catch { return null; }
+}
+
 // ── Helpers sondage ─────────────────────────────────────────────────────────
 const JFR = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
 const MFR_C = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
@@ -239,6 +260,7 @@ function renderSondagePanel() {
   const scores = computeScores(s);
   const winner = computeWinner(s);
   const nb = Object.keys(s.reponses || {}).length;
+  const testBadge = s._test ? `<span style="font-size:.66rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:rgba(181,87,45,.15);color:#b5572d;border:1px solid rgba(181,87,45,.4);border-radius:4px;padding:.1rem .45rem">TEST</span>` : '';
 
   const winnerBanner = winner ? `
     <div class="sp-winner">
@@ -248,7 +270,7 @@ function renderSondagePanel() {
 
   mount.innerHTML = `
     <div class="sp-panel-head">
-      <span class="sp-panel-title">${esc(livre?.titre ?? '—')}<small>${nb} réponse${nb !== 1 ? 's' : ''}</small></span>
+      <span class="sp-panel-title">${esc(livre?.titre ?? '—')}${testBadge}<small>${nb} réponse${nb !== 1 ? 's' : ''}</small></span>
       <span class="sp-cloture${expired ? ' expired' : ''}">${clotStr}</span>
     </div>
     ${winnerBanner}
@@ -368,14 +390,27 @@ function wireSondageForm() {
 
     // Find current livre
     const livreId = currentLivreIdForSondage();
+    const testMode = document.getElementById('sd-test-mode')?.checked;
     const btn = document.getElementById('sd-ok');
-    btn.disabled = true; btn.textContent = 'Création…';
+    btn.disabled = true; btn.textContent = testMode ? 'Lancement…' : 'Création…';
     try {
-      await createSondageDispo({ livre_id: livreId, jours, cloture });
-      sondageActif = await getSondageDispo();
-      document.getElementById('sd-overlay').classList.add('hidden');
-      renderSondagePanel();
-      toast('Sondage ouvert !');
+      if (testMode) {
+        const fake = {
+          id: 'test-' + Date.now(), livre_id: livreId, jours,
+          cloture: { toDate: () => cloture }, ouvert: true, reponses: {}, _test: true,
+        };
+        saveTestSondage({ ...fake, cloture });
+        sondageActif = fake;
+        document.getElementById('sd-overlay').classList.add('hidden');
+        renderSondagePanel();
+        toast('Sondage test lancé (2 min) — rien ne sera enregistré.');
+      } else {
+        await createSondageDispo({ livre_id: livreId, jours, cloture });
+        sondageActif = await getSondageDispo();
+        document.getElementById('sd-overlay').classList.add('hidden');
+        renderSondagePanel();
+        toast('Sondage ouvert !');
+      }
     } catch(e) {
       toast('Erreur : ' + e.message);
     } finally {
@@ -458,9 +493,11 @@ function openVoter(sondage) {
 async function init() {
   initNav("reunions");
 
-  [reunions, membres, livres, votes, sondageActif] = await Promise.all([
+  let sondageFirebase;
+  [reunions, membres, livres, votes, sondageFirebase] = await Promise.all([
     getReunions(), getMembres(), getLivres(), getVotes(), getSondageDispo(),
   ]);
+  sondageActif = sondageFirebase ?? loadTestSondage();
 
   membres.forEach((m, i) => {
     m._color = PALETTE[i % PALETTE.length];

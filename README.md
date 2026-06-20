@@ -73,7 +73,8 @@ Mon Site/
 │   ├── votes.html               Page Votes (scrutins archivés + vote en cours)
 │   ├── vote.html                Bulletin de vote (déposer son vote)
 │   ├── membres.html             Page Membres
-│   ├── reunions.html            Page Réunions
+│   ├── reunions.html            Page Réunions (+ panneau sondage de disponibilité)
+│   ├── sondage-dispo.html       Page vote Framadate-style (disponibilités de date)
 │   ├── statistiques.html        Page Statistiques
 │   ├── commentaires.html        Page Commentaires de lecture (par livre, ?livre=ID)
 │   ├── css/
@@ -90,7 +91,8 @@ Mon Site/
 │       ├── votes.js             Logique Votes (résultats, ?open=VOTE_ID)
 │       ├── vote.js              Logique Bulletin de vote
 │       ├── membres.js           Logique Membres (?open=MEMBRE_ID)
-│       ├── reunions.js          Logique Réunions (?open=REUNION_ID)
+│       ├── reunions.js          Logique Réunions (?open=REUNION_ID) + sondage de disponibilité
+│       ├── sondage-dispo.js     Logique page sondage de date (vote Framadate-style)
 │       ├── statistiques.js      Logique Statistiques (14 panels)
 │       └── commentaires.js      Logique Commentaires (?livre=ID, ?new=1)
 │
@@ -195,6 +197,7 @@ Mon Site/
 | `statuts_lecture` | Suivi de lecture par membre × livre (statut, page_actuelle, pages_totales) |
 | `progression_lecture` | Historique horodaté des avancements (pour le graphique en courbes) |
 | `commentaires_lecture` | Commentaires (livre_id, membre_id, avancement, titre, contenu) |
+| `sondages_dispo` | Sondages de disponibilité de date (livre_id, jours[], cloture, ouvert, reponses{}, date_choisie) |
 
 ### Navigation — pattern `?open=ID`
 
@@ -253,6 +256,23 @@ Toutes les pages principales gèrent un paramètre URL `?open=ID` pour auto-ouvr
 - Fiche réunion : tampons tour de table, notes, compte rendu, vidéo, flèches liens proportionnées au texte
 - Formulaire d'ajout : checklist membres **horizontale et compacte** (dot + nom sur une ligne, flex-wrap)
 - `?open=REUNION_ID` : auto-ouverture de la fiche
+- **Sondage de disponibilité** (panneau cahier relié à droite) : permet de choisir collectivement la date de la prochaine réunion, style Framadate.
+  - Bouton "Sondage de disponibilité" (ghost violet) → overlay de création
+  - **Deux modes de dates** : delta (N jours avant/après fin du mois) ou plage libre (date début + date fin)
+  - **Deux modes de durée** : durée en jours ou date d'échéance
+  - **Mode test (2 min)** : crée un sondage éphémère en sessionStorage, rien n'est enregistré en Firebase
+  - Grille Framadate (membres × jours, ✓ dispo / ~ si besoin / ✗ pas dispo, scores calculés côté client)
+  - **Auto-clôture** : si `cloture < now` au chargement, clôture automatiquement + crée/met à jour la réunion associée
+  - **Tiebreaker** : en cas d'égalité de score, la date la plus proche de la fin du mois est choisie
+  - **Sondage lié** : si une réunion a un `sondage_id`, un lien discret apparaît dans la fiche
+  - Données stockées dans la collection `sondages_dispo`
+
+#### Sondage de disponibilité (`sondage-dispo.html` + `sondage-dispo.js`)
+- Page dédiée (DA bulletin de vote, fond crème, filet rouge gauche)
+- **Section 1 — Bilan du groupe** : tableau Framadate complet avec scores et meilleure date surlignée
+- **Section 2 — Identification** : dropdown pour choisir son nom (même pattern que `vote.html`)
+- **Section 3 — Disponibilités** : 3 boutons par jour (✓ Dispo / ~ Si besoin / ✗ Pas dispo), meilleure date mise en avant
+- **Mode test** : si un sondage test (sessionStorage `ltr_sondage_test`) est actif, les votes se sauvegardent en mémoire seulement — badge "TEST" visible dans l'en-tête et dans le sous-titre
 
 #### Statistiques (`statistiques.html` + `statistiques.js`)
 Panels répartis en 3 chapitres. Voir entrées historique 2026-06-09 pour le détail complet.
@@ -1202,6 +1222,16 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 ---
 
 ## Historique des modifications
+
+### 2026-06-21
+**Lis tes ratures — Sondage de disponibilité (Framadate-style) + mode test**
+
+- `lis-tes-ratures/db.js` : 5 nouvelles fonctions : `getSondageDispo()`, `createSondageDispo()`, `updateSondageReponse()`, `cloturerSondage()`, `getSondageById()`. Nouvelle collection Firestore `sondages_dispo`.
+- `lis-tes-ratures/accueil.js` : chargement du sondage actif en parallèle ; `buildVoteCard()` affiche l'encart "Date de la séance" avec lien "Répondre →" si un sondage est ouvert ; `buildReunionCard()` remplace "N présents attendus" par "N membres ont fini le livre".
+- `lis-tes-ratures/reunions.html` : layout 2 colonnes (registre + panneau sondage cahier relié), bouton ghost violet "Sondage de disponibilité", overlay création (mode delta/plage + durée/échéance + **mode test 2 min**), panneau `.sp-panel` avec grille Framadate, badge "TEST" en terracotta si sondage éphémère.
+- `lis-tes-ratures/js/reunions.js` : `renderSondagePanel()`, `buildVoteGrid()`, `openCreerSondage()`, `processClotureSondage()`, `computeScores()`, `computeWinner()`. `init()` charge le sondage Firebase ou, s'il n'y en a pas, le sondage test depuis `sessionStorage`. Helpers `saveTestSondage()` / `loadTestSondage()`.
+- `lis-tes-ratures/sondage-dispo.html` : nouvelle page (DA bulletin de vote). Sections : bilan groupe (Framadate), identification, disponibilités interactives (3 boutons/jour).
+- `lis-tes-ratures/js/sondage-dispo.js` : nouveau fichier. Charge sondage Firebase ou sessionStorage (mode test). En mode test, `submitAvail()` ne touche pas Firebase — met à jour la mémoire + sessionStorage et affiche un toast "non sauvegardé". Badge "TEST" visible dans l'en-tête.
 
 ### 2026-06-20
 **Lis tes ratures — auto-fin de lecture + KPIs statistiques recentrés sur les lectures réelles**

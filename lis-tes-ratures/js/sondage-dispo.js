@@ -64,6 +64,25 @@ function computeWinner(sondage) {
   return best > 0 ? winner : null;
 }
 
+// ── sessionStorage test mode ──────────────────────────────────────────────────
+const SD_TEST_KEY = 'ltr_sondage_test';
+function loadTestSondage() {
+  try {
+    const raw = sessionStorage.getItem(SD_TEST_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    const cloture = new Date(s.cloture);
+    if (cloture < new Date()) { sessionStorage.removeItem(SD_TEST_KEY); return null; }
+    return { ...s, cloture: { toDate: () => cloture } };
+  } catch { return null; }
+}
+function saveTestSondage(s) {
+  sessionStorage.setItem(SD_TEST_KEY, JSON.stringify({
+    ...s,
+    cloture: s.cloture?.toDate ? s.cloture.toDate().toISOString() : s.cloture,
+  }));
+}
+
 // ── État ──────────────────────────────────────────────────────────────────────
 let sondage = null, membres = [], livres = [];
 const membreById = {};
@@ -72,9 +91,11 @@ let currentVotes = {};
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
-  [sondage, membres, livres] = await Promise.all([
+  let sondageFirebase;
+  [sondageFirebase, membres, livres] = await Promise.all([
     getSondageDispo(), getMembres(), getLivres(),
   ]);
+  sondage = sondageFirebase ?? loadTestSondage();
   membres.forEach((m, i) => { m._color = PALETTE[i % PALETTE.length]; membreById[m.id] = m; });
 
   const root = document.getElementById("ballot-root");
@@ -145,11 +166,12 @@ function renderActive(root) {
     : joursR === 1 ? "Clôture demain"
     : `Clôture dans ${joursR} jours`;
 
+  const testBadge = sondage._test ? `<span style="font-size:.66rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:rgba(181,87,45,.15);color:#b5572d;border:1px solid rgba(181,87,45,.4);border-radius:4px;padding:.1rem .45rem;margin-left:.5rem">TEST</span>` : '';
   root.innerHTML = `
     <div class="ballot-letterhead">
-      <div class="ballot-club">Club de lecture</div>
+      <div class="ballot-club">Club de lecture ${testBadge}</div>
       <div class="ballot-h1">Sondage de <span class="rature">date</span></div>
-      <div class="ballot-sub">${esc(livre?.titre ?? "—")} · séance à planifier</div>
+      <div class="ballot-sub">${esc(livre?.titre ?? "—")} · séance à planifier${sondage._test ? ' · <em style="color:#b5572d">mode test — rien n\'est enregistré</em>' : ''}</div>
     </div>
 
     <div class="vbanner">
@@ -327,10 +349,13 @@ async function submitAvail() {
   const btn = document.getElementById("submit-avail");
   btn.disabled = true; btn.textContent = "Enregistrement…";
   try {
-    await updateSondageReponse(sondage.id, moi, moiNom, currentVotes);
-    // Mise à jour locale
+    if (!sondage._test) {
+      await updateSondageReponse(sondage.id, moi, moiNom, currentVotes);
+    }
+    // Mise à jour locale (test ou réel)
     if (!sondage.reponses) sondage.reponses = {};
     sondage.reponses[moi] = { nom: moiNom, votes: { ...currentVotes } };
+    if (sondage._test) saveTestSondage(sondage);
     // Rafraîchir la table du groupe + bilan
     document.getElementById("framadate-mount").innerHTML = buildFramadateTable(sondage);
     renderBilan();
@@ -339,7 +364,7 @@ async function submitAvail() {
     if (countEl) countEl.innerHTML = `${nb}<small>/${membres.length} réponses</small>`;
     btn.innerHTML = `${IC.check} Disponibilités enregistrées`;
     btn.style.opacity = ".65";
-    showToast("Disponibilités enregistrées — merci !");
+    showToast(sondage._test ? "Disponibilités enregistrées (test — non sauvegardé)." : "Disponibilités enregistrées — merci !");
   } catch(e) {
     btn.disabled = false; btn.innerHTML = `${IC.check} Enregistrer mes disponibilités`;
     showToast("Erreur : " + e.message, false);
