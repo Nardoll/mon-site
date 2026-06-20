@@ -262,7 +262,7 @@ function renderMeeting() {
 
   document.getElementById("mtg-paper").innerHTML = `
     <button class="paper-close" id="mtg-close" aria-label="Fermer">✕</button>
-    <button class="rf-edit" id="mtg-modif-btn" style="position:absolute;top:.85rem;right:3rem">${IC.edit} Modifier la séance</button>
+    <button class="paper-close" id="mtg-modif-btn" aria-label="Modifier la séance" title="Modifier la séance" style="top:2.6rem">${IC.edit}</button>
     <div class="mtg-head">
       <div class="mtg-cover" style="--g1:${g1};--g2:${g2}"><span>${esc(titre)}</span></div>
       <div class="mtg-head-info">
