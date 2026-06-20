@@ -357,15 +357,24 @@ function buildSondageTable(vote) {
 }
 
 function openSondageEdit(vote) {
-  const livreIds = vote.livre_ids || [...new Set(Object.values(vote.sondage || {}))];
+  const livreIdsSet = new Set(vote.livre_ids || [...new Set(Object.values(vote.sondage || {}))]);
   const sondage = vote.sondage || {};
 
-  const rows = membres.map(m => {
+  const livresSorted = [...livres].sort((a, b) => (a.titre ?? "").localeCompare(b.titre ?? ""));
+
+  const checkboxes = livresSorted.map(l => {
+    const checked = livreIdsSet.has(l.id) ? "checked" : "";
+    return `<label style="display:flex;align-items:center;gap:.55rem;padding:.3rem 0;cursor:pointer;font-size:.84rem">
+      <input type="checkbox" data-livre="${esc(l.id)}" ${checked} style="cursor:pointer;flex-shrink:0">
+      ${esc(l.titre)}${l.auteur ? `<span style="color:var(--muted);font-size:.77rem;margin-left:.2rem">— ${esc(l.auteur)}</span>` : ""}
+    </label>`;
+  }).join("");
+
+  const voteRows = membres.map(m => {
     const current = sondage[m.id] || "";
-    const opts = livreIds.map(lId => {
-      const l = livreById[lId];
-      return `<option value="${esc(lId)}" ${current === lId ? "selected" : ""}>${esc(l?.titre ?? lId)}</option>`;
-    }).join("");
+    const opts = livresSorted.map(l =>
+      `<option value="${esc(l.id)}" ${current === l.id ? "selected" : ""}>${esc(l.titre)}</option>`
+    ).join("");
     return `<div style="display:flex;align-items:center;gap:.8rem;padding:.45rem 0;border-bottom:1px solid rgba(120,90,50,.1)">
       <span style="min-width:90px;font-size:.85rem;flex-shrink:0">${esc(m.nom)}</span>
       <select data-membre="${esc(m.id)}" style="flex:1;font-size:.82rem;padding:.3rem .5rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)">
@@ -379,8 +388,15 @@ function openSondageEdit(vote) {
     <button class="paper-close" id="result-close" aria-label="Fermer">✕</button>
     <div class="paper-eyebrow">Sondage · ${formatMois(vote.mois, vote.annee)}</div>
     <div class="paper-title">Modifier les votes</div>
-    <p style="font-size:.85rem;color:var(--muted);margin:.3rem 0 1rem">Indiquer quel livre chaque membre a choisi lors du sondage Discord.</p>
-    <div style="display:flex;flex-direction:column;margin-bottom:1.2rem">${rows}</div>
+
+    <div class="paper-sec-title" style="margin-top:.8rem">${IC.grid} Livres en compétition</div>
+    <p style="font-size:.83rem;color:var(--muted);margin:.2rem 0 .7rem">Cocher les livres qui étaient dans le sondage Discord.</p>
+    <div style="display:flex;flex-direction:column;max-height:180px;overflow-y:auto;padding:.1rem .2rem;border:1px solid var(--border);border-radius:8px;margin-bottom:1.2rem">${checkboxes}</div>
+
+    <div class="paper-sec-title">${IC.users} Votes individuels</div>
+    <p style="font-size:.83rem;color:var(--muted);margin:.2rem 0 .7rem">Indiquer quel livre chaque membre a choisi.</p>
+    <div style="display:flex;flex-direction:column;margin-bottom:1.2rem">${voteRows}</div>
+
     <div style="display:flex;gap:.8rem;flex-wrap:wrap">
       <button id="sondage-save-btn" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.55rem 1.2rem;font-size:.88rem;font-weight:600;cursor:pointer">Enregistrer</button>
       <button id="sondage-cancel-btn" style="background:none;border:1px solid var(--border);border-radius:8px;padding:.55rem 1.2rem;font-size:.88rem;cursor:pointer;color:var(--text)">Annuler</button>
@@ -390,12 +406,17 @@ function openSondageEdit(vote) {
   document.getElementById("result-close").addEventListener("click", closeResult);
   document.getElementById("sondage-cancel-btn").addEventListener("click", () => openExceptionnel(vote));
   document.getElementById("sondage-save-btn").addEventListener("click", async () => {
+    const newLivreIds = [];
+    document.getElementById("result-paper").querySelectorAll("[data-livre]").forEach(cb => {
+      if (cb.checked) newLivreIds.push(cb.dataset.livre);
+    });
     const newSondage = {};
     document.getElementById("result-paper").querySelectorAll("[data-membre]").forEach(sel => {
       if (sel.value) newSondage[sel.dataset.membre] = sel.value;
     });
     try {
-      await updateVote(vote.id, { sondage: newSondage });
+      await updateVote(vote.id, { livre_ids: newLivreIds, sondage: newSondage });
+      vote.livre_ids = newLivreIds;
       vote.sondage = newSondage;
       openExceptionnel(vote);
     } catch (e) {
