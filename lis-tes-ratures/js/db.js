@@ -338,3 +338,41 @@ export async function getProgressionForLivre(livre_id) {
   const s = await getDocs(query(collection(db, "progression_lecture"), where("livre_id", "==", livre_id)));
   return snap(s).sort((a, b) => (a.horodatage?.seconds ?? 0) - (b.horodatage?.seconds ?? 0));
 }
+
+// ── Sondages de disponibilité ─────────────────────────────────────
+
+export async function getSondageDispo() {
+  const s = await getDocs(query(collection(db, "sondages_dispo"), where("ouvert", "==", true)));
+  const docs = snap(s);
+  return docs.length ? docs[0] : null;
+}
+
+export async function createSondageDispo({ livre_id, jours, cloture }) {
+  return addDoc(collection(db, "sondages_dispo"), {
+    livre_id,
+    jours,
+    cloture: Timestamp.fromDate(cloture instanceof Date ? cloture : new Date(cloture)),
+    ouvert: true,
+    reponses: {},
+    cree_le: serverTimestamp(),
+  });
+}
+
+export async function updateSondageReponse(sondageId, membreId, nom, votes) {
+  const updates = {};
+  updates[`reponses.${membreId}`] = { nom, votes };
+  return updateDoc(doc(db, "sondages_dispo", sondageId), updates);
+}
+
+export async function cloturerSondage(sondageId, { date_choisie, reunion_id }) {
+  return updateDoc(doc(db, "sondages_dispo", sondageId), {
+    ouvert: false,
+    date_choisie: date_choisie || null,
+    reunion_id: reunion_id || null,
+  });
+}
+
+export async function getSondageById(id) {
+  const d = await getDoc(doc(db, "sondages_dispo", id));
+  return d.exists() ? { id: d.id, ...d.data() } : null;
+}

@@ -218,6 +218,87 @@
     .mtoast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(1rem); background: #2c2015; color: #fdf6ea; border-radius: 9px; padding: .7rem 1.3rem; font-size: .86rem; z-index: 999; opacity: 0; transition: all .25s; pointer-events: none; box-shadow: 0 18px 40px -18px rgba(0,0,0,.6); }
     .mtoast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+    /* ════════════ Layout 2 colonnes ════════════ */
+    .reu-layout { display: grid; grid-template-columns: minmax(0,1fr) 360px; gap: 2rem; align-items: start; }
+    .ledger { max-width: none; }
+
+    /* ════════════ Panneau sondage ════════════ */
+    .sp-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.25rem 1.3rem; position: sticky; top: 1rem;
+    }
+    .sp-panel-head { display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; }
+    .sp-panel-title { font-family: var(--serif); font-size: 1rem; font-weight: 600; color: var(--ink); flex: 1; }
+    .sp-panel-title small { display: block; font-family: 'Segoe UI', sans-serif; font-size: .72rem; font-weight: 400; color: var(--muted); margin-top: .1rem; }
+    .sp-empty { text-align: center; padding: 2rem 1rem; color: var(--muted); font-size: .85rem; }
+    .sp-empty-icon { font-size: 2rem; margin-bottom: .6rem; opacity: .4; }
+    .sp-btn-create { display: block; width: 100%; margin-top: 1rem; background: var(--accent); color: var(--accent-text); border: none; border-radius: 8px; padding: .6rem 1rem; font-size: .86rem; font-weight: 600; font-family: inherit; cursor: pointer; transition: background .15s; }
+    .sp-btn-create:hover { background: var(--accent-hover); }
+
+    /* badge clôture */
+    .sp-cloture { display: inline-flex; align-items: center; gap: .3rem; font-size: .72rem; font-weight: 600; padding: .2rem .5rem; border-radius: 20px; background: rgba(var(--purple-rgb,100,60,180),.1); color: var(--purple); white-space: nowrap; }
+    .sp-cloture.expired { background: rgba(200,50,50,.1); color: #c83232; }
+
+    /* Bandeau gagnant */
+    .sp-winner { background: rgba(26,138,85,.1); border: 1px solid rgba(26,138,85,.25); border-radius: 8px; padding: .6rem .85rem; margin-bottom: 1rem; font-size: .82rem; color: #1a5a35; display: flex; align-items: center; gap: .5rem; }
+    .sp-winner strong { font-weight: 700; }
+    .sp-winner svg { width: 15px; height: 15px; flex-shrink: 0; color: #1a8a55; }
+
+    /* Grille Framadate */
+    .sp-grid-wrap { overflow-x: auto; margin: 0 -1.3rem; padding: 0 1.3rem 0; }
+    .sp-grid { border-collapse: collapse; font-size: .75rem; min-width: 100%; }
+    .sp-grid th, .sp-grid td { padding: .28rem .38rem; white-space: nowrap; border: 1px solid rgba(var(--border-rgb,120,90,50),.15); }
+    .sp-grid thead th { background: var(--surface-2,rgba(0,0,0,.03)); font-weight: 700; text-align: center; font-size: .7rem; color: var(--muted); }
+    .sp-grid thead th.best { background: rgba(26,138,85,.12); color: #1a5a35; }
+    .sp-grid td.sp-name { font-weight: 600; color: var(--ink); max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
+    .sp-grid td.sp-cell { text-align: center; cursor: default; }
+    .sp-grid td.sp-cell.dispo { background: rgba(26,138,85,.15); color: #1a5a35; }
+    .sp-grid td.sp-cell.si_besoin { background: rgba(200,130,20,.14); color: #8a5a00; }
+    .sp-grid td.sp-cell.pas_dispo { background: rgba(180,40,40,.1); color: #8a2020; }
+    .sp-grid tr.sp-score-row td { background: var(--surface-2,rgba(0,0,0,.03)); font-weight: 700; text-align: center; border-top: 2px solid rgba(var(--border-rgb,120,90,50),.25); }
+    .sp-grid tr.sp-score-row td.best { background: rgba(26,138,85,.18); color: #1a5a35; }
+
+    /* Boutons panneau bas */
+    .sp-actions { display: flex; gap: .6rem; margin-top: 1rem; flex-wrap: wrap; }
+    .sp-btn-vote { flex: 1; background: var(--purple,#7c3aed); color: #fff; border: none; border-radius: 8px; padding: .55rem .8rem; font-size: .84rem; font-weight: 600; font-family: inherit; cursor: pointer; transition: background .15s; white-space: nowrap; }
+    .sp-btn-vote:hover { background: #6730d4; }
+    .sp-btn-close-poll { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: .55rem .8rem; font-size: .8rem; font-family: inherit; cursor: pointer; transition: all .15s; white-space: nowrap; }
+    .sp-btn-close-poll:hover { border-color: #c83232; color: #c83232; }
+    .sp-sondage-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .74rem; color: var(--muted); text-decoration: none; opacity: .75; }
+    .sp-sondage-link:hover { opacity: 1; color: var(--accent); }
+
+    /* ════════════ Overlay création sondage ════════════ */
+    .sd-section { margin-bottom: 1.2rem; }
+    .sd-section-title { font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #8a5a2a; margin-bottom: .6rem; }
+    .sd-mode-tabs { display: flex; gap: .5rem; margin-bottom: .9rem; }
+    .sd-tab { flex: 1; padding: .45rem; border: 1.5px solid rgba(120,90,50,.3); border-radius: 7px; background: none; font-family: inherit; font-size: .82rem; color: #6a513a; cursor: pointer; transition: all .15s; text-align: center; }
+    .sd-tab.active { background: rgba(181,87,45,.1); border-color: #b5572d; color: #b5572d; font-weight: 700; }
+    .sd-preview { font-size: .75rem; color: #8a6b46; background: rgba(255,255,255,.5); border: 1px solid rgba(120,90,50,.2); border-radius: 6px; padding: .5rem .7rem; margin-top: .5rem; min-height: 2rem; }
+    .sd-preview b { color: #3a2b1c; }
+
+    /* ════════════ Overlay vote membre ════════════ */
+    .vd-who { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1.1rem; }
+    .vd-who label { font-size: .8rem; font-weight: 600; color: #8a5a2a; }
+    .vd-grid { display: flex; flex-direction: column; gap: .35rem; margin-bottom: 1.2rem; }
+    .vd-grid-head { display: grid; font-size: .7rem; font-weight: 700; color: #8a6b46; text-align: center; padding: 0 0 .3rem; }
+    .vd-day-row { display: grid; align-items: center; gap: .5rem; padding: .28rem 0; border-bottom: 1px solid rgba(120,90,50,.1); }
+    .vd-day-label { font-size: .8rem; color: #3a2b1c; font-weight: 600; }
+    .vd-day-label small { font-weight: 400; color: #8a6b46; display: block; font-size: .68rem; }
+    .vd-btns { display: flex; gap: .35rem; }
+    .vd-state-btn { flex: 1; border: 1.5px solid transparent; border-radius: 6px; padding: .32rem .2rem; font-size: .72rem; font-weight: 700; font-family: inherit; cursor: pointer; background: none; transition: all .13s; display: flex; align-items: center; justify-content: center; gap: .2rem; }
+    .vd-state-btn.dispo { border-color: rgba(26,138,85,.4); color: #1a5a35; }
+    .vd-state-btn.dispo.active { background: rgba(26,138,85,.15); border-color: #1a8a55; }
+    .vd-state-btn.si_besoin { border-color: rgba(200,130,20,.4); color: #7a5200; }
+    .vd-state-btn.si_besoin.active { background: rgba(200,130,20,.15); border-color: #c88200; }
+    .vd-state-btn.pas_dispo { border-color: rgba(180,40,40,.35); color: #8a2020; }
+    .vd-state-btn.pas_dispo.active { background: rgba(180,40,40,.12); border-color: #c83232; }
+    .vd-legend { display: flex; gap: .7rem; flex-wrap: wrap; margin-bottom: .9rem; font-size: .72rem; color: #8a6b46; }
+    .vd-legend span { display: inline-flex; align-items: center; gap: .25rem; }
+
+    @media (max-width: 1100px) {
+      .reu-layout { grid-template-columns: 1fr; }
+      .sp-panel { position: static; }
+    }
     @media (max-width: 700px) {
       .ledger { padding: 1.3rem 1.1rem 1.1rem 2.6rem; }
       .reg-row { grid-template-columns: 96px 1fr; gap: .9rem; }
@@ -234,6 +315,10 @@
     <div class="page-header">
       <h1>Réunions</h1>
       <div class="reu-actions">
+        <button class="btn-add" id="btn-sondage" style="background:var(--purple,#7c3aed)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg>
+          Sondage de disponibilité
+        </button>
         <button class="btn-add" id="btn-add">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
           Ajouter une réunion
@@ -241,6 +326,7 @@
       </div>
     </div>
 
+    <div class="reu-layout">
     <div class="ledger" id="ledger">
       <div class="ledger-margin"></div>
       <div class="ledger-head">
@@ -297,7 +383,14 @@
           <div class="sk" style="width:76px;height:76px;border-radius:50%;flex-shrink:0;opacity:.3"></div>
         </div>
       </div>
+    </div><!-- /.ledger -->
+
+    <!-- Panneau sondage de disponibilité -->
+    <div class="sp-panel" id="sondage-panel">
+      <div id="sp-mount"></div>
     </div>
+
+    </div><!-- /.reu-layout -->
   </main>
 
   <!-- Fiche réunion -->
@@ -311,6 +404,128 @@
   <div class="overlay paper-overlay hidden" id="add-overlay">
     <div class="modal" style="max-width:520px">
       <div class="paper" id="add-paper"></div>
+    </div>
+  </div>
+
+  <!-- Créer un sondage de disponibilité -->
+  <div class="overlay paper-overlay hidden" id="sd-overlay">
+    <div class="modal" style="max-width:480px">
+      <div class="paper" id="sd-paper">
+        <button class="paper-close" id="sd-close">✕</button>
+        <div class="pf-eyebrow">Disponibilités</div>
+        <div class="pf-title">Sondage de date</div>
+
+        <div class="sd-section">
+          <div class="sd-section-title">Plage de dates</div>
+          <div class="sd-mode-tabs">
+            <button class="sd-tab active" id="sd-tab-delta" type="button">Autour de la fin du mois</button>
+            <button class="sd-tab" id="sd-tab-range" type="button">Plage libre</button>
+          </div>
+
+          <!-- Mode delta -->
+          <div id="sd-mode-delta">
+            <div class="pf-row">
+              <div class="pf-group" style="margin-bottom:.5rem">
+                <label>Jours avant la fin du mois</label>
+                <input type="number" class="pf-input" id="sd-avant" value="5" min="0" max="20" />
+              </div>
+              <div class="pf-group" style="margin-bottom:.5rem">
+                <label>Jours après la fin du mois</label>
+                <input type="number" class="pf-input" id="sd-apres" value="3" min="0" max="20" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Mode range -->
+          <div id="sd-mode-range" class="hidden">
+            <div class="pf-row">
+              <div class="pf-group" style="margin-bottom:.5rem">
+                <label>Date de début <span class="req">*</span></label>
+                <input type="date" class="pf-input" id="sd-debut" />
+              </div>
+              <div class="pf-group" style="margin-bottom:.5rem">
+                <label>Date de fin <span class="req">*</span></label>
+                <input type="date" class="pf-input" id="sd-fin" />
+              </div>
+            </div>
+          </div>
+
+          <div class="sd-preview" id="sd-preview"></div>
+        </div>
+
+        <div class="sd-section">
+          <div class="sd-section-title">Durée du vote</div>
+          <div class="sd-mode-tabs">
+            <button class="sd-tab active" id="sd-tab-duree" type="button">Durée</button>
+            <button class="sd-tab" id="sd-tab-echeance" type="button">Date limite</button>
+          </div>
+
+          <!-- Mode durée -->
+          <div id="sd-mode-duree">
+            <div class="pf-row">
+              <div class="pf-group" style="margin-bottom:.5rem">
+                <label>Durée</label>
+                <input type="number" class="pf-input" id="sd-duree-val" value="5" min="1" max="30" />
+              </div>
+              <div class="pf-group" style="margin-bottom:.5rem">
+                <label>Unité</label>
+                <select class="pf-input" id="sd-duree-unite">
+                  <option value="h">Heures</option>
+                  <option value="j" selected>Jours</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mode échéance -->
+          <div id="sd-mode-echeance" class="hidden">
+            <div class="pf-row">
+              <div class="pf-group" style="margin-bottom:.5rem">
+                <label>Date de clôture <span class="req">*</span></label>
+                <input type="date" class="pf-input" id="sd-ech-date" />
+              </div>
+              <div class="pf-group" style="margin-bottom:.5rem">
+                <label>Heure <span class="pf-hint">(optionnel)</span></label>
+                <input type="time" class="pf-input" id="sd-ech-heure" value="23:59" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pf-foot">
+          <button class="pf-btn cancel" id="sd-cancel">Annuler</button>
+          <button class="pf-btn ok" id="sd-ok">Ouvrir le sondage</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Voter : remplir ses disponibilités -->
+  <div class="overlay paper-overlay hidden" id="vd-overlay">
+    <div class="modal" style="max-width:460px">
+      <div class="paper" id="vd-paper">
+        <button class="paper-close" id="vd-close">✕</button>
+        <div class="pf-eyebrow">Sondage de disponibilité</div>
+        <div class="pf-title" id="vd-title">Mes disponibilités</div>
+
+        <div class="vd-who">
+          <label>Qui êtes-vous ?</label>
+          <select class="pf-input" id="vd-membre"></select>
+        </div>
+
+        <div class="vd-legend">
+          <span><b style="color:#1a8a55">✓</b> Dispo</span>
+          <span><b style="color:#c88200">~</b> Si besoin</span>
+          <span><b style="color:#c83232">✗</b> Pas dispo</span>
+        </div>
+
+        <div class="vd-grid" id="vd-grid"></div>
+
+        <div class="pf-foot">
+          <button class="pf-btn cancel" id="vd-cancel">Annuler</button>
+          <button class="pf-btn ok" id="vd-ok">Enregistrer mes disponibilités</button>
+        </div>
+      </div>
     </div>
   </div>
 

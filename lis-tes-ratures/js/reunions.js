@@ -2,6 +2,7 @@ import { requireAuth } from "./auth.js";
 import {
   getMembres, getLivres, getVotes, getReunions,
   addReunion, updateReunion,
+  getSondageDispo, createSondageDispo, updateSondageReponse, cloturerSondage,
 } from "./db.js";
 import { initNav } from "./nav.js";
 import { formatMois, formatDate, initiales } from "./utils.js";
@@ -35,6 +36,7 @@ const IC = {
 
 // ── État global ─────────────────────────────────────────────────────────────
 let reunions = [], membres = [], livres = [], votes = [];
+let sondageActif = null;
 const membreById = {}, livreById = {};
 // voteByMoisAnnee : "mois-annee" → vote (pour auto-détecter le livre élu)
 const voteByMoisAnnee = {};
@@ -95,12 +97,370 @@ function coverOf(livreId) {
   return l?._cover || COVERS[0];
 }
 
+// ── Helpers sondage ─────────────────────────────────────────────────────────
+const JFR = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+const MFR_C = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+
+function joursFromDelta(avant, apres) {
+  const now = new Date();
+  const fin = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const jours = [];
+  for (let i = -avant; i <= apres; i++) {
+    const d = new Date(fin); d.setDate(d.getDate() + i);
+    jours.push(d.toISOString().split('T')[0]);
+  }
+  return jours;
+}
+
+function joursFromRange(debut, fin) {
+  const jours = [];
+  const d = new Date(debut + 'T12:00:00'), f = new Date(fin + 'T12:00:00');
+  while (d <= f) { jours.push(d.toISOString().split('T')[0]); d.setDate(d.getDate() + 1); }
+  return jours;
+}
+
+function formatJour(iso) {
+  const d = new Date(iso + 'T12:00:00');
+  return { court: `${JFR[d.getDay()]} ${d.getDate()}`, long: `${JFR[d.getDay()]} ${d.getDate()} ${MFR_C[d.getMonth()]}` };
+}
+
+function computeScores(sondage) {
+  const scores = {};
+  (sondage.jours || []).forEach(j => { scores[j] = 0; });
+  Object.values(sondage.reponses || {}).forEach(({ votes: v }) => {
+    Object.entries(v || {}).forEach(([j, e]) => {
+      if (e === 'dispo') scores[j] = (scores[j] || 0) + 1;
+      else if (e === 'si_besoin') scores[j] = (scores[j] || 0) + 0.5;
+    });
+  });
+  return scores;
+}
+
+function computeWinner(sondage) {
+  const scores = computeScores(sondage);
+  const now = new Date();
+  const finMois = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  let best = -1, winner = null;
+  (sondage.jours || []).forEach(j => {
+    const s = scores[j] || 0;
+    if (s > best) { best = s; winner = j; return; }
+    if (s === best && winner) {
+      const dj = Math.abs(new Date(j + 'T12:00:00') - finMois);
+      const dw = Math.abs(new Date(winner + 'T12:00:00') - finMois);
+      if (dj < dw) winner = j;
+    }
+  });
+  return best > 0 ? winner : null;
+}
+
+async function processClotureSondage(sondage) {
+  const winner = computeWinner(sondage);
+  let reunionId = null;
+
+  if (winner) {
+    const dateW = winner; // ISO string, updateReunion accepte string
+    let reunion = reunions.find(r => r.livre_id === sondage.livre_id);
+    if (reunion) {
+      await updateReunion(reunion.id, { date: dateW, statut: 'prévue', sondage_id: sondage.id });
+      reunionId = reunion.id;
+    } else {
+      const d = new Date(winner + 'T12:00:00');
+      const ref = await addReunion({
+        statut: 'prévue', date: dateW,
+        mois: d.getMonth() + 1, annee: d.getFullYear(),
+        livre_id: sondage.livre_id,
+        participant_ids: [], lecteurs_ids: [], compte_rendu: '', lien_video: null,
+      });
+      reunionId = ref.id;
+      await updateReunion(reunionId, { sondage_id: sondage.id });
+    }
+  }
+
+  await cloturerSondage(sondage.id, { date_choisie: winner, reunion_id: reunionId });
+  sondageActif = null;
+  reunions = await getReunions();
+  renderLedger();
+  renderSondagePanel();
+  toast(winner ? `Sondage clôturé — réunion prévue le ${formatJour(winner).long}` : 'Sondage clôturé sans date choisie.');
+}
+
+// ── Panneau sondage (colonne droite) ────────────────────────────────────────
+function buildVoteGrid(sondage, scores, winner) {
+  const jours = sondage.jours || [];
+  const reponses = sondage.reponses || {};
+  const ids = Object.keys(reponses);
+  if (!ids.length) return `<p style="font-size:.8rem;color:var(--muted);font-style:italic;padding:.5rem 0">Aucune réponse pour l'instant.</p>`;
+  const SYM = { dispo: '✓', si_besoin: '~', pas_dispo: '✗' };
+  const heads = jours.map(j => `<th class="${j === winner ? 'best' : ''}">${formatJour(j).court}</th>`).join('');
+  const rows = ids.map(mid => {
+    const rep = reponses[mid];
+    const nom = rep.nom || membreById[mid]?.nom || mid;
+    const cells = jours.map(j => {
+      const e = rep.votes?.[j] || ''; return `<td class="sp-cell ${e}">${SYM[e] || '—'}</td>`;
+    }).join('');
+    return `<tr><td class="sp-name">${esc(nom)}</td>${cells}</tr>`;
+  }).join('');
+  const scoreRow = jours.map(j => {
+    const s = scores[j] || 0;
+    return `<td class="${j === winner ? 'best' : ''}">${s % 1 ? s.toFixed(1) : s}</td>`;
+  }).join('');
+  return `<table class="sp-grid">
+    <thead><tr><th></th>${heads}</tr></thead>
+    <tbody>${rows}<tr class="sp-score-row"><td class="sp-name">Score</td>${scoreRow}</tr></tbody>
+  </table>`;
+}
+
+function renderSondagePanel() {
+  const mount = document.getElementById('sp-mount');
+  if (!mount) return;
+
+  if (!sondageActif) {
+    mount.innerHTML = `
+      <div class="sp-panel-head">
+        <span class="sp-panel-title">Sondage de disponibilité</span>
+      </div>
+      <div class="sp-empty">
+        <div class="sp-empty-icon">📅</div>
+        <div style="line-height:1.5">Aucun sondage en cours.<br>Proposez des dates pour la prochaine réunion.</div>
+      </div>`;
+    return;
+  }
+
+  const s = sondageActif;
+  const livre = livreById[s.livre_id];
+  const cloture = s.cloture?.toDate ? s.cloture.toDate() : new Date(s.cloture);
+  const joursR = Math.max(0, Math.ceil((cloture - new Date()) / 86400000));
+  const expired = cloture < new Date();
+  const clotStr = expired ? 'Clôture dépassée'
+    : joursR === 0 ? "Clôture aujourd'hui"
+    : joursR === 1 ? 'Clôture demain'
+    : `Clôture dans ${joursR} j`;
+
+  const scores = computeScores(s);
+  const winner = computeWinner(s);
+  const nb = Object.keys(s.reponses || {}).length;
+
+  const winnerBanner = winner ? `
+    <div class="sp-winner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      <span>Meilleure date : <strong>${formatJour(winner).long}</strong></span>
+    </div>` : '';
+
+  mount.innerHTML = `
+    <div class="sp-panel-head">
+      <span class="sp-panel-title">${esc(livre?.titre ?? '—')}<small>${nb} réponse${nb !== 1 ? 's' : ''}</small></span>
+      <span class="sp-cloture${expired ? ' expired' : ''}">${clotStr}</span>
+    </div>
+    ${winnerBanner}
+    <div class="sp-grid-wrap">${buildVoteGrid(s, scores, winner)}</div>
+    <div class="sp-actions">
+      <button class="sp-btn-vote" id="sp-btn-vote">Remplir mes disponibilités</button>
+      <button class="sp-btn-close-poll" id="sp-btn-close">Clôturer</button>
+    </div>`;
+
+  document.getElementById('sp-btn-vote').addEventListener('click', () => openVoter(s));
+  document.getElementById('sp-btn-close').addEventListener('click', async () => {
+    if (!confirm('Clôturer le sondage et planifier la réunion sur la date la plus disponible ?')) return;
+    await processClotureSondage(s);
+  });
+}
+
+// ── Créer un sondage ─────────────────────────────────────────────────────────
+let sdModeDate = false, sdModeEcheance = false;
+
+function updateSdPreview() {
+  const isDelta = !sdModeDate;
+  let jours;
+  if (isDelta) {
+    const avant = parseInt(document.getElementById('sd-avant').value) || 5;
+    const apres = parseInt(document.getElementById('sd-apres').value) || 3;
+    jours = joursFromDelta(avant, apres);
+  } else {
+    const debut = document.getElementById('sd-debut').value;
+    const fin   = document.getElementById('sd-fin').value;
+    jours = debut && fin && debut <= fin ? joursFromRange(debut, fin) : [];
+  }
+  const prev = document.getElementById('sd-preview');
+  if (!prev) return;
+  if (!jours.length) { prev.innerHTML = 'Sélectionnez une plage valide.'; return; }
+  prev.innerHTML = `<b>${jours.length} jour${jours.length > 1 ? 's' : ''} :</b> ${jours.map(j => formatJour(j).court).join(', ')}`;
+}
+
+function openCreerSondage() {
+  sdModeDate = false; sdModeEcheance = false;
+  document.getElementById('sd-tab-delta').classList.add('active');
+  document.getElementById('sd-tab-range').classList.remove('active');
+  document.getElementById('sd-mode-delta').classList.remove('hidden');
+  document.getElementById('sd-mode-range').classList.add('hidden');
+  document.getElementById('sd-tab-duree').classList.add('active');
+  document.getElementById('sd-tab-echeance').classList.remove('active');
+  document.getElementById('sd-mode-duree').classList.remove('hidden');
+  document.getElementById('sd-mode-echeance').classList.add('hidden');
+  updateSdPreview();
+  document.getElementById('sd-overlay').classList.remove('hidden');
+}
+
+function wireSondageForm() {
+  document.getElementById('sd-tab-delta').addEventListener('click', () => {
+    sdModeDate = false;
+    document.getElementById('sd-tab-delta').classList.add('active');
+    document.getElementById('sd-tab-range').classList.remove('active');
+    document.getElementById('sd-mode-delta').classList.remove('hidden');
+    document.getElementById('sd-mode-range').classList.add('hidden');
+    updateSdPreview();
+  });
+  document.getElementById('sd-tab-range').addEventListener('click', () => {
+    sdModeDate = true;
+    document.getElementById('sd-tab-range').classList.add('active');
+    document.getElementById('sd-tab-delta').classList.remove('active');
+    document.getElementById('sd-mode-range').classList.remove('hidden');
+    document.getElementById('sd-mode-delta').classList.add('hidden');
+    updateSdPreview();
+  });
+  document.getElementById('sd-tab-duree').addEventListener('click', () => {
+    sdModeEcheance = false;
+    document.getElementById('sd-tab-duree').classList.add('active');
+    document.getElementById('sd-tab-echeance').classList.remove('active');
+    document.getElementById('sd-mode-duree').classList.remove('hidden');
+    document.getElementById('sd-mode-echeance').classList.add('hidden');
+  });
+  document.getElementById('sd-tab-echeance').addEventListener('click', () => {
+    sdModeEcheance = true;
+    document.getElementById('sd-tab-echeance').classList.add('active');
+    document.getElementById('sd-tab-duree').classList.remove('active');
+    document.getElementById('sd-mode-echeance').classList.remove('hidden');
+    document.getElementById('sd-mode-duree').classList.add('hidden');
+  });
+  ['sd-avant','sd-apres'].forEach(id => document.getElementById(id)?.addEventListener('input', updateSdPreview));
+  ['sd-debut','sd-fin'].forEach(id => document.getElementById(id)?.addEventListener('change', updateSdPreview));
+
+  document.getElementById('sd-close').addEventListener('click', () => document.getElementById('sd-overlay').classList.add('hidden'));
+  document.getElementById('sd-cancel').addEventListener('click', () => document.getElementById('sd-overlay').classList.add('hidden'));
+  document.getElementById('sd-overlay').addEventListener('click', e => { if (e.target.id === 'sd-overlay') document.getElementById('sd-overlay').classList.add('hidden'); });
+
+  document.getElementById('sd-ok').addEventListener('click', async () => {
+    // Compute jours
+    let jours;
+    if (!sdModeDate) {
+      const avant = parseInt(document.getElementById('sd-avant').value) || 5;
+      const apres = parseInt(document.getElementById('sd-apres').value) || 3;
+      jours = joursFromDelta(avant, apres);
+    } else {
+      const debut = document.getElementById('sd-debut').value;
+      const fin   = document.getElementById('sd-fin').value;
+      if (!debut || !fin || debut > fin) { toast('Sélectionnez une plage de dates valide.'); return; }
+      jours = joursFromRange(debut, fin);
+    }
+    if (!jours.length) { toast('Aucune date dans la plage sélectionnée.'); return; }
+
+    // Compute cloture
+    let cloture;
+    if (!sdModeEcheance) {
+      const val = parseInt(document.getElementById('sd-duree-val').value) || 5;
+      const unite = document.getElementById('sd-duree-unite').value;
+      cloture = new Date();
+      cloture.setTime(cloture.getTime() + val * (unite === 'h' ? 3600000 : 86400000));
+    } else {
+      const dateE = document.getElementById('sd-ech-date').value;
+      const heureE = document.getElementById('sd-ech-heure').value || '23:59';
+      if (!dateE) { toast('Sélectionnez une date de clôture.'); return; }
+      cloture = new Date(`${dateE}T${heureE}:00`);
+    }
+
+    // Find current livre
+    const livreId = currentLivreIdForSondage();
+    const btn = document.getElementById('sd-ok');
+    btn.disabled = true; btn.textContent = 'Création…';
+    try {
+      await createSondageDispo({ livre_id: livreId, jours, cloture });
+      sondageActif = await getSondageDispo();
+      document.getElementById('sd-overlay').classList.add('hidden');
+      renderSondagePanel();
+      toast('Sondage ouvert !');
+    } catch(e) {
+      toast('Erreur : ' + e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Ouvrir le sondage';
+    }
+  });
+}
+
+function currentLivreIdForSondage() {
+  // Most recent elected book
+  const v = [...votes].filter(v => v.livre_elu).sort((a, b) => a.annee !== b.annee ? b.annee - a.annee : b.mois - a.mois)[0];
+  return v?.livre_elu ?? null;
+}
+
+// ── Voter : remplir ses disponibilités ───────────────────────────────────────
+function openVoter(sondage) {
+  const livre = livreById[sondage.livre_id];
+  document.getElementById('vd-title').textContent = `Disponibilités — ${livre?.titre ?? '—'}`;
+
+  const sel = document.getElementById('vd-membre');
+  sel.innerHTML = `<option value="">— Choisir —</option>` +
+    membres.map(m => `<option value="${esc(m.id)}">${esc(m.nom)}</option>`).join('');
+
+  let currentVotes = {};
+  const grid = document.getElementById('vd-grid');
+  grid.innerHTML = '';
+
+  function buildVdGrid(membreId) {
+    const existing = sondage.reponses?.[membreId]?.votes || {};
+    currentVotes = { ...existing };
+    grid.innerHTML = sondage.jours.map(j => {
+      const e = currentVotes[j] || '';
+      const { long } = formatJour(j);
+      return `<div class="vd-day-row" style="grid-template-columns:1fr auto">
+        <div class="vd-day-label">${long}</div>
+        <div class="vd-btns">
+          <button class="vd-state-btn dispo ${e === 'dispo' ? 'active' : ''}" data-state="dispo" data-jour="${j}" title="Disponible">✓</button>
+          <button class="vd-state-btn si_besoin ${e === 'si_besoin' ? 'active' : ''}" data-state="si_besoin" data-jour="${j}" title="Si besoin">~</button>
+          <button class="vd-state-btn pas_dispo ${e === 'pas_dispo' ? 'active' : ''}" data-state="pas_dispo" data-jour="${j}" title="Pas disponible">✗</button>
+        </div>
+      </div>`;
+    }).join('');
+    grid.querySelectorAll('.vd-state-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const jour = btn.dataset.jour;
+        currentVotes[jour] = btn.dataset.state;
+        grid.querySelectorAll(`.vd-state-btn[data-jour="${jour}"]`).forEach(b => {
+          b.classList.toggle('active', b.dataset.state === btn.dataset.state);
+        });
+      });
+    });
+  }
+
+  sel.onchange = () => sel.value ? buildVdGrid(sel.value) : (grid.innerHTML = '');
+
+  document.getElementById('vd-ok').onclick = async () => {
+    const membreId = sel.value;
+    if (!membreId) { toast('Choisissez un membre.'); return; }
+    const m = membres.find(x => x.id === membreId);
+    const btn = document.getElementById('vd-ok');
+    btn.disabled = true; btn.textContent = 'Enregistrement…';
+    try {
+      await updateSondageReponse(sondage.id, membreId, m?.nom ?? membreId, currentVotes);
+      if (!sondageActif.reponses) sondageActif.reponses = {};
+      sondageActif.reponses[membreId] = { nom: m?.nom ?? membreId, votes: { ...currentVotes } };
+      document.getElementById('vd-overlay').classList.add('hidden');
+      renderSondagePanel();
+      toast('Disponibilités enregistrées !');
+    } catch(e) {
+      toast('Erreur : ' + e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Enregistrer mes disponibilités';
+    }
+  };
+
+  document.getElementById('vd-overlay').classList.remove('hidden');
+}
+
 // ── Init ────────────────────────────────────────────────────────────────────
 async function init() {
   initNav("reunions");
 
-  [reunions, membres, livres, votes] = await Promise.all([
-    getReunions(), getMembres(), getLivres(), getVotes(),
+  [reunions, membres, livres, votes, sondageActif] = await Promise.all([
+    getReunions(), getMembres(), getLivres(), getVotes(), getSondageDispo(),
   ]);
 
   membres.forEach((m, i) => {
@@ -116,21 +476,37 @@ async function init() {
   });
 
   renderLedger();
+  renderSondagePanel();
+
+  // Auto-clôture si le sondage est expiré
+  if (sondageActif) {
+    const cloture = sondageActif.cloture?.toDate ? sondageActif.cloture.toDate() : new Date(sondageActif.cloture);
+    if (cloture < new Date()) await processClotureSondage(sondageActif);
+  }
 
   // Auto-ouvrir une réunion depuis l'URL ?open=ID (ex: frise "Notre parcours")
   const openId = new URLSearchParams(location.search).get("open");
   if (openId) openMeeting(openId);
 
   document.getElementById("btn-add").addEventListener("click", openAdd);
+  document.getElementById("btn-sondage").addEventListener("click", () => {
+    if (sondageActif) { toast("Un sondage est déjà en cours."); return; }
+    openCreerSondage();
+  });
   document.getElementById("mtg-overlay").addEventListener("click", e => {
     if (e.target.id === "mtg-overlay") closeMeeting();
   });
   document.getElementById("add-overlay").addEventListener("click", e => {
     if (e.target.id === "add-overlay") closeAdd();
   });
+  document.getElementById("vd-close").addEventListener("click", () => document.getElementById("vd-overlay").classList.add("hidden"));
+  document.getElementById("vd-cancel").addEventListener("click", () => document.getElementById("vd-overlay").classList.add("hidden"));
+  document.getElementById("vd-overlay").addEventListener("click", e => { if (e.target.id === "vd-overlay") document.getElementById("vd-overlay").classList.add("hidden"); });
   document.addEventListener("keydown", e => {
-    if (e.key === "Escape") { closeMeeting(); closeAdd(); }
+    if (e.key === "Escape") { closeMeeting(); closeAdd(); document.getElementById("sd-overlay").classList.add("hidden"); document.getElementById("vd-overlay").classList.add("hidden"); }
   });
+
+  wireSondageForm();
 }
 
 // ── Registre (liste) ─────────────────────────────────────────────────────────
@@ -246,6 +622,13 @@ function renderMeeting() {
   const notesBlock = editMode ? buildEditBlock(r, everyone) : buildReadBlock(r, notes, avg, presents);
 
   // Compte rendu
+  // Lien discret vers le sondage si présent
+  const sondageLink = r.sondage_id
+    ? `<div style="margin-top:.7rem"><a class="sp-sondage-link" href="reunions.html" title="Voir le sondage de disponibilité ayant défini cette date">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg>
+        Date choisie par sondage de disponibilité
+      </a></div>` : '';
+
   const crBlock = r.compte_rendu
     ? `<div class="mtg-divider"></div>
        <div class="mtg-sec-title">${IC.note} Compte rendu</div>
@@ -288,6 +671,7 @@ function renderMeeting() {
       ${editMode ? "" : `<button class="rf-edit" id="mtg-edit-btn" style="margin-left:.6rem">${IC.edit} Modifier</button>`}
     </div>
     ${notesBlock}
+    ${sondageLink}
     ${crBlock}
     ${videoBlock}`;
 

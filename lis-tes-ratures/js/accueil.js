@@ -4,7 +4,7 @@ import {
   getMembres, getLivres, getVotes, getReunions, getVoteActif,
   getStatutsForLivre, upsertStatutLecture, getLivreById,
   updateLivre, addProgressionPoint, getProgressionForLivre,
-  updateReunion,
+  updateReunion, getSondageDispo,
 } from "./db.js";
 import { formatMois, MOIS_NOMS, showToast } from "./utils.js";
 import { hydrateCover } from "./covers.js";
@@ -47,7 +47,7 @@ function bookTint(id = '') {
 
 // ── State ─────────────────────────────────────────────────────────
 let allVotes = [], allMembres = [], allLivres = [], allReunions = [];
-let currentLivre = null, currentLivreId = null, currentVote = null, voteActif = null;
+let currentLivre = null, currentLivreId = null, currentVote = null, voteActif = null, sondageDispoActif = null;
 let statutByMembre = {}, progressionData = [];
 let friseVariant = 'fil';
 let editMembreId = null;
@@ -946,6 +946,33 @@ function buildReunionCard(r) {
 }
 
 function buildVoteCard() {
+  // Priorité : sondage de date si actif
+  if (sondageDispoActif) {
+    const s = sondageDispoActif;
+    const livre = allLivres.find(l => l.id === s.livre_id);
+    const cloture = s.cloture?.toDate ? s.cloture.toDate() : new Date(s.cloture);
+    const joursR = Math.max(0, Math.ceil((cloture - new Date()) / 86400000));
+    const nb = Object.keys(s.reponses || {}).length;
+    const tot = allMembres.length;
+    const pct = tot ? nb / tot : 0;
+    const circ = 94.25;
+    const dash = (circ * pct).toFixed(1);
+    const clotStr = joursR === 0 ? "Clôture aujourd'hui" : joursR === 1 ? 'Clôture demain' : `Clôture dans ${joursR} jours`;
+    return `<div class="hs-card is-vote">
+      <div class="hs-eyebrow">${ICON_VOTE} Sondage de date</div>
+      <div class="hs-ring-wrap">
+        <svg class="hs-ring" viewBox="0 0 34 34">
+          <circle class="ring-bg" cx="17" cy="17" r="15"/>
+          <circle class="ring-fill" cx="17" cy="17" r="15" stroke-dasharray="${dash} ${circ}"/>
+        </svg>
+        <div class="hs-ring-txt"><b>${nb}/${tot}</b><br>réponses</div>
+      </div>
+      <div class="hs-title">Date de la séance${livre ? ` — ${esc(livre.titre)}` : ''}</div>
+      <div class="hs-meta"><b>${nb} réponse${nb !== 1 ? 's' : ''}</b> · ${clotStr}</div>
+      <a class="hs-cta solid" href="reunions.html">Répondre →</a>
+    </div>`;
+  }
+
   if (!voteActif) {
     const now = new Date();
     const nomMois = MFR_FULL[(now.getMonth() + 1) % 12];
@@ -997,8 +1024,8 @@ function renderHomeStatus() {
 }
 
 async function init() {
-  [allVotes, allMembres, allLivres, allReunions, voteActif] = await Promise.all([
-    getVotes(), getMembres(), getLivres(), getReunions(), getVoteActif(),
+  [allVotes, allMembres, allLivres, allReunions, voteActif, sondageDispoActif] = await Promise.all([
+    getVotes(), getMembres(), getLivres(), getReunions(), getVoteActif(), getSondageDispo(),
   ]);
   await renderLivreMois();
   renderHero();
