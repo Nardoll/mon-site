@@ -115,12 +115,27 @@ async function init() {
     .filter(r => isPasse(r))
     .sort((a, b) => toTs(a.date) - toTs(b.date));
 
-  // ── Votes triés chronologiquement (hors votes exceptionnels) ──
-  // Les votes marqués `exceptionnel: true` en Firestore sont exclus de tous
-  // les calculs statistiques car ils ne suivent pas le système de notation /5.
+  // ── Votes triés chronologiquement ──────────────────────────────
+  // votesChron : hors exceptionnels — pour tout ce qui requiert des notes /5
+  // votesAvecExcept : inclut les exceptionnels normalisés — pour participation,
+  //   membres actifs et durée de vie (le sondage compte comme une session de vote)
   const votesChron = [...votes]
     .filter(v => !v.exceptionnel)
     .sort((a, b) => toTs(a.date) - toTs(b.date));
+
+  function normaliserVoteExcept(v) {
+    if (!v.exceptionnel) return v;
+    const fakRes = {};
+    (v.livre_ids || []).forEach(lId => { fakRes[lId] = { livre_id: lId, notes: {} }; });
+    Object.entries(v.sondage || {}).forEach(([mId, lId]) => {
+      if (!fakRes[lId]) fakRes[lId] = { livre_id: lId, notes: {} };
+      fakRes[lId].notes[mId] = 1;
+    });
+    return { ...v, resultats: Object.values(fakRes) };
+  }
+  const votesAvecExcept = [...votes]
+    .sort((a, b) => toTs(a.date) - toTs(b.date))
+    .map(normaliserVoteExcept);
 
   // ── Sous-titre page ─────────────────────────────────────────────
   const nbElus = livres.filter(l => l.statut === "elu").length;
@@ -134,16 +149,16 @@ async function init() {
   renderRepartition({ livres });
   renderHistNotes10({ passees, membres });
   renderHistNotes5({ votes: votesChron, membres });
-  renderParticipation({ votes: votesChron, membres });
+  renderParticipation({ votes: votesAvecExcept, membres });
   renderColsLecteurs({ passees, statuts });
   renderPlotNotes({ passees, membreById });
-  renderTblActifs({ membres, livres, votes: votesChron, reunions, statuts, commentaires });
+  renderTblActifs({ membres, livres, votes: votesAvecExcept, reunions, statuts, commentaires });
   renderBilanProps({ membres, livres, votes: votesChron, reunions, livreById });
   renderHeatGouts({ membres, livreById, votes: votesChron });
   renderScatterCorrel({ livres, livreById, votes: votesChron, reunions });
   renderHeatSim({ membres, membreById, votes: votesChron });
   renderContrConso({ livreById, votes: votesChron });
-  renderDureeVie({ livreById, votes: votesChron });
+  renderDureeVie({ livreById, votes: votesAvecExcept });
   renderPropsStack({ membres, livres });
 }
 

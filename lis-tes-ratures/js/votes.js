@@ -1,5 +1,5 @@
 import { requireAuth } from "./auth.js";
-import { getVotes, getMembres, getLivres, getVoteActif } from "./db.js";
+import { getVotes, getMembres, getLivres, getVoteActif, updateVote } from "./db.js";
 import { initNav } from "./nav.js";
 import { formatMois } from "./utils.js";
 import { hydrateCover, coversOn, removeAllCovers } from "./covers.js";
@@ -239,6 +239,7 @@ function openExceptionnel(vote) {
   const [g1, g2] = getBookCover(vote.livre_elu);
   const note = vote.note_exceptionnelle ?? null;
   const desc = vote.description_exceptionnelle ?? "Ce livre a été choisi via un sondage extérieur au site.";
+  const hasSondage = vote.sondage && Object.keys(vote.sondage).length > 0;
 
   document.getElementById("result-paper").innerHTML = `
     <button class="paper-close" id="result-close" aria-label="Fermer">✕</button>
@@ -258,26 +259,150 @@ function openExceptionnel(vote) {
       <div style="font-weight:700;color:#b5572d;margin-bottom:.5rem;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase">⚠ Hors scrutin officiel</div>
       ${esc(desc)}
     </div>
-    ${vote.resultats?.length ? `
     <div class="paper-divider"></div>
     <div class="paper-sec-title">${IC.bars} Résultats du sondage</div>
-    <div style="display:flex;flex-direction:column;gap:.5rem">
-      ${[...(vote.resultats)].sort((a,b) => (b.score ?? b.moyenne ?? 0) - (a.score ?? a.moyenne ?? 0)).map(r => {
-        const l = livreById[r.livre_id];
-        const sc = r.score ?? r.moyenne ?? null;
-        const isElu = r.livre_id === vote.livre_elu;
-        return `<div style="display:flex;align-items:center;gap:.8rem;padding:.5rem .3rem;border-bottom:1px solid rgba(120,90,50,.15)">
-          <span style="flex:1;font-size:.9rem;color:${isElu ? "#1a8a55" : "#5a4326"};font-weight:${isElu ? "600" : "400"}">${esc(l?.titre ?? r.titre ?? r.livre_id)}${isElu ? " ✓" : ""}</span>
-          ${sc != null ? `<span style="font-size:.82rem;color:#8a6b46">${Number(sc).toFixed(2)}/5</span>` : ""}
-        </div>`;
-      }).join("")}
-    </div>` : ""}`;
+    <div class="paper-sec-sub">Nombre de voix par livre — vote unique par membre.</div>
+    ${buildSondageChart(vote)}
+    ${hasSondage ? `
+    <div class="paper-divider"></div>
+    <div class="paper-sec-title">${IC.grid} Émargement</div>
+    <div class="paper-sec-sub">✓ = a voté pour ce livre.</div>
+    ${buildSondageTable(vote)}
+    ` : `<p style="font-size:.83rem;color:var(--muted);margin:.6rem 0 .2rem">Aucun vote renseigné — cliquez "Modifier les votes" pour saisir les résultats.</p>`}
+    <div class="paper-divider"></div>
+    <button id="sondage-edit-btn" style="display:inline-flex;align-items:center;gap:.45rem;background:none;border:1px solid var(--border);border-radius:8px;padding:.5rem 1rem;font-size:.83rem;cursor:pointer;color:var(--text)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
+      Modifier les votes
+    </button>`;
 
   document.getElementById("result-overlay").classList.remove("hidden");
   document.getElementById("result-paper").scrollTop = 0;
   document.getElementById("result-close").addEventListener("click", closeResult);
+  document.getElementById("sondage-edit-btn").addEventListener("click", () => openSondageEdit(vote));
   curResultVote = vote;
   hydrateCover(document.querySelector("#result-paper .wcover"), eluL);
+}
+
+function buildSondageChart(vote) {
+  const sondage = vote.sondage || {};
+  const livreIds = vote.livre_ids || [...new Set(Object.values(sondage))];
+  if (!livreIds.length) return `<p style="font-size:.83rem;color:var(--muted);margin:.3rem 0">Aucun livre enregistré.</p>`;
+
+  const counts = {};
+  livreIds.forEach(id => { counts[id] = 0; });
+  Object.values(sondage).forEach(lId => { if (lId in counts) counts[lId]++; });
+
+  const H = 150;
+  const maxCount = Math.max(1, ...Object.values(counts));
+  const sorted = [...livreIds].sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
+
+  const cols = sorted.map(lId => {
+    const isWin = lId === vote.livre_elu;
+    const col = isWin ? "#1a8a55" : "#6840d8";
+    const cnt = counts[lId] || 0;
+    const h = Math.max(cnt > 0 ? 18 : 3, Math.round(cnt / maxCount * H));
+    return `<div class="dep-col">
+      <div class="dep-val" style="color:${col}">${cnt} voix</div>
+      <div class="dep-bar" style="height:${h}px;background:${col}"></div>
+    </div>`;
+  }).join("");
+
+  const labels = sorted.map(lId => {
+    const l = livreById[lId];
+    return `<div class="dep-label">${esc(l?.titre ?? lId)}</div>`;
+  }).join("");
+
+  return `
+    <div class="dep-legend">
+      <span class="dep-legend-item"><span class="dep-legend-dot" style="background:#1a8a55"></span>Élu</span>
+      <span class="dep-legend-item"><span class="dep-legend-dot" style="background:#6840d8"></span>En lice</span>
+    </div>
+    <div class="dep-chart-wrap">
+      <div class="dep-chart">${cols}</div>
+      <div class="dep-labels">${labels}</div>
+    </div>`;
+}
+
+function buildSondageTable(vote) {
+  const sondage = vote.sondage || {};
+  const livreIds = vote.livre_ids || [...new Set(Object.values(sondage))];
+  const membreIds = Object.keys(sondage);
+  if (!membreIds.length || !livreIds.length) return "";
+
+  const heads = livreIds.map(id => {
+    const l = livreById[id];
+    const isWin = id === vote.livre_elu;
+    return `<th class="${isWin ? "win" : ""}">${esc(l?.titre ?? id)}</th>`;
+  }).join("");
+
+  const rows = membreIds.map(mId => {
+    const m = membreById[mId] || { nom: mId, _color: "#888" };
+    const voted = sondage[mId];
+    const cells = livreIds.map(lId => lId === voted
+      ? `<td style="text-align:center;background:rgba(26,138,85,.12);color:#1a8a55;font-weight:700;font-size:1rem">✓</td>`
+      : `<td></td>`
+    ).join("");
+    return `<tr>
+      <td class="who"><span style="display:inline-flex;align-items:center;gap:.4rem">
+        <span style="width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;font-size:.56rem;font-weight:700;color:#fff;background:${m._color}">${ini(m.nom)}</span>${esc(m.nom)}
+      </span></td>
+      ${cells}
+    </tr>`;
+  }).join("");
+
+  return `<div class="tally-wrap"><table class="tally">
+    <thead><tr><th class="who">Membre</th>${heads}</tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function openSondageEdit(vote) {
+  const livreIds = vote.livre_ids || [...new Set(Object.values(vote.sondage || {}))];
+  const sondage = vote.sondage || {};
+
+  const rows = membres.map(m => {
+    const current = sondage[m.id] || "";
+    const opts = livreIds.map(lId => {
+      const l = livreById[lId];
+      return `<option value="${esc(lId)}" ${current === lId ? "selected" : ""}>${esc(l?.titre ?? lId)}</option>`;
+    }).join("");
+    return `<div style="display:flex;align-items:center;gap:.8rem;padding:.45rem 0;border-bottom:1px solid rgba(120,90,50,.1)">
+      <span style="min-width:90px;font-size:.85rem;flex-shrink:0">${esc(m.nom)}</span>
+      <select data-membre="${esc(m.id)}" style="flex:1;font-size:.82rem;padding:.3rem .5rem;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)">
+        <option value="">— N'a pas voté —</option>
+        ${opts}
+      </select>
+    </div>`;
+  }).join("");
+
+  document.getElementById("result-paper").innerHTML = `
+    <button class="paper-close" id="result-close" aria-label="Fermer">✕</button>
+    <div class="paper-eyebrow">Sondage · ${formatMois(vote.mois, vote.annee)}</div>
+    <div class="paper-title">Modifier les votes</div>
+    <p style="font-size:.85rem;color:var(--muted);margin:.3rem 0 1rem">Indiquer quel livre chaque membre a choisi lors du sondage Discord.</p>
+    <div style="display:flex;flex-direction:column;margin-bottom:1.2rem">${rows}</div>
+    <div style="display:flex;gap:.8rem;flex-wrap:wrap">
+      <button id="sondage-save-btn" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.55rem 1.2rem;font-size:.88rem;font-weight:600;cursor:pointer">Enregistrer</button>
+      <button id="sondage-cancel-btn" style="background:none;border:1px solid var(--border);border-radius:8px;padding:.55rem 1.2rem;font-size:.88rem;cursor:pointer;color:var(--text)">Annuler</button>
+    </div>`;
+
+  document.getElementById("result-paper").scrollTop = 0;
+  document.getElementById("result-close").addEventListener("click", closeResult);
+  document.getElementById("sondage-cancel-btn").addEventListener("click", () => openExceptionnel(vote));
+  document.getElementById("sondage-save-btn").addEventListener("click", async () => {
+    const newSondage = {};
+    document.getElementById("result-paper").querySelectorAll("[data-membre]").forEach(sel => {
+      if (sel.value) newSondage[sel.dataset.membre] = sel.value;
+    });
+    try {
+      await updateVote(vote.id, { sondage: newSondage });
+      vote.sondage = newSondage;
+      openExceptionnel(vote);
+    } catch (e) {
+      console.error(e);
+      alert("Erreur lors de la sauvegarde.");
+    }
+  });
 }
 
 // ── Fiche résultats ───────────────────────────────────────────────────────
