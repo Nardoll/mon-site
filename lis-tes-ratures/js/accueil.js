@@ -928,10 +928,11 @@ function buildReunionCard(r) {
   const now = new Date();
   const jours = d ? Math.max(0, Math.ceil((d - now) / 86400000)) : null;
   const cachet = d ? `<div class="hs-cachet"><small>${MFR_SHORT[d.getMonth()]}</small><b>${d.getDate()}</b><span>${d.getFullYear()}</span></div>` : '';
+  const termines = Object.values(statutByMembre).filter(s => s.statut === 'termine').length;
   const meta = [
     d ? `${JOURS[d.getDay()]} ${d.getDate()} ${MFR_FULL[d.getMonth()]}` : null,
     jours === 0 ? "Aujourd'hui !" : jours === 1 ? 'Demain' : jours != null ? `Dans ${jours} jours` : null,
-    (r.participant_ids || []).length > 0 ? `${r.participant_ids.length} présent${r.participant_ids.length > 1 ? 's' : ''} attendu${r.participant_ids.length > 1 ? 's' : ''}` : null,
+    termines > 0 ? `${termines} membre${termines > 1 ? 's' : ''} ${termines > 1 ? 'ont' : 'a'} fini le livre` : null,
   ].filter(Boolean).join(' · ');
   return `<div class="hs-card is-reunion">
     ${cachet}
