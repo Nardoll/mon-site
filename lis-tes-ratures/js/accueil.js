@@ -916,10 +916,12 @@ function buildReunionCard(r) {
   const JOURS = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
   if (!r) {
     return `<div class="hs-card is-reunion is-empty">
-      <div class="hs-eyebrow">${ICON_NOTE} Réunion</div>
-      <div class="hs-title">Pas encore de séance prévue${currentLivre ? ` pour ${esc(currentLivre.titre)}` : ''}</div>
-      <div class="hs-meta">Aucune réunion planifiée pour l'instant.</div>
-      <a class="hs-cta ghost-acc" href="reunions.html">Réunions →</a>
+      <div class="hs-body">
+        <div class="hs-eyebrow">${ICON_NOTE} Réunion</div>
+        <div class="hs-title">Pas encore de séance prévue${currentLivre ? ` pour ${esc(currentLivre.titre)}` : ''}</div>
+        <div class="hs-meta">Aucune réunion planifiée pour l'instant.</div>
+        <a class="hs-cta ghost-acc" href="reunions.html">Réunions →</a>
+      </div>
     </div>`;
   }
   const d = toDate(r.date);
@@ -935,11 +937,13 @@ function buildReunionCard(r) {
     (r.participant_ids || []).length > 0 ? `${r.participant_ids.length} présent${r.participant_ids.length > 1 ? 's' : ''} attendu${r.participant_ids.length > 1 ? 's' : ''}` : null,
   ].filter(Boolean).join(' · ');
   return `<div class="hs-card is-reunion">
-    <div class="hs-eyebrow">${ICON_NOTE} Réunion</div>
     ${cachet}
-    <div class="hs-title">Débrief de ${esc(currentLivre?.titre ?? '—')}</div>
-    <div class="hs-meta">${esc(meta)}</div>
-    <a class="hs-cta ghost-acc" href="reunions.html">Voir la séance →</a>
+    <div class="hs-body">
+      <div class="hs-eyebrow">${ICON_NOTE} Réunion</div>
+      <div class="hs-title">Débrief de ${esc(currentLivre?.titre ?? '—')}</div>
+      <div class="hs-meta">${esc(meta)}</div>
+      <a class="hs-cta ghost-acc" href="reunions.html">Voir la séance →</a>
+    </div>
   </div>`;
 }
 
