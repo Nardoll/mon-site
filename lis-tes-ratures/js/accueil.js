@@ -1,7 +1,7 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
 import {
-  getMembres, getLivres, getVotes, getReunions,
+  getMembres, getLivres, getVotes, getReunions, getVoteActif,
   getStatutsForLivre, upsertStatutLecture, getLivreById,
   updateLivre, addProgressionPoint, getProgressionForLivre,
   updateReunion,
@@ -47,7 +47,7 @@ function bookTint(id = '') {
 
 // ── State ─────────────────────────────────────────────────────────
 let allVotes = [], allMembres = [], allLivres = [], allReunions = [];
-let currentLivre = null, currentLivreId = null, currentVote = null;
+let currentLivre = null, currentLivreId = null, currentVote = null, voteActif = null;
 let statutByMembre = {}, progressionData = [];
 let friseVariant = 'fil';
 let editMembreId = null;
@@ -902,10 +902,105 @@ document.getElementById('fiche-overlay').addEventListener('click', e => { if (e.
 document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.overlay').forEach(o => o.classList.add('hidden')); });
 
 // ── Init ──────────────────────────────────────────────────────────
+// ── Encarts statut accueil (Réunion + Vote) ──────────────────────
+
+function isReunionPrevue(r) {
+  if (Object.keys(r.notes_finales || {}).length > 0) return false;
+  const s = (r.statut || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  if (s.includes('pass') || s.includes('termin')) return false;
+  const d = toDate(r.date);
+  return !(d && d < new Date());
+}
+
+function buildReunionCard(r) {
+  const JOURS = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+  if (!r) {
+    return `<div class="hs-card is-empty">
+      <div class="hs-eyebrow">${ICON_NOTE} Réunion</div>
+      <div class="hs-title">Pas encore de séance prévue${currentLivre ? ` pour ${esc(currentLivre.titre)}` : ''}</div>
+      <div class="hs-meta">Aucune réunion planifiée pour l'instant.</div>
+      <a class="hs-cta ghost-acc" href="reunions.html">Réunions →</a>
+    </div>`;
+  }
+  const d = toDate(r.date);
+  const now = new Date();
+  const jours = d ? Math.max(0, Math.ceil((d - now) / 86400000)) : null;
+  const cachet = d ? `<div class="hs-cachet">
+    <div class="cach-j">${d.getDate()}</div>
+    <div class="cach-m">${MFR_SHORT[d.getMonth()]}<br>${d.getFullYear()}</div>
+  </div>` : '';
+  const meta = [
+    d ? `${JOURS[d.getDay()]} ${d.getDate()} ${MFR_FULL[d.getMonth()]}` : null,
+    jours === 0 ? "Aujourd'hui !" : jours === 1 ? 'Demain' : jours != null ? `Dans ${jours} jours` : null,
+    (r.participant_ids || []).length > 0 ? `${r.participant_ids.length} présent${r.participant_ids.length > 1 ? 's' : ''} attendu${r.participant_ids.length > 1 ? 's' : ''}` : null,
+  ].filter(Boolean).join(' · ');
+  return `<div class="hs-card is-reunion">
+    <div class="hs-eyebrow">${ICON_NOTE} Réunion</div>
+    ${cachet}
+    <div class="hs-title">Débrief de ${esc(currentLivre?.titre ?? '—')}</div>
+    <div class="hs-meta">${esc(meta)}</div>
+    <a class="hs-cta ghost-acc" href="reunions.html">Voir la séance →</a>
+  </div>`;
+}
+
+function buildVoteCard() {
+  if (!voteActif) {
+    const now = new Date();
+    const nomMois = MFR_FULL[(now.getMonth() + 1) % 12];
+    return `<div class="hs-card is-empty">
+      <div class="hs-eyebrow">${ICON_VOTE} Vote</div>
+      <div class="hs-title">Aucun scrutin ouvert</div>
+      <div class="hs-meta">Prochain : <b>livre de ${esc(nomMois)}</b> · ouverture le 1ᵉʳ ${esc(nomMois.toLowerCase())}</div>
+      <a class="hs-cta ghost-pur" href="votes.html">Votes →</a>
+    </div>`;
+  }
+  const bulletins = voteActif.bulletins || {};
+  const membreIds = voteActif.membre_ids || [];
+  const nb = Object.keys(bulletins).length;
+  const tot = membreIds.length;
+  const pct = tot ? nb / tot : 0;
+  const circ = 94.25;
+  const dash = (circ * pct).toFixed(1);
+  const clotureDate = voteActif.expires_at ? toDate(voteActif.expires_at) : null;
+  const joursR = clotureDate ? Math.max(0, Math.ceil((clotureDate - new Date()) / 86400000)) : null;
+  const nb_livres = (voteActif.livre_ids || []).length;
+  const meta = [
+    `<b>${nb_livres} livre${nb_livres > 1 ? 's' : ''}</b> en lice`,
+    joursR === 0 ? 'clôture aujourd\'hui' : joursR === 1 ? 'clôture demain' : joursR != null ? `clôture dans ${joursR} jours` : null,
+  ].filter(Boolean).join(' · ');
+  return `<div class="hs-card is-vote">
+    <div class="hs-eyebrow">${ICON_VOTE} Vote</div>
+    <div class="hs-ring-wrap">
+      <svg class="hs-ring" viewBox="0 0 34 34">
+        <circle class="ring-bg" cx="17" cy="17" r="15"/>
+        <circle class="ring-fill" cx="17" cy="17" r="15" stroke-dasharray="${dash} ${circ}"/>
+      </svg>
+      <div class="hs-ring-txt"><b>${nb}/${tot}</b><br>bulletins reçus</div>
+    </div>
+    <div class="hs-title">Livre de ${formatMois(voteActif.mois, voteActif.annee)}</div>
+    <div class="hs-meta">${meta}</div>
+    <a class="hs-cta solid" href="vote.html">Voter →</a>
+  </div>`;
+}
+
+function renderHomeStatus() {
+  const mount = document.getElementById('hs-mount');
+  if (!mount) return;
+  const reunionPrevue = currentLivreId
+    ? [...allReunions]
+        .filter(r => r.livre_id === currentLivreId && isReunionPrevue(r))
+        .sort((a, b) => (toDate(a.date) ?? new Date(9e14)) - (toDate(b.date) ?? new Date(9e14)))[0] ?? null
+    : null;
+  mount.innerHTML = buildReunionCard(reunionPrevue) + buildVoteCard();
+}
+
 async function init() {
-  [allVotes, allMembres, allLivres, allReunions] = await Promise.all([getVotes(), getMembres(), getLivres(), getReunions()]);
+  [allVotes, allMembres, allLivres, allReunions, voteActif] = await Promise.all([
+    getVotes(), getMembres(), getLivres(), getReunions(), getVoteActif(),
+  ]);
   await renderLivreMois();
   renderHero();
+  renderHomeStatus();
   renderFrise();
   renderPalmares();
   wireFrise();

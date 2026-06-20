@@ -8,7 +8,8 @@
   <link rel="stylesheet" href="css/style.css" />
   <style>
     /* ════════════ En-tête chaleureux ════════════ */
-    .home-hero { margin-bottom: 2.4rem; }
+    .home-top { display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; align-items: start; margin-bottom: 2.4rem; }
+    .home-hero { }
     .home-date { font-size: .76rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: .55rem; }
     .home-hello { font-family: var(--serif); font-size: 2.15rem; line-height: 1.08; font-weight: 600; color: var(--text); }
     .home-hello .name { position: relative; white-space: nowrap; }
@@ -22,6 +23,39 @@
     .home-deadline .dl-txt { font-size:.86rem; color:var(--muted); line-height:1.45; }
     .home-deadline .dl-txt em { font-style:italic; color:var(--text); }
     .home-deadline .dl-txt b { color:var(--text); font-weight:600; }
+
+    /* ════════════ Encarts statut (Réunion + Vote) ════════════ */
+    .hs-stack { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    .hs-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 14px; padding: 1.1rem 1.2rem; display: flex; flex-direction: column; gap: .5rem; min-width: 0; min-height: 160px; }
+    .hs-card.is-reunion { border-left-color: var(--accent); }
+    .hs-card.is-vote    { border-left-color: var(--purple); }
+    .hs-card.is-empty .hs-title { color: var(--muted); font-style: italic; font-size: .88rem; font-family: inherit; }
+    .hs-eyebrow { font-size: .65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: .35rem; }
+    .hs-eyebrow svg { width: 11px; height: 11px; }
+    .hs-title { font-family: var(--serif); font-size: .95rem; font-weight: 600; color: var(--text); line-height: 1.3; }
+    .hs-meta { font-size: .74rem; color: var(--muted); line-height: 1.55; }
+    .hs-meta b { color: var(--text); font-weight: 600; }
+    .hs-cta { display: inline-flex; align-items: center; gap: .35rem; font-size: .76rem; font-weight: 600; text-decoration: none; border-radius: 7px; padding: .3rem .7rem; margin-top: auto; cursor: pointer; border: none; font-family: inherit; transition: all .14s; width: fit-content; }
+    .hs-cta.solid { background: var(--purple); color: #fff; }
+    .hs-cta.solid:hover { filter: brightness(1.1); }
+    .hs-cta.ghost-acc { color: var(--accent); border: 1px solid rgba(181,87,45,.3); background: none; }
+    .hs-cta.ghost-acc:hover { background: rgba(181,87,45,.07); }
+    .hs-cta.ghost-pur { color: var(--purple); border: 1px solid rgba(104,64,216,.28); background: none; }
+    .hs-cta.ghost-pur:hover { background: rgba(104,64,216,.06); }
+    /* Cachet date réunion */
+    .hs-cachet { display: inline-flex; align-items: center; gap: .5rem; padding: .28rem .6rem; background: rgba(181,87,45,.09); border: 1px solid rgba(181,87,45,.22); border-radius: 7px; color: var(--accent); width: fit-content; }
+    .hs-cachet .cach-j { font-family: var(--serif); font-size: 1.35rem; font-weight: 700; line-height: 1; }
+    .hs-cachet .cach-m { font-size: .6rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; line-height: 1.4; }
+    /* Anneau vote */
+    .hs-ring-wrap { display: flex; align-items: center; gap: .65rem; }
+    .hs-ring { width: 38px; height: 38px; flex-shrink: 0; overflow: visible; }
+    .hs-ring .ring-bg   { fill: none; stroke: rgba(104,64,216,.14); stroke-width: 4; }
+    .hs-ring .ring-fill { fill: none; stroke: var(--purple); stroke-width: 4; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 17px 17px; transition: stroke-dasharray .6s cubic-bezier(.4,0,.2,1); }
+    .hs-ring-txt { font-size: .8rem; color: var(--muted); line-height: 1.45; }
+    .hs-ring-txt b { color: var(--purple); font-size: .9rem; font-weight: 700; }
+    /* Responsive */
+    @media (max-width: 1240px) { .home-top { grid-template-columns: 1fr; } }
+    @media (max-width: 580px)  { .hs-stack { grid-template-columns: 1fr; } }
 
     /* ════════════ Bandeau de section ════════════ */
     .home-sec { margin-bottom: 2.8rem; }
@@ -294,11 +328,14 @@
 
   <main class="main">
     <!-- En-tête -->
-    <div class="home-hero">
-      <div class="home-date" id="home-date"></div>
-      <h1 class="home-hello">Bonjour à toutes et à <span class="name">tous</span></h1>
-      <p class="home-sub" id="home-sub"></p>
-      <div class="home-deadline" id="home-deadline"></div>
+    <div class="home-top">
+      <div class="home-hero">
+        <div class="home-date" id="home-date"></div>
+        <h1 class="home-hello">Bonjour à toutes et à <span class="name">tous</span></h1>
+        <p class="home-sub" id="home-sub"></p>
+        <div class="home-deadline" id="home-deadline"></div>
+      </div>
+      <div class="hs-stack" id="hs-mount"></div>
     </div>
 
     <!-- Livre du mois -->
