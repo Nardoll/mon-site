@@ -254,11 +254,10 @@ function renderSondagePanel() {
     ${winnerBanner}
     <div class="sp-grid-wrap">${buildVoteGrid(s, scores, winner)}</div>
     <div class="sp-actions">
-      <button class="sp-btn-vote" id="sp-btn-vote">Remplir mes disponibilités</button>
+      <a class="sp-btn-vote" href="sondage-dispo.html">Remplir mes disponibilités</a>
       <button class="sp-btn-close-poll" id="sp-btn-close">Clôturer</button>
     </div>`;
 
-  document.getElementById('sp-btn-vote').addEventListener('click', () => openVoter(s));
   document.getElementById('sp-btn-close').addEventListener('click', async () => {
     if (!confirm('Clôturer le sondage et planifier la réunion sur la date la plus disponible ?')) return;
     await processClotureSondage(s);

@@ -222,50 +222,60 @@
     .reu-layout { display: grid; grid-template-columns: minmax(0,1fr) 360px; gap: 2rem; align-items: start; }
     .ledger { max-width: none; }
 
-    /* ════════════ Panneau sondage ════════════ */
+    /* ════════════ Panneau sondage — cahier relié ════════════ */
     .sp-panel {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 12px; padding: 1.25rem 1.3rem; position: sticky; top: 1rem;
+      position: sticky; top: 1rem; overflow: hidden;
+      background: linear-gradient(180deg,#fcf6e7,#f3e7cd);
+      border: 1px solid rgba(150,120,80,.34);
+      border-radius: 3px 8px 8px 3px;
+      box-shadow: 0 20px 40px -24px rgba(60,40,20,.5), inset 0 0 0 1px rgba(255,255,255,.4);
+      padding: 1.4rem 1.4rem 1.4rem 3rem;
     }
+    /* reliure */
+    .sp-panel::before { content:""; position:absolute; left:0; top:0; bottom:0; width:22px; background:linear-gradient(90deg,#e3d2b0,#d8c49e 60%,#cdb88f); border-right:1px solid rgba(120,90,50,.3); box-shadow:inset -3px 0 6px -3px rgba(90,60,30,.4); }
+    /* points de couture */
+    .sp-panel::after { content:""; position:absolute; left:10px; top:18px; bottom:18px; width:2px; background:repeating-linear-gradient(180deg,rgba(120,90,50,.55) 0 7px,transparent 7px 16px); }
+    /* double marge rouge */
+    .sp-margin { position:absolute; left:34px; top:0; bottom:0; width:1.5px; background:rgba(176,72,52,.4); box-shadow:4px 0 0 rgba(176,72,52,.18); pointer-events:none; }
     .sp-panel-head { display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; }
-    .sp-panel-title { font-family: var(--serif); font-size: 1rem; font-weight: 600; color: var(--ink); flex: 1; }
-    .sp-panel-title small { display: block; font-family: 'Segoe UI', sans-serif; font-size: .72rem; font-weight: 400; color: var(--muted); margin-top: .1rem; }
-    .sp-empty { text-align: center; padding: 2rem 1rem; color: var(--muted); font-size: .85rem; }
-    .sp-empty-icon { font-size: 2rem; margin-bottom: .6rem; opacity: .4; }
-    .sp-btn-create { display: block; width: 100%; margin-top: 1rem; background: var(--accent); color: var(--accent-text); border: none; border-radius: 8px; padding: .6rem 1rem; font-size: .86rem; font-weight: 600; font-family: inherit; cursor: pointer; transition: background .15s; }
-    .sp-btn-create:hover { background: var(--accent-hover); }
+    .sp-panel-title { font-family: var(--serif); font-size: 1rem; font-weight: 600; color: #2c2015; flex: 1; }
+    .sp-panel-title small { display: block; font-family: 'Segoe UI', sans-serif; font-size: .72rem; font-weight: 400; color: #9a7a4e; margin-top: .1rem; }
+    .sp-empty { text-align: center; padding: 2rem 1rem; color: #9a7a4e; font-size: .85rem; line-height: 1.5; }
+    .sp-empty-icon { font-size: 2rem; margin-bottom: .6rem; opacity: .5; }
+    .sp-btn-create { display: block; width: 100%; margin-top: 1.1rem; background: #b5572d; color: #fff7ee; border: none; border-radius: 8px; padding: .6rem 1rem; font-size: .86rem; font-weight: 600; font-family: inherit; cursor: pointer; transition: background .15s; }
+    .sp-btn-create:hover { background: #c46b41; }
 
     /* badge clôture */
-    .sp-cloture { display: inline-flex; align-items: center; gap: .3rem; font-size: .72rem; font-weight: 600; padding: .2rem .5rem; border-radius: 20px; background: rgba(var(--purple-rgb,100,60,180),.1); color: var(--purple); white-space: nowrap; }
-    .sp-cloture.expired { background: rgba(200,50,50,.1); color: #c83232; }
+    .sp-cloture { display: inline-flex; align-items: center; gap: .3rem; font-size: .7rem; font-weight: 700; padding: .18rem .5rem; border-radius: 20px; background: rgba(124,58,237,.12); color: #6730d4; white-space: nowrap; letter-spacing: .02em; }
+    .sp-cloture.expired { background: rgba(184,58,30,.1); color: #b83a1e; }
 
     /* Bandeau gagnant */
-    .sp-winner { background: rgba(26,138,85,.1); border: 1px solid rgba(26,138,85,.25); border-radius: 8px; padding: .6rem .85rem; margin-bottom: 1rem; font-size: .82rem; color: #1a5a35; display: flex; align-items: center; gap: .5rem; }
+    .sp-winner { background: rgba(26,138,85,.1); border: 1px solid rgba(26,138,85,.3); border-radius: 7px; padding: .55rem .8rem; margin-bottom: .9rem; font-size: .8rem; color: #1a5a35; display: flex; align-items: center; gap: .45rem; }
     .sp-winner strong { font-weight: 700; }
-    .sp-winner svg { width: 15px; height: 15px; flex-shrink: 0; color: #1a8a55; }
+    .sp-winner svg { width: 14px; height: 14px; flex-shrink: 0; }
 
     /* Grille Framadate */
-    .sp-grid-wrap { overflow-x: auto; margin: 0 -1.3rem; padding: 0 1.3rem 0; }
-    .sp-grid { border-collapse: collapse; font-size: .75rem; min-width: 100%; }
-    .sp-grid th, .sp-grid td { padding: .28rem .38rem; white-space: nowrap; border: 1px solid rgba(var(--border-rgb,120,90,50),.15); }
-    .sp-grid thead th { background: var(--surface-2,rgba(0,0,0,.03)); font-weight: 700; text-align: center; font-size: .7rem; color: var(--muted); }
-    .sp-grid thead th.best { background: rgba(26,138,85,.12); color: #1a5a35; }
-    .sp-grid td.sp-name { font-weight: 600; color: var(--ink); max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
-    .sp-grid td.sp-cell { text-align: center; cursor: default; }
-    .sp-grid td.sp-cell.dispo { background: rgba(26,138,85,.15); color: #1a5a35; }
-    .sp-grid td.sp-cell.si_besoin { background: rgba(200,130,20,.14); color: #8a5a00; }
+    .sp-grid-wrap { overflow-x: auto; margin: 0 -1.4rem 0 -3rem; padding: 0 1.4rem 0 3rem; }
+    .sp-grid { border-collapse: collapse; font-size: .73rem; min-width: 100%; }
+    .sp-grid th, .sp-grid td { padding: .26rem .34rem; white-space: nowrap; border: 1px solid rgba(120,90,50,.18); }
+    .sp-grid thead th { background: rgba(120,90,50,.07); font-weight: 700; text-align: center; font-size: .68rem; color: #9a7a4e; }
+    .sp-grid thead th.best { background: rgba(26,138,85,.14); color: #1a5a35; }
+    .sp-grid td.sp-name { font-weight: 600; color: #2c2015; max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
+    .sp-grid td.sp-cell { text-align: center; }
+    .sp-grid td.sp-cell.dispo { background: rgba(26,138,85,.16); color: #1a5a35; }
+    .sp-grid td.sp-cell.si_besoin { background: rgba(200,130,20,.15); color: #7a5200; }
     .sp-grid td.sp-cell.pas_dispo { background: rgba(180,40,40,.1); color: #8a2020; }
-    .sp-grid tr.sp-score-row td { background: var(--surface-2,rgba(0,0,0,.03)); font-weight: 700; text-align: center; border-top: 2px solid rgba(var(--border-rgb,120,90,50),.25); }
-    .sp-grid tr.sp-score-row td.best { background: rgba(26,138,85,.18); color: #1a5a35; }
+    .sp-grid tr.sp-score-row td { background: rgba(120,90,50,.07); font-weight: 700; text-align: center; border-top: 2px solid rgba(120,90,50,.28); color: #5a4326; }
+    .sp-grid tr.sp-score-row td.best { background: rgba(26,138,85,.2); color: #1a5a35; }
 
     /* Boutons panneau bas */
     .sp-actions { display: flex; gap: .6rem; margin-top: 1rem; flex-wrap: wrap; }
-    .sp-btn-vote { flex: 1; background: var(--purple,#7c3aed); color: #fff; border: none; border-radius: 8px; padding: .55rem .8rem; font-size: .84rem; font-weight: 600; font-family: inherit; cursor: pointer; transition: background .15s; white-space: nowrap; }
-    .sp-btn-vote:hover { background: #6730d4; }
-    .sp-btn-close-poll { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: .55rem .8rem; font-size: .8rem; font-family: inherit; cursor: pointer; transition: all .15s; white-space: nowrap; }
-    .sp-btn-close-poll:hover { border-color: #c83232; color: #c83232; }
-    .sp-sondage-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .74rem; color: var(--muted); text-decoration: none; opacity: .75; }
-    .sp-sondage-link:hover { opacity: 1; color: var(--accent); }
+    .sp-btn-vote { flex: 1; background: #b5572d; color: #fff7ee; border: none; border-radius: 8px; padding: .55rem .8rem; font-size: .82rem; font-weight: 600; font-family: inherit; cursor: pointer; transition: background .15s; white-space: nowrap; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+    .sp-btn-vote:hover { background: #c46b41; }
+    .sp-btn-close-poll { background: none; border: 1px solid rgba(120,90,50,.4); color: #9a7a4e; border-radius: 8px; padding: .55rem .8rem; font-size: .78rem; font-family: inherit; cursor: pointer; transition: all .15s; white-space: nowrap; }
+    .sp-btn-close-poll:hover { border-color: #b83a1e; color: #b83a1e; }
+    .sp-sondage-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .72rem; color: #9a7a4e; text-decoration: none; }
+    .sp-sondage-link:hover { color: #b5572d; }
 
     /* ════════════ Overlay création sondage ════════════ */
     .sd-section { margin-bottom: 1.2rem; }
@@ -315,7 +325,7 @@
     <div class="page-header">
       <h1>Réunions</h1>
       <div class="reu-actions">
-        <button class="btn-add" id="btn-sondage" style="background:var(--purple,#7c3aed)">
+        <button class="btn-add" id="btn-sondage" style="background:transparent;color:var(--purple,#7c3aed);border:1.5px solid var(--purple,#7c3aed)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></svg>
           Sondage de disponibilité
         </button>
@@ -387,6 +397,7 @@
 
     <!-- Panneau sondage de disponibilité -->
     <div class="sp-panel" id="sondage-panel">
+      <div class="sp-margin"></div>
       <div id="sp-mount"></div>
     </div>
 

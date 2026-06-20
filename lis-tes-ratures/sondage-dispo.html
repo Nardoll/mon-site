@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sondage de disponibilité — Lis tes ratures</title>
+  <link rel="icon" type="image/png" href="/lis-tes-ratures-ltr.png" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    body { min-height: 100vh; margin-left: 0; }
+
+    /* ── En-tête ── */
+    .vh { max-width: 880px; margin: 0 auto; display: flex; align-items: center; gap: 1rem; padding: 1.4rem 1.5rem .4rem; }
+    .vh-back { display: inline-flex; align-items: center; gap: .35rem; color: var(--muted); text-decoration: none; font-size: .85rem; font-weight: 600; border: 1px solid var(--border); border-radius: 8px; padding: .4rem .7rem .4rem .55rem; transition: all .15s; background: var(--surface); }
+    .vh-back svg { width: 15px; height: 15px; }
+    .vh-back:hover { color: var(--accent); border-color: var(--accent); }
+    .vh-spacer { flex: 1; }
+    .vh-mark { font-size: .78rem; color: var(--muted); font-style: italic; }
+
+    /* ── Bulletin papier ── */
+    .ballot {
+      max-width: 880px; margin: .8rem auto 4rem; position: relative;
+      background: linear-gradient(180deg,#fffaf1,#f8efdd);
+      border-radius: 6px; padding: 2.4rem 2.8rem 2.6rem 3.2rem;
+      box-shadow: 0 44px 90px -42px rgba(60,40,20,.6), inset 0 0 0 1px rgba(120,90,50,.1);
+      color: #2c2015;
+    }
+    .ballot::before { content: ""; position: absolute; left: 2.05rem; top: 1.4rem; bottom: 1.4rem; width: 1.5px; background: rgba(176,72,52,.3); }
+
+    /* en-tête */
+    .ballot-letterhead { text-align: center; padding-bottom: 1.4rem; border-bottom: 2px solid; border-image: linear-gradient(90deg, transparent, rgba(176,72,52,.5), transparent) 1; margin-bottom: 1.6rem; }
+    .ballot-club { font-size: .72rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--accent); }
+    .ballot-h1 { font-family: var(--serif); font-size: 2rem; font-weight: 600; line-height: 1.05; margin-top: .35rem; }
+    .ballot-h1 .rature { position: relative; white-space: nowrap; }
+    .ballot-h1 .rature::after { content: ""; position: absolute; left: -2%; right: -2%; top: 60%; height: 3px; background: var(--accent); border-radius: 2px; transform: rotate(-1.5deg); opacity: .85; }
+    .ballot-sub { font-size: .9rem; color: var(--muted); font-style: italic; margin-top: .5rem; }
+
+    /* bannière statut */
+    .vbanner { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; background: rgba(181,87,45,.07); border: 1px dashed rgba(181,87,45,.45); border-radius: 11px; padding: .85rem 1.1rem; margin-bottom: 1.8rem; }
+    .vbanner.closed { background: rgba(26,138,85,.07); border-color: rgba(26,138,85,.4); border-style: solid; }
+    .vbanner-ico { width: 38px; height: 38px; border-radius: 9px; background: var(--accent); color: #fff7ee; display: grid; place-items: center; flex-shrink: 0; }
+    .vbanner.closed .vbanner-ico { background: #1a8a55; }
+    .vbanner-ico svg { width: 20px; height: 20px; }
+    .vbanner-body { flex: 1; min-width: 0; }
+    .vbanner-title { font-weight: 700; font-size: .98rem; }
+    .vbanner-sub { font-size: .82rem; color: var(--muted); margin-top: .1rem; }
+    .vbanner-sub b { color: var(--text); }
+    .vbanner-count { font-family: var(--serif); font-size: 1.6rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
+    .vbanner-count small { font-size: .76rem; font-weight: 400; color: var(--muted); }
+
+    /* sections */
+    .vsec-title { font-family: var(--serif); font-size: 1.18rem; font-weight: 600; margin: 1.8rem 0 .3rem; display: flex; align-items: center; gap: .5rem; }
+    .vsec-title svg { width: 17px; height: 17px; color: var(--accent); }
+    .vsec-num { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff7ee; display: inline-grid; place-items: center; font-size: .8rem; font-weight: 700; flex-shrink: 0; }
+
+    /* identification */
+    .ident { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: 11px; padding: 1rem 1.2rem; margin-top: 1rem; }
+    .ident label { font-size: .9rem; font-weight: 600; }
+    .ident select { width: auto; min-width: 190px; }
+    .voter-tag { display: inline-flex; align-items: center; gap: .5rem; font-size: .9rem; background: rgba(26,158,106,.1); border: 1px solid rgba(26,158,106,.35); color: var(--text); border-radius: 999px; padding: .35rem .5rem .35rem .85rem; margin: 1rem 0 .2rem; }
+    .voter-tag b { font-weight: 700; }
+    .voter-tag .chg { background: none; border: none; color: var(--accent); cursor: pointer; font-size: .76rem; font-family: inherit; text-decoration: underline; padding: 0 .3rem; }
+
+    /* grille disponibilités */
+    .avail-grid { margin-top: .9rem; display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .avail-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 1rem; padding: .7rem 1rem; border-bottom: 1px solid var(--border); background: var(--surface); transition: background .12s; }
+    .avail-row:last-child { border-bottom: none; }
+    .avail-row.best-day { background: rgba(26,138,85,.06); }
+    .avail-day { font-size: .9rem; font-weight: 600; color: #2c2015; }
+    .avail-day small { font-weight: 400; color: var(--muted); font-size: .76rem; display: block; }
+    .avail-btns { display: flex; gap: .35rem; }
+    .avail-btn { padding: .36rem .65rem; border-radius: 7px; border: 1.5px solid transparent; font-size: .8rem; font-weight: 700; font-family: inherit; cursor: pointer; background: none; transition: all .13s; display: flex; align-items: center; gap: .25rem; }
+    .avail-btn.dispo { border-color: rgba(26,138,85,.4); color: #1a5a35; }
+    .avail-btn.dispo.active { background: rgba(26,138,85,.15); border-color: #1a8a55; box-shadow: 0 1px 4px rgba(26,138,85,.2); }
+    .avail-btn.si_besoin { border-color: rgba(200,130,20,.4); color: #7a5200; }
+    .avail-btn.si_besoin.active { background: rgba(200,130,20,.15); border-color: #c88200; }
+    .avail-btn.pas_dispo { border-color: rgba(180,40,40,.35); color: #8a2020; }
+    .avail-btn.pas_dispo.active { background: rgba(180,40,40,.12); border-color: #c83232; }
+    .avail-btn svg { width: 13px; height: 13px; }
+
+    /* légende */
+    .avail-legend { display: flex; gap: 1rem; flex-wrap: wrap; margin: .8rem 0 1.2rem; font-size: .78rem; color: var(--muted); }
+    .avail-legend span { display: inline-flex; align-items: center; gap: .3rem; }
+    .avail-legend b { font-size: .88rem; }
+
+    /* table bilan groupe */
+    .framadate-wrap { overflow-x: auto; margin-top: .9rem; border-radius: 10px; border: 1px solid var(--border); }
+    .framadate { border-collapse: collapse; font-size: .8rem; min-width: 100%; }
+    .framadate th, .framadate td { padding: .4rem .55rem; border: 1px solid var(--border); white-space: nowrap; }
+    .framadate thead th { background: var(--surface); font-weight: 700; text-align: center; font-size: .74rem; color: var(--muted); }
+    .framadate thead th.fd-best { background: rgba(26,138,85,.1); color: #1a5a35; }
+    .framadate td.fd-name { font-weight: 600; color: var(--text); background: var(--surface); }
+    .framadate td.fd-cell { text-align: center; font-size: .88rem; }
+    .framadate td.fd-cell.dispo { background: rgba(26,138,85,.13); color: #1a5a35; }
+    .framadate td.fd-cell.si_besoin { background: rgba(200,130,20,.12); color: #7a5200; }
+    .framadate td.fd-cell.pas_dispo { background: rgba(180,40,40,.08); color: #8a2020; }
+    .framadate tr.fd-score td { background: rgba(0,0,0,.03); font-weight: 700; text-align: center; border-top: 2px solid var(--border); color: var(--muted); }
+    .framadate tr.fd-score td.fd-best { background: rgba(26,138,85,.18); color: #1a5a35; }
+
+    /* bilan participation */
+    .bilan { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px dashed var(--border); }
+    .bilan-title { font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: .8rem; }
+    .bilan-grid { display: flex; flex-wrap: wrap; gap: .45rem; }
+    .bilan-tag { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; padding: .28rem .75rem .28rem .5rem; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); }
+    .bilan-tag .ava { width: 19px; height: 19px; border-radius: 50%; display: grid; place-items: center; font-size: .6rem; font-weight: 700; color: #fff; }
+    .bilan-tag.ok { color: var(--text); border-color: rgba(26,158,106,.4); background: rgba(26,158,106,.08); }
+    .bilan-tag .ck { display: none; }
+    .bilan-tag.ok .ck { display: inline-flex; color: #1a8a55; }
+    .bilan-tag .ck svg { width: 13px; height: 13px; }
+
+    /* submit */
+    .submit-row { display: flex; align-items: center; justify-content: flex-end; gap: 1rem; flex-wrap: wrap; margin-top: 1.6rem; }
+    .btn-lg { padding: .7rem 1.5rem; font-size: .95rem; }
+    .btn-lg svg { width: 17px; height: 17px; }
+
+    /* toast */
+    .vtoast { position: fixed; bottom: 1.6rem; left: 50%; transform: translateX(-50%) translateY(1rem); background: var(--text); color: var(--bg); border-radius: 10px; padding: .8rem 1.4rem; font-size: .9rem; font-weight: 600; box-shadow: 0 16px 40px -16px rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: all .3s; z-index: 50; display: inline-flex; align-items: center; gap: .5rem; }
+    .vtoast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .vtoast svg { width: 17px; height: 17px; }
+
+    @media (max-width: 620px) {
+      .ballot { padding: 1.8rem 1.3rem 2rem 1.6rem; }
+      .ballot::before { left: 1.1rem; }
+      .avail-row { grid-template-columns: 1fr; gap: .5rem; }
+      .avail-btns { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <header class="vh">
+    <a class="vh-back" href="reunions.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      Retour aux réunions
+    </a>
+    <span class="vh-spacer"></span>
+    <span class="vh-mark">Club de lecture · espace privé</span>
+  </header>
+
+  <main class="ballot" id="ballot-root">
+    <!-- Squelette de chargement -->
+    <div style="pointer-events:none">
+      <div style="text-align:center;padding-bottom:1.4rem;border-bottom:2px solid var(--border);margin-bottom:1.6rem">
+        <div class="sk" style="height:.65rem;width:160px;margin:0 auto .55rem"></div>
+        <div class="sk" style="height:2rem;width:48%;margin:0 auto"></div>
+        <div class="sk" style="height:.8rem;width:36%;margin:.6rem auto 0"></div>
+      </div>
+      <div style="display:flex;gap:1rem;background:var(--surface);border:1px dashed var(--border);border-radius:11px;padding:.85rem 1.1rem;margin-bottom:1.8rem">
+        <div class="sk" style="width:38px;height:38px;border-radius:9px;flex-shrink:0"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:.4rem">
+          <div class="sk" style="height:.8rem;width:44%"></div>
+          <div class="sk" style="height:.6rem;width:60%"></div>
+        </div>
+        <div class="sk" style="height:1.6rem;width:60px;border-radius:4px;flex-shrink:0"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.5rem;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+        ${[1,.8,.65].map(op => `<div style="display:flex;justify-content:space-between;align-items:center;padding:.7rem 1rem;border-bottom:1px solid var(--border);background:var(--surface);opacity:${op}"><div class="sk" style="height:.75rem;width:30%"></div><div style="display:flex;gap:.35rem">${'<div class="sk" style="height:28px;width:60px;border-radius:7px"></div>'.repeat(3)}</div></div>`).join('')}
+      </div>
+    </div>
+  </main>
+
+  <div class="vtoast" id="toast"></div>
+  <script type="module" src="js/sondage-dispo.js"></script>
+</body>
+</html>
