@@ -269,16 +269,11 @@ function openExceptionnel(vote) {
     <div class="paper-sec-sub">✓ = a voté pour ce livre.</div>
     ${buildSondageTable(vote)}
     ` : `<p style="font-size:.83rem;color:var(--muted);margin:.6rem 0 .2rem">Aucun vote renseigné — cliquez "Modifier les votes" pour saisir les résultats.</p>`}
-    <div class="paper-divider"></div>
-    <button id="sondage-edit-btn" style="display:inline-flex;align-items:center;gap:.45rem;background:none;border:1px solid var(--border);border-radius:8px;padding:.5rem 1rem;font-size:.83rem;cursor:pointer;color:var(--text)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
-      Modifier les votes
-    </button>`;
+    `;
 
   document.getElementById("result-overlay").classList.remove("hidden");
   document.getElementById("result-paper").scrollTop = 0;
   document.getElementById("result-close").addEventListener("click", closeResult);
-  document.getElementById("sondage-edit-btn").addEventListener("click", () => openSondageEdit(vote));
   curResultVote = vote;
   hydrateCover(document.querySelector("#result-paper .wcover"), eluL);
 }
