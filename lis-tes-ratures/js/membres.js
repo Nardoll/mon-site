@@ -88,6 +88,14 @@ async function init() {
     });
   });
 
+  // Compte des votes exceptionnels par membre (pour le total affiché — pas la liste)
+  const nbExceptByMembre = {};
+  votes.filter(v => v.exceptionnel).forEach(v => {
+    Object.keys(v.sondage || {}).forEach(mid => {
+      nbExceptByMembre[mid] = (nbExceptByMembre[mid] || 0) + 1;
+    });
+  });
+
   membres.forEach((m, i) => { m._color = PALETTE[i % PALETTE.length]; });
 
   renderRack();
@@ -120,7 +128,7 @@ function renderRack() {
     const props    = livresByMembre[m.id] || [];
     const nbProp   = props.length;
     const nbElus   = props.filter(l => l.statut === "elu").length;
-    const nbVotes  = Object.keys(votesByMembre[m.id] || {}).length;
+    const nbVotes  = Object.keys(votesByMembre[m.id] || {}).length + (nbExceptByMembre[m.id] || 0);
     const isNew    = nbProp === 0 && nbVotes === 0;
 
     // Tampons de dates (max 4 propositions, les plus récentes en premier)
@@ -184,7 +192,7 @@ async function openMember(membreId) {
   const reus     = reunionsByMembre[m.id] || [];
   const votesObj = votesByMembre[m.id] || {};
   const nbProp   = props.length;
-  const nbVotes  = Object.keys(votesObj).length;
+  const nbVotes  = Object.keys(votesObj).length + (nbExceptByMembre[m.id] || 0);
 
   // ── Livres proposés ──────────────────────────────────────────────────────
   const propsHtml = nbProp
