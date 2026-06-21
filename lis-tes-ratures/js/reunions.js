@@ -97,44 +97,19 @@ function coverOf(livreId) {
   return l?._cover || COVERS[0];
 }
 
-// ── Sondage test (sessionStorage, jamais Firebase) ───────────────────────────
-const SD_TEST_KEY = 'ltr_sondage_test';
+// ── Poller auto-clôture ──────────────────────────────────────────────────────
 let _pollTimer = null;
 function startPoller() {
   if (_pollTimer) return;
   if (!sondageActif) return;
-  const interval = sondageActif._test ? 15000 : 30000;
   _pollTimer = setInterval(async () => {
     if (!sondageActif) { stopPoller(); return; }
     const cl = sondageActif.cloture?.toDate ? sondageActif.cloture.toDate() : new Date(sondageActif.cloture);
-    if (cl < new Date()) {
-      stopPoller();
-      await processClotureSondage(sondageActif);
-    } else if (sondageActif._test) {
-      renderSondagePanel(); // rafraîchit le compte à rebours en minutes
-    }
-  }, interval);
+    if (cl < new Date()) { stopPoller(); await processClotureSondage(sondageActif); }
+  }, 30000);
 }
 function stopPoller() {
   if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
-}
-
-function saveTestSondage(s) {
-  sessionStorage.setItem(SD_TEST_KEY, JSON.stringify({
-    ...s,
-    cloture: s.cloture?.toDate ? s.cloture.toDate().toISOString() : s.cloture,
-  }));
-}
-
-function loadTestSondage() {
-  try {
-    const raw = sessionStorage.getItem(SD_TEST_KEY);
-    if (!raw) return null;
-    const s = JSON.parse(raw);
-    const cloture = new Date(s.cloture);
-    if (cloture < new Date()) { sessionStorage.removeItem(SD_TEST_KEY); return null; }
-    return { ...s, cloture: { toDate: () => cloture } };
-  } catch { return null; }
 }
 
 // ── Helpers sondage ─────────────────────────────────────────────────────────
@@ -194,15 +169,6 @@ function computeWinner(sondage) {
 }
 
 async function processClotureSondage(sondage) {
-  if (sondage._test) {
-    sessionStorage.removeItem(SD_TEST_KEY);
-    sondageActif = null;
-    stopPoller();
-    renderSondagePanel();
-    toast('Sondage test clôturé.');
-    return;
-  }
-
   const winner = computeWinner(sondage);
   let reunionId = null;
 
@@ -269,8 +235,10 @@ function renderSondagePanel() {
         <span class="sp-panel-title">Sondage de disponibilité</span>
       </div>
       <div class="sp-empty">
-        <div class="sp-empty-icon">📅</div>
-        <div style="line-height:1.5">Aucun sondage en cours.<br>Proposez des dates pour la prochaine réunion.</div>
+        <div class="sp-empty-lines"><span></span><span></span><span></span><span></span></div>
+        <div class="sp-empty-note">— Aucune date proposée —</div>
+        <div class="sp-empty-lines"><span></span><span></span></div>
+        <div class="sp-empty-hint">Lancez un sondage pour planifier<br>la prochaine séance avec le club.</div>
       </div>`;
     return;
   }
@@ -281,10 +249,6 @@ function renderSondagePanel() {
   const joursR = Math.max(0, Math.ceil((cloture - new Date()) / 86400000));
   const expired = cloture < new Date();
   const clotStr = expired ? 'Clôture dépassée'
-    : s._test ? (() => {
-        const mins = Math.max(0, Math.ceil((cloture - new Date()) / 60000));
-        return mins === 0 ? 'Clôture imminente…' : `TEST — clôture dans ${mins} min`;
-      })()
     : joursR === 0 ? "Clôture aujourd'hui"
     : joursR === 1 ? 'Clôture demain'
     : `Clôture dans ${joursR} j`;
@@ -292,8 +256,6 @@ function renderSondagePanel() {
   const scores = computeScores(s);
   const winner = computeWinner(s);
   const nb = Object.keys(s.reponses || {}).length;
-  const testBadge = s._test ? `<span style="font-size:.66rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:rgba(181,87,45,.15);color:#b5572d;border:1px solid rgba(181,87,45,.4);border-radius:4px;padding:.1rem .45rem">TEST</span>` : '';
-
   const winnerBanner = winner ? `
     <div class="sp-winner">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
@@ -302,7 +264,7 @@ function renderSondagePanel() {
 
   mount.innerHTML = `
     <div class="sp-panel-head">
-      <span class="sp-panel-title">${esc(livre?.titre ?? '—')}${testBadge}<small>${nb} réponse${nb !== 1 ? 's' : ''}</small></span>
+      <span class="sp-panel-title">${esc(livre?.titre ?? '—')}<small>${nb} réponse${nb !== 1 ? 's' : ''}</small></span>
       <span class="sp-cloture${expired ? ' expired' : ''}">${clotStr}</span>
     </div>
     ${winnerBanner}
@@ -313,7 +275,6 @@ function renderSondagePanel() {
     </div>`;
 
   document.getElementById('sp-btn-close').addEventListener('click', async () => {
-    if (s._test) { await processClotureSondage(s); return; }
     if (!confirm('Clôturer le sondage et planifier la réunion sur la date la plus disponible ?')) return;
     await processClotureSondage(s);
   });
@@ -425,28 +386,14 @@ function wireSondageForm() {
 
     // Find current livre
     const livreId = currentLivreIdForSondage();
-    const testMode = document.getElementById('sd-test-mode')?.checked;
-    if (testMode) cloture = new Date(Date.now() + 2 * 60 * 1000); // forcer 2 min
     const btn = document.getElementById('sd-ok');
-    btn.disabled = true; btn.textContent = testMode ? 'Lancement…' : 'Création…';
+    btn.disabled = true; btn.textContent = 'Création…';
     try {
-      if (testMode) {
-        const fake = {
-          id: 'test-' + Date.now(), livre_id: livreId, jours,
-          cloture: { toDate: () => cloture }, ouvert: true, reponses: {}, _test: true,
-        };
-        saveTestSondage({ ...fake, cloture });
-        sondageActif = fake;
-        document.getElementById('sd-overlay').classList.add('hidden');
-        renderSondagePanel();
-        toast('Sondage test lancé (2 min) — rien ne sera enregistré.');
-      } else {
-        await createSondageDispo({ livre_id: livreId, jours, cloture });
-        sondageActif = await getSondageDispo();
-        document.getElementById('sd-overlay').classList.add('hidden');
-        renderSondagePanel();
-        toast('Sondage ouvert !');
-      }
+      await createSondageDispo({ livre_id: livreId, jours, cloture });
+      sondageActif = await getSondageDispo();
+      document.getElementById('sd-overlay').classList.add('hidden');
+      renderSondagePanel();
+      toast('Sondage ouvert !');
     } catch(e) {
       toast('Erreur : ' + e.message);
     } finally {
@@ -529,11 +476,9 @@ function openVoter(sondage) {
 async function init() {
   initNav("reunions");
 
-  let sondageFirebase;
-  [reunions, membres, livres, votes, sondageFirebase] = await Promise.all([
+  [reunions, membres, livres, votes, sondageActif] = await Promise.all([
     getReunions(), getMembres(), getLivres(), getVotes(), getSondageDispo(),
   ]);
-  sondageActif = sondageFirebase ?? loadTestSondage();
 
   membres.forEach((m, i) => {
     m._color = PALETTE[i % PALETTE.length];

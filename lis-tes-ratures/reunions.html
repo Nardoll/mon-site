@@ -240,8 +240,11 @@
     .sp-panel-head { display: flex; align-items: center; gap: .6rem; margin-bottom: 1rem; }
     .sp-panel-title { font-family: var(--serif); font-size: 1rem; font-weight: 600; color: #2c2015; flex: 1; }
     .sp-panel-title small { display: block; font-family: 'Segoe UI', sans-serif; font-size: .72rem; font-weight: 400; color: #9a7a4e; margin-top: .1rem; }
-    .sp-empty { text-align: center; padding: 2rem 1rem; color: #9a7a4e; font-size: .85rem; line-height: 1.5; }
-    .sp-empty-icon { font-size: 2rem; margin-bottom: .6rem; opacity: .5; }
+    .sp-empty { padding: .6rem 0 .4rem; }
+    .sp-empty-lines { display: flex; flex-direction: column; gap: .82rem; margin: .9rem 0; }
+    .sp-empty-lines span { display: block; height: 1px; background: rgba(160,120,70,.22); }
+    .sp-empty-note { font-family: var(--serif); font-size: .95rem; font-style: italic; color: #7a5c35; text-align: center; padding: .15rem 0; }
+    .sp-empty-hint { font-size: .76rem; color: #9a7a4e; text-align: center; line-height: 1.55; margin-top: .9rem; }
     .sp-btn-create { display: block; width: 100%; margin-top: 1.1rem; background: #b5572d; color: #fff7ee; border: none; border-radius: 8px; padding: .6rem 1rem; font-size: .86rem; font-weight: 600; font-family: inherit; cursor: pointer; transition: background .15s; }
     .sp-btn-create:hover { background: #c46b41; }
 
@@ -502,11 +505,6 @@
             </div>
           </div>
         </div>
-
-        <label id="sd-test-label" style="display:flex;align-items:center;gap:.6rem;cursor:pointer;font-size:.82rem;color:#7a3a20;background:rgba(181,87,45,.07);border:1px dashed rgba(181,87,45,.4);border-radius:8px;padding:.6rem .85rem;margin-top:.4rem">
-          <input type="checkbox" id="sd-test-mode" style="accent-color:#b5572d;flex-shrink:0">
-          <span><b>Mode test (2 min)</b> — rien n'est enregistré, juste pour tester l'interface</span>
-        </label>
 
         <div class="pf-foot">
           <button class="pf-btn cancel" id="sd-cancel">Annuler</button>
