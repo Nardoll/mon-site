@@ -36,6 +36,7 @@ const livreById        = {};
 const livresByMembre   = {}; // membre_id → livre[]
 const reunionsByMembre = {}; // membre_id → reunion[]
 const votesByMembre    = {}; // membre_id → { vote_id: { v, ballot: {livre_id: note} } }
+const nbExceptByMembre = {}; // membre_id → nb votes exceptionnels
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function esc(s) {
@@ -89,7 +90,6 @@ async function init() {
   });
 
   // Compte des votes exceptionnels par membre (pour le total affiché — pas la liste)
-  const nbExceptByMembre = {};
   votes.filter(v => v.exceptionnel).forEach(v => {
     Object.keys(v.sondage || {}).forEach(mid => {
       nbExceptByMembre[mid] = (nbExceptByMembre[mid] || 0) + 1;
