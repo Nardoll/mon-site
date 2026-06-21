@@ -48,6 +48,17 @@ function bookTint(id = '') {
 // ── State ─────────────────────────────────────────────────────────
 let allVotes = [], allMembres = [], allLivres = [], allReunions = [];
 let currentLivre = null, currentLivreId = null, currentVote = null, voteActif = null, sondageDispoActif = null;
+
+function loadTestSondage() {
+  try {
+    const raw = sessionStorage.getItem('ltr_sondage_test');
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    const cloture = new Date(s.cloture);
+    if (cloture < new Date()) { sessionStorage.removeItem('ltr_sondage_test'); return null; }
+    return { ...s, cloture: { toDate: () => cloture } };
+  } catch { return null; }
+}
 let statutByMembre = {}, progressionData = [];
 let friseVariant = 'fil';
 let editMembreId = null;
@@ -969,7 +980,7 @@ function buildVoteCard() {
       </div>
       <div class="hs-title">Date de la séance${livre ? ` — ${esc(livre.titre)}` : ''}</div>
       <div class="hs-meta"><b>${nb} réponse${nb !== 1 ? 's' : ''}</b> · ${clotStr}</div>
-      <a class="hs-cta solid" href="reunions.html">Répondre →</a>
+      <a class="hs-cta solid" href="sondage-dispo.html">Répondre →</a>
     </div>`;
   }
 
@@ -1024,9 +1035,11 @@ function renderHomeStatus() {
 }
 
 async function init() {
-  [allVotes, allMembres, allLivres, allReunions, voteActif, sondageDispoActif] = await Promise.all([
+  let sondageFirebase;
+  [allVotes, allMembres, allLivres, allReunions, voteActif, sondageFirebase] = await Promise.all([
     getVotes(), getMembres(), getLivres(), getReunions(), getVoteActif(), getSondageDispo(),
   ]);
+  sondageDispoActif = sondageFirebase ?? loadTestSondage();
   await renderLivreMois();
   renderHero();
   renderHomeStatus();
