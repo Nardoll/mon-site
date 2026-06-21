@@ -99,6 +99,25 @@ function coverOf(livreId) {
 
 // ── Sondage test (sessionStorage, jamais Firebase) ───────────────────────────
 const SD_TEST_KEY = 'ltr_sondage_test';
+let _pollTimer = null;
+function startPoller() {
+  if (_pollTimer) return;
+  if (!sondageActif) return;
+  const interval = sondageActif._test ? 15000 : 30000;
+  _pollTimer = setInterval(async () => {
+    if (!sondageActif) { stopPoller(); return; }
+    const cl = sondageActif.cloture?.toDate ? sondageActif.cloture.toDate() : new Date(sondageActif.cloture);
+    if (cl < new Date()) {
+      stopPoller();
+      await processClotureSondage(sondageActif);
+    } else if (sondageActif._test) {
+      renderSondagePanel(); // rafraîchit le compte à rebours en minutes
+    }
+  }, interval);
+}
+function stopPoller() {
+  if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+}
 
 function saveTestSondage(s) {
   sessionStorage.setItem(SD_TEST_KEY, JSON.stringify({
@@ -175,6 +194,15 @@ function computeWinner(sondage) {
 }
 
 async function processClotureSondage(sondage) {
+  if (sondage._test) {
+    sessionStorage.removeItem(SD_TEST_KEY);
+    sondageActif = null;
+    stopPoller();
+    renderSondagePanel();
+    toast('Sondage test clôturé.');
+    return;
+  }
+
   const winner = computeWinner(sondage);
   let reunionId = null;
 
@@ -253,6 +281,10 @@ function renderSondagePanel() {
   const joursR = Math.max(0, Math.ceil((cloture - new Date()) / 86400000));
   const expired = cloture < new Date();
   const clotStr = expired ? 'Clôture dépassée'
+    : s._test ? (() => {
+        const mins = Math.max(0, Math.ceil((cloture - new Date()) / 60000));
+        return mins === 0 ? 'Clôture imminente…' : `TEST — clôture dans ${mins} min`;
+      })()
     : joursR === 0 ? "Clôture aujourd'hui"
     : joursR === 1 ? 'Clôture demain'
     : `Clôture dans ${joursR} j`;
@@ -281,9 +313,12 @@ function renderSondagePanel() {
     </div>`;
 
   document.getElementById('sp-btn-close').addEventListener('click', async () => {
+    if (s._test) { await processClotureSondage(s); return; }
     if (!confirm('Clôturer le sondage et planifier la réunion sur la date la plus disponible ?')) return;
     await processClotureSondage(s);
   });
+
+  startPoller();
 }
 
 // ── Créer un sondage ─────────────────────────────────────────────────────────
@@ -391,6 +426,7 @@ function wireSondageForm() {
     // Find current livre
     const livreId = currentLivreIdForSondage();
     const testMode = document.getElementById('sd-test-mode')?.checked;
+    if (testMode) cloture = new Date(Date.now() + 2 * 60 * 1000); // forcer 2 min
     const btn = document.getElementById('sd-ok');
     btn.disabled = true; btn.textContent = testMode ? 'Lancement…' : 'Création…';
     try {

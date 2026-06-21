@@ -108,6 +108,23 @@
     .bilan-tag.ok .ck { display: inline-flex; color: #1a8a55; }
     .bilan-tag .ck svg { width: 13px; height: 13px; }
 
+    /* classement des dates */
+    .ranking { margin: .2rem 0 1.8rem; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .ranking-header { background: var(--surface); padding: .55rem 1rem; font-size: .72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); }
+    .rank-row { display: flex; align-items: center; gap: .6rem; padding: .6rem 1rem; border-bottom: 1px solid var(--border); background: var(--bg, #fff); }
+    .rank-row:last-child { border-bottom: none; }
+    .rank-row.rank-winner { background: rgba(26,138,85,.06); }
+    .rank-pos { font-size: .88rem; width: 1.5rem; text-align: center; flex-shrink: 0; }
+    .rank-info { flex: 1; min-width: 0; }
+    .rank-name { font-weight: 600; font-size: .88rem; color: #2c2015; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rank-detail { font-size: .73rem; color: var(--muted); margin-top: .05rem; }
+    .rank-bar-col { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+    .rank-bar-wrap { width: 65px; height: 7px; background: rgba(0,0,0,.08); border-radius: 4px; overflow: hidden; }
+    .rank-bar { height: 100%; border-radius: 4px; background: #3f7a52; transition: width .5s; }
+    .rank-row.rank-winner .rank-bar { background: #1a8a55; }
+    .rank-score { font-size: .8rem; font-weight: 700; color: #3f7a52; white-space: nowrap; min-width: 3.2rem; text-align: right; }
+    .rank-row.rank-winner .rank-score { color: #1a5a35; }
+
     /* submit */
     .submit-row { display: flex; align-items: center; justify-content: flex-end; gap: 1rem; flex-wrap: wrap; margin-top: 1.6rem; }
     .btn-lg { padding: .7rem 1.5rem; font-size: .95rem; }

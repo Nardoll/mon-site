@@ -183,6 +183,8 @@ function renderActive(root) {
       <div class="vbanner-count" id="b-count">${nb}<small>/${tot} réponses</small></div>
     </div>
 
+    <div id="ranking-mount">${buildRanking(sondage)}</div>
+
     <div class="vsec-title"><span class="vsec-num">1</span>${IC.users} Disponibilités du groupe</div>
     <div id="framadate-mount">${buildFramadateTable(sondage)}</div>
 
@@ -198,6 +200,58 @@ function renderActive(root) {
 
   renderIdent();
   renderBilan();
+}
+
+// ── Classement des dates ──────────────────────────────────────────────────────
+function buildRanking(s) {
+  const scores = computeScores(s);
+  const winner = computeWinner(s);
+  const reponses = Object.values(s.reponses || {});
+
+  const entries = Object.entries(scores)
+    .map(([j, sc]) => ({
+      j, sc,
+      nb:   reponses.filter(r => r.votes?.[j] === 'dispo').length,
+      nbSb: reponses.filter(r => r.votes?.[j] === 'si_besoin').length,
+    }))
+    .filter(e => e.sc > 0)
+    .sort((a, b) => b.sc - a.sc);
+
+  if (!entries.length) return `
+    <div class="ranking">
+      <div class="ranking-header">Classement des dates</div>
+      <div style="padding:.9rem 1rem;font-size:.8rem;color:var(--muted);font-style:italic">Aucune réponse pour l'instant — soyez le premier !</div>
+    </div>`;
+
+  const maxSc = entries[0].sc;
+  const medals = ['🥇', '🥈', '🥉'];
+
+  const rows = entries.slice(0, 6).map(({ j, sc, nb, nbSb }, i) => {
+    const { long } = formatJour(j);
+    const pct = (sc / maxSc * 100).toFixed(0);
+    const isWinner = j === winner;
+    const pos = medals[i] ?? `${i + 1}.`;
+    const parts = [
+      nb > 0 ? `${nb} dispo` : null,
+      nbSb > 0 ? `${nbSb} si besoin` : null,
+    ].filter(Boolean).join(' · ');
+    return `<div class="rank-row${isWinner ? ' rank-winner' : ''}">
+      <span class="rank-pos">${pos}</span>
+      <div class="rank-info">
+        <div class="rank-name">${esc(long)}</div>
+        ${parts ? `<div class="rank-detail">${esc(parts)}</div>` : ''}
+      </div>
+      <div class="rank-bar-col">
+        <div class="rank-bar-wrap"><div class="rank-bar" style="width:${pct}%"></div></div>
+        <span class="rank-score">${sc % 1 ? sc.toFixed(1) : sc} pt${sc > 1 ? 's' : ''}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="ranking">
+    <div class="ranking-header">Classement des dates</div>
+    ${rows}
+  </div>`;
 }
 
 // ── Table Framadate ───────────────────────────────────────────────────────────
@@ -356,7 +410,9 @@ async function submitAvail() {
     if (!sondage.reponses) sondage.reponses = {};
     sondage.reponses[moi] = { nom: moiNom, votes: { ...currentVotes } };
     if (sondage._test) saveTestSondage(sondage);
-    // Rafraîchir la table du groupe + bilan
+    // Rafraîchir classement + table du groupe + bilan
+    const rankMount = document.getElementById("ranking-mount");
+    if (rankMount) rankMount.innerHTML = buildRanking(sondage);
     document.getElementById("framadate-mount").innerHTML = buildFramadateTable(sondage);
     renderBilan();
     const nb = Object.keys(sondage.reponses).length;
