@@ -71,6 +71,12 @@
     .kpi-value { font-size: 2rem; font-weight: 700; color: #fff; line-height: 1; }
     .kpi-sub { font-size: .75rem; color: var(--muted); margin-top: .3rem; }
 
+    /* ── Filtre thèmes ── */
+    .filter-bar { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: 1.75rem; }
+    .filter-chip { font-size: .75rem; font-weight: 600; padding: .3em .75em; border-radius: 99px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.05); color: var(--muted); cursor: pointer; user-select: none; transition: all .15s; }
+    .filter-chip:hover { background: rgba(255,255,255,.1); color: var(--text); }
+    .filter-chip.active { background: rgba(88,101,242,.22); border-color: rgba(88,101,242,.5); color: #c7caf9; }
+
     /* ── Section ── */
     .section { margin-bottom: 2.5rem; }
     .section-title {
@@ -159,6 +165,8 @@
 
     <div class="kpis" id="kpis"></div>
 
+    <div class="filter-bar" id="filter-bar"></div>
+
     <div class="section">
       <div class="section-title">Matrice d'accord — qui vote comme qui</div>
       <div id="matrix-wrap"></div>
@@ -178,21 +186,53 @@
   <script type="module">
     import { db } from './firebase-config.js';
     import { renderNav } from './nav.js';
-    import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { collection, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
     renderNav('stats');
 
+    let allPolls   = [];
+    let allMembres = [];
+    let themes     = [];
+    let activeTheme = null;
+
     async function load() {
-      const [mbSnap, pollSnap] = await Promise.all([
+      const [mbSnap, pollSnap, thSnap] = await Promise.all([
         getDocs(collection(db, 'discord_membres')),
-        getDocs(collection(db, 'discord_sondages'))
+        getDocs(collection(db, 'discord_sondages')),
+        getDocs(query(collection(db, 'discord_themes'), orderBy('nom')))
       ]);
 
-      const membres = mbSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const polls = pollSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      allMembres = mbSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      allPolls   = pollSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      themes     = thSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      renderKPIs(membres, polls);
-      renderMatrix(membres, polls);
+      renderFilters();
+      renderAll();
+    }
+
+    function renderFilters() {
+      const bar = document.getElementById('filter-bar');
+      const usedIds = new Set(allPolls.map(p => p.theme_id).filter(Boolean));
+      const usedThemes = themes.filter(t => usedIds.has(t.id));
+      if (usedThemes.length === 0) { bar.innerHTML = ''; return; }
+
+      bar.innerHTML = `
+        <span class="filter-chip${activeTheme === null ? ' active' : ''}" data-id="all">Tous</span>
+        ${usedThemes.map(t => `<span class="filter-chip${activeTheme === t.id ? ' active' : ''}" data-id="${t.id}"># ${esc(t.nom)}</span>`).join('')}
+      `;
+      bar.querySelectorAll('.filter-chip').forEach(c => {
+        c.onclick = () => {
+          activeTheme = c.dataset.id === 'all' ? null : c.dataset.id;
+          renderFilters();
+          renderAll();
+        };
+      });
+    }
+
+    function renderAll() {
+      const polls = activeTheme ? allPolls.filter(p => p.theme_id === activeTheme) : allPolls;
+      renderKPIs(allMembres, polls);
+      renderMatrix(allMembres, polls);
     }
 
     function renderKPIs(membres, polls) {

@@ -33,364 +33,167 @@
     }
 
     /* ── Sidebar ── */
-    #sidebar {
-      width: var(--sidebar-w);
-      background: var(--sidebar-bg);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      position: fixed;
-      top: 0; left: 0; bottom: 0;
-      padding: 1.25rem .75rem;
-    }
-    .sidebar-header {
-      display: flex;
-      align-items: center;
-      gap: .6rem;
-      padding: .5rem .5rem 1.25rem;
-      border-bottom: 1px solid rgba(255,255,255,.06);
-      margin-bottom: .75rem;
-    }
+    #sidebar { width: var(--sidebar-w); background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; padding: 1.25rem .75rem; }
+    .sidebar-header { display: flex; align-items: center; gap: .6rem; padding: .5rem .5rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,.06); margin-bottom: .75rem; }
     .sidebar-logo { font-size: 1.4rem; }
-    .sidebar-title {
-      font-weight: 700;
-      font-size: .95rem;
-      color: #fff;
-    }
-    .sidebar-nav {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      flex: 1;
-    }
-    .sidebar-link {
-      display: flex;
-      align-items: center;
-      gap: .55rem;
-      padding: .55rem .75rem;
-      border-radius: 6px;
-      text-decoration: none;
-      color: var(--muted);
-      font-size: .88rem;
-      font-weight: 500;
-      transition: background .15s, color .15s;
-    }
+    .sidebar-title { font-weight: 700; font-size: .95rem; color: #fff; }
+    .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .sidebar-link { display: flex; align-items: center; gap: .55rem; padding: .55rem .75rem; border-radius: 6px; text-decoration: none; color: var(--muted); font-size: .88rem; font-weight: 500; transition: background .15s, color .15s; }
     .sidebar-link:hover { background: rgba(255,255,255,.06); color: var(--text); }
     .sidebar-link.active { background: rgba(88,101,242,.2); color: #c7caf9; }
-    .sidebar-footer {
-      padding-top: 1rem;
-      border-top: 1px solid rgba(255,255,255,.06);
-    }
-    .sidebar-home {
-      display: block;
-      text-decoration: none;
-      color: var(--muted);
-      font-size: .8rem;
-      padding: .4rem .5rem;
-      border-radius: 5px;
-      transition: color .15s;
-    }
+    .sidebar-footer { padding-top: 1rem; border-top: 1px solid rgba(255,255,255,.06); }
+    .sidebar-home { display: block; text-decoration: none; color: var(--muted); font-size: .8rem; padding: .4rem .5rem; border-radius: 5px; transition: color .15s; }
     .sidebar-home:hover { color: var(--text); }
 
     /* ── Main ── */
-    .main {
-      margin-left: var(--sidebar-w);
-      flex: 1;
-      padding: 2rem 2.5rem;
-      max-width: 900px;
-    }
+    .main { margin-left: var(--sidebar-w); flex: 1; padding: 2rem 2.5rem; max-width: 900px; }
 
     /* ── Page header ── */
-    .page-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 1.75rem;
-    }
-    .page-title {
-      font-size: 1.3rem;
-      font-weight: 700;
-      color: #fff;
-    }
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+    .page-title { font-size: 1.3rem; font-weight: 700; color: #fff; }
     .page-subtitle { font-size: .83rem; color: var(--muted); margin-top: .15rem; }
 
     /* ── Boutons ── */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: .4rem;
-      padding: .5rem 1rem;
-      border-radius: 6px;
-      font-size: .85rem;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      transition: background .15s, opacity .15s;
-    }
+    .btn { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem 1rem; border-radius: 6px; font-size: .85rem; font-weight: 600; cursor: pointer; border: none; transition: background .15s, opacity .15s; }
     .btn-primary { background: var(--accent); color: #fff; }
     .btn-primary:hover { background: var(--accent-hover); }
-    .btn-ghost {
-      background: rgba(255,255,255,.06);
-      color: var(--text);
-      border: 1px solid rgba(255,255,255,.1);
-    }
+    .btn-ghost { background: rgba(255,255,255,.06); color: var(--text); border: 1px solid rgba(255,255,255,.1); }
     .btn-ghost:hover { background: rgba(255,255,255,.1); }
     .btn-danger { background: rgba(237,66,69,.15); color: var(--danger); border: 1px solid rgba(237,66,69,.25); }
     .btn-danger:hover { background: rgba(237,66,69,.25); }
     .btn-sm { padding: .3rem .65rem; font-size: .78rem; }
 
-    /* ── Liste des sondages ── */
-    #polls-list { display: flex; flex-direction: column; gap: .75rem; }
-
-    .poll-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      overflow: hidden;
-      transition: border-color .15s;
-    }
-    .poll-card:hover { border-color: rgba(88,101,242,.4); }
-
-    .poll-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 1rem 1.25rem;
-      cursor: pointer;
-    }
-    .poll-meta { flex: 1; }
-    .poll-question {
-      font-weight: 600;
-      font-size: .95rem;
-      color: #fff;
-      margin-bottom: .35rem;
-    }
-    .poll-infos {
+    /* ── Barre de filtre ── */
+    .filter-bar {
       display: flex;
       align-items: center;
-      gap: .6rem;
+      gap: .5rem;
       flex-wrap: wrap;
+      margin-bottom: 1.1rem;
     }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: .25rem;
-      font-size: .7rem;
-      font-weight: 600;
-      padding: .2em .55em;
-      border-radius: 4px;
-    }
-    .badge-unique { background: rgba(88,101,242,.18); color: #a5b4fc; }
-    .badge-multiple { background: rgba(87,242,135,.12); color: #86efac; }
-    .badge-date { background: rgba(255,255,255,.07); color: var(--muted); }
-    .badge-votes { background: rgba(255,255,255,.07); color: var(--muted); }
-
-    .poll-chevron {
-      color: var(--muted);
-      font-size: .85rem;
-      flex-shrink: 0;
-      margin-top: .1rem;
-      transition: transform .2s;
-    }
-    .poll-card.open .poll-chevron { transform: rotate(90deg); }
-
-    .poll-body {
-      display: none;
-      padding: 0 1.25rem 1.1rem;
-      border-top: 1px solid rgba(255,255,255,.05);
-    }
-    .poll-card.open .poll-body { display: block; }
-
-    .propositions { display: flex; flex-direction: column; gap: .55rem; margin-top: .85rem; }
-
-    .prop-item {
-      display: flex;
-      flex-direction: column;
-      gap: .35rem;
-    }
-    .prop-bar-wrap {
-      display: flex;
-      align-items: center;
-      gap: .6rem;
-    }
-    .prop-label {
-      font-size: .83rem;
-      color: var(--text);
-      min-width: 140px;
-      max-width: 250px;
-      flex-shrink: 0;
-    }
-    .prop-bar-bg {
-      flex: 1;
-      height: 6px;
-      background: rgba(255,255,255,.08);
-      border-radius: 99px;
-      overflow: hidden;
-    }
-    .prop-bar-fill {
-      height: 100%;
-      background: var(--accent);
-      border-radius: 99px;
-      transition: width .4s;
-    }
-    .prop-count {
+    .filter-chip {
       font-size: .75rem;
-      color: var(--muted);
-      flex-shrink: 0;
-      min-width: 40px;
-      text-align: right;
-    }
-    .prop-voters {
-      display: flex;
-      gap: .3rem;
-      flex-wrap: wrap;
-      padding-left: calc(140px + .6rem);
-    }
-    .voter-chip {
-      font-size: .7rem;
-      padding: .15em .5em;
-      border-radius: 4px;
-      background: rgba(88,101,242,.15);
-      color: #c7caf9;
-    }
-
-    .poll-actions {
-      display: flex;
-      gap: .5rem;
-      margin-top: 1rem;
-      padding-top: .75rem;
-      border-top: 1px solid rgba(255,255,255,.05);
-    }
-
-    /* ── Overlay ── */
-    .overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.75);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-    }
-    .overlay.open { display: flex; }
-
-    .modal {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.75rem;
-      width: 100%;
-      max-width: 580px;
-      max-height: 90vh;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 1.1rem;
-    }
-    .modal-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: #fff;
-    }
-
-    .field { display: flex; flex-direction: column; gap: .4rem; }
-    .field label { font-size: .8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-    .field input, .field select, .field textarea {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text);
-      font-size: .88rem;
-      font-family: inherit;
-      padding: .55rem .75rem;
-      outline: none;
-      transition: border-color .15s;
-    }
-    .field input:focus, .field select:focus, .field textarea:focus {
-      border-color: var(--accent);
-    }
-    .field select option { background: var(--surface2); }
-
-    /* propositions dans le formulaire */
-    #props-list { display: flex; flex-direction: column; gap: .5rem; }
-    .prop-row {
-      display: flex;
-      gap: .5rem;
-      align-items: flex-start;
-      flex-direction: column;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: .75rem;
-    }
-    .prop-row-header {
-      display: flex;
-      gap: .5rem;
-      align-items: center;
-      width: 100%;
-    }
-    .prop-row-header input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      border-bottom: 1px solid var(--border);
-      border-radius: 0;
-      padding: .3rem 0;
-      color: var(--text);
-      font-size: .88rem;
-      font-family: inherit;
-      outline: none;
-    }
-    .prop-row-header input:focus { border-bottom-color: var(--accent); }
-    .btn-remove-prop {
-      background: none;
-      border: none;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 1rem;
-      padding: .1rem .3rem;
-      border-radius: 4px;
-      flex-shrink: 0;
-      transition: color .15s;
-    }
-    .btn-remove-prop:hover { color: var(--danger); }
-
-    .voters-select {
-      display: flex;
-      gap: .35rem;
-      flex-wrap: wrap;
-    }
-    .voter-toggle {
-      font-size: .75rem;
-      padding: .25em .6em;
-      border-radius: 4px;
-      border: 1px solid rgba(255,255,255,.12);
+      font-weight: 600;
+      padding: .3em .75em;
+      border-radius: 99px;
+      border: 1px solid rgba(255,255,255,.1);
       background: rgba(255,255,255,.05);
       color: var(--muted);
       cursor: pointer;
       user-select: none;
       transition: all .15s;
     }
-    .voter-toggle.selected {
-      background: rgba(88,101,242,.25);
-      border-color: rgba(88,101,242,.5);
-      color: #c7caf9;
+    .filter-chip:hover { background: rgba(255,255,255,.1); color: var(--text); }
+    .filter-chip.active { background: rgba(88,101,242,.22); border-color: rgba(88,101,242,.5); color: #c7caf9; }
+
+    /* ── Liste des sondages ── */
+    #polls-list { display: flex; flex-direction: column; gap: .75rem; }
+
+    .poll-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; transition: border-color .15s; }
+    .poll-card:hover { border-color: rgba(88,101,242,.4); }
+
+    .poll-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; cursor: pointer; }
+    .poll-meta { flex: 1; }
+    .poll-question { font-weight: 600; font-size: .95rem; color: #fff; margin-bottom: .35rem; }
+    .poll-infos { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+
+    .badge { display: inline-flex; align-items: center; gap: .25rem; font-size: .7rem; font-weight: 600; padding: .2em .55em; border-radius: 4px; }
+    .badge-unique { background: rgba(88,101,242,.18); color: #a5b4fc; }
+    .badge-multiple { background: rgba(87,242,135,.12); color: #86efac; }
+    .badge-date { background: rgba(255,255,255,.07); color: var(--muted); }
+    .badge-votes { background: rgba(255,255,255,.07); color: var(--muted); }
+    .badge-theme { background: rgba(250,168,26,.12); color: #fcd34d; border: 1px solid rgba(250,168,26,.2); }
+
+    .poll-chevron { color: var(--muted); font-size: .85rem; flex-shrink: 0; margin-top: .1rem; transition: transform .2s; }
+    .poll-card.open .poll-chevron { transform: rotate(90deg); }
+
+    .poll-body { display: none; padding: 0 1.25rem 1.1rem; border-top: 1px solid rgba(255,255,255,.05); }
+    .poll-card.open .poll-body { display: block; }
+
+    .propositions { display: flex; flex-direction: column; gap: .55rem; margin-top: .85rem; }
+    .prop-item { display: flex; flex-direction: column; gap: .35rem; }
+    .prop-bar-wrap { display: flex; align-items: center; gap: .6rem; }
+    .prop-label { font-size: .83rem; color: var(--text); min-width: 140px; max-width: 250px; flex-shrink: 0; }
+    .prop-bar-bg { flex: 1; height: 6px; background: rgba(255,255,255,.08); border-radius: 99px; overflow: hidden; }
+    .prop-bar-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s; }
+    .prop-count { font-size: .75rem; color: var(--muted); flex-shrink: 0; min-width: 40px; text-align: right; }
+    .prop-voters { display: flex; gap: .3rem; flex-wrap: wrap; padding-left: calc(140px + .6rem); }
+    .voter-chip { font-size: .7rem; padding: .15em .5em; border-radius: 4px; background: rgba(88,101,242,.15); color: #c7caf9; }
+
+    .poll-actions { display: flex; gap: .5rem; margin-top: 1rem; padding-top: .75rem; border-top: 1px solid rgba(255,255,255,.05); }
+
+    /* ── Overlay ── */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
+    .overlay.open { display: flex; }
+
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 1.1rem; }
+    .modal-title { font-size: 1.05rem; font-weight: 700; color: #fff; }
+
+    .field { display: flex; flex-direction: column; gap: .4rem; }
+    .field label { font-size: .8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .field input, .field select, .field textarea { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: .88rem; font-family: inherit; padding: .55rem .75rem; outline: none; transition: border-color .15s; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+    .field select option { background: var(--surface2); }
+
+    /* ── Theme combobox ── */
+    .theme-combo { position: relative; }
+    .theme-combo input { width: 100%; }
+    .theme-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0; right: 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      z-index: 10;
+      max-height: 180px;
+      overflow-y: auto;
     }
+    .theme-dropdown.open { display: block; }
+    .theme-option {
+      padding: .45rem .75rem;
+      font-size: .85rem;
+      color: var(--text);
+      cursor: pointer;
+      transition: background .1s;
+    }
+    .theme-option:hover, .theme-option.focused { background: rgba(88,101,242,.2); color: #c7caf9; }
+    .theme-option.create { color: #fcd34d; }
+    .theme-clear {
+      position: absolute;
+      right: .5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: .9rem;
+      line-height: 1;
+      padding: .1rem .2rem;
+      display: none;
+    }
+    .theme-combo.has-value .theme-clear { display: block; }
+
+    /* ── Propositions formulaire ── */
+    #props-list { display: flex; flex-direction: column; gap: .5rem; }
+    .prop-row { display: flex; gap: .5rem; align-items: flex-start; flex-direction: column; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: .75rem; }
+    .prop-row-header { display: flex; gap: .5rem; align-items: center; width: 100%; }
+    .prop-row-header input { flex: 1; background: transparent; border: none; border-bottom: 1px solid var(--border); border-radius: 0; padding: .3rem 0; color: var(--text); font-size: .88rem; font-family: inherit; outline: none; }
+    .prop-row-header input:focus { border-bottom-color: var(--accent); }
+    .btn-remove-prop { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1rem; padding: .1rem .3rem; border-radius: 4px; flex-shrink: 0; transition: color .15s; }
+    .btn-remove-prop:hover { color: var(--danger); }
+    .voters-select { display: flex; gap: .35rem; flex-wrap: wrap; }
+    .voter-toggle { font-size: .75rem; padding: .25em .6em; border-radius: 4px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05); color: var(--muted); cursor: pointer; user-select: none; transition: all .15s; }
+    .voter-toggle.selected { background: rgba(88,101,242,.25); border-color: rgba(88,101,242,.5); color: #c7caf9; }
 
     .modal-actions { display: flex; gap: .6rem; justify-content: flex-end; }
 
-    /* ── Empty state ── */
-    .empty {
-      text-align: center;
-      padding: 4rem 2rem;
-      color: var(--muted);
-    }
+    .empty { text-align: center; padding: 4rem 2rem; color: var(--muted); }
     .empty-icon { font-size: 2.5rem; margin-bottom: .75rem; }
     .empty p { font-size: .88rem; }
 
-    /* ── Responsive ── */
     @media (max-width: 640px) {
       #sidebar { display: none; }
       .main { margin-left: 0; padding: 1.25rem; }
@@ -409,6 +212,7 @@
       </div>
       <button class="btn btn-primary" id="btn-add">+ Ajouter un sondage</button>
     </div>
+    <div class="filter-bar" id="filter-bar"></div>
     <div id="polls-list"></div>
   </main>
 
@@ -421,18 +225,30 @@
         <label>Question</label>
         <input type="text" id="f-question" placeholder="Quelle est la question ?" />
       </div>
-      <div style="display:flex;gap:.75rem">
-        <div class="field" style="flex:1">
+
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:120px">
           <label>Date</label>
           <input type="date" id="f-date" />
         </div>
-        <div class="field" style="flex:1">
+        <div class="field" style="flex:1;min-width:120px">
           <label>Type</label>
           <select id="f-type">
             <option value="unique">Choix unique</option>
             <option value="multiple">Choix multiple</option>
           </select>
         </div>
+      </div>
+
+      <div class="field">
+        <label>Thème</label>
+        <div class="theme-combo" id="theme-combo">
+          <input type="text" id="f-theme-input" placeholder="Sélectionner ou créer un thème…" autocomplete="off" />
+          <button class="theme-clear" id="theme-clear" title="Effacer">×</button>
+          <div class="theme-dropdown" id="theme-dropdown"></div>
+        </div>
+        <input type="hidden" id="f-theme-id" />
+        <input type="hidden" id="f-theme-nom" />
       </div>
 
       <div class="field">
@@ -452,42 +268,82 @@
     import { db } from './firebase-config.js';
     import { renderNav } from './nav.js';
     import {
-      collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy
+      collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, setDoc
     } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
     renderNav('archives');
 
-    const pollsCol = collection(db, 'discord_sondages');
+    const pollsCol   = collection(db, 'discord_sondages');
     const membresCol = collection(db, 'discord_membres');
+    const themesCol  = collection(db, 'discord_themes');
 
     let membres = [];
-    let polls = [];
+    let polls   = [];
+    let themes  = [];
     let editingId = null;
+    let activeThemeFilter = null; // null = tous
 
+    // ── Chargement ──────────────────────────────────────────────
     async function load() {
-      const [pmSnap, mbSnap] = await Promise.all([
+      const [pmSnap, mbSnap, thSnap] = await Promise.all([
         getDocs(query(pollsCol, orderBy('date', 'desc'))),
-        getDocs(membresCol)
+        getDocs(membresCol),
+        getDocs(query(themesCol, orderBy('nom')))
       ]);
       membres = mbSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      polls = pmSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      polls   = pmSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      themes  = thSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderFilters();
       render();
     }
 
-    function render() {
-      const list = document.getElementById('polls-list');
-      const countEl = document.getElementById('poll-count');
-      countEl.textContent = `${polls.length} sondage${polls.length !== 1 ? 's' : ''} enregistré${polls.length !== 1 ? 's' : ''}`;
+    // ── Filtre thèmes ────────────────────────────────────────────
+    function renderFilters() {
+      const bar = document.getElementById('filter-bar');
+      const usedThemeIds = new Set(polls.map(p => p.theme_id).filter(Boolean));
+      const usedThemes = themes.filter(t => usedThemeIds.has(t.id));
 
-      if (polls.length === 0) {
-        list.innerHTML = `<div class="empty"><div class="empty-icon">🗳️</div><p>Aucun sondage enregistré.<br>Appuie sur "+ Ajouter un sondage" pour commencer.</p></div>`;
+      if (usedThemes.length === 0) { bar.innerHTML = ''; return; }
+
+      bar.innerHTML = `
+        <span class="filter-chip${activeThemeFilter === null ? ' active' : ''}" data-theme="all">Tous</span>
+        ${usedThemes.map(t => `
+          <span class="filter-chip${activeThemeFilter === t.id ? ' active' : ''}" data-theme="${t.id}"># ${esc(t.nom)}</span>
+        `).join('')}
+      `;
+      bar.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.onclick = () => {
+          activeThemeFilter = chip.dataset.theme === 'all' ? null : chip.dataset.theme;
+          renderFilters();
+          render();
+        };
+      });
+    }
+
+    // ── Rendu liste ──────────────────────────────────────────────
+    function render() {
+      const list     = document.getElementById('polls-list');
+      const countEl  = document.getElementById('poll-count');
+      const filtered = activeThemeFilter
+        ? polls.filter(p => p.theme_id === activeThemeFilter)
+        : polls;
+
+      const total = polls.length;
+      const shown = filtered.length;
+      countEl.textContent = activeThemeFilter
+        ? `${shown} / ${total} sondage${total !== 1 ? 's' : ''}`
+        : `${total} sondage${total !== 1 ? 's' : ''} enregistré${total !== 1 ? 's' : ''}`;
+
+      if (filtered.length === 0) {
+        list.innerHTML = `<div class="empty"><div class="empty-icon">🗳️</div><p>${total === 0 ? 'Aucun sondage enregistré.<br>Appuie sur "+ Ajouter un sondage" pour commencer.' : 'Aucun sondage pour ce thème.'}</p></div>`;
         return;
       }
 
-      list.innerHTML = polls.map(p => {
+      list.innerHTML = filtered.map(p => {
         const totalVotes = (p.propositions || []).reduce((s, pr) => s + (pr.votants || []).length, 0);
-        const allVoters = new Set((p.propositions || []).flatMap(pr => pr.votants || []));
-        const maxVotes = Math.max(...(p.propositions || []).map(pr => (pr.votants || []).length), 1);
+        const allVoters  = new Set((p.propositions || []).flatMap(pr => pr.votants || []));
+        const maxVotes   = Math.max(...(p.propositions || []).map(pr => (pr.votants || []).length), 1);
+        const theme      = p.theme_id ? themes.find(t => t.id === p.theme_id) : null;
 
         return `
         <div class="poll-card" data-id="${p.id}">
@@ -498,6 +354,7 @@
                 ${p.date ? `<span class="badge badge-date">📅 ${p.date}</span>` : ''}
                 <span class="badge ${p.type === 'multiple' ? 'badge-multiple' : 'badge-unique'}">${p.type === 'multiple' ? '☑ Choix multiple' : '◉ Choix unique'}</span>
                 <span class="badge badge-votes">👥 ${allVoters.size} votants · ${totalVotes} votes</span>
+                ${theme ? `<span class="badge badge-theme"># ${esc(theme.nom)}</span>` : ''}
               </div>
             </div>
             <span class="poll-chevron">›</span>
@@ -506,7 +363,7 @@
             <div class="propositions">
               ${(p.propositions || []).map(pr => {
                 const count = (pr.votants || []).length;
-                const pct = maxVotes > 0 ? Math.round(count / maxVotes * 100) : 0;
+                const pct   = maxVotes > 0 ? Math.round(count / maxVotes * 100) : 0;
                 const voterNames = (pr.votants || []).map(vid => {
                   const m = membres.find(m => m.id === vid);
                   return m ? m.nom : vid;
@@ -519,8 +376,7 @@
                       <div class="prop-count">${count}</div>
                     </div>
                     ${voterNames.length > 0 ? `<div class="prop-voters">${voterNames.map(n => `<span class="voter-chip">${esc(n)}</span>`).join('')}</div>` : ''}
-                  </div>
-                `;
+                  </div>`;
               }).join('')}
             </div>
             <div class="poll-actions">
@@ -536,7 +392,72 @@
       document.querySelector(`.poll-card[data-id="${id}"]`)?.classList.toggle('open');
     };
 
-    // ── Formulaire ──
+    // ── Theme combobox ───────────────────────────────────────────
+    function buildThemeCombo(selectedId = '', selectedNom = '') {
+      const input    = document.getElementById('f-theme-input');
+      const dropdown = document.getElementById('theme-dropdown');
+      const hiddenId = document.getElementById('f-theme-id');
+      const hiddenNom= document.getElementById('f-theme-nom');
+      const combo    = document.getElementById('theme-combo');
+      const clearBtn = document.getElementById('theme-clear');
+
+      input.value = selectedNom || '';
+      hiddenId.value  = selectedId || '';
+      hiddenNom.value = selectedNom || '';
+      combo.classList.toggle('has-value', !!selectedNom);
+
+      function showDropdown(filter = '') {
+        const fl = filter.toLowerCase();
+        const matches = themes.filter(t => !fl || t.nom.toLowerCase().includes(fl));
+        let html = matches.map(t =>
+          `<div class="theme-option" data-id="${t.id}" data-nom="${esc(t.nom)}">${esc(t.nom)}</div>`
+        ).join('');
+        const trimmed = filter.trim();
+        const exact = themes.some(t => t.nom.toLowerCase() === trimmed.toLowerCase());
+        if (trimmed && !exact) {
+          html += `<div class="theme-option create" data-create="${esc(trimmed)}">+ Créer « ${esc(trimmed)} »</div>`;
+        }
+        dropdown.innerHTML = html || `<div class="theme-option" style="pointer-events:none;color:var(--muted)">Aucun thème trouvé</div>`;
+        dropdown.classList.add('open');
+
+        dropdown.querySelectorAll('.theme-option').forEach(opt => {
+          opt.onclick = async () => {
+            if (opt.dataset.create) {
+              const newDoc = await addDoc(themesCol, { nom: opt.dataset.create });
+              const newTheme = { id: newDoc.id, nom: opt.dataset.create };
+              themes.push(newTheme);
+              themes.sort((a,b) => a.nom.localeCompare(b.nom));
+              select(newTheme.id, newTheme.nom);
+            } else {
+              select(opt.dataset.id, opt.dataset.nom);
+            }
+          };
+        });
+      }
+
+      function select(id, nom) {
+        input.value = nom;
+        hiddenId.value  = id;
+        hiddenNom.value = nom;
+        combo.classList.add('has-value');
+        dropdown.classList.remove('open');
+      }
+
+      function clear() {
+        input.value = '';
+        hiddenId.value  = '';
+        hiddenNom.value = '';
+        combo.classList.remove('has-value');
+        dropdown.classList.remove('open');
+      }
+
+      input.oninput = () => showDropdown(input.value);
+      input.onfocus = () => showDropdown(input.value);
+      input.onblur  = () => setTimeout(() => dropdown.classList.remove('open'), 150);
+      clearBtn.onclick = clear;
+    }
+
+    // ── Formulaire propositions ──────────────────────────────────
     function buildPropsForm(props = []) {
       const list = document.getElementById('props-list');
       list.innerHTML = '';
@@ -546,7 +467,7 @@
 
     function addPropRow(data = {}) {
       const list = document.getElementById('props-list');
-      const div = document.createElement('div');
+      const div  = document.createElement('div');
       div.className = 'prop-row';
       div.innerHTML = `
         <div class="prop-row-header">
@@ -560,22 +481,22 @@
         </div>
       `;
       div.querySelector('.btn-remove-prop').onclick = () => div.remove();
-      div.querySelectorAll('.voter-toggle').forEach(t => {
-        t.onclick = () => t.classList.toggle('selected');
-      });
+      div.querySelectorAll('.voter-toggle').forEach(t => { t.onclick = () => t.classList.toggle('selected'); });
       list.appendChild(div);
     }
 
     function getFormData() {
       const props = [...document.querySelectorAll('#props-list .prop-row')].map(row => ({
-        texte: row.querySelector('input').value.trim(),
+        texte:   row.querySelector('input').value.trim(),
         votants: [...row.querySelectorAll('.voter-toggle.selected')].map(t => t.dataset.id)
       })).filter(p => p.texte);
 
       return {
         question: document.getElementById('f-question').value.trim(),
-        date: document.getElementById('f-date').value,
-        type: document.getElementById('f-type').value,
+        date:     document.getElementById('f-date').value,
+        type:     document.getElementById('f-type').value,
+        theme_id: document.getElementById('f-theme-id').value || null,
+        theme_nom:document.getElementById('f-theme-nom').value || null,
         propositions: props
       };
     }
@@ -587,6 +508,7 @@
       document.getElementById('f-date').value = new Date().toISOString().slice(0, 10);
       document.getElementById('f-type').value = 'unique';
       buildPropsForm();
+      buildThemeCombo();
       document.getElementById('overlay').classList.add('open');
     }
 
@@ -599,16 +521,18 @@
       document.getElementById('f-date').value = p.date || '';
       document.getElementById('f-type').value = p.type || 'unique';
       buildPropsForm(p.propositions || []);
+      buildThemeCombo(p.theme_id || '', p.theme_nom || '');
       document.getElementById('overlay').classList.add('open');
     };
 
     function closeOverlay() {
       document.getElementById('overlay').classList.remove('open');
+      document.getElementById('theme-dropdown').classList.remove('open');
     }
 
     async function save() {
       const data = getFormData();
-      if (!data.question) return alert('La question est obligatoire.');
+      if (!data.question)              return alert('La question est obligatoire.');
       if (data.propositions.length < 2) return alert('Il faut au moins 2 propositions.');
 
       if (editingId) {
@@ -626,15 +550,13 @@
       await load();
     };
 
-    document.getElementById('btn-add').onclick = openAdd;
+    document.getElementById('btn-add').onclick    = openAdd;
     document.getElementById('btn-add-prop').onclick = () => addPropRow();
-    document.getElementById('btn-cancel').onclick = closeOverlay;
-    document.getElementById('btn-save').onclick = save;
-    document.getElementById('overlay').onclick = e => { if (e.target === e.currentTarget) closeOverlay(); };
+    document.getElementById('btn-cancel').onclick  = closeOverlay;
+    document.getElementById('btn-save').onclick    = save;
+    document.getElementById('overlay').onclick     = e => { if (e.target === e.currentTarget) closeOverlay(); };
 
-    function esc(s) {
-      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
     window.esc = esc;
 
     load();
