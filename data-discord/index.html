@@ -241,6 +241,13 @@
       </div>
 
       <div class="field">
+        <label>Posté par</label>
+        <select id="f-posted-by">
+          <option value="">— Inconnu —</option>
+        </select>
+      </div>
+
+      <div class="field">
         <label>Thème</label>
         <div class="theme-combo" id="theme-combo">
           <input type="text" id="f-theme-input" placeholder="Sélectionner ou créer un thème…" autocomplete="off" />
@@ -355,6 +362,7 @@
                 <span class="badge ${p.type === 'multiple' ? 'badge-multiple' : 'badge-unique'}">${p.type === 'multiple' ? '☑ Choix multiple' : '◉ Choix unique'}</span>
                 <span class="badge badge-votes">👥 ${allVoters.size} votants · ${totalVotes} votes</span>
                 ${theme ? `<span class="badge badge-theme"># ${esc(theme.nom)}</span>` : ''}
+                ${p.posted_by ? (() => { const m = membres.find(m => m.id === p.posted_by); return m ? `<span class="badge badge-date">📤 ${esc(m.nom)}</span>` : ''; })() : ''}
               </div>
             </div>
             <span class="poll-chevron">›</span>
@@ -492,13 +500,20 @@
       })).filter(p => p.texte);
 
       return {
-        question: document.getElementById('f-question').value.trim(),
-        date:     document.getElementById('f-date').value,
-        type:     document.getElementById('f-type').value,
-        theme_id: document.getElementById('f-theme-id').value || null,
-        theme_nom:document.getElementById('f-theme-nom').value || null,
+        question:   document.getElementById('f-question').value.trim(),
+        date:       document.getElementById('f-date').value,
+        type:       document.getElementById('f-type').value,
+        theme_id:   document.getElementById('f-theme-id').value || null,
+        theme_nom:  document.getElementById('f-theme-nom').value || null,
+        posted_by:  document.getElementById('f-posted-by').value || null,
         propositions: props
       };
+    }
+
+    function buildPostedBySelect(selectedId = '') {
+      const sel = document.getElementById('f-posted-by');
+      sel.innerHTML = `<option value="">— Inconnu —</option>` +
+        membres.map(m => `<option value="${m.id}"${m.id === selectedId ? ' selected' : ''}>${esc(m.nom)}</option>`).join('');
     }
 
     function openAdd() {
@@ -509,6 +524,7 @@
       document.getElementById('f-type').value = 'unique';
       buildPropsForm();
       buildThemeCombo();
+      buildPostedBySelect();
       document.getElementById('overlay').classList.add('open');
     }
 
@@ -522,6 +538,7 @@
       document.getElementById('f-type').value = p.type || 'unique';
       buildPropsForm(p.propositions || []);
       buildThemeCombo(p.theme_id || '', p.theme_nom || '');
+      buildPostedBySelect(p.posted_by || '');
       document.getElementById('overlay').classList.add('open');
     };
 
