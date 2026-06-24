@@ -3,17 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Data Discord</title>
+  <title>Data Discord — Sondages</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0a0a0a;
-      --surface: #131313;
-      --border: #232323;
-      --text: #d8d8d8;
-      --muted2: #7a7a7a;
+      --bg: #313338;
+      --sidebar-bg: #2b2d31;
+      --surface: #383a40;
+      --surface2: #404249;
+      --border: #1e1f22;
+      --text: #dbdee1;
+      --muted: #80848e;
       --accent: #5865f2;
+      --accent-hover: #4752c4;
+      --danger: #ed4245;
+      --green: #57f287;
+      --sidebar-w: 220px;
     }
 
     body {
@@ -22,67 +28,616 @@
       font-family: 'Segoe UI', system-ui, sans-serif;
       font-size: 14px;
       line-height: 1.5;
+      display: flex;
       min-height: 100vh;
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: var(--sidebar-w);
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      padding: 1.25rem .75rem;
+    }
+    .sidebar-header {
+      display: flex;
       align-items: center;
-      justify-content: center;
-      padding: 2.5rem 1.5rem;
-      gap: 1.5rem;
+      gap: .6rem;
+      padding: .5rem .5rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      margin-bottom: .75rem;
     }
-
-    .icon { font-size: 3rem; }
-
-    h1 {
-      font-size: 1.8rem;
+    .sidebar-logo { font-size: 1.4rem; }
+    .sidebar-title {
       font-weight: 700;
-      color: #efefef;
-      letter-spacing: -.02em;
+      font-size: .95rem;
+      color: #fff;
+    }
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+    }
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      padding: .55rem .75rem;
+      border-radius: 6px;
+      text-decoration: none;
+      color: var(--muted);
+      font-size: .88rem;
+      font-weight: 500;
+      transition: background .15s, color .15s;
+    }
+    .sidebar-link:hover { background: rgba(255,255,255,.06); color: var(--text); }
+    .sidebar-link.active { background: rgba(88,101,242,.2); color: #c7caf9; }
+    .sidebar-footer {
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255,255,255,.06);
+    }
+    .sidebar-home {
+      display: block;
+      text-decoration: none;
+      color: var(--muted);
+      font-size: .8rem;
+      padding: .4rem .5rem;
+      border-radius: 5px;
+      transition: color .15s;
+    }
+    .sidebar-home:hover { color: var(--text); }
+
+    /* ── Main ── */
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      padding: 2rem 2.5rem;
+      max-width: 900px;
     }
 
-    p {
-      color: var(--muted2);
-      font-size: .93rem;
-      text-align: center;
-      max-width: 380px;
+    /* ── Page header ── */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.75rem;
     }
+    .page-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .page-subtitle { font-size: .83rem; color: var(--muted); margin-top: .15rem; }
 
-    .badge {
+    /* ── Boutons ── */
+    .btn {
       display: inline-flex;
       align-items: center;
       gap: .4rem;
-      font-size: .75rem;
-      font-weight: 600;
-      padding: .35em .85em;
+      padding: .5rem 1rem;
       border-radius: 6px;
-      background: rgba(74,74,74,.18);
-      color: var(--muted2);
-      border: 1px solid rgba(74,74,74,.3);
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background .15s, opacity .15s;
     }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-ghost {
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,.1);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,.1); }
+    .btn-danger { background: rgba(237,66,69,.15); color: var(--danger); border: 1px solid rgba(237,66,69,.25); }
+    .btn-danger:hover { background: rgba(237,66,69,.25); }
+    .btn-sm { padding: .3rem .65rem; font-size: .78rem; }
 
-    .back {
-      position: fixed;
-      top: 1.25rem;
-      left: 1.25rem;
-      font-size: .8rem;
-      color: var(--muted2);
-      text-decoration: none;
+    /* ── Liste des sondages ── */
+    #polls-list { display: flex; flex-direction: column; gap: .75rem; }
+
+    .poll-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: border-color .15s;
+    }
+    .poll-card:hover { border-color: rgba(88,101,242,.4); }
+
+    .poll-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      cursor: pointer;
+    }
+    .poll-meta { flex: 1; }
+    .poll-question {
+      font-weight: 600;
+      font-size: .95rem;
+      color: #fff;
+      margin-bottom: .35rem;
+    }
+    .poll-infos {
       display: flex;
       align-items: center;
+      gap: .6rem;
+      flex-wrap: wrap;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .25rem;
+      font-size: .7rem;
+      font-weight: 600;
+      padding: .2em .55em;
+      border-radius: 4px;
+    }
+    .badge-unique { background: rgba(88,101,242,.18); color: #a5b4fc; }
+    .badge-multiple { background: rgba(87,242,135,.12); color: #86efac; }
+    .badge-date { background: rgba(255,255,255,.07); color: var(--muted); }
+    .badge-votes { background: rgba(255,255,255,.07); color: var(--muted); }
+
+    .poll-chevron {
+      color: var(--muted);
+      font-size: .85rem;
+      flex-shrink: 0;
+      margin-top: .1rem;
+      transition: transform .2s;
+    }
+    .poll-card.open .poll-chevron { transform: rotate(90deg); }
+
+    .poll-body {
+      display: none;
+      padding: 0 1.25rem 1.1rem;
+      border-top: 1px solid rgba(255,255,255,.05);
+    }
+    .poll-card.open .poll-body { display: block; }
+
+    .propositions { display: flex; flex-direction: column; gap: .55rem; margin-top: .85rem; }
+
+    .prop-item {
+      display: flex;
+      flex-direction: column;
       gap: .35rem;
+    }
+    .prop-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+    .prop-label {
+      font-size: .83rem;
+      color: var(--text);
+      min-width: 140px;
+      max-width: 250px;
+      flex-shrink: 0;
+    }
+    .prop-bar-bg {
+      flex: 1;
+      height: 6px;
+      background: rgba(255,255,255,.08);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .prop-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 99px;
+      transition: width .4s;
+    }
+    .prop-count {
+      font-size: .75rem;
+      color: var(--muted);
+      flex-shrink: 0;
+      min-width: 40px;
+      text-align: right;
+    }
+    .prop-voters {
+      display: flex;
+      gap: .3rem;
+      flex-wrap: wrap;
+      padding-left: calc(140px + .6rem);
+    }
+    .voter-chip {
+      font-size: .7rem;
+      padding: .15em .5em;
+      border-radius: 4px;
+      background: rgba(88,101,242,.15);
+      color: #c7caf9;
+    }
+
+    .poll-actions {
+      display: flex;
+      gap: .5rem;
+      margin-top: 1rem;
+      padding-top: .75rem;
+      border-top: 1px solid rgba(255,255,255,.05);
+    }
+
+    /* ── Overlay ── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.75);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem;
+      width: 100%;
+      max-width: 580px;
+      max-height: 90vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+    }
+    .modal-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .field { display: flex; flex-direction: column; gap: .4rem; }
+    .field label { font-size: .8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .field input, .field select, .field textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: .88rem;
+      font-family: inherit;
+      padding: .55rem .75rem;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      border-color: var(--accent);
+    }
+    .field select option { background: var(--surface2); }
+
+    /* propositions dans le formulaire */
+    #props-list { display: flex; flex-direction: column; gap: .5rem; }
+    .prop-row {
+      display: flex;
+      gap: .5rem;
+      align-items: flex-start;
+      flex-direction: column;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .75rem;
+    }
+    .prop-row-header {
+      display: flex;
+      gap: .5rem;
+      align-items: center;
+      width: 100%;
+    }
+    .prop-row-header input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      border-radius: 0;
+      padding: .3rem 0;
+      color: var(--text);
+      font-size: .88rem;
+      font-family: inherit;
+      outline: none;
+    }
+    .prop-row-header input:focus { border-bottom-color: var(--accent); }
+    .btn-remove-prop {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: .1rem .3rem;
+      border-radius: 4px;
+      flex-shrink: 0;
       transition: color .15s;
     }
-    .back:hover { color: var(--text); }
+    .btn-remove-prop:hover { color: var(--danger); }
+
+    .voters-select {
+      display: flex;
+      gap: .35rem;
+      flex-wrap: wrap;
+    }
+    .voter-toggle {
+      font-size: .75rem;
+      padding: .25em .6em;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+      transition: all .15s;
+    }
+    .voter-toggle.selected {
+      background: rgba(88,101,242,.25);
+      border-color: rgba(88,101,242,.5);
+      color: #c7caf9;
+    }
+
+    .modal-actions { display: flex; gap: .6rem; justify-content: flex-end; }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 2.5rem; margin-bottom: .75rem; }
+    .empty p { font-size: .88rem; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      #sidebar { display: none; }
+      .main { margin-left: 0; padding: 1.25rem; }
+    }
   </style>
 </head>
 <body>
 
-  <a href="/" class="back">← Accueil</a>
+  <div id="sidebar"></div>
 
-  <div class="icon">📊</div>
-  <h1>Data Discord</h1>
-  <p>Cette section est en cours de construction. Elle présentera des statistiques et visualisations à partir des données du serveur Discord.</p>
-  <span class="badge">🚧 En construction</span>
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Sondages</div>
+        <div class="page-subtitle" id="poll-count">Chargement…</div>
+      </div>
+      <button class="btn btn-primary" id="btn-add">+ Ajouter un sondage</button>
+    </div>
+    <div id="polls-list"></div>
+  </main>
 
+  <!-- Overlay ajout/édition sondage -->
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <div class="modal-title" id="modal-title">Nouveau sondage</div>
+
+      <div class="field">
+        <label>Question</label>
+        <input type="text" id="f-question" placeholder="Quelle est la question ?" />
+      </div>
+      <div style="display:flex;gap:.75rem">
+        <div class="field" style="flex:1">
+          <label>Date</label>
+          <input type="date" id="f-date" />
+        </div>
+        <div class="field" style="flex:1">
+          <label>Type</label>
+          <select id="f-type">
+            <option value="unique">Choix unique</option>
+            <option value="multiple">Choix multiple</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Propositions</label>
+        <div id="props-list"></div>
+        <button class="btn btn-ghost btn-sm" id="btn-add-prop" style="margin-top:.5rem;align-self:flex-start">+ Ajouter une proposition</button>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="btn-cancel">Annuler</button>
+        <button class="btn btn-primary" id="btn-save">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from './firebase-config.js';
+    import { renderNav } from './nav.js';
+    import {
+      collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy
+    } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    renderNav('archives');
+
+    const pollsCol = collection(db, 'discord_sondages');
+    const membresCol = collection(db, 'discord_membres');
+
+    let membres = [];
+    let polls = [];
+    let editingId = null;
+
+    async function load() {
+      const [pmSnap, mbSnap] = await Promise.all([
+        getDocs(query(pollsCol, orderBy('date', 'desc'))),
+        getDocs(membresCol)
+      ]);
+      membres = mbSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      polls = pmSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      render();
+    }
+
+    function render() {
+      const list = document.getElementById('polls-list');
+      const countEl = document.getElementById('poll-count');
+      countEl.textContent = `${polls.length} sondage${polls.length !== 1 ? 's' : ''} enregistré${polls.length !== 1 ? 's' : ''}`;
+
+      if (polls.length === 0) {
+        list.innerHTML = `<div class="empty"><div class="empty-icon">🗳️</div><p>Aucun sondage enregistré.<br>Appuie sur "+ Ajouter un sondage" pour commencer.</p></div>`;
+        return;
+      }
+
+      list.innerHTML = polls.map(p => {
+        const totalVotes = (p.propositions || []).reduce((s, pr) => s + (pr.votants || []).length, 0);
+        const allVoters = new Set((p.propositions || []).flatMap(pr => pr.votants || []));
+        const maxVotes = Math.max(...(p.propositions || []).map(pr => (pr.votants || []).length), 1);
+
+        return `
+        <div class="poll-card" data-id="${p.id}">
+          <div class="poll-header" onclick="togglePoll('${p.id}')">
+            <div class="poll-meta">
+              <div class="poll-question">${esc(p.question)}</div>
+              <div class="poll-infos">
+                ${p.date ? `<span class="badge badge-date">📅 ${p.date}</span>` : ''}
+                <span class="badge ${p.type === 'multiple' ? 'badge-multiple' : 'badge-unique'}">${p.type === 'multiple' ? '☑ Choix multiple' : '◉ Choix unique'}</span>
+                <span class="badge badge-votes">👥 ${allVoters.size} votants · ${totalVotes} votes</span>
+              </div>
+            </div>
+            <span class="poll-chevron">›</span>
+          </div>
+          <div class="poll-body">
+            <div class="propositions">
+              ${(p.propositions || []).map(pr => {
+                const count = (pr.votants || []).length;
+                const pct = maxVotes > 0 ? Math.round(count / maxVotes * 100) : 0;
+                const voterNames = (pr.votants || []).map(vid => {
+                  const m = membres.find(m => m.id === vid);
+                  return m ? m.nom : vid;
+                });
+                return `
+                  <div class="prop-item">
+                    <div class="prop-bar-wrap">
+                      <div class="prop-label">${esc(pr.texte)}</div>
+                      <div class="prop-bar-bg"><div class="prop-bar-fill" style="width:${pct}%"></div></div>
+                      <div class="prop-count">${count}</div>
+                    </div>
+                    ${voterNames.length > 0 ? `<div class="prop-voters">${voterNames.map(n => `<span class="voter-chip">${esc(n)}</span>`).join('')}</div>` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+            <div class="poll-actions">
+              <button class="btn btn-ghost btn-sm" onclick="openEdit('${p.id}')">✏️ Modifier</button>
+              <button class="btn btn-danger btn-sm" onclick="deletePoll('${p.id}')">🗑 Supprimer</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    window.togglePoll = (id) => {
+      document.querySelector(`.poll-card[data-id="${id}"]`)?.classList.toggle('open');
+    };
+
+    // ── Formulaire ──
+    function buildPropsForm(props = []) {
+      const list = document.getElementById('props-list');
+      list.innerHTML = '';
+      if (props.length === 0) addPropRow();
+      else props.forEach(p => addPropRow(p));
+    }
+
+    function addPropRow(data = {}) {
+      const list = document.getElementById('props-list');
+      const div = document.createElement('div');
+      div.className = 'prop-row';
+      div.innerHTML = `
+        <div class="prop-row-header">
+          <input type="text" placeholder="Texte de la proposition" value="${esc(data.texte || '')}" />
+          <button class="btn-remove-prop" title="Supprimer">×</button>
+        </div>
+        <div class="voters-select">
+          ${membres.map(m => `
+            <span class="voter-toggle${(data.votants || []).includes(m.id) ? ' selected' : ''}" data-id="${m.id}">${esc(m.nom)}</span>
+          `).join('')}
+        </div>
+      `;
+      div.querySelector('.btn-remove-prop').onclick = () => div.remove();
+      div.querySelectorAll('.voter-toggle').forEach(t => {
+        t.onclick = () => t.classList.toggle('selected');
+      });
+      list.appendChild(div);
+    }
+
+    function getFormData() {
+      const props = [...document.querySelectorAll('#props-list .prop-row')].map(row => ({
+        texte: row.querySelector('input').value.trim(),
+        votants: [...row.querySelectorAll('.voter-toggle.selected')].map(t => t.dataset.id)
+      })).filter(p => p.texte);
+
+      return {
+        question: document.getElementById('f-question').value.trim(),
+        date: document.getElementById('f-date').value,
+        type: document.getElementById('f-type').value,
+        propositions: props
+      };
+    }
+
+    function openAdd() {
+      editingId = null;
+      document.getElementById('modal-title').textContent = 'Nouveau sondage';
+      document.getElementById('f-question').value = '';
+      document.getElementById('f-date').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('f-type').value = 'unique';
+      buildPropsForm();
+      document.getElementById('overlay').classList.add('open');
+    }
+
+    window.openEdit = (id) => {
+      const p = polls.find(p => p.id === id);
+      if (!p) return;
+      editingId = id;
+      document.getElementById('modal-title').textContent = 'Modifier le sondage';
+      document.getElementById('f-question').value = p.question || '';
+      document.getElementById('f-date').value = p.date || '';
+      document.getElementById('f-type').value = p.type || 'unique';
+      buildPropsForm(p.propositions || []);
+      document.getElementById('overlay').classList.add('open');
+    };
+
+    function closeOverlay() {
+      document.getElementById('overlay').classList.remove('open');
+    }
+
+    async function save() {
+      const data = getFormData();
+      if (!data.question) return alert('La question est obligatoire.');
+      if (data.propositions.length < 2) return alert('Il faut au moins 2 propositions.');
+
+      if (editingId) {
+        await updateDoc(doc(db, 'discord_sondages', editingId), data);
+      } else {
+        await addDoc(pollsCol, data);
+      }
+      closeOverlay();
+      await load();
+    }
+
+    window.deletePoll = async (id) => {
+      if (!confirm('Supprimer ce sondage ?')) return;
+      await deleteDoc(doc(db, 'discord_sondages', id));
+      await load();
+    };
+
+    document.getElementById('btn-add').onclick = openAdd;
+    document.getElementById('btn-add-prop').onclick = () => addPropRow();
+    document.getElementById('btn-cancel').onclick = closeOverlay;
+    document.getElementById('btn-save').onclick = save;
+    document.getElementById('overlay').onclick = e => { if (e.target === e.currentTarget) closeOverlay(); };
+
+    function esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    window.esc = esc;
+
+    load();
+  </script>
 </body>
 </html>

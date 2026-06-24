@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Discord — Membres</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #313338;
+      --sidebar-bg: #2b2d31;
+      --surface: #383a40;
+      --surface2: #404249;
+      --border: #1e1f22;
+      --text: #dbdee1;
+      --muted: #80848e;
+      --accent: #5865f2;
+      --accent-hover: #4752c4;
+      --danger: #ed4245;
+      --sidebar-w: 220px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    #sidebar {
+      width: var(--sidebar-w);
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      padding: 1.25rem .75rem;
+    }
+    .sidebar-header { display: flex; align-items: center; gap: .6rem; padding: .5rem .5rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,.06); margin-bottom: .75rem; }
+    .sidebar-logo { font-size: 1.4rem; }
+    .sidebar-title { font-weight: 700; font-size: .95rem; color: #fff; }
+    .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .sidebar-link { display: flex; align-items: center; gap: .55rem; padding: .55rem .75rem; border-radius: 6px; text-decoration: none; color: var(--muted); font-size: .88rem; font-weight: 500; transition: background .15s, color .15s; }
+    .sidebar-link:hover { background: rgba(255,255,255,.06); color: var(--text); }
+    .sidebar-link.active { background: rgba(88,101,242,.2); color: #c7caf9; }
+    .sidebar-footer { padding-top: 1rem; border-top: 1px solid rgba(255,255,255,.06); }
+    .sidebar-home { display: block; text-decoration: none; color: var(--muted); font-size: .8rem; padding: .4rem .5rem; border-radius: 5px; transition: color .15s; }
+    .sidebar-home:hover { color: var(--text); }
+
+    .main { margin-left: var(--sidebar-w); flex: 1; padding: 2rem 2.5rem; max-width: 700px; }
+
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.75rem; }
+    .page-title { font-size: 1.3rem; font-weight: 700; color: #fff; }
+    .page-subtitle { font-size: .83rem; color: var(--muted); margin-top: .15rem; }
+
+    .btn { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem 1rem; border-radius: 6px; font-size: .85rem; font-weight: 600; cursor: pointer; border: none; transition: background .15s; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-ghost { background: rgba(255,255,255,.06); color: var(--text); border: 1px solid rgba(255,255,255,.1); }
+    .btn-ghost:hover { background: rgba(255,255,255,.1); }
+    .btn-danger { background: rgba(237,66,69,.15); color: var(--danger); border: 1px solid rgba(237,66,69,.25); }
+    .btn-danger:hover { background: rgba(237,66,69,.25); }
+    .btn-sm { padding: .3rem .65rem; font-size: .78rem; }
+
+    .membres-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: .65rem;
+    }
+
+    .membre-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+
+    .membre-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: .88rem;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .membre-name { font-weight: 600; font-size: .9rem; color: #fff; flex: 1; }
+    .membre-votes { font-size: .75rem; color: var(--muted); }
+
+    .membre-delete {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: .85rem;
+      padding: .2rem;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity .15s, color .15s;
+    }
+    .membre-card:hover .membre-delete { opacity: 1; }
+    .membre-delete:hover { color: var(--danger); }
+
+    .empty { text-align: center; padding: 4rem 2rem; color: var(--muted); }
+    .empty-icon { font-size: 2.5rem; margin-bottom: .75rem; }
+    .empty p { font-size: .88rem; }
+
+    /* ── Overlay ── */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
+    .overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 1.1rem; }
+    .modal-title { font-size: 1.05rem; font-weight: 700; color: #fff; }
+    .field { display: flex; flex-direction: column; gap: .4rem; }
+    .field label { font-size: .8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .field input { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: .88rem; font-family: inherit; padding: .55rem .75rem; outline: none; transition: border-color .15s; }
+    .field input:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; gap: .6rem; justify-content: flex-end; }
+
+    @media (max-width: 640px) {
+      #sidebar { display: none; }
+      .main { margin-left: 0; padding: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="sidebar"></div>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Membres</div>
+        <div class="page-subtitle" id="membre-count">Chargement…</div>
+      </div>
+      <button class="btn btn-primary" id="btn-add">+ Ajouter un membre</button>
+    </div>
+    <div id="membres-grid" class="membres-grid"></div>
+  </main>
+
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <div class="modal-title">Nouveau membre</div>
+      <div class="field">
+        <label>Pseudo Discord</label>
+        <input type="text" id="f-nom" placeholder="Pseudo" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="btn-cancel">Annuler</button>
+        <button class="btn btn-primary" id="btn-save">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from './firebase-config.js';
+    import { renderNav } from './nav.js';
+    import {
+      collection, addDoc, getDocs, doc, deleteDoc, query, orderBy
+    } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    renderNav('membres');
+
+    const membresCol = collection(db, 'discord_membres');
+    const pollsCol = collection(db, 'discord_sondages');
+    let membres = [];
+    let votesByMembre = {};
+
+    async function load() {
+      const [mbSnap, pollSnap] = await Promise.all([
+        getDocs(query(membresCol, orderBy('nom'))),
+        getDocs(pollsCol)
+      ]);
+      membres = mbSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      votesByMembre = {};
+      pollSnap.docs.forEach(d => {
+        const poll = d.data();
+        (poll.propositions || []).forEach(pr => {
+          (pr.votants || []).forEach(vid => {
+            votesByMembre[vid] = (votesByMembre[vid] || 0) + 1;
+          });
+        });
+      });
+
+      render();
+    }
+
+    function render() {
+      const grid = document.getElementById('membres-grid');
+      const countEl = document.getElementById('membre-count');
+      countEl.textContent = `${membres.length} membre${membres.length !== 1 ? 's' : ''}`;
+
+      if (membres.length === 0) {
+        grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">👥</div><p>Aucun membre enregistré.<br>Ajoute les pseudos Discord ici.</p></div>`;
+        return;
+      }
+
+      grid.innerHTML = membres.map(m => {
+        const initials = m.nom.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+        const votes = votesByMembre[m.id] || 0;
+        return `
+          <div class="membre-card">
+            <div class="membre-avatar">${initials}</div>
+            <div style="flex:1;min-width:0">
+              <div class="membre-name">${esc(m.nom)}</div>
+              <div class="membre-votes">${votes} vote${votes !== 1 ? 's' : ''}</div>
+            </div>
+            <button class="membre-delete" onclick="deleteMembre('${m.id}', '${esc(m.nom)}')" title="Supprimer">×</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openAdd() {
+      document.getElementById('f-nom').value = '';
+      document.getElementById('overlay').classList.add('open');
+      setTimeout(() => document.getElementById('f-nom').focus(), 50);
+    }
+
+    function closeOverlay() {
+      document.getElementById('overlay').classList.remove('open');
+    }
+
+    async function save() {
+      const nom = document.getElementById('f-nom').value.trim();
+      if (!nom) return;
+      await addDoc(membresCol, { nom });
+      closeOverlay();
+      await load();
+    }
+
+    window.deleteMembre = async (id, nom) => {
+      if (!confirm(`Supprimer "${nom}" ? Ses votes dans les sondages ne seront pas effacés.`)) return;
+      await deleteDoc(doc(db, 'discord_membres', id));
+      await load();
+    };
+
+    document.getElementById('btn-add').onclick = openAdd;
+    document.getElementById('btn-cancel').onclick = closeOverlay;
+    document.getElementById('btn-save').onclick = save;
+    document.getElementById('f-nom').addEventListener('keydown', e => { if (e.key === 'Enter') save(); });
+    document.getElementById('overlay').onclick = e => { if (e.target === e.currentTarget) closeOverlay(); };
+
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    load();
+  </script>
+</body>
+</html>

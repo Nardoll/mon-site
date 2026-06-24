@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Discord — Statistiques</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #313338;
+      --sidebar-bg: #2b2d31;
+      --surface: #383a40;
+      --surface2: #404249;
+      --border: #1e1f22;
+      --text: #dbdee1;
+      --muted: #80848e;
+      --accent: #5865f2;
+      --sidebar-w: 220px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    #sidebar {
+      width: var(--sidebar-w);
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      padding: 1.25rem .75rem;
+    }
+    .sidebar-header { display: flex; align-items: center; gap: .6rem; padding: .5rem .5rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,.06); margin-bottom: .75rem; }
+    .sidebar-logo { font-size: 1.4rem; }
+    .sidebar-title { font-weight: 700; font-size: .95rem; color: #fff; }
+    .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .sidebar-link { display: flex; align-items: center; gap: .55rem; padding: .55rem .75rem; border-radius: 6px; text-decoration: none; color: var(--muted); font-size: .88rem; font-weight: 500; transition: background .15s, color .15s; }
+    .sidebar-link:hover { background: rgba(255,255,255,.06); color: var(--text); }
+    .sidebar-link.active { background: rgba(88,101,242,.2); color: #c7caf9; }
+    .sidebar-footer { padding-top: 1rem; border-top: 1px solid rgba(255,255,255,.06); }
+    .sidebar-home { display: block; text-decoration: none; color: var(--muted); font-size: .8rem; padding: .4rem .5rem; border-radius: 5px; transition: color .15s; }
+    .sidebar-home:hover { color: var(--text); }
+
+    .main { margin-left: var(--sidebar-w); flex: 1; padding: 2rem 2.5rem; max-width: 960px; }
+
+    .page-title { font-size: 1.3rem; font-weight: 700; color: #fff; margin-bottom: 1.75rem; }
+
+    /* ── KPIs ── */
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: .75rem;
+      margin-bottom: 2.5rem;
+    }
+    .kpi {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.1rem 1.2rem;
+    }
+    .kpi-label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .4rem; }
+    .kpi-value { font-size: 2rem; font-weight: 700; color: #fff; line-height: 1; }
+    .kpi-sub { font-size: .75rem; color: var(--muted); margin-top: .3rem; }
+
+    /* ── Section ── */
+    .section { margin-bottom: 2.5rem; }
+    .section-title {
+      font-size: .88rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Matrice ── */
+    .matrix-wrap { overflow-x: auto; }
+    .matrix {
+      border-collapse: collapse;
+      font-size: .78rem;
+      white-space: nowrap;
+    }
+    .matrix th, .matrix td {
+      padding: .45rem .6rem;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    .matrix th {
+      background: var(--surface2);
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .matrix th.row-header {
+      text-align: right;
+      color: var(--text);
+      background: var(--surface);
+      min-width: 90px;
+    }
+    .matrix td {
+      background: var(--surface);
+      color: var(--text);
+      font-weight: 600;
+      min-width: 52px;
+    }
+    .matrix td.self {
+      background: var(--surface2);
+      color: var(--muted);
+    }
+
+    /* ── Classement accord ── */
+    .accord-list { display: flex; flex-direction: column; gap: .45rem; }
+    .accord-row {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .6rem .9rem;
+    }
+    .accord-rank { font-size: .75rem; color: var(--muted); min-width: 20px; }
+    .accord-names { flex: 1; font-size: .85rem; color: var(--text); }
+    .accord-bar-bg { flex: 1; height: 5px; background: rgba(255,255,255,.08); border-radius: 99px; overflow: hidden; max-width: 200px; }
+    .accord-bar-fill { height: 100%; border-radius: 99px; }
+    .accord-pct { font-size: .8rem; font-weight: 600; min-width: 36px; text-align: right; }
+
+    .empty-msg { color: var(--muted); font-size: .88rem; font-style: italic; padding: 1.5rem 0; }
+
+    @media (max-width: 640px) {
+      #sidebar { display: none; }
+      .main { margin-left: 0; padding: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="sidebar"></div>
+
+  <main class="main">
+    <div class="page-title">Statistiques</div>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="section">
+      <div class="section-title">Matrice d'accord — qui vote comme qui</div>
+      <div id="matrix-wrap"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Paires les plus en accord</div>
+      <div id="top-accord" class="accord-list"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Paires les plus en désaccord</div>
+      <div id="top-desaccord" class="accord-list"></div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { db } from './firebase-config.js';
+    import { renderNav } from './nav.js';
+    import { collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    renderNav('stats');
+
+    async function load() {
+      const [mbSnap, pollSnap] = await Promise.all([
+        getDocs(collection(db, 'discord_membres')),
+        getDocs(collection(db, 'discord_sondages'))
+      ]);
+
+      const membres = mbSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const polls = pollSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      renderKPIs(membres, polls);
+      renderMatrix(membres, polls);
+    }
+
+    function renderKPIs(membres, polls) {
+      const totalVotants = new Set(
+        polls.flatMap(p => (p.propositions || []).flatMap(pr => pr.votants || []))
+      ).size;
+
+      const totalVotes = polls.reduce((s, p) =>
+        s + (p.propositions || []).reduce((s2, pr) => s2 + (pr.votants || []).length, 0), 0
+      );
+
+      const avgParticipation = polls.length > 0
+        ? (polls.reduce((s, p) => {
+            const voters = new Set((p.propositions || []).flatMap(pr => pr.votants || []));
+            return s + voters.size;
+          }, 0) / polls.length).toFixed(1)
+        : '—';
+
+      document.getElementById('kpis').innerHTML = `
+        <div class="kpi">
+          <div class="kpi-label">Membres</div>
+          <div class="kpi-value">${membres.length}</div>
+          <div class="kpi-sub">enregistrés</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Sondages</div>
+          <div class="kpi-value">${polls.length}</div>
+          <div class="kpi-sub">archivés</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Votes totaux</div>
+          <div class="kpi-value">${totalVotes}</div>
+          <div class="kpi-sub">${totalVotants} votants uniques</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Participation moy.</div>
+          <div class="kpi-value">${avgParticipation}</div>
+          <div class="kpi-sub">votants par sondage</div>
+        </div>
+      `;
+    }
+
+    function computeAgreement(membres, polls) {
+      // Pour chaque paire (A, B), calculer le taux d'accord sur les sondages où les deux ont voté.
+      // Accord = même option choisie (unique) ou Jaccard (multiple).
+      const ids = membres.map(m => m.id);
+      const scores = {}; // scores[idA][idB] = { agree, total }
+
+      ids.forEach(a => { scores[a] = {}; ids.forEach(b => { scores[a][b] = { agree: 0, total: 0 }; }); });
+
+      polls.forEach(poll => {
+        // Construire map votant → set de propositions choisies (index)
+        const voteMap = {}; // id → Set<propIndex>
+        (poll.propositions || []).forEach((pr, i) => {
+          (pr.votants || []).forEach(vid => {
+            if (!voteMap[vid]) voteMap[vid] = new Set();
+            voteMap[vid].add(i);
+          });
+        });
+
+        const participants = Object.keys(voteMap);
+
+        for (let i = 0; i < participants.length; i++) {
+          for (let j = i + 1; j < participants.length; j++) {
+            const a = participants[i];
+            const b = participants[j];
+            if (!scores[a] || !scores[b]) continue;
+
+            const setA = voteMap[a];
+            const setB = voteMap[b];
+
+            let agreement;
+            if (poll.type === 'unique') {
+              // Même option unique → accord parfait
+              agreement = [...setA].some(v => setB.has(v)) ? 1 : 0;
+            } else {
+              // Jaccard : intersection / union
+              const inter = [...setA].filter(v => setB.has(v)).length;
+              const union = new Set([...setA, ...setB]).size;
+              agreement = union > 0 ? inter / union : 0;
+            }
+
+            scores[a][b].agree += agreement;
+            scores[a][b].total += 1;
+            scores[b][a].agree += agreement;
+            scores[b][a].total += 1;
+          }
+        }
+      });
+
+      return scores;
+    }
+
+    function renderMatrix(membres, polls) {
+      if (membres.length < 2) {
+        document.getElementById('matrix-wrap').innerHTML = '<p class="empty-msg">Il faut au moins 2 membres pour afficher la matrice.</p>';
+        document.getElementById('top-accord').innerHTML = '<p class="empty-msg">Pas encore assez de données.</p>';
+        document.getElementById('top-desaccord').innerHTML = '<p class="empty-msg">Pas encore assez de données.</p>';
+        return;
+      }
+      if (polls.length === 0) {
+        document.getElementById('matrix-wrap').innerHTML = '<p class="empty-msg">Aucun sondage enregistré.</p>';
+        document.getElementById('top-accord').innerHTML = '<p class="empty-msg">Pas encore assez de données.</p>';
+        document.getElementById('top-desaccord').innerHTML = '<p class="empty-msg">Pas encore assez de données.</p>';
+        return;
+      }
+
+      const scores = computeAgreement(membres, polls);
+
+      // Matrice
+      let html = '<div class="matrix-wrap"><table class="matrix"><thead><tr><th></th>';
+      membres.forEach(m => { html += `<th title="${esc(m.nom)}">${esc(shortName(m.nom))}</th>`; });
+      html += '</tr></thead><tbody>';
+
+      membres.forEach(a => {
+        html += `<tr><th class="row-header">${esc(shortName(a.nom))}</th>`;
+        membres.forEach(b => {
+          if (a.id === b.id) {
+            html += `<td class="self">—</td>`;
+          } else {
+            const s = scores[a.id]?.[b.id];
+            const pct = s && s.total > 0 ? Math.round(s.agree / s.total * 100) : null;
+            if (pct === null) {
+              html += `<td style="color:var(--muted)">·</td>`;
+            } else {
+              const { bg, fg } = heatColor(pct / 100);
+              html += `<td style="background:${bg};color:${fg}" title="${s.total} sondage${s.total>1?'s':''} en commun">${pct}%</td>`;
+            }
+          }
+        });
+        html += '</tr>';
+      });
+      html += '</tbody></table></div>';
+      document.getElementById('matrix-wrap').innerHTML = html;
+
+      // Classements paires
+      const pairs = [];
+      for (let i = 0; i < membres.length; i++) {
+        for (let j = i + 1; j < membres.length; j++) {
+          const a = membres[i], b = membres[j];
+          const s = scores[a.id]?.[b.id];
+          if (s && s.total >= 2) {
+            pairs.push({ a, b, pct: Math.round(s.agree / s.total * 100), total: s.total });
+          }
+        }
+      }
+
+      if (pairs.length === 0) {
+        document.getElementById('top-accord').innerHTML = '<p class="empty-msg">Il faut au moins 2 sondages en commun par paire pour calculer le score.</p>';
+        document.getElementById('top-desaccord').innerHTML = '<p class="empty-msg">Il faut au moins 2 sondages en commun par paire pour calculer le score.</p>';
+        return;
+      }
+
+      const sorted = [...pairs].sort((a, b) => b.pct - a.pct);
+      const top5 = sorted.slice(0, 5);
+      const bot5 = [...sorted].reverse().slice(0, 5);
+
+      document.getElementById('top-accord').innerHTML = renderAccordList(top5, true);
+      document.getElementById('top-desaccord').innerHTML = renderAccordList(bot5, false);
+    }
+
+    function renderAccordList(pairs, high) {
+      return pairs.map((p, i) => {
+        const { bg: barColor } = heatColor(p.pct / 100);
+        return `
+          <div class="accord-row">
+            <div class="accord-rank">#${i+1}</div>
+            <div class="accord-names"><strong>${esc(p.a.nom)}</strong> × <strong>${esc(p.b.nom)}</strong></div>
+            <div class="accord-bar-bg"><div class="accord-bar-fill" style="width:${p.pct}%;background:${barColor}"></div></div>
+            <div class="accord-pct" style="color:${high ? '#86efac' : '#fca5a5'}">${p.pct}%</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function heatColor(t) {
+      // t : 0 (désaccord) → 1 (accord)
+      // Rouge → neutre → vert
+      if (t >= 0.5) {
+        const k = (t - 0.5) * 2;
+        return { bg: `rgba(87,242,135,${0.08 + k * 0.25})`, fg: `rgb(${Math.round(180 - k*80)},${Math.round(220 + k*22)},${Math.round(160 - k*60)})` };
+      } else {
+        const k = (0.5 - t) * 2;
+        return { bg: `rgba(237,66,69,${0.08 + k * 0.25})`, fg: `rgb(${Math.round(220 + k*35)},${Math.round(160 - k*80)},${Math.round(160 - k*60)})` };
+      }
+    }
+
+    function shortName(nom) {
+      const parts = nom.trim().split(/\s+/);
+      if (parts.length === 1) return nom.slice(0, 10);
+      return parts[0];
+    }
+
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    load();
+  </script>
+</body>
+</html>
