@@ -12,10 +12,9 @@
       --sidebar-w: 220px;
     }
     body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; display: flex; height: 100vh; overflow: hidden; }
-    #sidebar { width: var(--sidebar-w); background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; padding: 1.25rem .75rem; overflow-y: auto; flex-shrink: 0; }
+    #sidebar { width: var(--sidebar-w); background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; padding: 1.25rem .75rem; overflow-y: auto; flex-shrink: 0; z-index: 5; }
     .sidebar-header { display: flex; align-items: center; gap: .6rem; padding: .5rem .5rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,.06); margin-bottom: .75rem; }
-    .sidebar-logo { font-size: 1.4rem; }
-    .sidebar-title { font-weight: 700; font-size: .95rem; color: #fff; }
+    .sidebar-logo { font-size: 1.4rem; } .sidebar-title { font-weight: 700; font-size: .95rem; color: #fff; }
     .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
     .sidebar-section { font-size: .68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; padding: .75rem .75rem .25rem; }
     .sidebar-link { display: flex; align-items: center; gap: .55rem; padding: .55rem .75rem; border-radius: 6px; text-decoration: none; color: var(--muted); font-size: .88rem; font-weight: 500; transition: background .15s, color .15s; }
@@ -30,87 +29,102 @@
     .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
     /* ── Toolbar ── */
-    .toolbar {
-      display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
-      padding: .85rem 1.5rem;
-      background: var(--sidebar-bg); border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .toolbar-title { font-weight: 700; font-size: .95rem; color: #fff; margin-right: .5rem; }
-    .toolbar-label { font-size: .78rem; color: var(--muted); white-space: nowrap; }
-    .slider-wrap { display: flex; align-items: center; gap: .6rem; }
-    input[type=range] { accent-color: var(--accent); width: 120px; cursor: pointer; }
-    .slider-val { font-size: .82rem; font-weight: 700; color: #c7caf9; min-width: 50px; }
-    .toggle-group { display: flex; background: var(--surface2); border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
-    .toggle-btn { padding: .28rem .65rem; font-size: .75rem; font-weight: 600; color: var(--muted); background: none; border: none; cursor: pointer; transition: background .15s, color .15s; }
-    .toggle-btn.active { background: var(--accent); color: #fff; }
-    .stat-chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: .2rem .6rem; font-size: .75rem; color: var(--muted); }
-    .stat-chip span { color: #fff; font-weight: 700; }
+    .toolbar { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; padding: .75rem 1.25rem; background: var(--sidebar-bg); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .toolbar-title { font-weight: 700; font-size: .95rem; color: #fff; margin-right: .25rem; }
+    .toolbar-sep { width: 1px; height: 18px; background: var(--border); }
+    .toolbar-label { font-size: .75rem; color: var(--muted); white-space: nowrap; }
+    .slider-wrap { display: flex; align-items: center; gap: .5rem; }
+    input[type=range] { accent-color: var(--accent); width: 100px; cursor: pointer; }
+    .slider-val { font-size: .8rem; font-weight: 700; color: #c7caf9; min-width: 48px; }
+    .stat-chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: .2rem .55rem; font-size: .73rem; color: var(--muted); }
+    .stat-chip b { color: #fff; font-weight: 700; }
 
-    /* ── Canvas zone ── */
+    /* ── Era filter chips ── */
+    .era-chips { display: flex; align-items: center; gap: .35rem; flex-wrap: nowrap; overflow-x: auto; }
+    .era-chips::-webkit-scrollbar { display: none; }
+    .era-chip {
+      flex-shrink: 0; display: inline-flex; align-items: center; gap: .3rem;
+      padding: .22rem .6rem; border-radius: 99px; font-size: .73rem; font-weight: 600;
+      border: 1px solid var(--border); background: var(--surface2); color: var(--muted);
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .era-chip:hover { border-color: rgba(88,101,242,.4); color: var(--text); }
+    .era-chip.active { color: #fff; border-color: transparent; }
+    .era-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── Graph + timeline layout ── */
+    .graph-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
     #graph-wrap { flex: 1; position: relative; overflow: hidden; }
     #graph-svg { width: 100%; height: 100%; }
 
-    /* ── Tooltip ── */
-    #tooltip {
-      position: absolute; background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; padding: .6rem .85rem; font-size: .78rem; color: var(--text);
-      pointer-events: none; opacity: 0; transition: opacity .15s;
-      max-width: 200px; z-index: 10;
+    /* ── Timeline panel ── */
+    #timeline-panel {
+      flex-shrink: 0; background: var(--sidebar-bg); border-top: 1px solid var(--border);
+      transition: height .25s ease;
     }
+    #timeline-panel.collapsed { height: 28px; }
+    #timeline-panel.expanded  { height: 170px; }
+    .timeline-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1rem; height: 28px; cursor: pointer; user-select: none;
+    }
+    .timeline-header-left { display: flex; align-items: center; gap: .6rem; }
+    .timeline-header-title { font-size: .72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .timeline-toggle { font-size: .65rem; color: var(--muted); transition: transform .2s; }
+    #timeline-panel.expanded .timeline-toggle { transform: rotate(180deg); }
+    .timeline-body { height: calc(100% - 28px); padding: .4rem 1rem .6rem; display: flex; flex-direction: column; gap: .35rem; overflow: hidden; }
+
+    .era-sensitivity { display: flex; align-items: center; gap: .5rem; }
+
+    #timeline-svg { flex: 1; width: 100%; }
+
+    /* ── Tooltip ── */
+    #tooltip { position: absolute; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .55rem .8rem; font-size: .76rem; color: var(--text); pointer-events: none; opacity: 0; transition: opacity .12s; max-width: 190px; z-index: 10; }
     #tooltip.visible { opacity: 1; }
-    #tooltip .tt-name { font-weight: 700; color: #fff; margin-bottom: .2rem; }
+    #tooltip .tt-name { font-weight: 700; color: #fff; margin-bottom: .15rem; }
     #tooltip .tt-line { color: var(--muted); }
 
     /* ── Légende clusters ── */
-    #legend {
-      position: absolute; bottom: 1rem; left: 1rem;
-      background: rgba(43,45,49,.9); border: 1px solid var(--border);
-      border-radius: 10px; padding: .75rem 1rem;
-      display: none; flex-direction: column; gap: .35rem;
-    }
+    #legend { position: absolute; bottom: 1rem; left: 1rem; background: rgba(43,45,49,.92); border: 1px solid var(--border); border-radius: 10px; padding: .65rem .9rem; display: none; flex-direction: column; gap: .3rem; }
     #legend.visible { display: flex; }
-    .legend-title { font-size: .7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .1rem; }
-    .legend-item { display: flex; align-items: center; gap: .5rem; font-size: .78rem; cursor: pointer; }
-    .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .legend-title { font-size: .68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .1rem; }
+    .legend-item { display: flex; align-items: center; gap: .45rem; font-size: .76rem; cursor: default; }
+    .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
     .legend-name { color: var(--text); }
-    .legend-name.editing { background: transparent; border: none; border-bottom: 1px solid var(--accent); color: #fff; font-size: .78rem; font-family: inherit; outline: none; width: 120px; }
+    .legend-name.editing { background: transparent; border: none; border-bottom: 1px solid var(--accent); color: #fff; font-size: .76rem; font-family: inherit; outline: none; width: 110px; }
 
     /* ── Panneau latéral membre ── */
-    #member-panel {
-      position: absolute; top: 0; right: 0; bottom: 0; width: 280px;
-      background: var(--sidebar-bg); border-left: 1px solid var(--border);
-      transform: translateX(100%); transition: transform .25s;
-      display: flex; flex-direction: column; overflow-y: auto;
-    }
+    #member-panel { position: absolute; top: 0; right: 0; bottom: 0; width: 270px; background: var(--sidebar-bg); border-left: 1px solid var(--border); transform: translateX(100%); transition: transform .22s; display: flex; flex-direction: column; overflow-y: auto; z-index: 4; }
     #member-panel.open { transform: translateX(0); }
-    .panel-header { display: flex; align-items: center; gap: .75rem; padding: 1.1rem 1rem; border-bottom: 1px solid var(--border); }
-    .panel-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; overflow: hidden; flex-shrink: 0; }
+    .panel-header { display: flex; align-items: center; gap: .7rem; padding: 1rem .9rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--sidebar-bg); }
+    .panel-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; overflow: hidden; flex-shrink: 0; font-size: .85rem; }
     .panel-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-    .panel-name { font-weight: 700; color: #fff; font-size: .95rem; }
-    .panel-sub { font-size: .72rem; color: var(--muted); }
-    .btn-close-panel { margin-left: auto; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.1rem; }
-    .panel-body { padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
-    .panel-section-title { font-size: .7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .4rem; }
-    .conn-row { display: flex; align-items: center; gap: .55rem; padding: .3rem 0; border-bottom: 1px solid rgba(255,255,255,.04); }
-    .conn-av { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: .6rem; font-weight: 700; color: #fff; overflow: hidden; flex-shrink: 0; }
+    .panel-name { font-weight: 700; color: #fff; font-size: .9rem; }
+    .panel-sub { font-size: .7rem; color: var(--muted); }
+    .btn-close-panel { margin-left: auto; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.1rem; flex-shrink: 0; }
+    .panel-body { padding: .9rem; display: flex; flex-direction: column; gap: .85rem; }
+    .panel-section-title { font-size: .68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .35rem; }
+    .conn-row { display: flex; align-items: center; gap: .5rem; padding: .28rem 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+    .conn-av { width: 20px; height: 20px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: .56rem; font-weight: 700; color: #fff; overflow: hidden; flex-shrink: 0; }
     .conn-av img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-    .conn-name { flex: 1; font-size: .8rem; color: var(--text); }
-    .conn-bar-bg { width: 60px; height: 4px; background: rgba(255,255,255,.08); border-radius: 99px; overflow: hidden; }
+    .conn-name { flex: 1; font-size: .78rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .conn-bar-bg { width: 52px; height: 4px; background: rgba(255,255,255,.08); border-radius: 99px; overflow: hidden; flex-shrink: 0; }
     .conn-bar-fill { height: 100%; border-radius: 99px; background: var(--accent); }
-    .conn-count { font-size: .72rem; color: var(--muted); min-width: 24px; text-align: right; }
+    .conn-count { font-size: .7rem; color: var(--muted); min-width: 22px; text-align: right; }
 
-    .empty-msg { color: var(--muted); font-size: .82rem; font-style: italic; text-align: center; padding: .75rem 0; }
+    .empty-msg { color: var(--muted); font-size: .8rem; font-style: italic; text-align: center; padding: .75rem 0; }
   </style>
 </head>
 <body>
   <div id="sidebar"></div>
 
   <div class="main">
+    <!-- Toolbar -->
     <div class="toolbar">
-      <div class="toolbar-title">🕸️ Graphe des relations</div>
+      <div class="toolbar-title">🕸️ Graphe</div>
+      <div class="toolbar-sep"></div>
       <div class="slider-wrap">
-        <span class="toolbar-label">Fenêtre de conversation :</span>
+        <span class="toolbar-label">Fenêtre :</span>
         <input type="range" id="slider-window" min="5" max="120" step="5" value="30">
         <span class="slider-val" id="slider-label">30 min</span>
       </div>
@@ -119,31 +133,58 @@
         <input type="range" id="slider-min" min="1" max="20" step="1" value="2">
         <span class="slider-val" id="slider-min-label">2 conv.</span>
       </div>
+      <div class="toolbar-sep"></div>
       <div class="stat-chip" id="stat-nodes">— nœuds</div>
       <div class="stat-chip" id="stat-edges">— liens</div>
+      <div class="toolbar-sep"></div>
+      <span class="toolbar-label">Ère :</span>
+      <div class="era-chips" id="era-chips"></div>
     </div>
 
-    <div id="graph-wrap">
-      <svg id="graph-svg"></svg>
-      <div id="tooltip">
-        <div class="tt-name" id="tt-name"></div>
-        <div class="tt-line" id="tt-msgs"></div>
-        <div class="tt-line" id="tt-links"></div>
-      </div>
-      <div id="legend">
-        <div class="legend-title">Clusters</div>
-        <div id="legend-items"></div>
-      </div>
-      <div id="member-panel">
-        <div class="panel-header">
-          <div class="panel-avatar" id="panel-avatar"></div>
-          <div>
-            <div class="panel-name" id="panel-name"></div>
-            <div class="panel-sub" id="panel-sub"></div>
-          </div>
-          <button class="btn-close-panel" id="btn-close-panel">×</button>
+    <div class="graph-area">
+      <!-- Graph -->
+      <div id="graph-wrap">
+        <svg id="graph-svg"></svg>
+        <div id="tooltip">
+          <div class="tt-name" id="tt-name"></div>
+          <div class="tt-line" id="tt-msgs"></div>
+          <div class="tt-line" id="tt-links"></div>
         </div>
-        <div class="panel-body" id="panel-body"></div>
+        <div id="legend">
+          <div class="legend-title">Clusters</div>
+          <div id="legend-items"></div>
+        </div>
+        <div id="member-panel">
+          <div class="panel-header">
+            <div class="panel-avatar" id="panel-avatar"></div>
+            <div>
+              <div class="panel-name" id="panel-name"></div>
+              <div class="panel-sub" id="panel-sub"></div>
+            </div>
+            <button class="btn-close-panel" id="btn-close-panel">×</button>
+          </div>
+          <div class="panel-body" id="panel-body"></div>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div id="timeline-panel" class="expanded">
+        <div class="timeline-header" id="timeline-header">
+          <div class="timeline-header-left">
+            <span class="timeline-title" style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Chronologie des ères</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:.75rem">
+            <div class="era-sensitivity slider-wrap">
+              <span class="toolbar-label">Sensibilité :</span>
+              <input type="range" id="slider-era" min="0.1" max="0.9" step="0.05" value="0.35" onclick="event.stopPropagation()">
+              <span class="slider-val" id="slider-era-label">0.35</span>
+            </div>
+            <span class="timeline-toggle">▲</span>
+          </div>
+        </div>
+        <div class="timeline-body">
+          <svg id="timeline-svg"></svg>
+        </div>
       </div>
     </div>
   </div>
@@ -152,115 +193,119 @@
   <script type="module">
     import { db } from './firebase-config.js';
     import { renderNav } from './nav.js';
-    import { collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import {
+      collection, getDocs, query, where, doc, setDoc, getDoc
+    } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
     const params   = new URLSearchParams(location.search);
     const GUILD_ID = params.get('id') || '1499528679758364744';
 
+    const ERA_COLORS    = ['#5865f2','#57f287','#fee75c','#ed4245','#eb459e','#faa61a','#00b0f4','#9b59b6'];
     const CLUSTER_COLORS = ['#5865f2','#57f287','#fee75c','#ed4245','#eb459e','#3ba55d','#faa61a','#00b0f4'];
 
-    let allMessages = [];
-    let allMembres  = [];
-    let memberMap   = {};
-    let windowMin   = 30;
-    let minEdge     = 2;
+    let allMessages  = [];
+    let allMembres   = [];
+    let memberMap    = {};
+    let windowMin    = 30;
+    let minEdge      = 2;
+    let eraSensitivity = 0.35;
+    let eras         = [];
+    let activeEraId  = null;   // null = toutes périodes
     let clusterNames = {};
+    let eraNames     = {};     // {eraId: string}
+    let eraDoc       = null;
 
     // ── Chargement ────────────────────────────────────────────────
     async function load() {
-      const [msgSnap, mbSnap, srvSnap] = await Promise.all([
-        getDocs(query(collection(db, 'discord_messages'),     where('serveur_id', '==', GUILD_ID))),
-        getDocs(query(collection(db, 'discord_membres_bot'),  where('serveur_id', '==', GUILD_ID))),
+      const [msgSnap, mbSnap, srvSnap, eraSnap] = await Promise.all([
+        getDocs(query(collection(db, 'discord_messages'),    where('serveur_id', '==', GUILD_ID))),
+        getDocs(query(collection(db, 'discord_membres_bot'), where('serveur_id', '==', GUILD_ID))),
         getDocs(collection(db, 'discord_serveurs')),
+        getDoc(doc(db, 'discord_eres', GUILD_ID)),
       ]);
       allMessages = msgSnap.docs.map(d => d.data());
       allMembres  = mbSnap.docs.map(d => d.data());
       allMembres.forEach(m => { memberMap[m.discord_id] = m; });
+      if (eraSnap.exists()) eraNames = eraSnap.data().noms || {};
 
       const servers = srvSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderNav('graphe', servers);
+
+      computeEras();
+      renderTimeline();
+      renderEraChips();
       buildGraph();
     }
 
-    // ── Algorithme conversations ──────────────────────────────────
-    function buildEdges(windowMs) {
-      const byChannel = {};
+    // ── Détection des ères ────────────────────────────────────────
+    function computeEras() {
+      const byMonth = {};
       allMessages.forEach(m => {
-        if (!byChannel[m.salon_id]) byChannel[m.salon_id] = [];
-        byChannel[m.salon_id].push(m);
+        const k = m.date?.slice(0, 7);
+        if (!k) return;
+        if (!byMonth[k]) byMonth[k] = {};
+        byMonth[k][m.auteur_id] = (byMonth[k][m.auteur_id] || 0) + 1;
       });
 
-      const edges = {};
-      for (const msgs of Object.values(byChannel)) {
-        const sorted = [...msgs].sort((a, b) => new Date(a.date) - new Date(b.date));
-        let convParticipants = new Set();
-        let lastTime = null;
+      const months = Object.keys(byMonth).sort();
+      if (months.length < 2) { eras = []; return; }
 
-        const flushConv = () => {
-          const arr = [...convParticipants];
-          for (let i = 0; i < arr.length; i++) {
-            for (let j = i + 1; j < arr.length; j++) {
-              const key = [arr[i], arr[j]].sort().join('|');
-              edges[key] = (edges[key] || 0) + 1;
-            }
-          }
+      // Similarité Jaccard entre deux mois consécutifs
+      function jaccard(ma, mb) {
+        const sA = new Set(Object.keys(byMonth[ma]));
+        const sB = new Set(Object.keys(byMonth[mb]));
+        const inter = [...sA].filter(x => sB.has(x)).length;
+        const union = new Set([...sA, ...sB]).size;
+        return union > 0 ? inter / union : 0;
+      }
+
+      // Breakpoints = mois où la similarité avec le précédent est sous le seuil
+      const breaks = [0];
+      for (let i = 1; i < months.length; i++) {
+        if (jaccard(months[i - 1], months[i]) < eraSensitivity) breaks.push(i);
+      }
+      breaks.push(months.length);
+
+      eras = breaks.slice(0, -1).map((start, i) => {
+        const end     = breaks[i + 1] - 1;
+        const slice   = months.slice(start, breaks[i + 1]);
+        const total   = slice.reduce((s, m) => s + Object.values(byMonth[m]).reduce((a, b) => a + b, 0), 0);
+        const mbCount = {};
+        slice.forEach(m => { Object.entries(byMonth[m]).forEach(([id, n]) => { mbCount[id] = (mbCount[id] || 0) + n; }); });
+        const top = Object.entries(mbCount).sort(([, a], [, b]) => b - a).slice(0, 4)
+          .map(([id]) => { const mb = memberMap[id]; return mb?.display_name || mb?.nom || id.slice(0, 6); });
+        return {
+          id:      i,
+          start:   months[start],
+          end:     months[end],
+          months:  slice,
+          total,
+          top,
+          byMonth,
         };
-
-        for (const msg of sorted) {
-          const t = new Date(msg.date).getTime();
-          if (lastTime !== null && (t - lastTime) > windowMs) {
-            flushConv();
-            convParticipants = new Set();
-          }
-          convParticipants.add(msg.auteur_id);
-          lastTime = t;
-        }
-        flushConv();
-      }
-      return edges;
-    }
-
-    // ── Détection clusters (simple Louvain-like greedy) ───────────
-    function detectClusters(nodes, links) {
-      const cluster = {};
-      nodes.forEach(n => { cluster[n.id] = n.id; });
-
-      // Trie les liens par poids desc, assigne cluster du nœud avec le plus de connexions
-      const adj = {};
-      nodes.forEach(n => { adj[n.id] = {}; });
-      links.forEach(l => {
-        adj[l.source.id || l.source][l.target.id || l.target] = l.weight;
-        adj[l.target.id || l.target][l.source.id || l.source] = l.weight;
       });
-
-      // Itérations : chaque nœud rejoint le cluster le plus représenté parmi ses voisins
-      for (let iter = 0; iter < 5; iter++) {
-        nodes.forEach(n => {
-          const neighbors = adj[n.id] || {};
-          const clusterWeight = {};
-          for (const [nbId, w] of Object.entries(neighbors)) {
-            const c = cluster[nbId];
-            clusterWeight[c] = (clusterWeight[c] || 0) + w;
-          }
-          if (Object.keys(clusterWeight).length === 0) return;
-          const best = Object.entries(clusterWeight).sort(([,a],[,b]) => b-a)[0][0];
-          cluster[n.id] = best;
-        });
-      }
-
-      // Renumber clusters 0, 1, 2…
-      const ids = [...new Set(Object.values(cluster))];
-      const remap = Object.fromEntries(ids.map((id, i) => [id, i]));
-      nodes.forEach(n => { n.cluster = remap[cluster[n.id]]; });
     }
 
-    // ── Construction + rendu ──────────────────────────────────────
+    // ── Filtre messages par ère ───────────────────────────────────
+    function filteredMessages() {
+      if (activeEraId === null) return allMessages;
+      const era = eras[activeEraId];
+      if (!era) return allMessages;
+      const monthSet = new Set(era.months);
+      return allMessages.filter(m => {
+        const k = m.date?.slice(0, 7);
+        return k && monthSet.has(k);
+      });
+    }
+
+    // ── Construction graphe ───────────────────────────────────────
     function buildGraph() {
+      const msgs     = filteredMessages();
       const windowMs = windowMin * 60 * 1000;
-      const rawEdges = buildEdges(windowMs);
+      const rawEdges = buildEdges(msgs, windowMs);
 
       const msgCounts = {};
-      allMessages.forEach(m => { msgCounts[m.auteur_id] = (msgCounts[m.auteur_id] || 0) + 1; });
+      msgs.forEach(m => { msgCounts[m.auteur_id] = (msgCounts[m.auteur_id] || 0) + 1; });
 
       const usedIds = new Set();
       Object.entries(rawEdges).forEach(([key, w]) => {
@@ -268,61 +313,97 @@
       });
 
       const nodes = [...usedIds].map(id => ({
-        id,
-        msgs: msgCounts[id] || 0,
+        id, msgs: msgCounts[id] || 0,
         r: Math.max(8, Math.min(28, 6 + Math.sqrt(msgCounts[id] || 1) * 2.5)),
       }));
-
       const links = Object.entries(rawEdges)
         .filter(([, w]) => w >= minEdge)
-        .map(([key, w]) => {
-          const [source, target] = key.split('|');
-          return { source, target, weight: w };
-        });
+        .map(([key, w]) => { const [source, target] = key.split('|'); return { source, target, weight: w }; });
 
-      document.getElementById('stat-nodes').innerHTML = `<span>${nodes.length}</span> membres`;
-      document.getElementById('stat-edges').innerHTML = `<span>${links.length}</span> liens`;
+      document.getElementById('stat-nodes').innerHTML = `<b>${nodes.length}</b> membres`;
+      document.getElementById('stat-edges').innerHTML = `<b>${links.length}</b> liens`;
 
       detectClusters(nodes, links);
       renderD3(nodes, links);
       renderLegend(nodes);
     }
 
-    // ── D3 Force layout ───────────────────────────────────────────
+    function buildEdges(msgs, windowMs) {
+      const byChannel = {};
+      msgs.forEach(m => {
+        if (!byChannel[m.salon_id]) byChannel[m.salon_id] = [];
+        byChannel[m.salon_id].push(m);
+      });
+      const edges = {};
+      for (const list of Object.values(byChannel)) {
+        const sorted = [...list].sort((a, b) => new Date(a.date) - new Date(b.date));
+        let conv = new Set(); let lastT = null;
+        const flush = () => {
+          const arr = [...conv];
+          for (let i = 0; i < arr.length; i++)
+            for (let j = i + 1; j < arr.length; j++) {
+              const k = [arr[i], arr[j]].sort().join('|');
+              edges[k] = (edges[k] || 0) + 1;
+            }
+        };
+        for (const m of sorted) {
+          const t = new Date(m.date).getTime();
+          if (lastT !== null && (t - lastT) > windowMs) { flush(); conv = new Set(); }
+          conv.add(m.auteur_id); lastT = t;
+        }
+        flush();
+      }
+      return edges;
+    }
+
+    // ── Clustering greedy ─────────────────────────────────────────
+    function detectClusters(nodes, links) {
+      const cluster = {}; nodes.forEach(n => { cluster[n.id] = n.id; });
+      const adj = {}; nodes.forEach(n => { adj[n.id] = {}; });
+      links.forEach(l => {
+        const s = l.source.id || l.source, t = l.target.id || l.target;
+        adj[s][t] = l.weight; adj[t][s] = l.weight;
+      });
+      for (let iter = 0; iter < 6; iter++) {
+        nodes.forEach(n => {
+          const cw = {};
+          for (const [nb, w] of Object.entries(adj[n.id] || {})) {
+            const c = cluster[nb]; cw[c] = (cw[c] || 0) + w;
+          }
+          if (!Object.keys(cw).length) return;
+          cluster[n.id] = Object.entries(cw).sort(([, a], [, b]) => b - a)[0][0];
+        });
+      }
+      const ids = [...new Set(Object.values(cluster))];
+      const remap = Object.fromEntries(ids.map((id, i) => [id, i]));
+      nodes.forEach(n => { n.cluster = remap[cluster[n.id]]; });
+    }
+
+    // ── D3 ────────────────────────────────────────────────────────
     function renderD3(nodes, links) {
-      const wrap  = document.getElementById('graph-wrap');
-      const W = wrap.clientWidth;
-      const H = wrap.clientHeight;
-
+      const wrap = document.getElementById('graph-wrap');
+      const W = wrap.clientWidth, H = wrap.clientHeight;
       d3.select('#graph-svg').selectAll('*').remove();
-      const svg = d3.select('#graph-svg')
-        .attr('viewBox', `0 0 ${W} ${H}`);
-
+      const svg = d3.select('#graph-svg').attr('viewBox', `0 0 ${W} ${H}`);
       const g = svg.append('g');
-
-      svg.call(d3.zoom()
-        .scaleExtent([0.3, 4])
-        .on('zoom', e => g.attr('transform', e.transform)));
+      svg.call(d3.zoom().scaleExtent([0.25, 5]).on('zoom', e => g.attr('transform', e.transform)));
 
       const maxW = Math.max(...links.map(l => l.weight), 1);
 
       const sim = d3.forceSimulation(nodes)
         .force('link', d3.forceLink(links).id(d => d.id)
-          .distance(d => Math.max(60, 120 - d.weight * 3))
+          .distance(d => Math.max(55, 120 - d.weight * 3))
           .strength(d => Math.min(1, d.weight / maxW * 0.8)))
-        .force('charge', d3.forceManyBody().strength(-180))
+        .force('charge', d3.forceManyBody().strength(-160))
         .force('center', d3.forceCenter(W / 2, H / 2))
         .force('collision', d3.forceCollide().radius(d => d.r + 6));
 
-      const link = g.append('g').selectAll('line')
-        .data(links).join('line')
-        .attr('stroke', '#ffffff')
-        .attr('stroke-opacity', d => Math.min(0.35, 0.08 + d.weight / maxW * 0.28))
+      const link = g.append('g').selectAll('line').data(links).join('line')
+        .attr('stroke', '#fff')
+        .attr('stroke-opacity', d => Math.min(0.35, 0.07 + d.weight / maxW * 0.28))
         .attr('stroke-width', d => Math.max(0.5, Math.min(5, d.weight / maxW * 5)));
 
-      const nodeG = g.append('g').selectAll('g')
-        .data(nodes).join('g')
-        .style('cursor', 'pointer')
+      const nodeG = g.append('g').selectAll('g').data(nodes).join('g').style('cursor', 'pointer')
         .call(d3.drag()
           .on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
           .on('drag',  (e, d) => { d.fx = e.x; d.fy = e.y; })
@@ -332,39 +413,31 @@
         .attr('r', d => d.r)
         .attr('fill', d => CLUSTER_COLORS[d.cluster % CLUSTER_COLORS.length])
         .attr('fill-opacity', 0.85)
-        .attr('stroke', '#1e1f22')
-        .attr('stroke-width', 2);
+        .attr('stroke', '#1e1f22').attr('stroke-width', 2);
 
       nodeG.append('text')
-        .attr('text-anchor', 'middle')
-        .attr('dy', '0.35em')
-        .attr('font-size', d => Math.max(7, Math.min(11, d.r * 0.6)))
-        .attr('fill', '#fff')
-        .attr('pointer-events', 'none')
+        .attr('text-anchor', 'middle').attr('dy', '0.35em')
+        .attr('font-size', d => Math.max(7, Math.min(11, d.r * 0.58)))
+        .attr('fill', '#fff').attr('pointer-events', 'none')
         .text(d => {
           const m = memberMap[d.id];
-          const nom = m?.display_name || m?.nom || d.id.slice(0, 4);
-          return d.r > 12 ? nom.slice(0, 8) : nom.slice(0, 3);
+          const n = m?.display_name || m?.nom || d.id.slice(0, 4);
+          return d.r > 12 ? n.slice(0, 8) : n.slice(0, 3);
         });
 
-      // Tooltip
       nodeG
         .on('mouseenter', (e, d) => {
-          const m   = memberMap[d.id];
-          const nom = m?.display_name || m?.nom || d.id;
-          const connCount = links.filter(l => (l.source.id||l.source) === d.id || (l.target.id||l.target) === d.id).length;
-          document.getElementById('tt-name').textContent  = nom;
+          const m = memberMap[d.id];
+          document.getElementById('tt-name').textContent  = m?.display_name || m?.nom || d.id;
           document.getElementById('tt-msgs').textContent  = `${d.msgs} messages`;
-          document.getElementById('tt-links').textContent = `${connCount} connexions`;
+          document.getElementById('tt-links').textContent = `${links.filter(l => (l.source.id||l.source) === d.id || (l.target.id||l.target) === d.id).length} connexions`;
           const tt = document.getElementById('tooltip');
-          tt.style.left = (e.offsetX + 14) + 'px';
-          tt.style.top  = (e.offsetY - 10) + 'px';
+          tt.style.left = (e.offsetX + 14) + 'px'; tt.style.top = (e.offsetY - 10) + 'px';
           tt.classList.add('visible');
         })
         .on('mousemove', e => {
           const tt = document.getElementById('tooltip');
-          tt.style.left = (e.offsetX + 14) + 'px';
-          tt.style.top  = (e.offsetY - 10) + 'px';
+          tt.style.left = (e.offsetX + 14) + 'px'; tt.style.top = (e.offsetY - 10) + 'px';
         })
         .on('mouseleave', () => document.getElementById('tooltip').classList.remove('visible'))
         .on('click', (e, d) => { e.stopPropagation(); openPanel(d, links); });
@@ -372,67 +445,214 @@
       svg.on('click', () => document.getElementById('member-panel').classList.remove('open'));
 
       sim.on('tick', () => {
-        link
-          .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
-          .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+        link.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+            .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
         nodeG.attr('transform', d => `translate(${d.x},${d.y})`);
       });
     }
 
-    // ── Légende clusters ──────────────────────────────────────────
+    // ── Légende ───────────────────────────────────────────────────
     function renderLegend(nodes) {
       const clusters = [...new Set(nodes.map(n => n.cluster))].sort();
-      if (clusters.length <= 1) return;
-      const legend = document.getElementById('legend');
-      legend.classList.add('visible');
+      if (clusters.length <= 1) { document.getElementById('legend').classList.remove('visible'); return; }
+      document.getElementById('legend').classList.add('visible');
       document.getElementById('legend-items').innerHTML = clusters.map(c => {
         const name = clusterNames[c] || `Groupe ${c + 1}`;
-        return `
-          <div class="legend-item">
-            <div class="legend-dot" style="background:${CLUSTER_COLORS[c % CLUSTER_COLORS.length]}"></div>
-            <span class="legend-name" data-cluster="${c}" title="Double-clic pour renommer">${esc(name)}</span>
-          </div>`;
+        return `<div class="legend-item">
+          <div class="legend-dot" style="background:${CLUSTER_COLORS[c % CLUSTER_COLORS.length]}"></div>
+          <span class="legend-name" data-cluster="${c}" title="Double-clic pour renommer">${esc(name)}</span>
+        </div>`;
       }).join('');
-
       document.querySelectorAll('.legend-name').forEach(el => {
         el.addEventListener('dblclick', () => {
           const c = +el.dataset.cluster;
-          const input = document.createElement('input');
-          input.className = 'legend-name editing';
-          input.value = clusterNames[c] || `Groupe ${c + 1}`;
-          el.replaceWith(input);
-          input.focus();
+          const inp = document.createElement('input');
+          inp.className = 'legend-name editing';
+          inp.value = clusterNames[c] || `Groupe ${c + 1}`;
+          el.replaceWith(inp); inp.focus();
           const save = () => {
-            clusterNames[c] = input.value.trim() || `Groupe ${c + 1}`;
-            input.replaceWith(Object.assign(document.createElement('span'), {
-              className: 'legend-name', dataset: { cluster: c },
-              textContent: clusterNames[c], title: 'Double-clic pour renommer',
-            }));
+            clusterNames[c] = inp.value.trim() || `Groupe ${c + 1}`;
+            const span = document.createElement('span');
+            span.className = 'legend-name'; span.dataset.cluster = c;
+            span.textContent = clusterNames[c]; span.title = 'Double-clic pour renommer';
+            inp.replaceWith(span);
           };
-          input.addEventListener('blur', save);
-          input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
+          inp.addEventListener('blur', save);
+          inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); });
         });
       });
+    }
+
+    // ── Timeline ──────────────────────────────────────────────────
+    function renderTimeline() {
+      const panel    = document.getElementById('timeline-panel');
+      if (!panel.classList.contains('expanded')) return;
+
+      const svg      = document.getElementById('timeline-svg');
+      const W        = svg.clientWidth  || 800;
+      const H        = svg.clientHeight || 100;
+      const PAD      = { l: 8, r: 8, t: 4, b: 22 };
+      const innerW   = W - PAD.l - PAD.r;
+      const innerH   = H - PAD.t - PAD.b;
+
+      // Compter messages par mois
+      const byMonth = {};
+      allMessages.forEach(m => {
+        const k = m.date?.slice(0, 7); if (!k) return;
+        byMonth[k] = (byMonth[k] || 0) + 1;
+      });
+      const months = Object.keys(byMonth).sort();
+      if (months.length === 0) return;
+
+      const maxVal = Math.max(...Object.values(byMonth), 1);
+      const barW   = innerW / months.length;
+
+      d3.select('#timeline-svg').selectAll('*').remove();
+      const s = d3.select('#timeline-svg');
+
+      // Fonds des ères
+      eras.forEach(era => {
+        const si = months.indexOf(era.start);
+        const ei = months.indexOf(era.end);
+        if (si < 0 || ei < 0) return;
+        const x = PAD.l + si * barW;
+        const w = (ei - si + 1) * barW;
+        const isActive = activeEraId === era.id;
+        s.append('rect')
+          .attr('x', x).attr('y', PAD.t)
+          .attr('width', w).attr('height', innerH)
+          .attr('fill', ERA_COLORS[era.id % ERA_COLORS.length])
+          .attr('fill-opacity', isActive ? 0.2 : 0.07)
+          .attr('rx', 3)
+          .style('cursor', 'pointer')
+          .on('click', () => selectEra(era.id));
+
+        // Nom de l'ère (cliquable pour renommer)
+        const eraName = eraNames[era.id] || `Ère ${era.id + 1}`;
+        s.append('text')
+          .attr('x', x + w / 2).attr('y', PAD.t + innerH + 14)
+          .attr('text-anchor', 'middle')
+          .attr('font-size', 9).attr('font-weight', isActive ? 700 : 400)
+          .attr('fill', isActive ? ERA_COLORS[era.id % ERA_COLORS.length] : 'var(--muted)')
+          .style('cursor', 'pointer')
+          .text(eraName)
+          .on('dblclick', (e) => { e.stopPropagation(); startRenameEra(era.id, e.target); });
+
+        // Séparateur
+        if (era.id > 0) {
+          s.append('line')
+            .attr('x1', x).attr('y1', PAD.t - 2)
+            .attr('x2', x).attr('y2', PAD.t + innerH)
+            .attr('stroke', ERA_COLORS[era.id % ERA_COLORS.length])
+            .attr('stroke-opacity', 0.4)
+            .attr('stroke-width', 1)
+            .attr('stroke-dasharray', '3,3');
+        }
+      });
+
+      // Barres mensuelles
+      months.forEach((m, i) => {
+        const val = byMonth[m] || 0;
+        const bH  = Math.max(2, Math.round(val / maxVal * innerH));
+        const x   = PAD.l + i * barW + barW * 0.1;
+        const w   = barW * 0.8;
+        s.append('rect')
+          .attr('x', x).attr('y', PAD.t + innerH - bH)
+          .attr('width', Math.max(1, w)).attr('height', bH)
+          .attr('fill', '#fff').attr('fill-opacity', 0.25)
+          .attr('rx', 1).attr('pointer-events', 'none');
+      });
+
+      // Étiquettes quelques mois clés
+      const step = Math.max(1, Math.floor(months.length / 8));
+      months.filter((_, i) => i % step === 0).forEach(m => {
+        const i = months.indexOf(m);
+        s.append('text')
+          .attr('x', PAD.l + (i + 0.5) * barW)
+          .attr('y', PAD.t + innerH + 14)
+          .attr('text-anchor', 'middle')
+          .attr('font-size', 8).attr('fill', 'var(--muted)')
+          .text(shortLabel(m))
+          .attr('pointer-events', 'none');
+      });
+    }
+
+    function shortLabel(k) {
+      const [y, m] = k.split('-');
+      const mo = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+      return `${mo[+m - 1]}${y.slice(2)}`;
+    }
+
+    // ── Sélection ère ─────────────────────────────────────────────
+    function selectEra(id) {
+      activeEraId = (activeEraId === id) ? null : id;
+      renderTimeline();
+      renderEraChips();
+      buildGraph();
+    }
+
+    function renderEraChips() {
+      const wrap = document.getElementById('era-chips');
+      wrap.innerHTML = `
+        <div class="era-chip${activeEraId === null ? ' active' : ''}" style="${activeEraId === null ? 'background:rgba(255,255,255,.12);border-color:transparent' : ''}" onclick="selectEra(null)">
+          Toutes
+        </div>
+        ${eras.map(era => {
+          const name = eraNames[era.id] || `Ère ${era.id + 1}`;
+          const col  = ERA_COLORS[era.id % ERA_COLORS.length];
+          const isA  = activeEraId === era.id;
+          return `<div class="era-chip${isA ? ' active' : ''}" style="${isA ? `background:${col}22;border-color:${col}66` : ''}" onclick="selectEra(${era.id})" title="${esc(era.start)} → ${esc(era.end)} · ${era.total} msgs · Top: ${esc(era.top.join(', '))}">
+            <span class="era-dot" style="background:${col}"></span>
+            ${esc(name)}
+          </div>`;
+        }).join('')}
+      `;
+    }
+
+    window.selectEra = selectEra;
+
+    // ── Renommer une ère ──────────────────────────────────────────
+    function startRenameEra(id, textEl) {
+      const current = eraNames[id] || `Ère ${id + 1}`;
+      const inp     = document.createElement('input');
+      inp.value     = current;
+      inp.style.cssText = 'position:absolute;background:var(--surface);border:1px solid var(--accent);border-radius:4px;color:#fff;font-size:11px;padding:2px 5px;outline:none;z-index:20;width:100px';
+      const bbox = textEl.getBoundingClientRect();
+      const wrap = document.getElementById('timeline-panel');
+      const wrapRect = wrap.getBoundingClientRect();
+      inp.style.left = (bbox.left - wrapRect.left - 50 + bbox.width / 2) + 'px';
+      inp.style.top  = (bbox.top  - wrapRect.top - 2) + 'px';
+      wrap.style.position = 'relative';
+      wrap.appendChild(inp);
+      inp.focus(); inp.select();
+
+      const save = async () => {
+        const val = inp.value.trim();
+        if (val) eraNames[id] = val;
+        inp.remove();
+        await setDoc(doc(db, 'discord_eres', GUILD_ID), { noms: eraNames }, { merge: true });
+        renderTimeline();
+        renderEraChips();
+      };
+      inp.addEventListener('blur', save);
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') inp.remove(); });
     }
 
     // ── Panneau membre ────────────────────────────────────────────
     function openPanel(node, links) {
       const m   = memberMap[node.id];
       const nom = m?.display_name || m?.nom || node.id;
-      const ini = nom.slice(0, 2).toUpperCase();
-      const av  = m?.avatar_url ? `<img src="${esc(m.avatar_url)}" alt="">` : ini;
-
-      document.getElementById('panel-avatar').innerHTML = av;
+      document.getElementById('panel-avatar').innerHTML =
+        m?.avatar_url ? `<img src="${esc(m.avatar_url)}" alt="">` : nom.slice(0, 2).toUpperCase();
       document.getElementById('panel-name').textContent = nom;
       document.getElementById('panel-sub').textContent  = `${node.msgs} messages`;
 
       const conns = links
         .filter(l => (l.source.id||l.source) === node.id || (l.target.id||l.target) === node.id)
-        .map(l => {
-          const otherId = (l.source.id||l.source) === node.id ? (l.target.id||l.target) : (l.source.id||l.source);
-          return { id: otherId, weight: l.weight };
-        })
-        .sort((a, b) => b.weight - a.weight);
+        .map(l => ({
+          id: (l.source.id||l.source) === node.id ? (l.target.id||l.target) : (l.source.id||l.source),
+          weight: l.weight,
+        })).sort((a, b) => b.weight - a.weight);
 
       const maxW = conns[0]?.weight || 1;
       document.getElementById('panel-body').innerHTML = conns.length ? `
@@ -440,18 +660,16 @@
           <div class="panel-section-title">Connexions (${conns.length})</div>
           ${conns.map(c => {
             const mb2  = memberMap[c.id];
-            const nom2 = mb2?.display_name || mb2?.nom || c.id.slice(0,8);
-            const ini2 = nom2.slice(0,2).toUpperCase();
-            const av2  = mb2?.avatar_url ? `<img src="${esc(mb2.avatar_url)}" alt="">` : ini2;
-            return `
-              <div class="conn-row">
-                <div class="conn-av">${av2}</div>
-                <div class="conn-name">${esc(nom2)}</div>
-                <div class="conn-bar-bg"><div class="conn-bar-fill" style="width:${Math.round(c.weight/maxW*100)}%"></div></div>
-                <div class="conn-count">${c.weight}</div>
-              </div>`;
+            const nom2 = mb2?.display_name || mb2?.nom || c.id.slice(0, 8);
+            const av2  = mb2?.avatar_url ? `<img src="${esc(mb2.avatar_url)}" alt="">` : nom2.slice(0, 2).toUpperCase();
+            return `<div class="conn-row">
+              <div class="conn-av">${av2}</div>
+              <div class="conn-name">${esc(nom2)}</div>
+              <div class="conn-bar-bg"><div class="conn-bar-fill" style="width:${Math.round(c.weight/maxW*100)}%"></div></div>
+              <div class="conn-count">${c.weight}</div>
+            </div>`;
           }).join('')}
-        </div>` : '<div class="empty-msg">Aucune connexion avec ce seuil.</div>';
+        </div>` : '<div class="empty-msg">Aucune connexion.</div>';
 
       document.getElementById('member-panel').classList.add('open');
     }
@@ -459,9 +677,23 @@
     document.getElementById('btn-close-panel').onclick = () =>
       document.getElementById('member-panel').classList.remove('open');
 
+    // ── Timeline toggle ───────────────────────────────────────────
+    document.getElementById('timeline-header').addEventListener('click', () => {
+      const p = document.getElementById('timeline-panel');
+      const isExp = p.classList.contains('expanded');
+      p.classList.toggle('expanded', !isExp);
+      p.classList.toggle('collapsed', isExp);
+      if (!isExp) setTimeout(renderTimeline, 260);
+    });
+
     // ── Sliders ───────────────────────────────────────────────────
     let rebuildTimer;
     const debuild = () => { clearTimeout(rebuildTimer); rebuildTimer = setTimeout(buildGraph, 300); };
+    let eraTimer;
+    const derecompute = () => {
+      clearTimeout(eraTimer);
+      eraTimer = setTimeout(() => { computeEras(); renderTimeline(); renderEraChips(); buildGraph(); }, 350);
+    };
 
     document.getElementById('slider-window').addEventListener('input', e => {
       windowMin = +e.target.value;
@@ -473,6 +705,14 @@
       document.getElementById('slider-min-label').textContent = `${minEdge} conv.`;
       debuild();
     });
+    document.getElementById('slider-era').addEventListener('input', e => {
+      eraSensitivity = +e.target.value;
+      document.getElementById('slider-era-label').textContent = (+e.target.value).toFixed(2);
+      activeEraId = null;
+      derecompute();
+    });
+
+    window.addEventListener('resize', renderTimeline);
 
     function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
