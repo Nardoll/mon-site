@@ -1,15 +1,6 @@
-export function renderNav(activePage) {
+export function renderNav(activePage, servers = []) {
   const nav = document.getElementById('sidebar');
   if (!nav) return;
-
-  const links = [
-    { section: 'Serveurs' },
-    { href: '/data-discord/dashboard.html', label: '📗 Lis tes ratures', id: 'dashboard' },
-    { section: 'Sondages manuels' },
-    { href: '/data-discord/', label: '🗳️ Archives', id: 'archives' },
-    { href: '/data-discord/membres.html', label: '👥 Membres', id: 'membres' },
-    { href: '/data-discord/stats.html', label: '📊 Statistiques', id: 'stats' },
-  ];
 
   nav.innerHTML = `
     <div class="sidebar-header">
@@ -17,13 +8,19 @@ export function renderNav(activePage) {
       <span class="sidebar-title">Data Discord</span>
     </div>
     <nav class="sidebar-nav">
-      ${links.map(l => l.section
-        ? `<div class="sidebar-section">${l.section}</div>`
-        : `<a href="${l.href}" class="sidebar-link${activePage === l.id ? ' active' : ''}">${l.label}</a>`
-      ).join('')}
+      <div class="sidebar-section">Serveurs</div>
+      <a href="/data-discord/" class="sidebar-link${activePage === 'home' ? ' active' : ''}">🏠 Accueil</a>
+      ${servers.map(s => `
+        <a href="/data-discord/dashboard.html?id=${s.id}" class="sidebar-link${activePage === s.id ? ' active' : ''}">
+          ${s.icon ? `<img src="${s.icon}" style="width:18px;height:18px;border-radius:50%;object-fit:cover;flex-shrink:0">` : '<span>💬</span>'}
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.nom)}</span>
+        </a>
+      `).join('')}
     </nav>
     <div class="sidebar-footer">
       <a href="/" class="sidebar-home">← Accueil du site</a>
     </div>
   `;
+
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 }

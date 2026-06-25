@@ -43,6 +43,18 @@ async function fsAdd(collection, data) {
   if (!res.ok) throw new Error(`Firestore ${collection}: ${await res.text()}`);
 }
 
+async function fsSet(collection, docId, data) {
+  const fields   = Object.keys(data);
+  const fieldMask = fields.map(f => `updateMask.fieldPaths=${encodeURIComponent(f)}`).join('&');
+  const url = `${FIRESTORE_BASE}/${collection}/${docId}?${fieldMask}&key=${FIREBASE_API_KEY}`;
+  const res = await fetch(url, {
+    method:  'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ fields: toFields(data) })
+  });
+  if (!res.ok) throw new Error(`Firestore set ${collection}/${docId}: ${await res.text()}`);
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -176,6 +188,14 @@ async function main() {
   const guild = await client.guilds.fetch(GUILD_ID);
   console.log(`📡 Serveur : ${guild.name}\n`);
 
+  // Infos serveur (icône, nom) — on ne touche pas icon_url si déjà défini
+  const iconUrl = guild.iconURL({ size: 256 }) || null;
+  await fsSet('discord_serveurs', GUILD_ID, {
+    nom:            guild.name,
+    guild_icon_url: iconUrl,
+    serveur_id:     GUILD_ID,
+  });
+
   // Membres
   console.log('👥 Membres...');
   const members = await guild.members.fetch();
@@ -213,6 +233,11 @@ async function main() {
       console.log(`  ⚠️  #${channel.name} ignoré : ${err.message}`);
     }
   }
+
+  await fsSet('discord_serveurs', GUILD_ID, {
+    nb_membres:     mbCount,
+    last_collected: new Date().toISOString(),
+  });
 
   console.log('\n✅ Collecte terminée ! Checkpoint sauvegardé.');
   client.destroy();
