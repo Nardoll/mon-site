@@ -182,13 +182,16 @@ async function main() {
     ]
   });
 
-  await client.login(DISCORD_TOKEN);
+  await new Promise((resolve, reject) => {
+    client.once('clientReady', resolve);
+    client.once('error', reject);
+    client.login(DISCORD_TOKEN);
+  });
   console.log(`✅ Connecté : ${client.user.tag}\n`);
 
-  const guild = await client.guilds.fetch(GUILD_ID);
+  const guild = client.guilds.cache.get(GUILD_ID) || await client.guilds.fetch(GUILD_ID);
   console.log(`📡 Serveur : ${guild.name}\n`);
 
-  // Infos serveur (icône, nom) — on ne touche pas icon_url si déjà défini
   const iconUrl = guild.iconURL({ size: 256 }) || null;
   await fsSet('discord_serveurs', GUILD_ID, {
     nom:            guild.name,
