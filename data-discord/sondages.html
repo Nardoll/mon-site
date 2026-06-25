@@ -103,13 +103,20 @@
     .section-title::after { content: ''; width: 40px; height: 1px; background: var(--border); }
 
     .corr-wrap { overflow-x: auto; }
-    .corr-table { border-collapse: collapse; font-size: .75rem; }
-    .corr-table th, .corr-table td { padding: .35rem .5rem; text-align: center; white-space: nowrap; }
-    .corr-table th { color: var(--muted); font-weight: 600; }
-    .corr-table td.label { text-align: right; color: var(--text); padding-right: .75rem; font-weight: 600; }
+    .corr-table { border-collapse: separate; border-spacing: 3px; font-size: .73rem; }
+    .corr-table td { text-align: center; white-space: nowrap; }
+    .corr-table td.label { text-align: right; color: var(--text); padding-right: .6rem; font-weight: 600; white-space: nowrap; }
+    .corr-table th.col-header {
+      padding: 0 0 4px; text-align: left; vertical-align: bottom; width: 36px;
+    }
+    .corr-table th.col-header > span {
+      display: block; writing-mode: vertical-rl; transform: rotate(180deg);
+      font-size: .72rem; font-weight: 600; color: var(--text);
+      white-space: nowrap; padding: 0 2px; text-align: left;
+    }
     .corr-cell {
-      width: 32px; height: 32px; border-radius: 4px;
-      font-size: .72rem; font-weight: 700;
+      width: 36px; height: 36px; border-radius: 6px;
+      font-size: .71rem; font-weight: 700; vertical-align: middle;
     }
 
     /* ── Theme input popup ── */
@@ -346,7 +353,7 @@
         return 'rgba(237,66,69,.25)';
       }
 
-      const header = `<tr><th></th>${voters.map(id => `<th style="color:var(--text);font-weight:600;transform:rotate(-30deg);display:inline-block">${esc(name(id))}</th>`).join('')}</tr>`;
+      const header = `<tr><th></th>${voters.map(id => `<th class="col-header"><span>${esc(name(id))}</span></th>`).join('')}</tr>`;
       const rows = voters.map(a => {
         const cells = voters.map(b => {
           if (a === b) return `<td class="corr-cell" style="background:rgba(88,101,242,.2);color:#a5b4fc">—</td>`;
