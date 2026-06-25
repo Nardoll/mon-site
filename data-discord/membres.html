@@ -197,54 +197,77 @@
       }).join('');
     }
 
+    let panelMsgs = [], panelGran = 'month';
+
+    function getKey(dateStr, gran) {
+      if (!dateStr) return null;
+      if (gran==='year')  return dateStr.slice(0,4);
+      if (gran==='month') return dateStr.slice(0,7);
+      const d=new Date(dateStr), jan4=new Date(d.getFullYear(),0,4);
+      const w=Math.ceil(((d-jan4)/86400000+jan4.getDay()+1)/7);
+      return `${d.getFullYear()}-W${String(w).padStart(2,'0')}`;
+    }
+
+    function renderPanelChart() {
+      const counts={};
+      panelMsgs.forEach(m=>{ const k=getKey(m.date,panelGran); if(k) counts[k]=(counts[k]||0)+1; });
+      const sorted = Object.entries(counts).sort(([a],[b])=>a.localeCompare(b));
+      const max  = Math.max(...sorted.map(([,v])=>v),1);
+      const barH = 108;
+      const barW = panelGran==='year'?36:panelGran==='month'?22:14;
+      const step = Math.max(1, Math.ceil(48/barW));
+      const bars = sorted.map(([k,v],i)=>{
+        const showL = i%step===0||i===sorted.length-1;
+        return `<div class="bar-wrap-c" style="width:${barW}px">
+          <div class="bar-col-c" style="height:${Math.max(2,Math.round(v/max*barH))}px" title="${k}:${v}"></div>
+          ${showL?`<div class="bar-lbl">${shortLabel(k)}</div>`:''}
+        </div>`;
+      }).join('');
+      const el = document.getElementById('panel-chart-bars');
+      if (el) el.innerHTML = bars || '<span style="color:var(--muted);font-size:.8rem;padding:.5rem">Aucune donnée</span>';
+      document.querySelectorAll('.chart-toggle-btn').forEach(b=>b.classList.toggle('active',b.dataset.g===panelGran));
+    }
+
     window.openMember = (id) => {
-      openId = id;
+      openId = id; panelGran = 'month';
       renderList();
       const m   = memberMap[id];
       const nom = m?.display_name||m?.nom||id;
-      const msgs = allMessages.filter(x=>x.auteur_id===id);
+      panelMsgs = allMessages.filter(x=>x.auteur_id===id);
       const days = m?.date_arrivee ? Math.floor((Date.now()-new Date(m.date_arrivee))/86400000) : null;
 
       document.getElementById('p-avatar').innerHTML = m?.avatar_url ? `<img src="${esc(m.avatar_url)}" alt="">` : nom.slice(0,2).toUpperCase();
       document.getElementById('p-name').textContent = nom;
-      document.getElementById('p-sub').textContent  = `${msgs.length} messages${days!==null?' · '+days+' jours sur le serveur':''}`;
-
-      const byMonth={};
-      msgs.forEach(x=>{ const k=x.date?.slice(0,7); if(k) byMonth[k]=(byMonth[k]||0)+1; });
-      const monthSorted = Object.entries(byMonth).sort(([a],[b])=>a.localeCompare(b));
-      const maxM2 = Math.max(...monthSorted.map(([,v])=>v),1);
-      const barH  = 108;
-      const step  = Math.max(1, Math.ceil(monthSorted.length/Math.max(1,Math.floor(560/40))));
-
-      const chartBars = monthSorted.map(([k,v],i)=>{
-        const showL = i%step===0||i===monthSorted.length-1;
-        return `<div class="bar-wrap-c" style="width:20px">
-          <div class="bar-col-c" style="height:${Math.max(2,Math.round(v/maxM2*barH))}px" title="${k}:${v}"></div>
-          ${showL?`<div class="bar-lbl">${shortLabel(k)}</div>`:''}
-        </div>`;
-      }).join('');
+      document.getElementById('p-sub').textContent  = `${panelMsgs.length} messages${days!==null?' · '+days+' jours sur le serveur':''}`;
 
       const bySalon={};
-      msgs.forEach(x=>{ bySalon[x.salon_nom]=(bySalon[x.salon_nom]||0)+1; });
+      panelMsgs.forEach(x=>{ bySalon[x.salon_nom]=(bySalon[x.salon_nom]||0)+1; });
       const topSalons = Object.entries(bySalon).sort(([,a],[,b])=>b-a);
       const maxS = topSalons[0]?.[1]||1;
 
       const byType={};
-      msgs.forEach(x=>{ byType[x.type]=(byType[x.type]||0)+1; });
+      panelMsgs.forEach(x=>{ byType[x.type]=(byType[x.type]||0)+1; });
       const icons={texte:'💬',image:'🖼️',lien:'🔗',video:'🎥',fichier:'📎',sondage:'🗳️',autre:'❓'};
 
       document.getElementById('p-body').innerHTML = `
         <div>
           <div class="mini-kpis">
-            <div class="mini-kpi"><div class="n">${msgs.length}</div><div class="l">Messages</div></div>
-            <div class="mini-kpi"><div class="n">${msgs.filter(x=>x.est_reponse).length}</div><div class="l">Réponses</div></div>
-            <div class="mini-kpi"><div class="n">${msgs.filter(x=>x.type==='image').length}</div><div class="l">Images</div></div>
-            <div class="mini-kpi"><div class="n">${msgs.filter(x=>x.type==='sondage').length}</div><div class="l">Sondages</div></div>
+            <div class="mini-kpi"><div class="n">${panelMsgs.length}</div><div class="l">Messages</div></div>
+            <div class="mini-kpi"><div class="n">${panelMsgs.filter(x=>x.est_reponse).length}</div><div class="l">Réponses</div></div>
+            <div class="mini-kpi"><div class="n">${panelMsgs.filter(x=>x.type==='image').length}</div><div class="l">Images</div></div>
+            <div class="mini-kpi"><div class="n">${panelMsgs.filter(x=>x.type==='sondage').length}</div><div class="l">Sondages</div></div>
           </div>
         </div>
         <div>
-          <div class="panel-section-title">Activité mensuelle</div>
-          <div class="chart-wrap"><div class="chart-bars">${chartBars||'<span style="color:var(--muted);font-size:.8rem;padding:.5rem">Aucune donnée</span>'}</div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.85rem">
+            <div class="panel-section-title" style="margin-bottom:0">Activité</div>
+            <div style="display:flex;background:var(--surface2);border-radius:6px;overflow:hidden;border:1px solid var(--border)">
+              <button class="chart-toggle-btn" data-g="week"  style="padding:.22rem .55rem;font-size:.72rem;font-weight:600;background:none;border:none;cursor:pointer;color:var(--muted);transition:all .15s">Semaine</button>
+              <button class="chart-toggle-btn active" data-g="month" style="padding:.22rem .55rem;font-size:.72rem;font-weight:600;background:var(--accent);border:none;cursor:pointer;color:#fff;transition:all .15s">Mois</button>
+              <button class="chart-toggle-btn" data-g="year"  style="padding:.22rem .55rem;font-size:.72rem;font-weight:600;background:none;border:none;cursor:pointer;color:var(--muted);transition:all .15s">Année</button>
+            </div>
+          </div>
+          <div class="chart-wrap"><div class="chart-bars" id="panel-chart-bars"></div></div>
         </div>
         <div>
           <div class="panel-section-title">Par salon</div>
@@ -261,6 +284,12 @@
             <div class="type-card"><div class="type-icon">${icons[t]||'❓'}</div><div class="type-count">${n2}</div><div class="type-label">${t[0].toUpperCase()+t.slice(1)}</div></div>`).join('')}
           </div>
         </div>`;
+
+      renderPanelChart();
+
+      document.querySelectorAll('.chart-toggle-btn').forEach(btn=>{
+        btn.addEventListener('click',()=>{ panelGran=btn.dataset.g; renderPanelChart(); });
+      });
 
       document.getElementById('detail-panel').classList.add('open');
       document.getElementById('main').classList.add('panel-open');

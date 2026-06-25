@@ -357,10 +357,9 @@
       const barH = 138; // hauteur utile (160px - 20px padding - 2px marge)
       const barW = timeGran === 'year' ? 36 : timeGran === 'month' ? 22 : 14;
 
-      // Afficher un label tous les N bars pour éviter le chevauchement
-      const total   = sorted.length;
-      const minGap  = Math.ceil(36 / barW); // ~36px minimum entre deux labels
-      const step    = Math.max(1, Math.ceil(total / Math.floor((total * barW) / 36)));
+      // Minimum 48px entre deux centres de labels pour éviter le chevauchement
+      const total = sorted.length;
+      const step  = Math.max(1, Math.ceil(48 / barW));
 
       document.getElementById('activity-chart').innerHTML = sorted.map(([k, v], i) => {
         const showLabel = (i % step === 0) || i === total - 1;
@@ -527,7 +526,7 @@
           <div class="chart-wrap" style="padding:.85rem">
             <div class="chart-bars" style="height:130px">
               ${monthSorted.map(([k,v],i) => {
-                const showL = i % Math.max(1, Math.ceil(monthSorted.length/14)) === 0 || i === monthSorted.length-1;
+                const showL = i % Math.max(1, Math.ceil(48/20)) === 0 || i === monthSorted.length-1;
                 return `<div class="bar-wrap" style="width:20px">
                   <div class="bar-col" style="width:100%;height:${Math.max(2,Math.round(v/maxM*108))}px" title="${k}:${v}"></div>
                   ${showL ? `<div class="bar-lbl">${shortLabel(k)}</div>` : ''}
@@ -603,7 +602,7 @@
           <div class="chart-wrap" style="padding:.85rem">
             <div class="chart-bars" style="height:130px">
               ${monthSorted.map(([k,v],i) => {
-                const showL = i % Math.max(1, Math.ceil(monthSorted.length/14)) === 0 || i === monthSorted.length-1;
+                const showL = i % Math.max(1, Math.ceil(48/20)) === 0 || i === monthSorted.length-1;
                 return `<div class="bar-wrap" style="width:20px">
                   <div class="bar-col" style="width:100%;height:${Math.max(2,Math.round(v/maxM*108))}px" title="${k}:${v}"></div>
                   ${showL ? `<div class="bar-lbl">${shortLabel(k)}</div>` : ''}
