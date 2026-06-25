@@ -6,8 +6,8 @@
 
 ## ⚠️ Notes importantes pour Claude Code
 
-> **Ne jamais push sans confirmation explicite de Tom.**
-> Netlify a atteint sa limite mensuelle de déploiements en une seule journée. Le site est désormais hébergé sur **Cloudflare Pages** (fonctionnel, même repo GitHub). Pour économiser les déploiements : regrouper les modifications en packs avant de push, et **toujours attendre le feu vert de Tom** avant tout `git push`.
+> **Push sans confirmation.** Tom a demandé de pusher directement après chaque modification, sans demander son feu vert.
+> Le site est hébergé sur **Cloudflare Pages** (déploiement auto à chaque push sur `main`).
 
 > **Mettre à jour ce README à chaque modification significative.** À la fin de chaque session de développement, Claude doit documenter les changements effectués dans la section "Historique des modifications" ci-dessous. C'est une consigne permanente à appliquer sans que Tom ait besoin de le rappeler.
 
@@ -28,6 +28,7 @@ Site **personnel et privé** de Tom. Multi-sections indépendantes. La page d'ac
 - `/club-lecture/` — Ancienne version du club de lecture, **redirigée automatiquement** vers `/lis-tes-ratures/` via `_redirects` (301). Dossier conservé dans le repo.
 - `/jdr/` — Page d'accueil active, protégée par mot de passe, en cours de développement
 - `/Jeux/` — Section jeux en ligne, **accès libre** (pas de mot de passe)
+- `/data-discord/` — Stats et archives du serveur Discord — **en cours de développement** (archives sondages manuelles, membres, stats, thèmes)
 - `/atelier/` — Outil de world-building solo procédural, en développement actif
 - `/recettes/` — Supprimée de l'accueil public (dossier conservé mais non lié)
 
@@ -48,6 +49,42 @@ Site **personnel et privé** de Tom. Multi-sections indépendantes. La page d'ac
 **Workflow :**
 1. Modifier les fichiers dans VS Code
 2. `git add` + `git commit` + `git push` → Cloudflare Pages déploie en ~30 secondes
+
+---
+
+## Bot Discord (`/discord-bot/`)
+
+Script Node.js de collecte des données du serveur Discord vers Firebase.
+
+### Lancer la collecte
+```bash
+cd discord-bot
+npm install       # première fois uniquement
+npm run collect   # lance la collecte (ou reprise incrémentale)
+```
+
+### Fichiers
+| Fichier | Rôle |
+|---|---|
+| `collect.js` | Script principal — collecte messages, sondages, membres |
+| `.env` | Token Discord + ID serveur — **jamais commité** |
+| `.env.example` | Modèle du `.env` |
+| `checkpoint.json` | Dernier message_id par salon — **jamais commité**, permet la reprise |
+
+### Collections Firebase créées
+| Collection | Contenu |
+|---|---|
+| `discord_messages` | auteur, salon, date, type (texte/image/lien/sondage…), est_reponse |
+| `discord_sondages_bot` | Sondages natifs Discord avec question, propositions, votes par personne |
+| `discord_membres_bot` | Membres du serveur (pseudo, avatar, date d'arrivée) |
+
+### Collecte incrémentale
+- Première exécution : scan complet (peut prendre du temps selon l'historique)
+- Exécutions suivantes : reprend depuis le dernier message connu par salon
+- Le `checkpoint.json` est sauvegardé après chaque salon — si le script coupe, il repart là où il s'est arrêté
+
+### Serveurs configurés
+- `1499528679758364744` — serveur test (club de lecture Discord)
 
 ---
 
