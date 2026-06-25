@@ -83,13 +83,13 @@
 
     /* ── Histogramme ── */
     .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem 1.25rem; }
-    .chart-bars { display: flex; align-items: flex-end; gap: 3px; height: 90px; overflow-x: auto; overflow-y: hidden; }
-    .chart-bars::-webkit-scrollbar { height: 4px; }
-    .chart-bars::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-    .bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; min-width: 0; }
-    .bar-col { background: var(--accent); border-radius: 3px 3px 0 0; opacity: .75; transition: opacity .15s; cursor: default; }
+    .chart-bars { display: flex; align-items: flex-end; gap: 3px; height: 160px; overflow-x: auto; overflow-y: hidden; padding-bottom: 20px; }
+    .chart-bars::-webkit-scrollbar { height: 5px; }
+    .chart-bars::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 2px; }
+    .bar-wrap { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0; flex-shrink: 0; min-width: 0; position: relative; height: 100%; }
+    .bar-col { background: var(--accent); border-radius: 3px 3px 0 0; opacity: .7; transition: opacity .15s; cursor: default; width: 100%; }
     .bar-col:hover { opacity: 1; }
-    .bar-lbl { font-size: .58rem; color: var(--muted); white-space: nowrap; }
+    .bar-lbl { font-size: .68rem; color: var(--muted); white-space: nowrap; position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); }
 
     /* ── Barres horizontales ── */
     .bar-list { display: flex; flex-direction: column; gap: .4rem; }
@@ -352,27 +352,37 @@
         if (k) counts[k] = (counts[k] || 0) + 1;
       });
       const sorted = Object.entries(counts).sort(([a],[b]) => a.localeCompare(b));
-      const max = Math.max(...sorted.map(([,v]) => v), 1);
-      const barW = timeGran === 'year' ? 28 : timeGran === 'month' ? 18 : 12;
+      const max  = Math.max(...sorted.map(([,v]) => v), 1);
+      const barH = 138; // hauteur utile (160px - 20px padding - 2px marge)
+      const barW = timeGran === 'year' ? 36 : timeGran === 'month' ? 22 : 14;
 
-      document.getElementById('activity-chart').innerHTML = sorted.map(([k, v]) => `
-        <div class="bar-wrap" style="width:${barW}px">
-          <div class="bar-col" style="width:100%;height:${Math.round(v/max*86)}px" title="${k} : ${v} messages"></div>
-          <div class="bar-lbl">${shortLabel(k)}</div>
-        </div>
-      `).join('');
+      // Afficher un label tous les N bars pour éviter le chevauchement
+      const total   = sorted.length;
+      const minGap  = Math.ceil(36 / barW); // ~36px minimum entre deux labels
+      const step    = Math.max(1, Math.ceil(total / Math.floor((total * barW) / 36)));
 
-      // Scroll à droite
+      document.getElementById('activity-chart').innerHTML = sorted.map(([k, v], i) => {
+        const showLabel = (i % step === 0) || i === total - 1;
+        return `
+          <div class="bar-wrap" style="width:${barW}px">
+            <div class="bar-col" style="height:${Math.max(2, Math.round(v/max*barH))}px" title="${k} : ${v} message${v>1?'s':''}"></div>
+            ${showLabel ? `<div class="bar-lbl">${shortLabel(k)}</div>` : ''}
+          </div>`;
+      }).join('');
+
       const c = document.getElementById('activity-chart');
       c.scrollLeft = c.scrollWidth;
     }
 
     function shortLabel(k) {
-      if (k.includes('-W')) return k.slice(5);
-      if (k.length === 4)   return k;
+      if (k.includes('-W')) {
+        const [y, w] = k.split('-W');
+        return `S${w} '${y.slice(2)}`;
+      }
+      if (k.length === 4) return k;
       const [y, m] = k.split('-');
-      const months = ['J','F','M','A','M','J','J','A','S','O','N','D'];
-      return `${months[+m-1]}${y.slice(2)}`;
+      const mo = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
+      return `${mo[+m-1]} '${y.slice(2)}`;
     }
 
     document.getElementById('time-toggle').addEventListener('click', e => {
