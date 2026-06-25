@@ -33,10 +33,12 @@ export function renderNav(activePage, servers = []) {
             ${av}
             <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.nom)}</span>
           </a>
-          ${isActive ? subPages.map(p => `
-            <a href="/data-discord/${p.file}?id=${s.id}" class="sidebar-link sidebar-sublink${pageName === p.key ? ' active' : ''}">
-              ${p.label}
-            </a>`).join('') : ''}
+          ${isActive ? `<div style="margin-left:.75rem;padding-left:.75rem;border-left:2px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:2px;margin-top:2px;margin-bottom:4px">
+            ${subPages.map(p => `
+              <a href="/data-discord/${p.file}?id=${s.id}" class="sidebar-link sidebar-sublink${pageName === p.key ? ' active' : ''}">
+                ${p.label}
+              </a>`).join('')}
+          </div>` : ''}
         `;
       }).join('')}
     </nav>
