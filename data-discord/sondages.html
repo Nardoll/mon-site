@@ -325,18 +325,36 @@
         return;
       }
 
-      // Matrice : pour chaque paire (A, B), ratio de sondages où ils ont voté la même option
+      // Similarité par sondage :
+      //   - Choix unique  : 1 si même option, 0 sinon
+      //   - Choix multiple : Jaccard = |A ∩ B| / |A ∪ B| (ignore les "ni l'un ni l'autre")
+      // Score final = moyenne pondérée par nb de participants communs
       function corr(a, b) {
-        let both = 0, same = 0;
+        let weightSum = 0, scoreSum = 0;
         relevant.forEach(p => {
-          const votedByA = p.propositions?.filter(o => o.votants?.includes(a)).map(o => o.texte) || [];
-          const votedByB = p.propositions?.filter(o => o.votants?.includes(b)).map(o => o.texte) || [];
-          if (!votedByA.length || !votedByB.length) return;
-          both++;
-          const setA = new Set(votedByA);
-          if (votedByB.some(t => setA.has(t))) same++;
+          const setA = new Set(p.propositions?.filter(o => o.votants?.includes(a)).map(o => o.texte) || []);
+          const setB = new Set(p.propositions?.filter(o => o.votants?.includes(b)).map(o => o.texte) || []);
+          if (!setA.size || !setB.size) return;
+
+          // Poids = nb de votants communs sur ce sondage (au moins A et B)
+          const allVoters = new Set(p.propositions?.flatMap(o => o.votants || []) || []);
+          const weight = allVoters.size;
+
+          let sim;
+          if (p.type === 'unique') {
+            // Choix unique : 1 si intersection non vide (même option)
+            sim = [...setA].some(t => setB.has(t)) ? 1 : 0;
+          } else {
+            // Choix multiple : Jaccard
+            const inter = [...setA].filter(t => setB.has(t)).length;
+            const union = new Set([...setA, ...setB]).size;
+            sim = union > 0 ? inter / union : 0;
+          }
+
+          weightSum += weight;
+          scoreSum  += sim * weight;
         });
-        return both > 0 ? same / both : null;
+        return weightSum > 0 ? scoreSum / weightSum : null;
       }
 
       function name(id) {
