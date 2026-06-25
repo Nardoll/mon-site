@@ -56,20 +56,62 @@ Site **personnel et privé** de Tom. Multi-sections indépendantes. La page d'ac
 
 Script Node.js de collecte des données du serveur Discord vers Firebase.
 
-### Lancer la collecte
+### ⚠️ Mise en place sur un nouveau PC (à faire une seule fois)
+
+**1. Installer Node.js** si pas déjà installé : télécharger la version LTS sur nodejs.org
+
+**2. Installer les dépendances :**
 ```bash
 cd discord-bot
-npm install       # première fois uniquement
-npm run collect   # lance la collecte (ou reprise incrémentale)
+npm install
 ```
+
+**3. Créer le fichier `.env`** (jamais dans le repo, à recréer manuellement) :
+```
+DISCORD_TOKEN=<token du bot Statisticsman>
+GUILD_ID=1499528679758364744
+```
+> **Où trouver le token** : discord.com/developers/applications → application "Statisticsman" → onglet Bot → Reset Token (génère un nouveau token, l'ancien ne fonctionnera plus).
+> Le token n'est visible qu'une seule fois après génération — le noter quelque part en sécurité (gestionnaire de mots de passe, note privée).
+
+**4. Vérifier que le bot est bien sur le serveur.** Si besoin le réinviter :
+- Discord Developer Portal → OAuth2 → URL Generator → cocher `bot` → permissions : "Voir les salons" + "Voir les anciens messages" → copier l'URL → l'ouvrir dans le navigateur.
+
+**5. Vérifier que les Privileged Intents sont activés** :
+- Discord Developer Portal → onglet Bot → Privileged Gateway Intents → activer les 3 cases (Server Members Intent, Message Content Intent, Presence Intent).
+
+---
+
+### Lancer une collecte
+
+Double-clic sur `collecter.bat` **ou** depuis un terminal :
+```bash
+cd discord-bot
+npm run collect
+```
+- Première exécution : scan complet de tout l'historique
+- Exécutions suivantes : reprise automatique depuis le dernier message connu (rapide)
+- Le `checkpoint.json` est sauvegardé après chaque salon — si ça coupe, ça repart là où ça s'est arrêté
+
+**Pour demander à Claude de lancer la collecte :** dire "relance la collecte Discord" — Claude peut exécuter le script directement depuis le terminal.
+
+---
+
+### Serveurs configurés
+| ID | Nom | Statut |
+|---|---|---|
+| `1499528679758364744` | Lis tes ratures (club de lecture) | ✅ Collecte initiale faite le 2026-06-25 |
+
+---
 
 ### Fichiers
 | Fichier | Rôle |
 |---|---|
-| `collect.js` | Script principal — collecte messages, sondages, membres |
-| `.env` | Token Discord + ID serveur — **jamais commité** |
+| `collect.js` | Script principal |
+| `collecter.bat` | Double-clic pour lancer sur Windows |
+| `.env` | Token + ID serveur — **jamais commité, à recréer** |
 | `.env.example` | Modèle du `.env` |
-| `checkpoint.json` | Dernier message_id par salon — **jamais commité**, permet la reprise |
+| `checkpoint.json` | Reprise incrémentale — **jamais commité** |
 
 ### Collections Firebase créées
 | Collection | Contenu |
@@ -77,14 +119,6 @@ npm run collect   # lance la collecte (ou reprise incrémentale)
 | `discord_messages` | auteur, salon, date, type (texte/image/lien/sondage…), est_reponse |
 | `discord_sondages_bot` | Sondages natifs Discord avec question, propositions, votes par personne |
 | `discord_membres_bot` | Membres du serveur (pseudo, avatar, date d'arrivée) |
-
-### Collecte incrémentale
-- Première exécution : scan complet (peut prendre du temps selon l'historique)
-- Exécutions suivantes : reprend depuis le dernier message connu par salon
-- Le `checkpoint.json` est sauvegardé après chaque salon — si le script coupe, il repart là où il s'est arrêté
-
-### Serveurs configurés
-- `1499528679758364744` — serveur test (club de lecture Discord)
 
 ---
 
