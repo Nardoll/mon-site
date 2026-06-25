@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Discord — Lis tes ratures</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #313338;
+      --sidebar-bg: #2b2d31;
+      --surface: #383a40;
+      --surface2: #404249;
+      --border: #1e1f22;
+      --text: #dbdee1;
+      --muted: #80848e;
+      --accent: #5865f2;
+      --green: #57f287;
+      --yellow: #fee75c;
+      --sidebar-w: 220px;
+    }
+
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.5; display: flex; min-height: 100vh; }
+
+    /* ── Sidebar ── */
+    #sidebar { width: var(--sidebar-w); background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; padding: 1.25rem .75rem; }
+    .sidebar-header { display: flex; align-items: center; gap: .6rem; padding: .5rem .5rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,.06); margin-bottom: .75rem; }
+    .sidebar-logo { font-size: 1.4rem; }
+    .sidebar-title { font-weight: 700; font-size: .95rem; color: #fff; }
+    .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .sidebar-link { display: flex; align-items: center; gap: .55rem; padding: .55rem .75rem; border-radius: 6px; text-decoration: none; color: var(--muted); font-size: .88rem; font-weight: 500; transition: background .15s, color .15s; }
+    .sidebar-link:hover { background: rgba(255,255,255,.06); color: var(--text); }
+    .sidebar-link.active { background: rgba(88,101,242,.2); color: #c7caf9; }
+    .sidebar-section { font-size: .68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; padding: .75rem .75rem .25rem; }
+    .sidebar-footer { padding-top: 1rem; border-top: 1px solid rgba(255,255,255,.06); }
+    .sidebar-home { display: block; text-decoration: none; color: var(--muted); font-size: .8rem; padding: .4rem .5rem; border-radius: 5px; transition: color .15s; }
+    .sidebar-home:hover { color: var(--text); }
+
+    /* ── Main ── */
+    .main { margin-left: var(--sidebar-w); flex: 1; padding: 2rem 2.5rem; max-width: 960px; }
+
+    .page-header { margin-bottom: 2rem; }
+    .page-eyebrow { font-size: .72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: .4rem; }
+    .page-title { font-size: 1.4rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: .75rem; }
+    .server-dot { width: 10px; height: 10px; background: var(--green); border-radius: 50%; }
+    .page-sub { font-size: .83rem; color: var(--muted); margin-top: .3rem; }
+
+    /* ── KPIs ── */
+    .kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .75rem; margin-bottom: 2rem; }
+    .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; }
+    .kpi-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .35rem; }
+    .kpi-value { font-size: 1.9rem; font-weight: 700; color: #fff; line-height: 1; }
+    .kpi-sub { font-size: .73rem; color: var(--muted); margin-top: .3rem; }
+
+    /* ── Section ── */
+    .section { margin-bottom: 2rem; }
+    .section-title { font-size: .82rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: .85rem; display: flex; align-items: center; gap: .5rem; }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* ── Barres horizontales ── */
+    .bar-list { display: flex; flex-direction: column; gap: .45rem; }
+    .bar-row { display: flex; align-items: center; gap: .75rem; }
+    .bar-label { font-size: .83rem; color: var(--text); min-width: 120px; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+    .bar-bg { flex: 1; height: 6px; background: rgba(255,255,255,.07); border-radius: 99px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 99px; background: var(--accent); transition: width .4s; }
+    .bar-count { font-size: .78rem; color: var(--muted); min-width: 45px; text-align: right; flex-shrink: 0; }
+
+    /* ── Activité mensuelle ── */
+    .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; }
+    .month-bars { display: flex; align-items: flex-end; gap: 4px; height: 100px; }
+    .month-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; min-width: 0; }
+    .month-bar { width: 100%; background: var(--accent); border-radius: 3px 3px 0 0; opacity: .75; transition: opacity .15s; cursor: default; }
+    .month-bar:hover { opacity: 1; }
+    .month-label { font-size: .6rem; color: var(--muted); text-align: center; white-space: nowrap; }
+
+    /* ── Types ── */
+    .types-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: .6rem; }
+    .type-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .75rem 1rem; }
+    .type-icon { font-size: 1.2rem; margin-bottom: .3rem; }
+    .type-count { font-size: 1.3rem; font-weight: 700; color: #fff; }
+    .type-label { font-size: .73rem; color: var(--muted); }
+
+    .empty-msg { color: var(--muted); font-size: .85rem; font-style: italic; }
+
+    @media (max-width: 640px) {
+      #sidebar { display: none; }
+      .main { margin-left: 0; padding: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="sidebar"></div>
+
+  <main class="main">
+    <div class="page-header">
+      <div class="page-eyebrow">Serveur Discord</div>
+      <div class="page-title">
+        <span class="server-dot"></span>
+        Lis tes ratures
+      </div>
+      <div class="page-sub" id="last-update">Chargement…</div>
+    </div>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="section">
+      <div class="section-title">Activité mensuelle</div>
+      <div class="chart-wrap"><div class="month-bars" id="month-chart"></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Types de messages</div>
+      <div class="types-grid" id="types-grid"></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+      <div class="section">
+        <div class="section-title">Membres les plus actifs</div>
+        <div class="bar-list" id="top-membres"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Salons les plus actifs</div>
+        <div class="bar-list" id="top-salons"></div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { db } from './firebase-config.js';
+    import { renderNav } from './nav.js';
+    import { collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    renderNav('dashboard');
+
+    const GUILD_ID = '1499528679758364744';
+
+    async function load() {
+      const [msgSnap, mbSnap] = await Promise.all([
+        getDocs(query(collection(db, 'discord_messages'), where('serveur_id', '==', GUILD_ID))),
+        getDocs(query(collection(db, 'discord_membres_bot'), where('serveur_id', '==', GUILD_ID)))
+      ]);
+
+      const messages = msgSnap.docs.map(d => d.data());
+      const membres  = mbSnap.docs.map(d => d.data());
+
+      renderKPIs(messages, membres);
+      renderMonthChart(messages);
+      renderTypes(messages);
+      renderTopMembres(messages, membres);
+      renderTopSalons(messages);
+
+      const dates = messages.map(m => m.date).sort();
+      document.getElementById('last-update').textContent =
+        `${messages.length} messages collectés · dernier : ${dates.at(-1)?.slice(0,10) || '—'}`;
+    }
+
+    function renderKPIs(messages, membres) {
+      const auteurs  = new Set(messages.map(m => m.auteur_id)).size;
+      const salons   = new Set(messages.map(m => m.salon_id)).size;
+      const sondages = messages.filter(m => m.type === 'sondage').length;
+      const reponses = messages.filter(m => m.est_reponse).length;
+
+      document.getElementById('kpis').innerHTML = `
+        <div class="kpi"><div class="kpi-label">Membres</div><div class="kpi-value">${membres.length}</div><div class="kpi-sub">sur le serveur</div></div>
+        <div class="kpi"><div class="kpi-label">Messages</div><div class="kpi-value">${messages.length}</div><div class="kpi-sub">${auteurs} auteurs</div></div>
+        <div class="kpi"><div class="kpi-label">Salons</div><div class="kpi-value">${salons}</div><div class="kpi-sub">actifs</div></div>
+        <div class="kpi"><div class="kpi-label">Sondages</div><div class="kpi-value">${sondages}</div><div class="kpi-sub">natifs Discord</div></div>
+        <div class="kpi"><div class="kpi-label">Réponses</div><div class="kpi-value">${reponses}</div><div class="kpi-sub">${Math.round(reponses/messages.length*100)||0}% des msgs</div></div>
+      `;
+    }
+
+    function renderMonthChart(messages) {
+      const byMonth = {};
+      messages.forEach(m => {
+        const key = m.date?.slice(0, 7);
+        if (key) byMonth[key] = (byMonth[key] || 0) + 1;
+      });
+      const sorted = Object.entries(byMonth).sort(([a],[b]) => a.localeCompare(b));
+      const max = Math.max(...sorted.map(([,v]) => v), 1);
+
+      document.getElementById('month-chart').innerHTML = sorted.map(([k, v]) => `
+        <div class="month-bar-wrap">
+          <div class="month-bar" style="height:${Math.round(v/max*96)}px" title="${k} : ${v} messages"></div>
+          <div class="month-label">${k.slice(2)}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderTypes(messages) {
+      const icons = { texte:'💬', image:'🖼️', lien:'🔗', video:'🎥', fichier:'📎', sondage:'🗳️', autre:'❓' };
+      const counts = {};
+      messages.forEach(m => { counts[m.type] = (counts[m.type]||0)+1; });
+      const order = ['texte','image','lien','sondage','video','fichier','autre'];
+
+      document.getElementById('types-grid').innerHTML = order
+        .filter(t => counts[t])
+        .map(t => `
+          <div class="type-card">
+            <div class="type-icon">${icons[t]||'❓'}</div>
+            <div class="type-count">${counts[t]}</div>
+            <div class="type-label">${t.charAt(0).toUpperCase()+t.slice(1)}</div>
+          </div>
+        `).join('');
+    }
+
+    function renderTopMembres(messages, membres) {
+      const counts = {};
+      messages.forEach(m => { counts[m.auteur_id] = (counts[m.auteur_id]||0)+1; });
+      const sorted = Object.entries(counts).sort(([,a],[,b]) => b-a).slice(0,8);
+      const max = sorted[0]?.[1] || 1;
+
+      document.getElementById('top-membres').innerHTML = sorted.map(([id, n]) => {
+        const mb = membres.find(m => m.discord_id === id);
+        const nom = mb?.display_name || mb?.nom || id.slice(0,8);
+        return `
+          <div class="bar-row">
+            <div class="bar-label" title="${esc(nom)}">${esc(nom)}</div>
+            <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(n/max*100)}%"></div></div>
+            <div class="bar-count">${n}</div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderTopSalons(messages) {
+      const counts = {};
+      messages.forEach(m => { counts[m.salon_nom] = (counts[m.salon_nom]||0)+1; });
+      const sorted = Object.entries(counts).sort(([,a],[,b]) => b-a);
+      const max = sorted[0]?.[1] || 1;
+
+      document.getElementById('top-salons').innerHTML = sorted.map(([nom, n]) => `
+        <div class="bar-row">
+          <div class="bar-label" title="#${esc(nom)}">#${esc(nom)}</div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(n/max*100)}%"></div></div>
+          <div class="bar-count">${n}</div>
+        </div>`
+      ).join('');
+    }
+
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    load();
+  </script>
+</body>
+</html>

@@ -3,7 +3,10 @@ export function renderNav(activePage) {
   if (!nav) return;
 
   const links = [
-    { href: '/data-discord/', label: '🗳️ Sondages', id: 'archives' },
+    { section: 'Serveurs' },
+    { href: '/data-discord/dashboard.html', label: '📗 Lis tes ratures', id: 'dashboard' },
+    { section: 'Sondages manuels' },
+    { href: '/data-discord/', label: '🗳️ Archives', id: 'archives' },
     { href: '/data-discord/membres.html', label: '👥 Membres', id: 'membres' },
     { href: '/data-discord/stats.html', label: '📊 Statistiques', id: 'stats' },
   ];
@@ -14,11 +17,10 @@ export function renderNav(activePage) {
       <span class="sidebar-title">Data Discord</span>
     </div>
     <nav class="sidebar-nav">
-      ${links.map(l => `
-        <a href="${l.href}" class="sidebar-link${activePage === l.id ? ' active' : ''}">
-          ${l.label}
-        </a>
-      `).join('')}
+      ${links.map(l => l.section
+        ? `<div class="sidebar-section">${l.section}</div>`
+        : `<a href="${l.href}" class="sidebar-link${activePage === l.id ? ' active' : ''}">${l.label}</a>`
+      ).join('')}
     </nav>
     <div class="sidebar-footer">
       <a href="/" class="sidebar-home">← Accueil du site</a>
