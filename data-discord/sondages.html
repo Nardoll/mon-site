@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Discord — Sondages</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #313338; --sidebar-bg: #2b2d31; --surface: #383a40; --surface2: #404249;
+      --border: #1e1f22; --text: #dbdee1; --muted: #80848e; --accent: #5865f2;
+      --green: #57f287; --yellow: #fee75c; --red: #ed4245;
+      --sidebar-w: 220px;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; display: flex; min-height: 100vh; }
+    #sidebar { width: var(--sidebar-w); background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; padding: 1.25rem .75rem; overflow-y: auto; }
+    .sidebar-header { display: flex; align-items: center; gap: .6rem; padding: .5rem .5rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,.06); margin-bottom: .75rem; }
+    .sidebar-logo { font-size: 1.4rem; }
+    .sidebar-title { font-weight: 700; font-size: .95rem; color: #fff; }
+    .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .sidebar-section { font-size: .68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; padding: .75rem .75rem .25rem; }
+    .sidebar-link { display: flex; align-items: center; gap: .55rem; padding: .55rem .75rem; border-radius: 6px; text-decoration: none; color: var(--muted); font-size: .88rem; font-weight: 500; transition: background .15s, color .15s; }
+    .sidebar-link:hover { background: rgba(255,255,255,.06); color: var(--text); }
+    .sidebar-link.active { background: rgba(88,101,242,.2); color: #c7caf9; }
+    .sidebar-link.server-active { color: var(--text); }
+    .sidebar-sublink { padding-left: 2rem; font-size: .82rem; }
+    .sidebar-footer { padding-top: 1rem; border-top: 1px solid rgba(255,255,255,.06); }
+    .sidebar-home { display: block; text-decoration: none; color: var(--muted); font-size: .8rem; padding: .4rem .5rem; border-radius: 5px; transition: color .15s; }
+    .sidebar-home:hover { color: var(--text); }
+
+    .main { margin-left: var(--sidebar-w); flex: 1; padding: 2rem 2.5rem; max-width: 960px; }
+
+    /* ── En-tête + filtres ── */
+    .page-header { margin-bottom: 1.5rem; }
+    .page-title { font-size: 1.2rem; font-weight: 700; color: #fff; margin-bottom: .9rem; }
+
+    .filter-bar { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+    .chip {
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .25rem .7rem; border-radius: 99px; font-size: .78rem; font-weight: 600;
+      border: 1px solid var(--border); background: var(--surface2);
+      color: var(--muted); cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .chip:hover { border-color: rgba(88,101,242,.4); color: var(--text); }
+    .chip.active { background: rgba(88,101,242,.2); border-color: rgba(88,101,242,.5); color: #c7caf9; }
+    .chip-new {
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .25rem .7rem; border-radius: 99px; font-size: .78rem; font-weight: 600;
+      border: 1px dashed rgba(255,255,255,.2); background: transparent;
+      color: var(--muted); cursor: pointer; transition: all .15s;
+    }
+    .chip-new:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Liste sondages ── */
+    .poll-list { display: flex; flex-direction: column; gap: .75rem; margin-bottom: 2.5rem; }
+    .poll-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      overflow: hidden; transition: border-color .15s;
+    }
+    .poll-card:hover { border-color: rgba(88,101,242,.3); }
+    .poll-head {
+      display: flex; align-items: flex-start; gap: .85rem;
+      padding: .9rem 1.1rem .75rem; cursor: pointer;
+    }
+    .poll-expand-icon { font-size: .7rem; color: var(--muted); margin-top: 3px; transition: transform .2s; flex-shrink: 0; }
+    .poll-card.open .poll-expand-icon { transform: rotate(90deg); }
+    .poll-info { flex: 1; min-width: 0; }
+    .poll-question { font-weight: 700; color: #fff; font-size: .9rem; margin-bottom: .3rem; }
+    .poll-meta { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+    .poll-date { font-size: .74rem; color: var(--muted); }
+    .poll-author { font-size: .74rem; color: var(--muted); }
+    .poll-salon { font-size: .74rem; color: var(--muted); }
+    .poll-type-badge { font-size: .68rem; font-weight: 700; padding: .15em .5em; border-radius: 4px; }
+    .badge-unique   { background: rgba(88,101,242,.15); color: #a5b4fc; }
+    .badge-multiple { background: rgba(254,231,92,.1);  color: #fde68a; }
+    .poll-theme-wrap { display: flex; align-items: center; gap: .4rem; flex-shrink: 0; }
+    .theme-chip {
+      font-size: .72rem; font-weight: 600; padding: .2em .6em; border-radius: 99px;
+      background: rgba(87,242,135,.1); color: #86efac; border: 1px solid rgba(87,242,135,.2);
+      cursor: pointer; transition: opacity .15s;
+    }
+    .theme-chip:hover { opacity: .75; }
+    .btn-add-theme {
+      font-size: .72rem; padding: .18em .5em; border-radius: 99px;
+      background: none; border: 1px dashed rgba(255,255,255,.2); color: var(--muted);
+      cursor: pointer; transition: all .15s;
+    }
+    .btn-add-theme:hover { border-color: var(--accent); color: var(--accent); }
+
+    .poll-body { padding: 0 1.1rem 1rem; display: none; }
+    .poll-card.open .poll-body { display: block; }
+    .options-list { display: flex; flex-direction: column; gap: .45rem; }
+    .option-row { display: flex; align-items: center; gap: .65rem; }
+    .option-label { font-size: .83rem; color: var(--text); min-width: 140px; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .option-bar-bg { flex: 1; height: 6px; background: rgba(255,255,255,.07); border-radius: 99px; overflow: hidden; }
+    .option-bar-fill { height: 100%; border-radius: 99px; background: var(--accent); transition: width .4s; }
+    .option-count { font-size: .78rem; color: var(--muted); min-width: 60px; text-align: right; }
+    .voters-chips { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .25rem; }
+    .voter-chip { font-size: .68rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: .1em .4em; color: var(--muted); }
+
+    /* ── Corrélation ── */
+    .section-title { font-size: .78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 1rem; display: flex; align-items: center; gap: .5rem; }
+    .section-title::after { content: ''; width: 40px; height: 1px; background: var(--border); }
+
+    .corr-wrap { overflow-x: auto; }
+    .corr-table { border-collapse: collapse; font-size: .75rem; }
+    .corr-table th, .corr-table td { padding: .35rem .5rem; text-align: center; white-space: nowrap; }
+    .corr-table th { color: var(--muted); font-weight: 600; }
+    .corr-table td.label { text-align: right; color: var(--text); padding-right: .75rem; font-weight: 600; }
+    .corr-cell {
+      width: 32px; height: 32px; border-radius: 4px;
+      font-size: .72rem; font-weight: 700;
+    }
+
+    /* ── Theme input popup ── */
+    .theme-popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; align-items: center; justify-content: center; }
+    .theme-popup-overlay.open { display: flex; }
+    .theme-popup { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; width: 340px; display: flex; flex-direction: column; gap: .85rem; }
+    .theme-popup-title { font-weight: 700; color: #fff; font-size: .95rem; }
+    .theme-popup-q { font-size: .82rem; color: var(--muted); }
+    .existing-themes { display: flex; flex-wrap: wrap; gap: .35rem; }
+    .theme-select-chip { padding: .22rem .6rem; border-radius: 99px; font-size: .75rem; font-weight: 600; border: 1px solid rgba(87,242,135,.25); background: rgba(87,242,135,.07); color: #86efac; cursor: pointer; transition: background .15s; }
+    .theme-select-chip:hover, .theme-select-chip.selected { background: rgba(87,242,135,.2); }
+    .theme-new-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: .88rem; font-family: inherit; padding: .5rem .75rem; outline: none; width: 100%; }
+    .theme-new-input:focus { border-color: var(--accent); }
+    .popup-actions { display: flex; gap: .6rem; justify-content: flex-end; }
+    .btn { display: inline-flex; align-items: center; gap: .35rem; padding: .45rem .9rem; border-radius: 6px; font-size: .83rem; font-weight: 600; cursor: pointer; border: none; transition: background .15s; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #4752c4; }
+    .btn-ghost { background: rgba(255,255,255,.06); color: var(--text); border: 1px solid rgba(255,255,255,.1); }
+    .btn-ghost:hover { background: rgba(255,255,255,.1); }
+
+    .empty-msg { color: var(--muted); font-size: .84rem; font-style: italic; padding: 1.5rem 0; text-align: center; }
+  </style>
+</head>
+<body>
+  <div id="sidebar"></div>
+
+  <main class="main">
+    <div class="page-header">
+      <div class="page-title">🗳️ Sondages</div>
+      <div class="filter-bar" id="filter-bar">
+        <span style="font-size:.78rem;color:var(--muted)">Thème :</span>
+        <div class="chip active" data-theme="*">Tous</div>
+        <div class="chip-new" id="btn-new-theme">+ Nouveau thème</div>
+      </div>
+    </div>
+
+    <div class="poll-list" id="poll-list"></div>
+
+    <div class="section-title">Corrélation des votes</div>
+    <div class="corr-wrap" id="corr-wrap">
+      <div class="empty-msg">Chargement…</div>
+    </div>
+  </main>
+
+  <!-- Popup thème -->
+  <div class="theme-popup-overlay" id="theme-popup-overlay">
+    <div class="theme-popup">
+      <div class="theme-popup-title">Thème du sondage</div>
+      <div class="theme-popup-q" id="popup-question"></div>
+      <div>
+        <div style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem">Thèmes existants :</div>
+        <div class="existing-themes" id="existing-themes"></div>
+      </div>
+      <div>
+        <div style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem">Ou nouveau thème :</div>
+        <input class="theme-new-input" id="theme-new-input" placeholder="Ex: Littérature, Organisation…">
+      </div>
+      <div class="popup-actions">
+        <button class="btn btn-ghost" id="btn-popup-cancel">Annuler</button>
+        <button class="btn btn-primary" id="btn-popup-save">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from './firebase-config.js';
+    import { renderNav } from './nav.js';
+    import {
+      collection, getDocs, query, where, doc, updateDoc
+    } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    const params   = new URLSearchParams(location.search);
+    const GUILD_ID = params.get('id') || '1499528679758364744';
+
+    let allSondages = [];
+    let allMembres  = [];
+    let memberMap   = {};
+    let activeTheme = '*';
+    let editingDocId = null;
+    let selectedTheme = null;
+
+    // ── Chargement ────────────────────────────────────────────────
+    async function load() {
+      const [sSnap, mbSnap, srvSnap] = await Promise.all([
+        getDocs(query(collection(db, 'discord_sondages_bot'), where('serveur_id', '==', GUILD_ID))),
+        getDocs(query(collection(db, 'discord_membres_bot'),  where('serveur_id', '==', GUILD_ID))),
+        getDocs(collection(db, 'discord_serveurs')),
+      ]);
+
+      allSondages = sSnap.docs.map(d => ({ _id: d.id, ...d.data() }));
+      allMembres  = mbSnap.docs.map(d => d.data());
+      allMembres.forEach(m => { memberMap[m.discord_id] = m; });
+      allSondages.sort((a, b) => b.date?.localeCompare(a.date));
+
+      const servers = srvSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderNav('sondages', servers);
+
+      renderFilterBar();
+      renderList();
+      renderCorrelation();
+    }
+
+    // ── Filtre ────────────────────────────────────────────────────
+    function allThemes() {
+      const s = new Set();
+      allSondages.forEach(p => { if (p.theme) s.add(p.theme); });
+      return [...s].sort();
+    }
+
+    function renderFilterBar() {
+      const themes = allThemes();
+      const bar = document.getElementById('filter-bar');
+      // retire les chips de thème existants (sauf "Tous" et "Nouveau")
+      [...bar.querySelectorAll('.chip[data-theme]')].forEach(c => { if (c.dataset.theme !== '*') c.remove(); });
+      themes.forEach(t => {
+        const chip = Object.assign(document.createElement('div'), {
+          className: `chip${activeTheme === t ? ' active' : ''}`,
+          textContent: t,
+          dataset: { theme: t },
+        });
+        chip.addEventListener('click', () => setTheme(t));
+        bar.querySelector('.chip-new').before(chip);
+      });
+      bar.querySelector('.chip[data-theme="*"]').className = `chip${activeTheme === '*' ? ' active' : ''}`;
+    }
+
+    function setTheme(t) {
+      activeTheme = t;
+      renderFilterBar();
+      renderList();
+    }
+
+    document.querySelector('.chip[data-theme="*"]').addEventListener('click', () => setTheme('*'));
+
+    // ── Liste ─────────────────────────────────────────────────────
+    function renderList() {
+      const filtered = activeTheme === '*'
+        ? allSondages
+        : allSondages.filter(p => p.theme === activeTheme);
+
+      if (filtered.length === 0) {
+        document.getElementById('poll-list').innerHTML = '<div class="empty-msg">Aucun sondage pour ce filtre.</div>';
+        return;
+      }
+
+      document.getElementById('poll-list').innerHTML = filtered.map(p => {
+        const totalVotes = p.propositions?.reduce((s, o) => s + (o.votants?.length || 0), 0) || 0;
+        const maxVotes   = Math.max(...(p.propositions || []).map(o => o.votants?.length || 0), 1);
+        return `
+          <div class="poll-card" id="card-${p._id}">
+            <div class="poll-head" onclick="toggleCard('${p._id}')">
+              <span class="poll-expand-icon">▶</span>
+              <div class="poll-info">
+                <div class="poll-question">${esc(p.question || '—')}</div>
+                <div class="poll-meta">
+                  <span class="poll-date">${p.date?.slice(0,10) || '—'}</span>
+                  <span class="poll-author">par ${esc(p.auteur_nom || '—')}</span>
+                  <span class="poll-salon">#${esc(p.salon_nom || '—')}</span>
+                  <span class="poll-type-badge badge-${p.type}">${p.type === 'multiple' ? 'Choix multiple' : 'Choix unique'}</span>
+                  <span style="color:var(--muted);font-size:.74rem">${totalVotes} vote${totalVotes > 1 ? 's' : ''}</span>
+                </div>
+              </div>
+              <div class="poll-theme-wrap">
+                ${p.theme
+                  ? `<span class="theme-chip" onclick="event.stopPropagation();openThemePopup('${p._id}')" title="Modifier le thème">${esc(p.theme)}</span>`
+                  : `<button class="btn-add-theme" onclick="event.stopPropagation();openThemePopup('${p._id}')">+ thème</button>`}
+              </div>
+            </div>
+            <div class="poll-body">
+              <div class="options-list">
+                ${(p.propositions || []).map(o => {
+                  const n   = o.votants?.length || 0;
+                  const pct = Math.round(n / Math.max(totalVotes, 1) * 100);
+                  const voterNames = (o.votants || []).map(id => {
+                    const m = memberMap[id];
+                    return m?.display_name || m?.nom || id.slice(0,8);
+                  });
+                  return `
+                    <div class="option-row">
+                      <div class="option-label" title="${esc(o.texte)}">${esc(o.texte)}</div>
+                      <div class="option-bar-bg"><div class="option-bar-fill" style="width:${Math.round(n/maxVotes*100)}%"></div></div>
+                      <div class="option-count">${n} (${pct}%)</div>
+                    </div>
+                    ${voterNames.length ? `<div class="voters-chips">${voterNames.map(v => `<span class="voter-chip">${esc(v)}</span>`).join('')}</div>` : ''}`;
+                }).join('')}
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    window.toggleCard = id => {
+      document.getElementById(`card-${id}`)?.classList.toggle('open');
+    };
+
+    // ── Corrélation ───────────────────────────────────────────────
+    function renderCorrelation() {
+      const relevant = activeTheme === '*' ? allSondages : allSondages.filter(p => p.theme === activeTheme);
+      // Trouver tous les votants
+      const voterIds = new Set();
+      relevant.forEach(p => p.propositions?.forEach(o => o.votants?.forEach(id => voterIds.add(id))));
+      const voters = [...voterIds];
+
+      if (voters.length < 2) {
+        document.getElementById('corr-wrap').innerHTML = '<div class="empty-msg">Pas assez de données pour calculer les corrélations.</div>';
+        return;
+      }
+
+      // Matrice : pour chaque paire (A, B), ratio de sondages où ils ont voté la même option
+      function corr(a, b) {
+        let both = 0, same = 0;
+        relevant.forEach(p => {
+          const votedByA = p.propositions?.filter(o => o.votants?.includes(a)).map(o => o.texte) || [];
+          const votedByB = p.propositions?.filter(o => o.votants?.includes(b)).map(o => o.texte) || [];
+          if (!votedByA.length || !votedByB.length) return;
+          both++;
+          const setA = new Set(votedByA);
+          if (votedByB.some(t => setA.has(t))) same++;
+        });
+        return both > 0 ? same / both : null;
+      }
+
+      function name(id) {
+        const m = memberMap[id];
+        return (m?.display_name || m?.nom || id.slice(0,8)).slice(0,10);
+      }
+
+      function heatColor(v) {
+        if (v === null) return 'var(--surface2)';
+        // 0 → rouge, 0.5 → neutre, 1 → vert
+        if (v >= 0.75) return 'rgba(87,242,135,.25)';
+        if (v >= 0.5)  return 'rgba(87,242,135,.1)';
+        if (v >= 0.25) return 'rgba(237,66,69,.1)';
+        return 'rgba(237,66,69,.25)';
+      }
+
+      const header = `<tr><th></th>${voters.map(id => `<th style="color:var(--text);font-weight:600;transform:rotate(-30deg);display:inline-block">${esc(name(id))}</th>`).join('')}</tr>`;
+      const rows = voters.map(a => {
+        const cells = voters.map(b => {
+          if (a === b) return `<td class="corr-cell" style="background:rgba(88,101,242,.2);color:#a5b4fc">—</td>`;
+          const v = corr(a, b);
+          const label = v === null ? '?' : Math.round(v * 100) + '%';
+          return `<td class="corr-cell" style="background:${heatColor(v)};color:${v === null ? 'var(--muted)' : 'var(--text)'}" title="${esc(name(a))} ↔ ${esc(name(b))}">${label}</td>`;
+        }).join('');
+        return `<tr><td class="label">${esc(name(a))}</td>${cells}</tr>`;
+      }).join('');
+
+      document.getElementById('corr-wrap').innerHTML =
+        `<table class="corr-table"><thead>${header}</thead><tbody>${rows}</tbody></table>`;
+    }
+
+    // ── Popup thème ───────────────────────────────────────────────
+    window.openThemePopup = (docId) => {
+      editingDocId = docId;
+      selectedTheme = null;
+      const poll = allSondages.find(p => p._id === docId);
+      document.getElementById('popup-question').textContent = poll?.question || '';
+      document.getElementById('theme-new-input').value = '';
+
+      const themes = allThemes();
+      document.getElementById('existing-themes').innerHTML = themes.map(t => `
+        <span class="theme-select-chip${poll?.theme === t ? ' selected' : ''}" data-t="${esc(t)}">${esc(t)}</span>
+      `).join('') || '<span style="color:var(--muted);font-size:.75rem">Aucun thème encore</span>';
+
+      document.querySelectorAll('.theme-select-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          document.querySelectorAll('.theme-select-chip').forEach(c => c.classList.remove('selected'));
+          chip.classList.add('selected');
+          selectedTheme = chip.dataset.t;
+          document.getElementById('theme-new-input').value = '';
+        });
+      });
+
+      document.getElementById('theme-popup-overlay').classList.add('open');
+    };
+
+    document.getElementById('btn-popup-cancel').onclick = () =>
+      document.getElementById('theme-popup-overlay').classList.remove('open');
+
+    document.getElementById('btn-popup-save').onclick = async () => {
+      const newTheme = selectedTheme || document.getElementById('theme-new-input').value.trim();
+      if (!newTheme || !editingDocId) {
+        document.getElementById('theme-popup-overlay').classList.remove('open');
+        return;
+      }
+      await updateDoc(doc(db, 'discord_sondages_bot', editingDocId), { theme: newTheme });
+      const poll = allSondages.find(p => p._id === editingDocId);
+      if (poll) poll.theme = newTheme;
+      document.getElementById('theme-popup-overlay').classList.remove('open');
+      renderFilterBar();
+      renderList();
+      renderCorrelation();
+    };
+
+    document.getElementById('btn-new-theme').addEventListener('click', () => {
+      if (allSondages.length > 0) openThemePopup(allSondages[0]._id);
+    });
+
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    load();
+  </script>
+</body>
+</html>
