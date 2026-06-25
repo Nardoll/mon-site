@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Data Discord — Membres</title>
+  <title>Data Discord — Salons</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -38,17 +38,16 @@
     .sort-btn:hover { color: var(--text); border-color: rgba(88,101,242,.4); }
     .sort-btn.active { background: rgba(88,101,242,.2); border-color: rgba(88,101,242,.5); color: #c7caf9; }
 
-    .member-list { display: flex; flex-direction: column; gap: .5rem; }
-    .member-row { display: flex; align-items: center; gap: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: .85rem 1.1rem; cursor: pointer; transition: border-color .15s, background .15s; }
-    .member-row:hover { border-color: rgba(88,101,242,.4); background: var(--surface2); }
-    .member-row.selected { border-color: rgba(88,101,242,.55); background: rgba(88,101,242,.07); }
+    .salon-list { display: flex; flex-direction: column; gap: .5rem; }
+    .salon-row { display: flex; align-items: center; gap: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: .85rem 1.1rem; cursor: pointer; transition: border-color .15s, background .15s; }
+    .salon-row:hover { border-color: rgba(88,101,242,.4); background: var(--surface2); }
+    .salon-row.selected { border-color: rgba(88,101,242,.55); background: rgba(88,101,242,.07); }
     .rank { font-size: .78rem; font-weight: 700; color: var(--muted); min-width: 28px; }
-    .avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: .9rem; flex-shrink: 0; overflow: hidden; }
-    .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-    .member-info { flex: 1; min-width: 0; }
-    .member-name { font-weight: 600; color: #fff; font-size: .95rem; }
-    .member-sub { font-size: .74rem; color: var(--muted); margin-top: .15rem; }
-    .member-stats { display: flex; gap: 1.25rem; align-items: center; flex-shrink: 0; }
+    .salon-hash { width: 42px; height: 42px; border-radius: 10px; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 700; color: var(--muted); flex-shrink: 0; }
+    .salon-info { flex: 1; min-width: 0; }
+    .salon-name { font-weight: 600; color: #fff; font-size: .95rem; }
+    .salon-sub { font-size: .74rem; color: var(--muted); margin-top: .15rem; }
+    .salon-stats { display: flex; gap: 1.25rem; align-items: center; flex-shrink: 0; }
     .stat-val .n { font-size: 1.15rem; font-weight: 700; color: #fff; text-align: right; }
     .stat-val .l { font-size: .67rem; color: var(--muted); text-align: right; }
     .bar-bg { width: 110px; height: 5px; background: rgba(255,255,255,.07); border-radius: 99px; overflow: hidden; }
@@ -59,8 +58,7 @@
     #detail-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 640px; background: var(--sidebar-bg); border-left: 1px solid var(--border); transform: translateX(100%); transition: transform .25s ease; display: flex; flex-direction: column; z-index: 20; overflow-y: auto; }
     #detail-panel.open { transform: translateX(0); }
     .panel-header { display: flex; align-items: center; gap: .9rem; padding: 1.4rem 1.5rem 1.1rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--sidebar-bg); z-index: 1; }
-    .panel-avatar { width: 54px; height: 54px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 1.1rem; flex-shrink: 0; overflow: hidden; }
-    .panel-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+    .panel-hash { width: 54px; height: 54px; border-radius: 12px; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700; color: var(--muted); flex-shrink: 0; }
     .panel-name { font-size: 1.15rem; font-weight: 700; color: #fff; }
     .panel-sub { font-size: .8rem; color: var(--muted); margin-top: .2rem; }
     .btn-close { margin-left: auto; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.5rem; line-height: 1; padding: .2rem; flex-shrink: 0; transition: color .15s; }
@@ -82,12 +80,14 @@
     .bar-col-c:hover { opacity: 1; }
     .bar-lbl { font-size: .65rem; color: var(--muted); white-space: nowrap; position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); }
 
-    .salon-bars { display: flex; flex-direction: column; gap: .45rem; }
-    .salon-row { display: flex; align-items: center; gap: .75rem; }
-    .salon-name { font-size: .83rem; color: var(--text); min-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .salon-bar-bg { flex: 1; height: 6px; background: rgba(255,255,255,.07); border-radius: 99px; overflow: hidden; }
-    .salon-bar-fill { height: 100%; border-radius: 99px; background: var(--accent); }
-    .salon-count { font-size: .78rem; color: var(--muted); min-width: 36px; text-align: right; }
+    .member-bars { display: flex; flex-direction: column; gap: .45rem; }
+    .mb-row { display: flex; align-items: center; gap: .75rem; }
+    .mb-av { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: .6rem; font-weight: 700; color: #fff; flex-shrink: 0; overflow: hidden; }
+    .mb-av img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+    .mb-name { font-size: .83rem; color: var(--text); min-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mb-bar-bg { flex: 1; height: 6px; background: rgba(255,255,255,.07); border-radius: 99px; overflow: hidden; }
+    .mb-bar-fill { height: 100%; border-radius: 99px; background: var(--accent); }
+    .mb-count { font-size: .78rem; color: var(--muted); min-width: 36px; text-align: right; }
 
     .types-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px,1fr)); gap: .5rem; }
     .type-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .65rem .85rem; }
@@ -101,20 +101,19 @@
   <div class="layout">
     <main class="main" id="main">
       <div class="page-header">
-        <div class="page-title">👥 Membres</div>
+        <div class="page-title">💬 Salons</div>
         <div class="sort-group">
           <span class="sort-label">Trier par :</span>
           <button class="sort-btn active" data-sort="msgs">Nb messages</button>
           <button class="sort-btn" data-sort="recent">Msg récent</button>
-          <button class="sort-btn" data-sort="ancien-msg">Msg ancien</button>
-          <button class="sort-btn" data-sort="anciennete">Ancienneté</button>
+          <button class="sort-btn" data-sort="ancien">Msg ancien</button>
         </div>
       </div>
-      <div class="member-list" id="member-list"></div>
+      <div class="salon-list" id="salon-list"></div>
     </main>
     <div id="detail-panel">
       <div class="panel-header">
-        <div class="panel-avatar" id="p-avatar"></div>
+        <div class="panel-hash">#</div>
         <div><div class="panel-name" id="p-name"></div><div class="panel-sub" id="p-sub"></div></div>
         <button class="btn-close" id="btn-close">×</button>
       </div>
@@ -141,81 +140,68 @@
       allMessages = msgSnap.docs.map(d=>d.data());
       allMembres  = mbSnap.docs.map(d=>d.data());
       allMembres.forEach(m=>{ memberMap[m.discord_id]=m; });
-      renderNav('membres', srvSnap.docs.map(d=>({id:d.id,...d.data()})));
+      renderNav('salons', srvSnap.docs.map(d=>({id:d.id,...d.data()})));
       renderList();
     }
 
-    function buildMemberData() {
-      const msgCount={}, firstMsg={}, lastMsg={};
+    function buildSalonData() {
+      const salonMap = {};
       allMessages.forEach(m => {
-        const id = m.auteur_id;
-        msgCount[id] = (msgCount[id]||0)+1;
-        if (!firstMsg[id]||m.date<firstMsg[id]) firstMsg[id]=m.date;
-        if (!lastMsg[id] ||m.date>lastMsg[id])  lastMsg[id] =m.date;
+        const id = m.salon_id;
+        if (!salonMap[id]) salonMap[id] = { id, nom: m.salon_nom, msgs: 0, firstMsg: null, lastMsg: null };
+        salonMap[id].msgs++;
+        if (!salonMap[id].firstMsg || m.date < salonMap[id].firstMsg) salonMap[id].firstMsg = m.date;
+        if (!salonMap[id].lastMsg  || m.date > salonMap[id].lastMsg)  salonMap[id].lastMsg  = m.date;
       });
-      return allMembres.map(m => ({
-        ...m,
-        msgs:     msgCount[m.discord_id]||0,
-        firstMsg: firstMsg[m.discord_id]||null,
-        lastMsg:  lastMsg[m.discord_id]||null,
-      }));
+      return Object.values(salonMap);
     }
 
     function renderList() {
-      const data   = buildMemberData();
+      const data = buildSalonData();
       const sorted = [...data].sort((a,b)=>{
-        if (sortKey==='msgs')       return b.msgs-a.msgs;
-        if (sortKey==='recent')     return (b.lastMsg||'').localeCompare(a.lastMsg||'');
-        if (sortKey==='ancien-msg') return (a.firstMsg||'zzz').localeCompare(b.firstMsg||'zzz');
-        if (sortKey==='anciennete') return (a.date_arrivee||'zzz').localeCompare(b.date_arrivee||'zzz');
+        if (sortKey==='msgs')   return b.msgs-a.msgs;
+        if (sortKey==='recent') return (b.lastMsg||'').localeCompare(a.lastMsg||'');
+        if (sortKey==='ancien') return (a.firstMsg||'zzz').localeCompare(b.firstMsg||'zzz');
         return 0;
       });
       const maxM = Math.max(...sorted.map(s=>s.msgs),1);
-      const now  = Date.now();
 
-      document.getElementById('member-list').innerHTML = sorted.map((m,i)=>{
-        const ini  = (m.display_name||m.nom||'?').slice(0,2).toUpperCase();
-        const av   = m.avatar_url ? `<img src="${esc(m.avatar_url)}" alt="">` : ini;
-        const days = m.date_arrivee ? Math.floor((now-new Date(m.date_arrivee))/86400000) : null;
-        const sub  = [
-          m.date_arrivee ? `Depuis ${m.date_arrivee.slice(0,10)}${days!==null?` · ${days} j`:''}` : null,
-          m.lastMsg ? `Dernier msg ${m.lastMsg.slice(0,10)}` : null,
-        ].filter(Boolean).join('  ·  ');
-        return `<div class="member-row${openId===m.discord_id?' selected':''}" onclick="openMember('${m.discord_id}')">
+      document.getElementById('salon-list').innerHTML = sorted.map((s,i)=>`
+        <div class="salon-row${openId===s.id?' selected':''}" onclick="openSalon('${s.id}')">
           <div class="rank">#${i+1}</div>
-          <div class="avatar">${av}</div>
-          <div class="member-info">
-            <div class="member-name">${esc(m.display_name||m.nom||'—')}</div>
-            <div class="member-sub">${sub}</div>
+          <div class="salon-hash">#</div>
+          <div class="salon-info">
+            <div class="salon-name">#${esc(s.nom)}</div>
+            <div class="salon-sub">
+              Premier msg : ${s.firstMsg?.slice(0,10)||'—'}
+              &nbsp;·&nbsp;
+              Dernier msg : ${s.lastMsg?.slice(0,10)||'—'}
+            </div>
           </div>
-          <div class="member-stats">
-            <div class="stat-val"><div class="n">${m.msgs}</div><div class="l">messages</div></div>
-            <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(m.msgs/maxM*100)}%"></div></div>
+          <div class="salon-stats">
+            <div class="stat-val"><div class="n">${s.msgs}</div><div class="l">messages</div></div>
+            <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(s.msgs/maxM*100)}%"></div></div>
           </div>
           <div class="chevron">›</div>
-        </div>`;
-      }).join('');
+        </div>`).join('');
     }
 
-    window.openMember = (id) => {
+    window.openSalon = (id) => {
       openId = id;
       renderList();
-      const m   = memberMap[id];
-      const nom = m?.display_name||m?.nom||id;
-      const msgs = allMessages.filter(x=>x.auteur_id===id);
-      const days = m?.date_arrivee ? Math.floor((Date.now()-new Date(m.date_arrivee))/86400000) : null;
+      const msgs = allMessages.filter(x=>x.salon_id===id);
+      const nom  = msgs[0]?.salon_nom || id;
 
-      document.getElementById('p-avatar').innerHTML = m?.avatar_url ? `<img src="${esc(m.avatar_url)}" alt="">` : nom.slice(0,2).toUpperCase();
-      document.getElementById('p-name').textContent = nom;
-      document.getElementById('p-sub').textContent  = `${msgs.length} messages${days!==null?' · '+days+' jours sur le serveur':''}`;
+      document.getElementById('p-name').textContent = `#${nom}`;
+      document.getElementById('p-sub').textContent  = `${msgs.length} messages · ${new Set(msgs.map(m=>m.auteur_id)).size} auteurs`;
 
+      // Activité mensuelle
       const byMonth={};
       msgs.forEach(x=>{ const k=x.date?.slice(0,7); if(k) byMonth[k]=(byMonth[k]||0)+1; });
       const monthSorted = Object.entries(byMonth).sort(([a],[b])=>a.localeCompare(b));
       const maxM2 = Math.max(...monthSorted.map(([,v])=>v),1);
       const barH  = 108;
       const step  = Math.max(1, Math.ceil(monthSorted.length/Math.max(1,Math.floor(560/40))));
-
       const chartBars = monthSorted.map(([k,v],i)=>{
         const showL = i%step===0||i===monthSorted.length-1;
         return `<div class="bar-wrap-c" style="width:20px">
@@ -224,11 +210,13 @@
         </div>`;
       }).join('');
 
-      const bySalon={};
-      msgs.forEach(x=>{ bySalon[x.salon_nom]=(bySalon[x.salon_nom]||0)+1; });
-      const topSalons = Object.entries(bySalon).sort(([,a],[,b])=>b-a);
-      const maxS = topSalons[0]?.[1]||1;
+      // Top membres
+      const byMembre={};
+      msgs.forEach(x=>{ byMembre[x.auteur_id]=(byMembre[x.auteur_id]||0)+1; });
+      const topMb = Object.entries(byMembre).sort(([,a],[,b])=>b-a);
+      const maxMb = topMb[0]?.[1]||1;
 
+      // Types
       const byType={};
       msgs.forEach(x=>{ byType[x.type]=(byType[x.type]||0)+1; });
       const icons={texte:'💬',image:'🖼️',lien:'🔗',video:'🎥',fichier:'📎',sondage:'🗳️',autre:'❓'};
@@ -237,8 +225,8 @@
         <div>
           <div class="mini-kpis">
             <div class="mini-kpi"><div class="n">${msgs.length}</div><div class="l">Messages</div></div>
+            <div class="mini-kpi"><div class="n">${new Set(msgs.map(m=>m.auteur_id)).size}</div><div class="l">Auteurs</div></div>
             <div class="mini-kpi"><div class="n">${msgs.filter(x=>x.est_reponse).length}</div><div class="l">Réponses</div></div>
-            <div class="mini-kpi"><div class="n">${msgs.filter(x=>x.type==='image').length}</div><div class="l">Images</div></div>
             <div class="mini-kpi"><div class="n">${msgs.filter(x=>x.type==='sondage').length}</div><div class="l">Sondages</div></div>
           </div>
         </div>
@@ -247,18 +235,23 @@
           <div class="chart-wrap"><div class="chart-bars">${chartBars||'<span style="color:var(--muted);font-size:.8rem;padding:.5rem">Aucune donnée</span>'}</div></div>
         </div>
         <div>
-          <div class="panel-section-title">Par salon</div>
-          <div class="salon-bars">${topSalons.map(([n2,c])=>`
-            <div class="salon-row">
-              <div class="salon-name">#${esc(n2)}</div>
-              <div class="salon-bar-bg"><div class="salon-bar-fill" style="width:${Math.round(c/maxS*100)}%"></div></div>
-              <div class="salon-count">${c}</div>
-            </div>`).join('')}</div>
+          <div class="panel-section-title">Membres actifs</div>
+          <div class="member-bars">${topMb.map(([mid,c])=>{
+            const mb  = memberMap[mid];
+            const nom2= mb?.display_name||mb?.nom||mid.slice(0,8);
+            const av  = mb?.avatar_url?`<img src="${esc(mb.avatar_url)}" alt="">`:nom2.slice(0,2).toUpperCase();
+            return `<div class="mb-row">
+              <div class="mb-av">${av}</div>
+              <div class="mb-name">${esc(nom2)}</div>
+              <div class="mb-bar-bg"><div class="mb-bar-fill" style="width:${Math.round(c/maxMb*100)}%"></div></div>
+              <div class="mb-count">${c}</div>
+            </div>`;
+          }).join('')}</div>
         </div>
         <div>
           <div class="panel-section-title">Types de contenu</div>
-          <div class="types-grid">${Object.entries(byType).sort(([,a],[,b])=>b-a).map(([t,n2])=>`
-            <div class="type-card"><div class="type-icon">${icons[t]||'❓'}</div><div class="type-count">${n2}</div><div class="type-label">${t[0].toUpperCase()+t.slice(1)}</div></div>`).join('')}
+          <div class="types-grid">${Object.entries(byType).sort(([,a],[,b])=>b-a).map(([t,n])=>`
+            <div class="type-card"><div class="type-icon">${icons[t]||'❓'}</div><div class="type-count">${n}</div><div class="type-label">${t[0].toUpperCase()+t.slice(1)}</div></div>`).join('')}
           </div>
         </div>`;
 

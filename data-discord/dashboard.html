@@ -130,13 +130,14 @@
     .anc-days { font-size: .75rem; font-weight: 600; color: #a5b4fc; background: rgba(88,101,242,.12); padding: .15em .5em; border-radius: 4px; }
 
     /* ── Modal ── */
-    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 100; align-items: flex-start; justify-content: flex-end; padding: 1rem; }
-    .overlay.open { display: flex; }
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; }
+    .overlay.open { display: block; }
     .modal-panel {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-      width: 420px; max-width: 95vw; height: calc(100vh - 2rem); overflow-y: auto;
-      display: flex; flex-direction: column;
-      animation: slideIn .2s ease;
+      position: fixed; top: 0; right: 0; bottom: 0;
+      width: 640px; max-width: 95vw;
+      background: var(--sidebar-bg); border-left: 1px solid var(--border);
+      overflow-y: auto; display: flex; flex-direction: column;
+      animation: slideIn .22s ease;
     }
     @keyframes slideIn { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     .modal-header { display: flex; align-items: center; gap: .75rem; padding: 1.25rem 1.25rem 1rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 1; }
@@ -325,9 +326,9 @@
       const reponses = allMessages.filter(m => m.est_reponse).length;
 
       document.getElementById('kpis').innerHTML = `
-        <div class="kpi"><div class="kpi-label">Membres</div><div class="kpi-value">${allMembres.length}</div><div class="kpi-sub">sur le serveur</div></div>
+        <a href="/data-discord/membres.html?id=${GUILD_ID}" class="kpi" style="text-decoration:none;cursor:pointer" title="Voir tous les membres"><div class="kpi-label">Membres</div><div class="kpi-value">${allMembres.length}</div><div class="kpi-sub">sur le serveur ›</div></a>
         <div class="kpi"><div class="kpi-label">Messages</div><div class="kpi-value">${allMessages.length}</div><div class="kpi-sub">${auteurs} auteurs</div></div>
-        <div class="kpi"><div class="kpi-label">Salons</div><div class="kpi-value">${salons}</div><div class="kpi-sub">actifs</div></div>
+        <a href="/data-discord/salons.html?id=${GUILD_ID}" class="kpi" style="text-decoration:none;cursor:pointer" title="Voir tous les salons"><div class="kpi-label">Salons</div><div class="kpi-value">${salons}</div><div class="kpi-sub">actifs ›</div></a>
         <div class="kpi"><div class="kpi-label">Sondages</div><div class="kpi-value">${sondages}</div><div class="kpi-sub">natifs Discord</div></div>
         <div class="kpi"><div class="kpi-label">Réponses</div><div class="kpi-value">${reponses}</div><div class="kpi-sub">${Math.round(reponses / Math.max(allMessages.length,1) * 100)}% des msgs</div></div>
       `;
@@ -524,12 +525,14 @@
         <div>
           <div class="modal-section-title">Activité mensuelle</div>
           <div class="chart-wrap" style="padding:.85rem">
-            <div class="chart-bars" style="height:60px">
-              ${monthSorted.map(([k,v]) => `
-                <div class="bar-wrap" style="width:16px">
-                  <div class="bar-col" style="width:100%;height:${Math.round(v/maxM*56)}px" title="${k}:${v}"></div>
-                  <div class="bar-lbl">${shortLabel(k)}</div>
-                </div>`).join('')}
+            <div class="chart-bars" style="height:130px">
+              ${monthSorted.map(([k,v],i) => {
+                const showL = i % Math.max(1, Math.ceil(monthSorted.length/14)) === 0 || i === monthSorted.length-1;
+                return `<div class="bar-wrap" style="width:20px">
+                  <div class="bar-col" style="width:100%;height:${Math.max(2,Math.round(v/maxM*108))}px" title="${k}:${v}"></div>
+                  ${showL ? `<div class="bar-lbl">${shortLabel(k)}</div>` : ''}
+                </div>`;
+              }).join('')}
             </div>
           </div>
         </div>
@@ -598,12 +601,14 @@
         <div>
           <div class="modal-section-title">Activité mensuelle</div>
           <div class="chart-wrap" style="padding:.85rem">
-            <div class="chart-bars" style="height:60px">
-              ${monthSorted.map(([k,v]) => `
-                <div class="bar-wrap" style="width:16px">
-                  <div class="bar-col" style="width:100%;height:${Math.round(v/maxM*56)}px" title="${k}:${v}"></div>
-                  <div class="bar-lbl">${shortLabel(k)}</div>
-                </div>`).join('')}
+            <div class="chart-bars" style="height:130px">
+              ${monthSorted.map(([k,v],i) => {
+                const showL = i % Math.max(1, Math.ceil(monthSorted.length/14)) === 0 || i === monthSorted.length-1;
+                return `<div class="bar-wrap" style="width:20px">
+                  <div class="bar-col" style="width:100%;height:${Math.max(2,Math.round(v/maxM*108))}px" title="${k}:${v}"></div>
+                  ${showL ? `<div class="bar-lbl">${shortLabel(k)}</div>` : ''}
+                </div>`;
+              }).join('')}
             </div>
           </div>
         </div>
