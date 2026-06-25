@@ -205,7 +205,7 @@ async function main() {
   let mbCount = 0;
   for (const [id, member] of members) {
     if (member.user.bot) continue;
-    await fsAdd('discord_membres_bot', {
+    await fsSet('discord_membres_bot', `${GUILD_ID}_${id}`, {
       serveur_id:   GUILD_ID,
       discord_id:   id,
       nom:          member.user.username,
