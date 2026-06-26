@@ -153,7 +153,7 @@ async function init() {
   renderHistNotes10({ passees, membres });
   renderHistNotes5({ votes: votesChron, membres });
   renderParticipation({ votes: votesAvecExcept, membres });
-  renderColsLecteurs({ reunions, livres, statuts, votes });
+  renderColsLecteurs({ reunions, livres, statuts });
   renderPlotNotes({ passees, membreById });
   renderTblActifs({ membres, livres, votes: votesAvecExcept, reunions, statuts, commentaires });
   renderBilanProps({ membres, livres, votes: votesChron, reunions, livreById });
@@ -416,38 +416,39 @@ function renderParticipation({ votes, membres }) {
 // ════════════════════════════════════════════════════════════════════
 // 5. Colonnes lecteurs par séance (Archétype 3)
 // ════════════════════════════════════════════════════════════════════
-function renderColsLecteurs({ reunions, livres, statuts, votes }) {
+function renderColsLecteurs({ reunions, livres, statuts }) {
   const host = document.getElementById("cols-lecteurs");
 
-  // Un point par vote avec livre élu, trié par mois/année
-  const votesElus = [...votes]
-    .filter(v => !v.exceptionnel && v.livre_elu)
-    .sort((a, b) => a.annee !== b.annee ? a.annee - b.annee : a.mois - b.mois);
+  // Itérer sur les réunions liées à un livre élu, triées par mois/année
+  // (inclut toutes les réunions peu importe leur statut, et tous les livres
+  //  élus y compris ceux dont le vote est marqué exceptionnel)
+  const livresElus = new Set(livres.filter(l => l.statut === "elu").map(l => l.id));
 
-  if (!votesElus.length) {
-    host.innerHTML = `<p class="sx-note">Aucun livre élu.</p>`;
+  const cols = reunions
+    .filter(r => r.livre_id && livresElus.has(r.livre_id) && r.mois && r.annee)
+    .sort((a, b) => a.annee !== b.annee ? a.annee - b.annee : a.mois - b.mois)
+    .map(r => {
+      const livre = livres.find(l => l.id === r.livre_id);
+      const count = membersWhoFinishedBook(r.livre_id, statuts, [r]).size;
+      const d     = new Date(r.annee, r.mois - 1);
+      const lab   = d.toLocaleDateString("fr-FR", { month: "long" });
+      const titre = livre?.titre ?? "?";
+      return { r, count, lab, titre };
+    });
+
+  if (!cols.length) {
+    host.innerHTML = `<p class="sx-note">Aucun livre élu avec réunion.</p>`;
     return;
   }
 
-  const cols = votesElus.map(v => {
-    const livre   = livres.find(l => l.id === v.livre_elu);
-    const reunion = reunions.find(r => r.livre_id === v.livre_elu) ?? null;
-    const count   = membersWhoFinishedBook(v.livre_elu, statuts, reunion ? [reunion] : []).size;
-    const lab     = new Date(v.annee, v.mois - 1)
-      .toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
-    const titre   = livre?.titre ?? "?";
-    return { reunion, count, lab, titre };
-  });
-
   const maxVal = Math.max(1, ...cols.map(c => c.count));
+  const panel  = host.closest(".sx-panel") || host.parentElement;
 
-  host.innerHTML = cols.map(({ reunion, count, lab, titre }) => {
-    const rid = reunion?.id ?? null;
+  host.innerHTML = cols.map(({ r, count, lab, titre }) => {
     const h   = Math.max(count / maxVal * 100, count > 0 ? 10 : 2).toFixed(1);
-    const tipText = `${titre} — ${count} lecteur${count !== 1 ? "s" : ""}`;
-    return `<div class="sx-col sx-col-tip"
-        ${rid ? `data-rid="${rid}" style="cursor:pointer"` : ""}
-        data-tip="${tipText.replace(/"/g, "&quot;")}">
+    return `<div class="sx-col sx-col-lect"
+        data-rid="${r.id}"
+        data-tip="${titre.replace(/"/g, "&quot;")} — ${count} lecteur${count !== 1 ? "s" : ""}">
       <div class="sx-col-bars" style="height:${h}%">
         <div class="sx-col-seg" style="height:100%;background:var(--accent)"></div>
       </div>
@@ -456,26 +457,40 @@ function renderColsLecteurs({ reunions, livres, statuts, votes }) {
     </div>`;
   }).join("");
 
-  // Tooltip flottant
-  let tip = document.getElementById("sx-float-tip");
-  if (!tip) {
-    tip = document.createElement("div");
-    tip.id = "sx-float-tip";
-    tip.className = "sx-float-tip";
-    document.body.appendChild(tip);
-  }
-  host.addEventListener("mousemove", e => {
-    const col = e.target.closest(".sx-col-tip[data-tip]");
-    if (col) {
+  // Tooltip positionné dans le panel (même style que celui des propositions)
+  if (panel) {
+    panel.style.position = "relative";
+    const tip = document.createElement("div");
+    tip.style.cssText = [
+      "position:absolute",
+      "background:var(--surface)",
+      "color:var(--text)",
+      "border:1px solid var(--border)",
+      "border-radius:6px",
+      "padding:.4rem .75rem",
+      "font-size:.82rem",
+      "pointer-events:none",
+      "white-space:nowrap",
+      "opacity:0",
+      "transition:opacity .12s",
+      "z-index:20",
+      "transform:translate(-50%,-100%)",
+      "box-shadow:0 2px 12px rgba(0,0,0,.15)",
+    ].join(";");
+    panel.appendChild(tip);
+
+    host.addEventListener("mousemove", e => {
+      const col = e.target.closest(".sx-col-lect[data-tip]");
+      if (!col) { tip.style.opacity = "0"; return; }
       tip.textContent = col.dataset.tip;
-      tip.style.left = (e.clientX + 14) + "px";
-      tip.style.top  = (e.clientY - 36) + "px";
-      tip.classList.add("sx-float-tip--vis");
-    } else {
-      tip.classList.remove("sx-float-tip--vis");
-    }
-  });
-  host.addEventListener("mouseleave", () => tip.classList.remove("sx-float-tip--vis"));
+      const pRect = panel.getBoundingClientRect();
+      const cRect = col.getBoundingClientRect();
+      tip.style.left = (cRect.left + cRect.width / 2 - pRect.left) + "px";
+      tip.style.top  = (cRect.top - pRect.top - 8) + "px";
+      tip.style.opacity = "1";
+    });
+    host.addEventListener("mouseleave", () => { tip.style.opacity = "0"; });
+  }
 
   // Clic → réunion associée
   host.addEventListener("click", e => {
@@ -1088,7 +1103,7 @@ function renderPropsStack({ membres, livres }) {
     const h     = maxTotal ? Math.max(total / maxTotal * 100, 10) : 10;
     const [year, mon] = k.split("-");
     const lab   = new Date(Number(year), Number(mon) - 1)
-      .toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
+      .toLocaleDateString("fr-FR", { month: "long" });
 
     const segs = membresImpliques.map(m => {
       const cnt = moisMap[k][m.id] || 0;
