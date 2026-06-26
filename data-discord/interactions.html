@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Discord — Interactions</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #313338; --sidebar-bg: #2b2d31; --surface: #383a40; --surface2: #404249;
+      --border: #1e1f22; --text: #dbdee1; --muted: #80848e; --accent: #5865f2;
+      --green: #57f287; --yellow: #fee75c; --red: #ed4245;
+      --sidebar-w: 220px;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; line-height: 1.5; display: flex; min-height: 100vh; }
+
+    /* ── Sidebar ── */
+    #sidebar { width: var(--sidebar-w); background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; padding: 1.25rem .75rem; overflow-y: auto; }
+    .sidebar-header { display: flex; align-items: center; gap: .6rem; padding: .5rem .5rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,.06); margin-bottom: .75rem; }
+    .sidebar-logo { font-size: 1.4rem; }
+    .sidebar-title { font-weight: 700; font-size: .95rem; color: #fff; }
+    .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .sidebar-section { font-size: .68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; padding: .75rem .75rem .25rem; }
+    .sidebar-link { display: flex; align-items: center; gap: .55rem; padding: .55rem .75rem; border-radius: 6px; text-decoration: none; color: var(--muted); font-size: .88rem; font-weight: 500; transition: background .15s, color .15s; }
+    .sidebar-link:hover { background: rgba(255,255,255,.06); color: var(--text); }
+    .sidebar-link.active { background: rgba(88,101,242,.2); color: #c7caf9; }
+    .sidebar-link.server-active { color: var(--text); }
+    .sidebar-sublink { font-size: .82rem; padding: .4rem .65rem; }
+    .sidebar-footer { padding-top: 1rem; border-top: 1px solid rgba(255,255,255,.06); }
+    .sidebar-home { display: block; text-decoration: none; color: var(--muted); font-size: .8rem; padding: .4rem .5rem; border-radius: 5px; transition: color .15s; }
+    .sidebar-home:hover { color: var(--text); }
+
+    /* ── Main ── */
+    .main { margin-left: var(--sidebar-w); flex: 1; padding: 2rem 2.5rem; display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* ── Page header ── */
+    .page-header { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1.75rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+    .page-title { font-size: 1.3rem; font-weight: 700; color: #fff; }
+    .page-sub { font-size: .82rem; color: var(--muted); }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; gap: 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 3px; margin-bottom: 1.75rem; width: fit-content; }
+    .tab-btn { padding: .42rem 1.1rem; border-radius: 6px; font-size: .85rem; font-weight: 600; color: var(--muted); background: none; border: none; cursor: pointer; transition: background .15s, color .15s; }
+    .tab-btn.active { background: var(--accent); color: #fff; }
+    .tab-btn:hover:not(.active) { background: rgba(255,255,255,.06); color: var(--text); }
+
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* ── Contrôles ── */
+    .controls { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .ctrl-group { display: flex; align-items: center; gap: .65rem; }
+    .ctrl-label { font-size: .78rem; color: var(--muted); font-weight: 600; }
+    input[type=range] { accent-color: var(--accent); cursor: pointer; width: 140px; }
+    .ctrl-val { font-size: .83rem; color: var(--text); font-weight: 700; min-width: 55px; }
+
+    /* ── Top paires ── */
+    .section-title { font-size: .75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: .75rem; }
+    .pairs-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.1rem; margin-bottom: 1.5rem; }
+    .pairs-grid { display: grid; grid-template-columns: max-content 1fr auto; gap: .4rem .75rem; align-items: center; }
+    .pair-names { font-size: .85rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+    .pair-bar-bg { height: 5px; background: rgba(255,255,255,.07); border-radius: 99px; overflow: hidden; min-width: 0; }
+    .pair-bar-fill { height: 100%; border-radius: 99px; background: var(--accent); opacity: .75; }
+    .pair-count { font-size: .82rem; font-weight: 700; color: var(--text); text-align: right; white-space: nowrap; }
+
+    /* ── Matrice heatmap ── */
+    .matrix-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.1rem; overflow-x: auto; }
+    .matrix-table { border-collapse: collapse; font-size: .75rem; white-space: nowrap; }
+    .matrix-table th { padding: .3rem .5rem; color: var(--muted); font-weight: 600; }
+    .matrix-table th.row-head { text-align: right; color: var(--text); max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+    .matrix-table th.col-head { writing-mode: vertical-rl; transform: rotate(180deg); max-height: 90px; overflow: hidden; text-overflow: ellipsis; padding: .5rem .25rem; color: var(--text); }
+    .matrix-table td { padding: .28rem .35rem; text-align: center; min-width: 32px; border-radius: 3px; cursor: default; }
+    .matrix-table td.self { background: rgba(255,255,255,.03); }
+
+    /* ── Graphe iframe ── */
+    .graphe-iframe-wrap { flex: 1; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); min-height: calc(100vh - 220px); }
+    .graphe-iframe-wrap iframe { width: 100%; height: 100%; border: none; min-height: calc(100vh - 220px); }
+
+    /* ── Empty ── */
+    .empty { color: var(--muted); font-size: .85rem; font-style: italic; padding: 1.5rem 0; }
+
+    /* ── Tooltip ── */
+    #matrix-tooltip {
+      position: fixed; pointer-events: none; z-index: 50; display: none;
+      background: #1e1f22; border: 1px solid rgba(255,255,255,.12); border-radius: 8px;
+      padding: .5rem .75rem; flex-direction: column; gap: .1rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,.4);
+    }
+    #matrix-tooltip.visible { display: flex; }
+    .tt-names { font-size: .78rem; color: var(--text); font-weight: 600; }
+    .tt-count  { font-size: .9rem; font-weight: 700; color: #fff; }
+
+    @media (max-width: 640px) { #sidebar { display: none; } .main { margin-left: 0; padding: 1.25rem; } }
+  </style>
+</head>
+<body>
+  <div id="sidebar"></div>
+
+  <main class="main">
+    <div class="page-header">
+      <div class="page-title">🤝 Interactions</div>
+      <div class="page-sub" id="page-sub">Chargement…</div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="convos">💬 Conversations</button>
+      <button class="tab-btn" data-tab="reponses">↩️ Réponses</button>
+      <button class="tab-btn" data-tab="graphe">🕸️ Graphe</button>
+    </div>
+
+    <!-- Conversations -->
+    <div class="tab-pane active" id="tab-convos">
+      <div class="controls">
+        <div class="ctrl-group">
+          <div class="ctrl-label">Fenêtre de conversation</div>
+          <input type="range" id="window-slider" min="5" max="120" step="5" value="30">
+          <div class="ctrl-val"><span id="window-val">30</span> min</div>
+        </div>
+      </div>
+      <div class="section-title">Top paires</div>
+      <div class="pairs-wrap"><div class="pairs-grid" id="convo-pairs"></div></div>
+      <div class="section-title">Matrice des conversations</div>
+      <div class="matrix-wrap" id="convo-matrix"></div>
+    </div>
+
+    <!-- Réponses -->
+    <div class="tab-pane" id="tab-reponses">
+      <div class="section-title">Top paires</div>
+      <div class="pairs-wrap"><div class="pairs-grid" id="reply-pairs"></div></div>
+      <div class="section-title">Matrice des réponses</div>
+      <div class="matrix-wrap" id="reply-matrix"></div>
+    </div>
+
+    <!-- Graphe -->
+    <div class="tab-pane" id="tab-graphe">
+      <div class="graphe-iframe-wrap" id="graphe-wrap"></div>
+    </div>
+  </main>
+
+  <div id="matrix-tooltip">
+    <div class="tt-names" id="tt-names"></div>
+    <div class="tt-count" id="tt-count"></div>
+  </div>
+
+  <script type="module">
+    import { db } from './firebase-config.js';
+    import { renderNav } from './nav.js';
+    import { collection, getDocs, query, where, doc, getDoc }
+      from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    const params   = new URLSearchParams(location.search);
+    const GUILD_ID = params.get('id') || '1499528679758364744';
+
+    let allMessages = [];
+    let allMembres  = [];
+    let windowMin   = 30;
+
+    // ── Chargement ────────────────────────────────────────────────
+    async function load() {
+      const [msgSnap, mbSnap, srvSnap, srvDoc] = await Promise.all([
+        getDocs(query(collection(db, 'discord_messages'),     where('serveur_id', '==', GUILD_ID))),
+        getDocs(query(collection(db, 'discord_membres_bot'), where('serveur_id', '==', GUILD_ID))),
+        getDocs(query(collection(db, 'discord_serveurs'))),
+        getDoc(doc(db, 'discord_serveurs', GUILD_ID))
+      ]);
+
+      allMessages = msgSnap.docs.map(d => d.data());
+      allMembres  = mbSnap.docs.map(d => d.data());
+
+      const srv = srvDoc.exists() ? srvDoc.data() : {};
+      const allServers = srvSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderNav(GUILD_ID, allServers);
+
+      document.getElementById('page-sub').textContent =
+        `${srv.nom || 'Serveur'} · ${allMessages.length} messages`;
+
+      renderConvos();
+      renderReponses();
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────
+    function memberName(id) {
+      const mb = allMembres.find(m => m.discord_id === id);
+      return mb?.display_name || mb?.nom || id.slice(0, 8);
+    }
+
+    function pairKey(a, b) {
+      return a < b ? `${a}|${b}` : `${b}|${a}`;
+    }
+
+    // ── Conversations ─────────────────────────────────────────────
+    function buildConvoPairs(windowMs) {
+      // Grouper par salon, trier par timestamp
+      const bySalon = {};
+      allMessages.forEach(m => {
+        if (!bySalon[m.salon_id]) bySalon[m.salon_id] = [];
+        bySalon[m.salon_id].push(m);
+      });
+
+      const pairCounts = {};
+
+      for (const msgs of Object.values(bySalon)) {
+        msgs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        let convoParticipants = new Set();
+        let lastTime = null;
+
+        const flushConvo = () => {
+          const parts = [...convoParticipants];
+          for (let i = 0; i < parts.length; i++) {
+            for (let j = i + 1; j < parts.length; j++) {
+              const k = pairKey(parts[i], parts[j]);
+              pairCounts[k] = (pairCounts[k] || 0) + 1;
+            }
+          }
+          convoParticipants = new Set();
+        };
+
+        for (const m of msgs) {
+          const t = new Date(m.date).getTime();
+          if (lastTime !== null && t - lastTime > windowMs) {
+            flushConvo();
+          }
+          convoParticipants.add(m.auteur_id);
+          lastTime = t;
+        }
+        flushConvo();
+      }
+
+      return pairCounts;
+    }
+
+    function renderConvos() {
+      const pairCounts = buildConvoPairs(windowMin * 60000);
+      const sorted = Object.entries(pairCounts).sort(([,a],[,b]) => b - a);
+      renderPairs('convo-pairs', sorted);
+      renderMatrix('convo-matrix', sorted, 'conversations');
+    }
+
+    document.getElementById('window-slider').addEventListener('input', e => {
+      windowMin = +e.target.value;
+      document.getElementById('window-val').textContent = windowMin;
+      renderConvos();
+    });
+
+    // ── Réponses ──────────────────────────────────────────────────
+    function buildReplyPairs() {
+      // Construire un index messageId → auteur_id
+      const msgIndex = {};
+      allMessages.forEach(m => {
+        if (m.timestamp || m.date) {
+          // On utilise auteur_id + un identifiant de message
+          // On n'a pas de message_id en frontend, on va indexer par reponse_a_message_id
+        }
+      });
+
+      // Index par reponse_a_message_id : on cherche le message original dans allMessages
+      // On a besoin d'un id unique par message — on peut reconstruire via auteur_id+date+salon
+      // Mais on a reponse_a_message_id sauvegardé côté bot → on doit le cross-ref
+      // Le message original n'a pas d'id dans notre collection, on ne peut donc que compter
+      // qui fait des réponses à qui en cherchant si le message référencé est dans notre dataset.
+      // Note: on n'a pas le champ message_id dans discord_messages (on ne le sauvegarde pas).
+      // On compte donc "qui répond le plus" par auteur, en attendant d'avoir le champ message_id.
+
+      // Fallback : grouper les réponses par auteur uniquement
+      const replierCounts = {};
+      allMessages.filter(m => m.est_reponse).forEach(m => {
+        replierCounts[m.auteur_id] = (replierCounts[m.auteur_id] || 0) + 1;
+      });
+
+      return { pairCounts: {}, replierCounts };
+    }
+
+    function renderReponses() {
+      const { replierCounts } = buildReplyPairs();
+      const sorted = Object.entries(replierCounts).sort(([,a],[,b]) => b - a);
+      const max = sorted[0]?.[1] || 1;
+
+      const pairsEl = document.getElementById('reply-pairs');
+      if (!sorted.length) {
+        pairsEl.innerHTML = '<div class="empty">Aucune réponse directe collectée</div>';
+        document.getElementById('reply-matrix').innerHTML =
+          '<div class="empty">Les données de croisement seront disponibles après une prochaine collecte incluant l\'identifiant du message original.</div>';
+        return;
+      }
+
+      // Top repliers (liste simple car on n'a pas la cible)
+      pairsEl.innerHTML = sorted.slice(0, 15).map(([id, n]) => `
+        <div class="pair-names">${esc(memberName(id))}</div>
+        <div class="pair-bar-bg"><div class="pair-bar-fill" style="width:${Math.round(n/max*100)}%"></div></div>
+        <div class="pair-count">${n}</div>
+      `).join('');
+
+      document.getElementById('reply-matrix').innerHTML =
+        '<div style="color:var(--muted);font-size:.82rem;padding:.5rem 0">La matrice de croisement (qui répond à qui) sera disponible après une prochaine collecte — le champ <code style="background:rgba(255,255,255,.07);padding:.1em .4em;border-radius:3px">message_id</code> doit être ajouté à la collecte.</div>';
+    }
+
+    // ── Rendu générique paires ────────────────────────────────────
+    function renderPairs(elId, sorted) {
+      const el = document.getElementById(elId);
+      const top = sorted.slice(0, 15);
+      const max = top[0]?.[1] || 1;
+
+      if (!top.length) {
+        el.innerHTML = '<div class="empty">Aucune donnée</div>';
+        return;
+      }
+
+      el.innerHTML = top.map(([key, n]) => {
+        const [a, b] = key.split('|');
+        const label = `${esc(memberName(a))} & ${esc(memberName(b))}`;
+        return `
+          <div class="pair-names" title="${label}">${label}</div>
+          <div class="pair-bar-bg"><div class="pair-bar-fill" style="width:${Math.round(n/max*100)}%"></div></div>
+          <div class="pair-count">${n}</div>`;
+      }).join('');
+    }
+
+    // ── Matrice heatmap ───────────────────────────────────────────
+    function renderMatrix(elId, sorted, unit) {
+      const el = document.getElementById(elId);
+      if (!sorted.length) { el.innerHTML = '<div class="empty">Aucune donnée</div>'; return; }
+
+      // Membres impliqués, triés par total décroissant
+      const totals = {};
+      sorted.forEach(([key, n]) => {
+        const [a, b] = key.split('|');
+        totals[a] = (totals[a] || 0) + n;
+        totals[b] = (totals[b] || 0) + n;
+      });
+      const members = Object.entries(totals).sort(([,a],[,b]) => b-a).slice(0, 16).map(([id]) => id);
+
+      // Map paire → count
+      const pairMap = {};
+      sorted.forEach(([key, n]) => { pairMap[key] = n; });
+      const max = sorted[0]?.[1] || 1;
+
+      const heatColor = (n) => {
+        if (!n) return 'rgba(255,255,255,.03)';
+        const t = n / max;
+        const a = 0.12 + t * 0.65;
+        return `rgba(88,101,242,${a.toFixed(2)})`;
+      };
+
+      let html = `<table class="matrix-table"><thead><tr><th></th>`;
+      members.forEach(id => {
+        html += `<th class="col-head" title="${esc(memberName(id))}">${esc(memberName(id))}</th>`;
+      });
+      html += '</tr></thead><tbody>';
+
+      members.forEach(rowId => {
+        html += `<tr><th class="row-head" title="${esc(memberName(rowId))}">${esc(memberName(rowId))}</th>`;
+        members.forEach(colId => {
+          if (rowId === colId) {
+            html += `<td class="self">—</td>`;
+          } else {
+            const n = pairMap[pairKey(rowId, colId)] || 0;
+            html += `<td style="background:${heatColor(n)}"
+              data-a="${esc(memberName(rowId))}" data-b="${esc(memberName(colId))}"
+              data-n="${n}" data-unit="${unit}">${n || ''}</td>`;
+          }
+        });
+        html += '</tr>';
+      });
+
+      html += '</tbody></table>';
+      el.innerHTML = html;
+
+      // Tooltip
+      const tooltip = document.getElementById('matrix-tooltip');
+      el.addEventListener('mouseover', e => {
+        const td = e.target.closest('td[data-n]');
+        if (!td) return;
+        document.getElementById('tt-names').textContent = `${td.dataset.a} & ${td.dataset.b}`;
+        const n = +td.dataset.n;
+        document.getElementById('tt-count').textContent =
+          `${n} ${td.dataset.unit}`;
+        tooltip.classList.add('visible');
+      });
+      el.addEventListener('mousemove', e => {
+        tooltip.style.left = (e.clientX + 14) + 'px';
+        tooltip.style.top  = (e.clientY - 52) + 'px';
+      });
+      el.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
+    }
+
+    // ── Tabs ──────────────────────────────────────────────────────
+    let grapheLoaded = false;
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+
+        if (btn.dataset.tab === 'graphe' && !grapheLoaded) {
+          grapheLoaded = true;
+          const wrap = document.getElementById('graphe-wrap');
+          const iframe = document.createElement('iframe');
+          iframe.src = `/data-discord/graphe.html?id=${GUILD_ID}`;
+          wrap.appendChild(iframe);
+        }
+      });
+    });
+
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    load();
+  </script>
+</body>
+</html>
