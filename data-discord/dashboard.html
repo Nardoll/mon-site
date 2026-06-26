@@ -360,6 +360,13 @@
         allMessages.filter(m => m.date?.slice(0,7) === thisMonth).map(m => m.auteur_id)
       ).size;
 
+      // Membres actifs cette semaine
+      const now7 = new Date(); now7.setDate(now7.getDate() - now7.getDay() + (now7.getDay()===0?-6:1));
+      const d7str = now7.toISOString().slice(0,10);
+      const activeThisWeek = new Set(
+        allMessages.filter(m => m.date >= d7str).map(m => m.auteur_id)
+      ).size;
+
       // Salons
       const salonMap = {};
       allMessages.forEach(m => {
@@ -393,12 +400,6 @@
         });
       const maxReplies = topRepliers[0]?.n || 1;
 
-      // ── Calcul membres actifs 30j ────
-      const d30 = new Date(); d30.setDate(d30.getDate()-30);
-      const d30str = d30.toISOString().slice(0,10);
-      const active30 = new Set(
-        allMessages.filter(m => m.date >= d30str).map(m => m.auteur_id)
-      ).size;
 
       // ── HTML des cartes ────
       grid.innerHTML = `
@@ -413,8 +414,8 @@
           <div class="sec-card-extras">
             <div class="stat-pill">
               <div class="stat-dot" style="background:var(--green)"></div>
-              <div class="stat-label">Actifs ces 30 derniers jours</div>
-              <div class="stat-val">${active30}</div>
+              <div class="stat-label">Actifs cette semaine</div>
+              <div class="stat-val">${activeThisWeek}</div>
             </div>
             <div class="stat-pill">
               <div class="stat-dot" style="background:var(--accent)"></div>
