@@ -69,11 +69,19 @@ async function init() {
     }
   });
 
-  // Regroupement réunions par participant
+  // Regroupement réunions par participant OU lecteur du livre
   reunions.forEach(r => {
-    (r.participant_ids || []).forEach(mid => {
+    const presents = new Set(r.participant_ids || []);
+    // Participants présents à la réunion
+    presents.forEach(mid => {
       if (!reunionsByMembre[mid]) reunionsByMembre[mid] = [];
-      reunionsByMembre[mid].push(r);
+      reunionsByMembre[mid].push({ r, present: true });
+    });
+    // Lecteurs du livre absents de la réunion
+    (r.lecteurs_ids || []).forEach(mid => {
+      if (presents.has(mid)) return;
+      if (!reunionsByMembre[mid]) reunionsByMembre[mid] = [];
+      reunionsByMembre[mid].push({ r, present: false });
     });
   });
 
@@ -265,15 +273,20 @@ async function openMember(membreId) {
     : `<div class="rf-empty">Aucun commentaire enregistré.</div>`;
 
   // ── Réunions ──────────────────────────────────────────────────────────────
-  const reuHtml = reus.length
-    ? `<div class="rf-reunions">${reus.map(r => {
-        const titre  = livreById[r.livre_id]?.titre || "—";
-        const note   = r.notes_finales?.[m.id];
-        const absent = note == null;
-        return `<div class="rf-reunion ${absent ? "absent" : ""}">
+  const reusSorted = reus.slice().sort((a, b) =>
+    a.r.annee !== b.r.annee ? a.r.annee - b.r.annee : a.r.mois - b.r.mois
+  );
+  const reuHtml = reusSorted.length
+    ? `<div class="rf-reunions">${reusSorted.map(({ r, present }) => {
+        const titre = livreById[r.livre_id]?.titre || "—";
+        const note  = r.notes_finales?.[m.id];
+        const label = !present
+          ? `<span class="rf-reunion-note absent-label">absent·e <span class="rf-reunion-note-val">${note != null ? `${note}<small>/10</small>` : ""}</span></span>`
+          : `<span class="rf-reunion-note">${note != null ? `${note}<small>/10</small>` : "—"}</span>`;
+        return `<div class="rf-reunion${!present ? " rf-reunion-absent" : ""}">
           <span class="rf-reunion-mois">${formatMois(r.mois, r.annee)}</span>
           <span class="rf-reunion-livre">${esc(titre)}</span>
-          <span class="rf-reunion-note">${absent ? "absent·e" : `${note}<small>/10</small>`}</span>
+          ${label}
         </div>`;
       }).join("")}</div>`
     : `<div class="rf-empty">Aucune réunion enregistrée.</div>`;
