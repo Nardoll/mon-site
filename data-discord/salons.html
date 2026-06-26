@@ -53,6 +53,16 @@
     .bar-bg { width: 110px; height: 5px; background: rgba(255,255,255,.07); border-radius: 99px; overflow: hidden; }
     .bar-fill { height: 100%; border-radius: 99px; background: var(--accent); }
     .chevron { color: var(--muted); font-size: .9rem; }
+    .badge { display: inline-flex; align-items: center; gap: .25rem; font-size: .68rem; font-weight: 600; padding: .15rem .45rem; border-radius: 4px; line-height: 1.4; }
+    .badge-archive { background: rgba(255,255,255,.07); color: var(--muted); }
+    .badge-prive   { background: rgba(255,165,0,.15); color: #ffa500; }
+    .salon-row.archived { opacity: .5; }
+    .salon-row.archived .salon-name { text-decoration: line-through; text-decoration-color: var(--muted); }
+    .panel-toggle-row { display: flex; align-items: center; justify-content: space-between; padding: .65rem .9rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+    .panel-toggle-label { font-size: .83rem; color: var(--text); }
+    .toggle-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-size: .75rem; font-weight: 600; padding: .3rem .75rem; cursor: pointer; transition: all .15s; }
+    .toggle-btn:hover { color: var(--text); }
+    .toggle-btn.active { background: rgba(255,165,0,.2); border-color: #ffa500; color: #ffa500; }
 
     /* ── Panneau détail ── */
     #detail-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 640px; background: var(--sidebar-bg); border-left: 1px solid var(--border); transform: translateX(100%); transition: transform .25s ease; display: flex; flex-direction: column; z-index: 20; overflow-y: auto; }
@@ -124,22 +134,24 @@
   <script type="module">
     import { db } from './firebase-config.js';
     import { renderNav } from './nav.js';
-    import { collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { collection, getDocs, query, where, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
     const params   = new URLSearchParams(location.search);
     const GUILD_ID = params.get('id') || '1499528679758364744';
-    let allMessages = [], allMembres = [], memberMap = {};
+    let allMessages = [], allMembres = [], memberMap = {}, salonMetaMap = {};
     let sortKey = 'msgs', openId = null;
 
     async function load() {
-      const [msgSnap, mbSnap, srvSnap] = await Promise.all([
+      const [msgSnap, mbSnap, srvSnap, salonMetaSnap] = await Promise.all([
         getDocs(query(collection(db,'discord_messages'),    where('serveur_id','==',GUILD_ID))),
         getDocs(query(collection(db,'discord_membres_bot'), where('serveur_id','==',GUILD_ID))),
         getDocs(collection(db,'discord_serveurs')),
+        getDocs(query(collection(db,'discord_salons_bot'), where('serveur_id','==',GUILD_ID))),
       ]);
       allMessages = msgSnap.docs.map(d=>d.data());
       allMembres  = mbSnap.docs.map(d=>d.data());
       allMembres.forEach(m=>{ memberMap[m.discord_id]=m; });
+      salonMetaSnap.docs.forEach(d=>{ const v=d.data(); salonMetaMap[v.salon_id]={docId:d.id,...v}; });
       renderNav('salons', srvSnap.docs.map(d=>({id:d.id,...d.data()})));
       renderList();
     }
@@ -166,12 +178,20 @@
       });
       const maxM = Math.max(...sorted.map(s=>s.msgs),1);
 
-      document.getElementById('salon-list').innerHTML = sorted.map((s,i)=>`
-        <div class="salon-row${openId===s.id?' selected':''}" onclick="openSalon('${s.id}')">
+      document.getElementById('salon-list').innerHTML = sorted.map((s,i)=>{
+        const meta = salonMetaMap[s.id] || {};
+        const isArchive = meta.est_archive === true;
+        const isPrive   = meta.est_prive   === true;
+        const badges = [
+          isArchive ? `<span class="badge badge-archive">🗄️ Archivé</span>` : '',
+          isPrive   ? `<span class="badge badge-prive">🔒 Cercle privé</span>` : '',
+        ].join('');
+        return `
+        <div class="salon-row${openId===s.id?' selected':''}${isArchive?' archived':''}" onclick="openSalon('${s.id}')">
           <div class="rank">#${i+1}</div>
           <div class="salon-hash">#</div>
           <div class="salon-info">
-            <div class="salon-name">#${esc(s.nom)}</div>
+            <div class="salon-name">#${esc(s.nom)} ${badges}</div>
             <div class="salon-sub">
               Premier msg : ${s.firstMsg?.slice(0,10)||'—'}
               &nbsp;·&nbsp;
@@ -183,7 +203,8 @@
             <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(s.msgs/maxM*100)}%"></div></div>
           </div>
           <div class="chevron">›</div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     }
 
     let panelMsgs = [], panelGran = 'month';
@@ -217,14 +238,31 @@
       document.querySelectorAll('.chart-toggle-btn').forEach(b=>b.classList.toggle('active',b.dataset.g===panelGran));
     }
 
+    window.togglePrive = async (id) => {
+      const meta = salonMetaMap[id];
+      if (!meta) return;
+      const newVal = !meta.est_prive;
+      meta.est_prive = newVal;
+      try {
+        await updateDoc(doc(db, 'discord_salons_bot', meta.docId), { est_prive: newVal });
+      } catch(e) { console.error(e); }
+      renderList();
+      openSalon(id);
+    };
+
     window.openSalon = (id) => {
       openId = id; panelGran = 'month';
       renderList();
       panelMsgs = allMessages.filter(x=>x.salon_id===id);
       const nom  = panelMsgs[0]?.salon_nom || id;
+      const meta = salonMetaMap[id] || {};
 
       document.getElementById('p-name').textContent = `#${nom}`;
-      document.getElementById('p-sub').textContent  = `${panelMsgs.length} messages · ${new Set(panelMsgs.map(m=>m.auteur_id)).size} auteurs`;
+      const panelBadges = [
+        meta.est_archive ? `<span class="badge badge-archive">🗄️ Archivé</span>` : '',
+        meta.est_prive   ? `<span class="badge badge-prive">🔒 Cercle privé</span>` : '',
+      ].join(' ');
+      document.getElementById('p-sub').innerHTML = `${panelMsgs.length} messages · ${new Set(panelMsgs.map(m=>m.auteur_id)).size} auteurs ${panelBadges ? '&nbsp;' + panelBadges : ''}`;
 
       const byMembre={};
       panelMsgs.forEach(x=>{ byMembre[x.auteur_id]=(byMembre[x.auteur_id]||0)+1; });
@@ -236,6 +274,14 @@
       const icons={texte:'💬',image:'🖼️',lien:'🔗',video:'🎥',fichier:'📎',sondage:'🗳️',autre:'❓'};
 
       document.getElementById('p-body').innerHTML = `
+        <div>
+          <div class="panel-toggle-row">
+            <span class="panel-toggle-label">🔒 Cercle privé</span>
+            <button class="toggle-btn${meta.est_prive?' active':''}" onclick="togglePrive('${id}')">
+              ${meta.est_prive ? 'Oui — retirer' : 'Non — marquer'}
+            </button>
+          </div>
+        </div>
         <div>
           <div class="mini-kpis">
             <div class="mini-kpi"><div class="n">${panelMsgs.length}</div><div class="l">Messages</div></div>
