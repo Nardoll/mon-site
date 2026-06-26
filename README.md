@@ -7,7 +7,7 @@
 ## ⚠️ Notes importantes pour Claude Code
 
 > **Push sans confirmation.** Tom a demandé de pusher directement après chaque modification, sans demander son feu vert.
-> Le site est hébergé sur **Cloudflare Pages** (déploiement auto à chaque push sur `main`).
+> Le site est hébergé sur **Cloudflare Worker**. Le déploiement **n'est pas automatique** — lancer `npx wrangler deploy` manuellement après chaque push.
 
 > **Mettre à jour ce README à chaque modification significative.** À la fin de chaque session de développement, Claude doit documenter les changements effectués dans la section "Historique des modifications" ci-dessous. C'est une consigne permanente à appliquer sans que Tom ait besoin de le rappeler.
 
@@ -41,14 +41,15 @@ Site **personnel et privé** de Tom. Multi-sections indépendantes. La page d'ac
 | Langages | HTML / CSS / JS vanilla uniquement |
 | Framework | Aucun — pas de React, Vue, bundler, ni npm |
 | Base de données | Firebase Firestore v10.12.2 via CDN (ES modules natifs) |
-| Hébergement | Cloudflare **Worker** (Worker + fichiers statiques) — `npx wrangler deploy`, auto à chaque push sur `main`. Domaine `nardoll.monsiteinternet.workers.dev`. Voir [Enrichissement IA](#enrichissement-ia) |
+| Hébergement | Cloudflare **Worker** (Worker + fichiers statiques) — `npx wrangler deploy` (**manuel**, pas automatique). Domaine `nardoll.monsiteinternet.workers.dev`. Voir [Enrichissement IA](#enrichissement-ia) |
 | Repo GitHub | `https://github.com/Nardoll/mon-site` (branche `main`) |
 
 **Contrainte importante :** ES modules natifs dans le navigateur. Ça fonctionne en HTTPS (Cloudflare Pages) ou via l'extension Live Server de VS Code. Pas de `file://`.
 
 **Workflow :**
 1. Modifier les fichiers dans VS Code
-2. `git add` + `git commit` + `git push` → Cloudflare Pages déploie en ~30 secondes
+2. `git add` + `git commit` + `git push`
+3. `npx wrangler deploy` pour déployer sur Cloudflare
 
 ---
 
