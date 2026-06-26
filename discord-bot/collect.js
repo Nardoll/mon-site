@@ -184,6 +184,8 @@ async function processMessage(msg, channel) {
     serveur_id:           GUILD_ID,
     salon_id:             channel.id,
     salon_nom:            channel.name,
+    categorie_id:         channel.parentId  || null,
+    categorie_nom:        channel.parent?.name || null,
     auteur_id:            msg.author.id,
     auteur_nom:           msg.author.username,
     date:                 msg.createdAt.toISOString(),
@@ -351,6 +353,21 @@ async function main() {
 
   console.log(`💬 ${textChannels.length} salons textuels\n`);
   progress.totalChannels = textChannels.length;
+
+  // Sauvegarder les métadonnées de chaque salon
+  for (const channel of textChannels) {
+    const catNom = channel.parent?.name || null;
+    await fsSet('discord_salons_bot', `${GUILD_ID}_${channel.id}`, {
+      serveur_id:    GUILD_ID,
+      salon_id:      channel.id,
+      salon_nom:     channel.name,
+      categorie_id:  channel.parentId  || null,
+      categorie_nom: catNom,
+      est_archive:   catNom ? catNom.toLowerCase().includes('archive') : false,
+      est_prive:     false, // à définir manuellement sur le site
+      position:      channel.position,
+    }).catch(() => {});
+  }
 
   for (const channel of textChannels) {
     try {
