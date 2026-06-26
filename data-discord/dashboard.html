@@ -154,6 +154,24 @@
     .btn-ghost { background: rgba(255,255,255,.06); color: var(--text); border: 1px solid rgba(255,255,255,.1); }
     .btn-ghost:hover { background: rgba(255,255,255,.1); }
 
+    /* ── Bannière collecte ── */
+    .collect-banner {
+      display: none;
+      margin-bottom: 1.5rem;
+      background: rgba(88,101,242,.1); border: 1px solid rgba(88,101,242,.3);
+      border-radius: 10px; padding: 1rem 1.25rem;
+    }
+    .collect-banner.visible { display: block; }
+    .collect-banner-head { display: flex; align-items: center; gap: .65rem; margin-bottom: .75rem; }
+    .collect-spinner { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); animation: pulse 1.2s ease-in-out infinite; flex-shrink: 0; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+    .collect-banner-title { font-size: .85rem; font-weight: 700; color: #c7caf9; }
+    .collect-progress-bar { height: 6px; background: rgba(255,255,255,.08); border-radius: 99px; overflow: hidden; margin-bottom: .65rem; }
+    .collect-progress-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width .5s; }
+    .collect-stats { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .collect-stat { font-size: .78rem; color: var(--muted); }
+    .collect-stat strong { color: var(--text); }
+
     @media (max-width: 760px) { .cards-grid { grid-template-columns: 1fr; } }
     @media (max-width: 640px) { #sidebar { display: none; } .main { margin-left: 0; padding: 1.25rem; } }
   </style>
@@ -162,6 +180,16 @@
   <div id="sidebar"></div>
 
   <main class="main">
+    <!-- Bannière collecte en cours -->
+    <div class="collect-banner" id="collect-banner">
+      <div class="collect-banner-head">
+        <div class="collect-spinner"></div>
+        <div class="collect-banner-title">Collecte en cours…</div>
+      </div>
+      <div class="collect-progress-bar"><div class="collect-progress-fill" id="collect-fill"></div></div>
+      <div class="collect-stats" id="collect-stats"></div>
+    </div>
+
     <!-- Header serveur -->
     <div class="server-header">
       <div class="server-avatar-wrap">
@@ -246,8 +274,36 @@
       renderNav(GUILD_ID, allServers);
 
       renderHeader();
+      renderCollectBanner();
       renderActivity();
       renderCards();
+    }
+
+    // ── Bannière collecte ─────────────────────────────────────────
+    function renderCollectBanner() {
+      if (!serverData.collection_en_cours) return;
+      const done  = serverData.collection_salons_faits || 0;
+      const total = serverData.collection_salons_total || 1;
+      const msgs  = serverData.collection_messages    || 0;
+      const speed = serverData.collection_vitesse     || 0;
+      const eta   = serverData.collection_eta_sec;
+      const ratio = Math.min(done / total, 1);
+
+      const fmtEta = s => {
+        if (!s) return '—';
+        const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+        return h > 0 ? `${h}h ${String(m).padStart(2,'0')}m` : `${String(m).padStart(2,'0')}m ${String(sec).padStart(2,'0')}s`;
+      };
+
+      document.getElementById('collect-fill').style.width = `${Math.round(ratio * 100)}%`;
+      document.getElementById('collect-stats').innerHTML = `
+        <div class="collect-stat">Salons <strong>${done} / ${total}</strong></div>
+        <div class="collect-stat">Messages collectés <strong>${msgs.toLocaleString('fr')}</strong></div>
+        <div class="collect-stat">Vitesse <strong>${speed} msg/min</strong></div>
+        <div class="collect-stat">ETA <strong>${fmtEta(eta)}</strong></div>
+        <div class="collect-stat" style="color:var(--muted);font-size:.72rem">Actualisez la page pour mettre à jour</div>
+      `;
+      document.getElementById('collect-banner').classList.add('visible');
     }
 
     // ── Header ────────────────────────────────────────────────────

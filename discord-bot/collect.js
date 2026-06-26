@@ -128,13 +128,35 @@ const progress = {
     this.channelMsgs++;
   },
 
-  endChannel() {
+  async endChannel(guildId) {
     this.doneChannels++;
     this.print();
+    // Sync vers Firestore
+    const elapsed  = Date.now() - this.startTime;
+    const rate     = elapsed > 0 ? (this.totalMsgs / elapsed) * 60000 : 0;
+    const avgPerChan = this.doneChannels > 0 ? this.totalMsgs / this.doneChannels : 0;
+    const remaining  = (this.totalChannels - this.doneChannels) * avgPerChan;
+    const etaSec     = rate > 0 ? Math.round((remaining / rate) * 60) : null;
+    await fsSet('discord_serveurs', guildId, {
+      collection_en_cours:   true,
+      collection_salons_faits: this.doneChannels,
+      collection_salons_total: this.totalChannels,
+      collection_messages:   this.totalMsgs,
+      collection_vitesse:    Math.round(rate),
+      collection_eta_sec:    etaSec,
+      collection_debut:      new Date(this.startTime).toISOString(),
+    }).catch(() => {}); // non bloquant
   },
 
-  summary() {
+  async summary(guildId) {
     const elapsed = Date.now() - this.startTime;
+    await fsSet('discord_serveurs', guildId, {
+      collection_en_cours:   false,
+      collection_salons_faits: this.doneChannels,
+      collection_salons_total: this.totalChannels,
+      collection_messages:   this.totalMsgs,
+      collection_fin:        new Date().toISOString(),
+    }).catch(() => {});
     console.log(`\n  ✅  Terminé en ${this.fmt(elapsed)} — ${this.totalMsgs} messages collectés sur ${this.doneChannels} salons.\n`);
   },
 };
@@ -200,7 +222,7 @@ async function processMessage(msg, channel) {
 }
 
 // ── Collecte d'un salon ──────────────────────────────────────────────────────
-async function collectChannel(channel, checkpoint) {
+async function collectChannel(channel, checkpoint, guildId) {
   progress.startChannel(channel.name);
   let count   = 0;
   let newestId = checkpoint[channel.id] || null;
@@ -243,7 +265,7 @@ async function collectChannel(channel, checkpoint) {
     }
   }
 
-  progress.endChannel();
+  await progress.endChannel(guildId);
   return newestId;
 }
 
@@ -310,10 +332,10 @@ async function main() {
 
   for (const channel of textChannels) {
     try {
-      const newestId = await collectChannel(channel, checkpoint);
+      const newestId = await collectChannel(channel, checkpoint, GUILD_ID);
       if (newestId) {
         checkpoint[channel.id] = newestId;
-        saveCheckpoint(checkpoint); // sauvegarde après chaque salon
+        saveCheckpoint(checkpoint);
       }
     } catch (err) {
       console.log(`  ⚠️  #${channel.name} ignoré : ${err.message}`);
@@ -325,7 +347,7 @@ async function main() {
     last_collected: new Date().toISOString(),
   });
 
-  progress.summary();
+  await progress.summary(GUILD_ID);
   client.destroy();
 }
 
