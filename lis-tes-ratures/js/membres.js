@@ -280,13 +280,12 @@ async function openMember(membreId) {
     ? `<div class="rf-reunions">${reusSorted.map(({ r, present }) => {
         const titre = livreById[r.livre_id]?.titre || "—";
         const note  = r.notes_finales?.[m.id];
-        const label = !present
-          ? `<span class="rf-reunion-note absent-label">absent·e <span class="rf-reunion-note-val">${note != null ? `${note}<small>/10</small>` : ""}</span></span>`
-          : `<span class="rf-reunion-note">${note != null ? `${note}<small>/10</small>` : "—"}</span>`;
+        const absentTag = !present ? ` <em class="rf-absent-badge">absent·e</em>` : "";
+        const noteHtml  = note != null ? `${note}<small>/10</small>` : (!present ? "" : "—");
         return `<div class="rf-reunion${!present ? " rf-reunion-absent" : ""}">
           <span class="rf-reunion-mois">${formatMois(r.mois, r.annee)}</span>
-          <span class="rf-reunion-livre">${esc(titre)}</span>
-          ${label}
+          <span class="rf-reunion-livre">${esc(titre)}${absentTag}</span>
+          ${noteHtml ? `<span class="rf-reunion-note">${noteHtml}</span>` : ""}
         </div>`;
       }).join("")}</div>`
     : `<div class="rf-empty">Aucune réunion enregistrée.</div>`;
