@@ -180,7 +180,7 @@ async function processMessage(msg, channel) {
   const type = getType(msg);
 
   progress.addMsg();
-  await fsAdd('discord_messages', {
+  await fsSet('discord_messages', `${GUILD_ID}_${msg.id}`, {
     serveur_id:           GUILD_ID,
     salon_id:             channel.id,
     salon_nom:            channel.name,
@@ -222,14 +222,20 @@ async function processMessage(msg, channel) {
 }
 
 // ── Collecte d'un salon ──────────────────────────────────────────────────────
+// checkpoint[channelId] peut être :
+//   "messageId"            → salon terminé, prochaine fois incrémental
+//   { newest, before }     → scan en cours interrompu, reprendre depuis before
+//   undefined              → premier scan à faire
+const CHECKPOINT_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+
 async function collectChannel(channel, checkpoint, guildId) {
   progress.startChannel(channel.name);
-  let count   = 0;
-  let newestId = checkpoint[channel.id] || null;
+  const cp = checkpoint[channel.id];
 
-  if (newestId) {
-    // Incrémental : uniquement les messages plus récents
-    let afterId  = newestId;
+  // ── Mode incrémental (salon déjà complètement scanné) ────────────
+  if (typeof cp === 'string') {
+    let newestId = cp;
+    let afterId  = cp;
     let hasMore  = true;
     while (hasMore) {
       const batch = await channel.messages.fetch({ limit: 100, after: afterId });
@@ -237,34 +243,50 @@ async function collectChannel(channel, checkpoint, guildId) {
       const sorted = [...batch.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
       for (const msg of sorted) {
         await processMessage(msg, channel);
-        count++;
         if (msg.id > newestId) newestId = msg.id;
       }
-      afterId  = sorted.at(-1).id;
-      hasMore  = batch.size === 100;
-      await sleep(300);
-    }
-  } else {
-    // Scan complet (première fois)
-    let before  = undefined;
-    let hasMore = true;
-    while (hasMore) {
-      const opts = { limit: 100 };
-      if (before) opts.before = before;
-      const batch = await channel.messages.fetch(opts);
-      if (batch.size === 0) break;
-      const sorted = [...batch.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
-      for (const msg of sorted) {
-        await processMessage(msg, channel);
-        count++;
-        if (!newestId || msg.id > newestId) newestId = msg.id;
-      }
-      before  = sorted[0].id;
+      afterId = sorted.at(-1).id;
       hasMore = batch.size === 100;
       await sleep(300);
     }
+    checkpoint[channel.id] = newestId;
+    saveCheckpoint(checkpoint);
+    await progress.endChannel(guildId);
+    return newestId;
   }
 
+  // ── Scan complet (premier scan ou reprise après interruption) ────
+  let newestId  = cp?.newest || null;
+  let before    = cp?.before || undefined;
+  let hasMore   = true;
+  let lastSave  = Date.now();
+
+  while (hasMore) {
+    const opts = { limit: 100 };
+    if (before) opts.before = before;
+    const batch = await channel.messages.fetch(opts);
+    if (batch.size === 0) break;
+    const sorted = [...batch.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+    for (const msg of sorted) {
+      await processMessage(msg, channel);
+      if (!newestId || msg.id > newestId) newestId = msg.id;
+    }
+    before  = sorted[0].id;
+    hasMore = batch.size === 100;
+    await sleep(300);
+
+    // Checkpoint toutes les 10 minutes
+    if (Date.now() - lastSave >= CHECKPOINT_INTERVAL_MS) {
+      checkpoint[channel.id] = { newest: newestId, before };
+      saveCheckpoint(checkpoint);
+      lastSave = Date.now();
+      process.stdout.write('\n  💾 Checkpoint sauvegardé\n');
+    }
+  }
+
+  // Salon terminé : on passe en mode incrémental pour les prochaines fois
+  checkpoint[channel.id] = newestId;
+  saveCheckpoint(checkpoint);
   await progress.endChannel(guildId);
   return newestId;
 }
@@ -332,11 +354,7 @@ async function main() {
 
   for (const channel of textChannels) {
     try {
-      const newestId = await collectChannel(channel, checkpoint, GUILD_ID);
-      if (newestId) {
-        checkpoint[channel.id] = newestId;
-        saveCheckpoint(checkpoint);
-      }
+      await collectChannel(channel, checkpoint, GUILD_ID);
     } catch (err) {
       console.log(`  ⚠️  #${channel.name} ignoré : ${err.message}`);
     }
