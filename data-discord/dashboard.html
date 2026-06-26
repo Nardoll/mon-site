@@ -90,6 +90,17 @@
     .bar-col:hover { opacity: 1; }
     .bar-lbl { font-size: .65rem; color: var(--muted); white-space: nowrap; position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); }
 
+    /* ── Tooltip histogramme ── */
+    #chart-tooltip {
+      position: fixed; pointer-events: none; z-index: 50;
+      background: #1e1f22; border: 1px solid rgba(255,255,255,.12); border-radius: 8px;
+      padding: .5rem .75rem; display: none; flex-direction: column; gap: .15rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,.4);
+    }
+    #chart-tooltip.visible { display: flex; }
+    .tt-date { font-size: .72rem; color: var(--muted); }
+    .tt-count { font-size: 1rem; font-weight: 700; color: #fff; }
+
     /* ── Section cards ── */
     .cards-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
     .sec-card {
@@ -180,6 +191,9 @@
     <!-- Cartes de sections -->
     <div class="cards-grid" id="cards-grid"></div>
   </main>
+
+  <!-- Tooltip histogramme -->
+  <div id="chart-tooltip"><div class="tt-date"></div><div class="tt-count"></div></div>
 
   <!-- Éditeur icône -->
   <div class="icon-edit-overlay" id="icon-edit-overlay">
@@ -295,7 +309,8 @@
         const showLabel = (i % step === 0) || i === n - 1;
         return `
           <div class="bar-wrap" style="width:${barW}px">
-            <div class="bar-col" style="height:${Math.max(2, Math.round(v/max*barH))}px" title="${k} : ${v} message${v>1?'s':''}"></div>
+            <div class="bar-col" style="height:${Math.max(2, Math.round(v/max*barH))}px"
+              data-k="${k}" data-v="${v}"></div>
             ${showLabel ? `<div class="bar-lbl">${shortLabel(k)}</div>` : ''}
           </div>`;
       }).join('');
@@ -303,6 +318,25 @@
       // Scroll vers la droite (données récentes)
       chartEl.scrollLeft = chartEl.scrollWidth;
     }
+
+    // ── Tooltip ───────────────────────────────────────────────────
+    const tooltip = document.getElementById('chart-tooltip');
+    document.getElementById('activity-chart').addEventListener('mouseover', e => {
+      const bar = e.target.closest('.bar-col');
+      if (!bar) return;
+      const k = bar.dataset.k;
+      const v = bar.dataset.v;
+      tooltip.querySelector('.tt-date').textContent  = shortLabel(k);
+      tooltip.querySelector('.tt-count').textContent = `${v} message${v > 1 ? 's' : ''}`;
+      tooltip.classList.add('visible');
+    });
+    document.getElementById('activity-chart').addEventListener('mousemove', e => {
+      tooltip.style.left = (e.clientX + 14) + 'px';
+      tooltip.style.top  = (e.clientY - 48) + 'px';
+    });
+    document.getElementById('activity-chart').addEventListener('mouseleave', () => {
+      tooltip.classList.remove('visible');
+    });
 
     document.getElementById('time-toggle').addEventListener('click', e => {
       const btn = e.target.closest('.toggle-btn');
