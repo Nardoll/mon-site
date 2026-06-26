@@ -153,7 +153,7 @@ async function init() {
   renderHistNotes10({ passees, membres });
   renderHistNotes5({ votes: votesChron, membres });
   renderParticipation({ votes: votesAvecExcept, membres });
-  renderColsLecteurs({ reunions, livres, statuts });
+  renderColsLecteurs({ reunions, livres, statuts, membreById });
   renderPlotNotes({ passees, membreById });
   renderTblActifs({ membres, livres, votes: votesAvecExcept, reunions, statuts, commentaires });
   renderBilanProps({ membres, livres, votes: votesChron, reunions, livreById });
@@ -416,24 +416,22 @@ function renderParticipation({ votes, membres }) {
 // ════════════════════════════════════════════════════════════════════
 // 5. Colonnes lecteurs par séance (Archétype 3)
 // ════════════════════════════════════════════════════════════════════
-function renderColsLecteurs({ reunions, livres, statuts }) {
+function renderColsLecteurs({ reunions, livres, statuts, membreById }) {
   const host = document.getElementById("cols-lecteurs");
 
-  // Itérer sur les réunions liées à un livre élu, triées par mois/année
-  // (inclut toutes les réunions peu importe leur statut, et tous les livres
-  //  élus y compris ceux dont le vote est marqué exceptionnel)
   const livresElus = new Set(livres.filter(l => l.statut === "elu").map(l => l.id));
 
   const cols = reunions
     .filter(r => r.livre_id && livresElus.has(r.livre_id) && r.mois && r.annee)
     .sort((a, b) => a.annee !== b.annee ? a.annee - b.annee : a.mois - b.mois)
     .map(r => {
-      const livre = livres.find(l => l.id === r.livre_id);
-      const count = membersWhoFinishedBook(r.livre_id, statuts, [r]).size;
-      const d     = new Date(r.annee, r.mois - 1);
-      const lab   = d.toLocaleDateString("fr-FR", { month: "long" });
-      const titre = livre?.titre ?? "?";
-      return { r, count, lab, titre };
+      const livre      = livres.find(l => l.id === r.livre_id);
+      const finishers  = membersWhoFinishedBook(r.livre_id, statuts, [r]);
+      const count      = finishers.size;
+      const noms       = [...finishers].map(id => membreById[id]?.nom ?? id);
+      const lab        = new Date(r.annee, r.mois - 1).toLocaleDateString("fr-FR", { month: "long" });
+      const titre      = livre?.titre ?? "?";
+      return { r, count, noms, lab, titre };
     });
 
   if (!cols.length) {
@@ -441,14 +439,14 @@ function renderColsLecteurs({ reunions, livres, statuts }) {
     return;
   }
 
-  const maxVal = Math.max(1, ...cols.map(c => c.count));
-  const panel  = host.closest(".sx-panel") || host.parentElement;
+  const maxVal  = Math.max(1, ...cols.map(c => c.count));
+  const panel   = host.closest(".sx-panel") || host.parentElement;
+  const tipData = [];
 
-  host.innerHTML = cols.map(({ r, count, lab, titre }) => {
-    const h   = Math.max(count / maxVal * 100, count > 0 ? 10 : 2).toFixed(1);
-    return `<div class="sx-col sx-col-lect"
-        data-rid="${r.id}"
-        data-tip="${titre.replace(/"/g, "&quot;")} — ${count} lecteur${count !== 1 ? "s" : ""}">
+  host.innerHTML = cols.map(({ r, count, noms, lab, titre }, i) => {
+    const h = Math.max(count / maxVal * 100, count > 0 ? 10 : 2).toFixed(1);
+    tipData[i] = { titre, count, noms };
+    return `<div class="sx-col sx-col-lect" data-rid="${r.id}" data-idx="${i}">
       <div class="sx-col-bars" style="height:${h}%">
         <div class="sx-col-seg" style="height:100%;background:var(--accent)"></div>
       </div>
@@ -457,7 +455,7 @@ function renderColsLecteurs({ reunions, livres, statuts }) {
     </div>`;
   }).join("");
 
-  // Tooltip positionné dans le panel (même style que celui des propositions)
+  // Tooltip HTML riche (titre + liste des lecteurs)
   if (panel) {
     panel.style.position = "relative";
     const tip = document.createElement("div");
@@ -467,8 +465,9 @@ function renderColsLecteurs({ reunions, livres, statuts }) {
       "color:var(--text)",
       "border:1px solid var(--border)",
       "border-radius:6px",
-      "padding:.4rem .75rem",
+      "padding:.45rem .8rem",
       "font-size:.82rem",
+      "line-height:1.6",
       "pointer-events:none",
       "white-space:nowrap",
       "opacity:0",
@@ -480,9 +479,13 @@ function renderColsLecteurs({ reunions, livres, statuts }) {
     panel.appendChild(tip);
 
     host.addEventListener("mousemove", e => {
-      const col = e.target.closest(".sx-col-lect[data-tip]");
+      const col = e.target.closest(".sx-col-lect[data-idx]");
       if (!col) { tip.style.opacity = "0"; return; }
-      tip.textContent = col.dataset.tip;
+      const { titre, count, noms } = tipData[+col.dataset.idx];
+      const nomsHtml = noms.length
+        ? noms.map(n => `<span style="color:var(--muted)">${esc(n)}</span>`).join(" · ")
+        : `<span style="color:var(--muted)">—</span>`;
+      tip.innerHTML = `<strong>${esc(titre)}</strong> — ${count} lecteur${count !== 1 ? "s" : ""}<br>${nomsHtml}`;
       const pRect = panel.getBoundingClientRect();
       const cRect = col.getBoundingClientRect();
       tip.style.left = (cRect.left + cRect.width / 2 - pRect.left) + "px";
