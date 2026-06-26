@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Data Discord — Dashboard</title>
+  <title>Data Discord — Vue d'ensemble</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -24,12 +24,14 @@
     .sidebar-link { display: flex; align-items: center; gap: .55rem; padding: .55rem .75rem; border-radius: 6px; text-decoration: none; color: var(--muted); font-size: .88rem; font-weight: 500; transition: background .15s, color .15s; }
     .sidebar-link:hover { background: rgba(255,255,255,.06); color: var(--text); }
     .sidebar-link.active { background: rgba(88,101,242,.2); color: #c7caf9; }
+    .sidebar-link.server-active { color: var(--text); }
+    .sidebar-sublink { font-size: .82rem; padding: .4rem .65rem; }
     .sidebar-footer { padding-top: 1rem; border-top: 1px solid rgba(255,255,255,.06); }
     .sidebar-home { display: block; text-decoration: none; color: var(--muted); font-size: .8rem; padding: .4rem .5rem; border-radius: 5px; transition: color .15s; }
     .sidebar-home:hover { color: var(--text); }
 
     /* ── Main ── */
-    .main { margin-left: var(--sidebar-w); flex: 1; padding: 2rem 2.5rem; max-width: 1000px; }
+    .main { margin-left: var(--sidebar-w); flex: 1; padding: 2rem 2.5rem; }
 
     /* ── Server header ── */
     .server-header {
@@ -43,10 +45,8 @@
       width: 64px; height: 64px; border-radius: 50%;
       background: var(--surface2);
       border: 3px solid rgba(88,101,242,.4);
-      object-fit: cover;
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.8rem;
-      overflow: hidden;
+      font-size: 1.8rem; overflow: hidden;
     }
     .server-avatar img { width: 100%; height: 100%; object-fit: cover; }
     .btn-edit-icon {
@@ -54,8 +54,7 @@
       width: 20px; height: 20px; border-radius: 50%;
       background: var(--accent); border: 2px solid var(--bg);
       display: flex; align-items: center; justify-content: center;
-      font-size: .65rem; cursor: pointer; color: #fff;
-      transition: background .15s;
+      font-size: .65rem; cursor: pointer; color: #fff; transition: background .15s;
     }
     .btn-edit-icon:hover { background: #4752c4; }
     .server-info { flex: 1; }
@@ -63,18 +62,9 @@
     .server-dot { width: 10px; height: 10px; background: var(--green); border-radius: 50%; }
     .server-meta { font-size: .82rem; color: var(--muted); margin-top: .2rem; }
 
-    /* ── KPIs ── */
-    .kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .65rem; margin-bottom: 2rem; }
-    .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: .9rem 1.1rem; }
-    .kpi-label { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .3rem; }
-    .kpi-value { font-size: 1.8rem; font-weight: 700; color: #fff; line-height: 1; }
-    .kpi-sub { font-size: .71rem; color: var(--muted); margin-top: .25rem; }
-
-    /* ── Section ── */
-    .section { margin-bottom: 2rem; }
+    /* ── Section header ── */
     .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .85rem; }
-    .section-title { font-size: .8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; display: flex; align-items: center; gap: .5rem; }
-    .section-title::after { content: ''; width: 40px; height: 1px; background: var(--border); }
+    .section-title { font-size: .8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
 
     /* ── Toggle granularité ── */
     .toggle-group { display: flex; background: var(--surface2); border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
@@ -82,81 +72,63 @@
     .toggle-btn.active { background: var(--accent); color: #fff; }
 
     /* ── Histogramme ── */
-    .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem 1.25rem; }
-    .chart-bars { display: flex; align-items: flex-end; gap: 3px; height: 160px; overflow-x: auto; overflow-y: hidden; padding-bottom: 20px; }
+    .chart-section { margin-bottom: 2.5rem; }
+    .chart-wrap {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.5rem 1.5rem 0;
+    }
+    .chart-bars {
+      display: flex; align-items: flex-end; gap: 3px;
+      height: 240px;
+      overflow-x: auto; overflow-y: hidden;
+      padding-bottom: 28px;
+    }
     .chart-bars::-webkit-scrollbar { height: 5px; }
     .chart-bars::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 2px; }
-    .bar-wrap { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0; flex-shrink: 0; min-width: 0; position: relative; height: 100%; }
-    .bar-col { background: var(--accent); border-radius: 3px 3px 0 0; opacity: .7; transition: opacity .15s; cursor: default; width: 100%; }
+    .bar-wrap { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; flex-shrink: 0; position: relative; height: 100%; }
+    .bar-col { background: var(--accent); border-radius: 3px 3px 0 0; opacity: .65; transition: opacity .15s; cursor: default; width: 100%; }
     .bar-col:hover { opacity: 1; }
-    .bar-lbl { font-size: .68rem; color: var(--muted); white-space: nowrap; position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); }
+    .bar-lbl { font-size: .65rem; color: var(--muted); white-space: nowrap; position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); }
 
-    /* ── Barres horizontales ── */
-    .bar-list { display: flex; flex-direction: column; gap: .4rem; }
-    .bar-row {
-      display: flex; align-items: center; gap: .7rem;
-      padding: .5rem .75rem;
-      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-      cursor: pointer; transition: border-color .15s, background .15s;
+    /* ── Section cards ── */
+    .cards-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+    .sec-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.4rem 1.5rem;
+      text-decoration: none; color: inherit;
+      display: flex; flex-direction: column; gap: .9rem;
+      transition: border-color .18s, background .18s, transform .15s;
+      cursor: pointer;
     }
-    .bar-row:hover { border-color: rgba(88,101,242,.4); background: var(--surface2); }
-    .bar-avatar {
-      width: 28px; height: 28px; border-radius: 50%;
-      background: var(--accent); display: flex; align-items: center; justify-content: center;
-      font-size: .75rem; font-weight: 700; color: #fff; flex-shrink: 0; overflow: hidden;
-    }
-    .bar-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-    .bar-label { font-size: .83rem; color: var(--text); min-width: 100px; max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
-    .bar-bg { flex: 1; height: 5px; background: rgba(255,255,255,.07); border-radius: 99px; overflow: hidden; }
-    .bar-fill { height: 100%; border-radius: 99px; background: var(--accent); transition: width .4s; }
-    .bar-count { font-size: .78rem; color: var(--muted); min-width: 42px; text-align: right; flex-shrink: 0; }
-    .bar-chevron { font-size: .8rem; color: var(--muted); flex-shrink: 0; }
+    .sec-card:hover { border-color: rgba(88,101,242,.45); background: var(--surface2); transform: translateY(-1px); }
+    .sec-card-head { display: flex; align-items: center; justify-content: space-between; }
+    .sec-card-title { font-size: .8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; display: flex; align-items: center; gap: .45rem; }
+    .sec-card-arrow { font-size: .9rem; color: var(--muted); transition: color .15s, transform .15s; }
+    .sec-card:hover .sec-card-arrow { color: var(--text); transform: translateX(3px); }
+    .sec-card-kpi { font-size: 2.8rem; font-weight: 700; color: #fff; line-height: 1; }
+    .sec-card-sub { font-size: .78rem; color: var(--muted); }
+    .sec-card-extras { display: flex; flex-direction: column; gap: .35rem; margin-top: .1rem; }
 
-    /* ── Types ── */
-    .types-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: .55rem; }
-    .type-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .7rem .9rem; }
-    .type-icon { font-size: 1.1rem; margin-bottom: .25rem; }
-    .type-count { font-size: 1.25rem; font-weight: 700; color: #fff; }
-    .type-label { font-size: .7rem; color: var(--muted); }
+    /* mini stats dans les cards */
+    .stat-pill { display: flex; align-items: center; gap: .5rem; font-size: .8rem; }
+    .stat-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+    .stat-label { color: var(--muted); flex: 1; }
+    .stat-val { color: var(--text); font-weight: 600; }
 
-    /* ── Ancienneté ── */
-    .anciennete-list { display: flex; flex-direction: column; gap: .4rem; }
-    .anc-row { display: flex; align-items: center; gap: .75rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: .55rem .9rem; }
-    .anc-rank { font-size: .75rem; color: var(--muted); min-width: 22px; font-weight: 700; }
-    .anc-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: .7rem; font-weight: 700; color: #fff; flex-shrink: 0; overflow: hidden; }
-    .anc-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-    .anc-name { flex: 1; font-size: .85rem; color: var(--text); font-weight: 600; }
-    .anc-date { font-size: .75rem; color: var(--muted); }
-    .anc-days { font-size: .75rem; font-weight: 600; color: #a5b4fc; background: rgba(88,101,242,.12); padding: .15em .5em; border-radius: 4px; }
+    /* mini bar dans les cards */
+    .mini-bar-row { display: flex; align-items: center; gap: .6rem; font-size: .79rem; }
+    .mini-bar-name { color: var(--muted); min-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+    .mini-bar-bg { flex: 1; height: 4px; background: rgba(255,255,255,.07); border-radius: 99px; overflow: hidden; }
+    .mini-bar-fill { height: 100%; border-radius: 99px; background: var(--accent); opacity: .7; }
+    .mini-bar-count { color: var(--text); font-weight: 600; min-width: 36px; text-align: right; flex-shrink: 0; }
 
-    /* ── Modal ── */
-    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; }
-    .overlay.open { display: block; }
-    .modal-panel {
-      position: fixed; top: 0; right: 0; bottom: 0;
-      width: 640px; max-width: 95vw;
-      background: var(--sidebar-bg); border-left: 1px solid var(--border);
-      overflow-y: auto; display: flex; flex-direction: column;
-      animation: slideIn .22s ease;
-    }
-    @keyframes slideIn { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-    .modal-header { display: flex; align-items: center; gap: .75rem; padding: 1.25rem 1.25rem 1rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 1; }
-    .modal-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; flex-shrink: 0; overflow: hidden; }
-    .modal-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-    .modal-title { font-size: 1rem; font-weight: 700; color: #fff; flex: 1; }
-    .modal-sub { font-size: .75rem; color: var(--muted); }
-    .btn-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.2rem; padding: .2rem; transition: color .15s; }
-    .btn-close:hover { color: var(--text); }
-    .modal-body { padding: 1.25rem; display: flex; flex-direction: column; gap: 1.25rem; }
+    /* types grid dans la card messages */
+    .types-inline { display: flex; flex-wrap: wrap; gap: .45rem; }
+    .type-badge { display: flex; align-items: center; gap: .35rem; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07); border-radius: 6px; padding: .3rem .6rem; font-size: .78rem; }
+    .type-badge-count { font-weight: 700; color: #fff; }
+    .type-badge-lbl { color: var(--muted); }
 
-    .mini-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
-    .mini-kpi { background: var(--surface2); border-radius: 8px; padding: .65rem .85rem; }
-    .mini-kpi-val { font-size: 1.4rem; font-weight: 700; color: #fff; line-height: 1; }
-    .mini-kpi-lbl { font-size: .7rem; color: var(--muted); margin-top: .2rem; }
-
-    .modal-section-title { font-size: .72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: .6rem; }
-
-    /* ── Icon edit overlay ── */
+    /* Icon edit overlay */
     .icon-edit-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; align-items: center; justify-content: center; }
     .icon-edit-overlay.open { display: flex; }
     .icon-edit-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; width: 360px; display: flex; flex-direction: column; gap: 1rem; }
@@ -170,8 +142,7 @@
     .btn-ghost { background: rgba(255,255,255,.06); color: var(--text); border: 1px solid rgba(255,255,255,.1); }
     .btn-ghost:hover { background: rgba(255,255,255,.1); }
 
-    .empty-msg { color: var(--muted); font-size: .83rem; font-style: italic; text-align: center; padding: 1rem 0; }
-
+    @media (max-width: 760px) { .cards-grid { grid-template-columns: 1fr; } }
     @media (max-width: 640px) { #sidebar { display: none; } .main { margin-left: 0; padding: 1.25rem; } }
   </style>
 </head>
@@ -191,61 +162,24 @@
       </div>
     </div>
 
-    <!-- KPIs -->
-    <div class="kpis" id="kpis"></div>
-
-    <!-- Activité temporelle -->
-    <div class="section">
+    <!-- Histogramme d'activité -->
+    <div class="chart-section">
       <div class="section-head">
-        <div class="section-title">Activité</div>
+        <div class="section-title">Activité du serveur</div>
         <div class="toggle-group" id="time-toggle">
           <button class="toggle-btn" data-g="week">Semaine</button>
           <button class="toggle-btn active" data-g="month">Mois</button>
           <button class="toggle-btn" data-g="year">Année</button>
         </div>
       </div>
-      <div class="chart-wrap"><div class="chart-bars" id="activity-chart"></div></div>
-    </div>
-
-    <!-- Types de messages -->
-    <div class="section">
-      <div class="section-head"><div class="section-title">Types de messages</div></div>
-      <div class="types-grid" id="types-grid"></div>
-    </div>
-
-    <!-- Membres + Salons -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem">
-      <div class="section" style="margin-bottom:0">
-        <div class="section-head"><div class="section-title">Membres actifs</div></div>
-        <div class="bar-list" id="top-membres"></div>
-      </div>
-      <div class="section" style="margin-bottom:0">
-        <div class="section-head"><div class="section-title">Salons actifs</div></div>
-        <div class="bar-list" id="top-salons"></div>
+      <div class="chart-wrap">
+        <div class="chart-bars" id="activity-chart"></div>
       </div>
     </div>
 
-    <!-- Ancienneté -->
-    <div class="section">
-      <div class="section-head"><div class="section-title">Ancienneté sur le serveur</div></div>
-      <div class="anciennete-list" id="anciennete"></div>
-    </div>
+    <!-- Cartes de sections -->
+    <div class="cards-grid" id="cards-grid"></div>
   </main>
-
-  <!-- Modal membre / salon -->
-  <div class="overlay" id="modal-overlay">
-    <div class="modal-panel" id="modal-panel">
-      <div class="modal-header">
-        <div class="modal-avatar" id="modal-avatar"></div>
-        <div style="flex:1">
-          <div class="modal-title" id="modal-title"></div>
-          <div class="modal-sub" id="modal-sub"></div>
-        </div>
-        <button class="btn-close" id="btn-close-modal">×</button>
-      </div>
-      <div class="modal-body" id="modal-body"></div>
-    </div>
-  </div>
 
   <!-- Éditeur icône -->
   <div class="icon-edit-overlay" id="icon-edit-overlay">
@@ -272,7 +206,7 @@
       collection, getDocs, query, where, doc, setDoc, getDoc
     } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
-    const params  = new URLSearchParams(location.search);
+    const params   = new URLSearchParams(location.search);
     const GUILD_ID = params.get('id') || '1499528679758364744';
 
     let allMessages = [];
@@ -282,7 +216,7 @@
 
     // ── Chargement ────────────────────────────────────────────────
     async function load() {
-      const [msgSnap, mbSnap, srvSnap, srvSnap2] = await Promise.all([
+      const [msgSnap, mbSnap, srvSnap, srvDoc] = await Promise.all([
         getDocs(query(collection(db, 'discord_messages'),     where('serveur_id', '==', GUILD_ID))),
         getDocs(query(collection(db, 'discord_membres_bot'), where('serveur_id', '==', GUILD_ID))),
         getDocs(query(collection(db, 'discord_serveurs'))),
@@ -291,18 +225,14 @@
 
       allMessages = msgSnap.docs.map(d => d.data());
       allMembres  = mbSnap.docs.map(d => d.data());
-      serverData  = srvSnap2.exists() ? srvSnap2.data() : {};
+      serverData  = srvDoc.exists() ? srvDoc.data() : {};
 
       const allServers = srvSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderNav(GUILD_ID, allServers);
 
       renderHeader();
-      renderKPIs();
       renderActivity();
-      renderTypes();
-      renderTopMembres();
-      renderTopSalons();
-      renderAnciennete();
+      renderCards();
     }
 
     // ── Header ────────────────────────────────────────────────────
@@ -311,58 +241,58 @@
       document.getElementById('server-meta').textContent =
         `${allMembres.length} membres · ${allMessages.length} messages collectés · dernière collecte : ${serverData.last_collected?.slice(0,10) || '—'}`;
 
-      const avatarEl = document.getElementById('server-avatar');
       const iconSrc = serverData.icon_url || serverData.guild_icon_url;
       if (iconSrc) {
-        avatarEl.innerHTML = `<img src="${esc(iconSrc)}" alt="icône">`;
+        document.getElementById('server-avatar').innerHTML = `<img src="${esc(iconSrc)}" alt="icône">`;
       }
     }
 
-    // ── KPIs ──────────────────────────────────────────────────────
-    function renderKPIs() {
-      const auteurs  = new Set(allMessages.map(m => m.auteur_id)).size;
-      const salons   = new Set(allMessages.map(m => m.salon_id)).size;
-      const sondages = allMessages.filter(m => m.type === 'sondage').length;
-      const reponses = allMessages.filter(m => m.est_reponse).length;
-
-      document.getElementById('kpis').innerHTML = `
-        <a href="/data-discord/membres.html?id=${GUILD_ID}" class="kpi" style="text-decoration:none;cursor:pointer" title="Voir tous les membres"><div class="kpi-label">Membres</div><div class="kpi-value">${allMembres.length}</div><div class="kpi-sub">sur le serveur ›</div></a>
-        <div class="kpi"><div class="kpi-label">Messages</div><div class="kpi-value">${allMessages.length}</div><div class="kpi-sub">${auteurs} auteurs</div></div>
-        <a href="/data-discord/salons.html?id=${GUILD_ID}" class="kpi" style="text-decoration:none;cursor:pointer" title="Voir tous les salons"><div class="kpi-label">Salons</div><div class="kpi-value">${salons}</div><div class="kpi-sub">actifs ›</div></a>
-        <div class="kpi"><div class="kpi-label">Sondages</div><div class="kpi-value">${sondages}</div><div class="kpi-sub">natifs Discord</div></div>
-        <div class="kpi"><div class="kpi-label">Réponses</div><div class="kpi-value">${reponses}</div><div class="kpi-sub">${Math.round(reponses / Math.max(allMessages.length,1) * 100)}% des msgs</div></div>
-      `;
-    }
-
-    // ── Activité ──────────────────────────────────────────────────
+    // ── Histogramme ───────────────────────────────────────────────
     function getKey(dateStr, gran) {
       if (!dateStr) return null;
       if (gran === 'year')  return dateStr.slice(0, 4);
       if (gran === 'month') return dateStr.slice(0, 7);
-      // week : ISO week
       const d = new Date(dateStr);
       const jan4 = new Date(d.getFullYear(), 0, 4);
       const week = Math.ceil(((d - jan4) / 86400000 + jan4.getDay() + 1) / 7);
       return `${d.getFullYear()}-W${String(week).padStart(2,'0')}`;
     }
 
-    function renderActivity(messages = allMessages) {
+    function shortLabel(k) {
+      if (k.includes('-W')) { const [y,w] = k.split('-W'); return `S${w} '${y.slice(2)}`; }
+      if (k.length === 4) return k;
+      const [y, m] = k.split('-');
+      return `${'Jan Fév Mar Avr Mai Juin Juil Aoû Sep Oct Nov Déc'.split(' ')[+m-1]} '${y.slice(2)}`;
+    }
+
+    function renderActivity() {
       const counts = {};
-      messages.forEach(m => {
+      allMessages.forEach(m => {
         const k = getKey(m.date, timeGran);
         if (k) counts[k] = (counts[k] || 0) + 1;
       });
       const sorted = Object.entries(counts).sort(([a],[b]) => a.localeCompare(b));
-      const max  = Math.max(...sorted.map(([,v]) => v), 1);
-      const barH = 138; // hauteur utile (160px - 20px padding - 2px marge)
-      const barW = timeGran === 'year' ? 36 : timeGran === 'month' ? 22 : 14;
+      if (!sorted.length) {
+        document.getElementById('activity-chart').innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:2rem">Aucune donnée</div>';
+        return;
+      }
 
-      // Minimum 48px entre deux centres de labels pour éviter le chevauchement
-      const total = sorted.length;
+      const chartEl = document.getElementById('activity-chart');
+      // barW adaptatif : remplit le conteneur si peu de données, scroll si beaucoup
+      const minBarW = timeGran === 'year' ? 28 : timeGran === 'month' ? 14 : 8;
+      const maxBarW = timeGran === 'year' ? 120 : timeGran === 'month' ? 72 : 40;
+      const gap = 3;
+      const containerW = chartEl.parentElement.clientWidth - 48; // padding 1.5rem × 2
+      const n = sorted.length;
+      const idealBarW = n > 1 ? Math.floor((containerW - gap * (n - 1)) / n) : containerW;
+      const barW = Math.max(minBarW, Math.min(maxBarW, idealBarW));
+
+      const barH  = 210; // hauteur utile (240 - 28 padding bas - 2)
+      const max   = Math.max(...sorted.map(([,v]) => v), 1);
       const step  = Math.max(1, Math.ceil(48 / barW));
 
-      document.getElementById('activity-chart').innerHTML = sorted.map(([k, v], i) => {
-        const showLabel = (i % step === 0) || i === total - 1;
+      chartEl.innerHTML = sorted.map(([k, v], i) => {
+        const showLabel = (i % step === 0) || i === n - 1;
         return `
           <div class="bar-wrap" style="width:${barW}px">
             <div class="bar-col" style="height:${Math.max(2, Math.round(v/max*barH))}px" title="${k} : ${v} message${v>1?'s':''}"></div>
@@ -370,19 +300,8 @@
           </div>`;
       }).join('');
 
-      const c = document.getElementById('activity-chart');
-      c.scrollLeft = c.scrollWidth;
-    }
-
-    function shortLabel(k) {
-      if (k.includes('-W')) {
-        const [y, w] = k.split('-W');
-        return `S${w} '${y.slice(2)}`;
-      }
-      if (k.length === 4) return k;
-      const [y, m] = k.split('-');
-      const mo = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
-      return `${mo[+m-1]} '${y.slice(2)}`;
+      // Scroll vers la droite (données récentes)
+      chartEl.scrollLeft = chartEl.scrollWidth;
     }
 
     document.getElementById('time-toggle').addEventListener('click', e => {
@@ -393,264 +312,156 @@
       renderActivity();
     });
 
-    // ── Types ─────────────────────────────────────────────────────
-    function renderTypes(messages = allMessages) {
-      const icons = { texte:'💬', image:'🖼️', lien:'🔗', video:'🎥', fichier:'📎', sondage:'🗳️', autre:'❓' };
-      const counts = {};
-      messages.forEach(m => { counts[m.type] = (counts[m.type]||0)+1; });
-      const order = ['texte','image','lien','sondage','video','fichier','autre'];
-      document.getElementById('types-grid').innerHTML = order
-        .filter(t => counts[t])
-        .map(t => `
-          <div class="type-card">
-            <div class="type-icon">${icons[t]||'❓'}</div>
-            <div class="type-count">${counts[t]}</div>
-            <div class="type-label">${t[0].toUpperCase()+t.slice(1)}</div>
-          </div>`
-        ).join('');
-    }
+    // ── Cartes de sections ────────────────────────────────────────
+    function renderCards() {
+      const grid = document.getElementById('cards-grid');
 
-    // ── Top membres ───────────────────────────────────────────────
-    function renderTopMembres() {
-      const counts = {};
-      allMessages.forEach(m => { counts[m.auteur_id] = (counts[m.auteur_id]||0)+1; });
-      const sorted = Object.entries(counts).sort(([,a],[,b]) => b-a).slice(0, 10);
-      const max = sorted[0]?.[1] || 1;
+      // ── Stats globales ────
+      const totalMsgs   = allMessages.length;
+      const totalMembres = allMembres.length;
 
-      document.getElementById('top-membres').innerHTML = sorted.map(([id, n]) => {
-        const mb  = allMembres.find(m => m.discord_id === id);
-        const nom = mb?.display_name || mb?.nom || id.slice(0,8);
-        const ini = nom.slice(0,2).toUpperCase();
-        const av  = mb?.avatar_url ? `<img src="${esc(mb.avatar_url)}" alt="">` : ini;
-        return `
-          <div class="bar-row" onclick="openMember('${id}')">
-            <div class="bar-avatar">${av}</div>
-            <div class="bar-label" title="${esc(nom)}">${esc(nom)}</div>
-            <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(n/max*100)}%"></div></div>
-            <div class="bar-count">${n}</div>
-            <div class="bar-chevron">›</div>
-          </div>`;
-      }).join('');
-    }
+      // Membres actifs ce mois
+      const thisMonth = new Date().toISOString().slice(0,7);
+      const activeThisMonth = new Set(
+        allMessages.filter(m => m.date?.slice(0,7) === thisMonth).map(m => m.auteur_id)
+      ).size;
 
-    // ── Top salons ────────────────────────────────────────────────
-    function renderTopSalons() {
-      const counts = {};
-      allMessages.forEach(m => { counts[m.salon_id] = (counts[m.salon_id]||0)+1; });
-      const sorted = Object.entries(counts).sort(([,a],[,b]) => b-a);
-      const max = sorted[0]?.[1] || 1;
-      const nomBySalon = {};
-      allMessages.forEach(m => { nomBySalon[m.salon_id] = m.salon_nom; });
-
-      document.getElementById('top-salons').innerHTML = sorted.map(([id, n]) => `
-        <div class="bar-row" onclick="openSalon('${id}')">
-          <div class="bar-avatar" style="background:var(--surface2);color:var(--muted);font-size:.8rem">#</div>
-          <div class="bar-label" title="#${esc(nomBySalon[id]||id)}">#${esc(nomBySalon[id]||id)}</div>
-          <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(n/max*100)}%"></div></div>
-          <div class="bar-count">${n}</div>
-          <div class="bar-chevron">›</div>
-        </div>`
-      ).join('');
-    }
-
-    // ── Ancienneté ────────────────────────────────────────────────
-    function renderAnciennete() {
-      const sorted = [...allMembres]
-        .filter(m => m.date_arrivee)
-        .sort((a,b) => a.date_arrivee.localeCompare(b.date_arrivee));
-
-      const now = Date.now();
-      document.getElementById('anciennete').innerHTML = sorted.map((m, i) => {
-        const days = Math.floor((now - new Date(m.date_arrivee)) / 86400000);
-        const ini  = (m.display_name || m.nom || '?').slice(0,2).toUpperCase();
-        const av   = m.avatar_url ? `<img src="${esc(m.avatar_url)}" alt="">` : ini;
-        return `
-          <div class="anc-row">
-            <div class="anc-rank">#${i+1}</div>
-            <div class="anc-avatar">${av}</div>
-            <div class="anc-name">${esc(m.display_name || m.nom || '—')}</div>
-            <div class="anc-date">${m.date_arrivee.slice(0,10)}</div>
-            <div class="anc-days">${days} j</div>
-          </div>`;
-      }).join('');
-    }
-
-    // ── Modal membre ──────────────────────────────────────────────
-    window.openMember = (id) => {
-      const mb   = allMembres.find(m => m.discord_id === id);
-      const nom  = mb?.display_name || mb?.nom || id.slice(0,8);
-      const msgs = allMessages.filter(m => m.auteur_id === id);
-      const ini  = nom.slice(0,2).toUpperCase();
-
-      document.getElementById('modal-avatar').innerHTML =
-        mb?.avatar_url ? `<img src="${esc(mb.avatar_url)}" alt="">` : ini;
-      document.getElementById('modal-title').textContent = nom;
-      document.getElementById('modal-sub').textContent  =
-        `${msgs.length} messages · arrivé le ${mb?.date_arrivee?.slice(0,10) || '—'}`;
-
-      // Compter par salon
-      const bySalon = {};
-      msgs.forEach(m => { bySalon[m.salon_nom] = (bySalon[m.salon_nom]||0)+1; });
-      const topSalons = Object.entries(bySalon).sort(([,a],[,b]) => b-a);
-      const maxS = topSalons[0]?.[1] || 1;
-
-      // Compter par type
-      const byType = {};
-      msgs.forEach(m => { byType[m.type] = (byType[m.type]||0)+1; });
-
-      // À qui répond-il le plus
-      const replyTo = {};
-      msgs.filter(m => m.est_reponse).forEach(m => {
-        // on n'a pas l'auteur de la réponse, on ignore pour l'instant
+      // Salons
+      const salonMap = {};
+      allMessages.forEach(m => {
+        if (!salonMap[m.salon_id]) salonMap[m.salon_id] = { nom: m.salon_nom, count: 0 };
+        salonMap[m.salon_id].count++;
       });
+      const topSalons = Object.values(salonMap).sort((a,b) => b.count - a.count);
+      const totalSalons = topSalons.length;
 
-      // Activité mensuelle
-      const byMonth = {};
-      msgs.forEach(m => {
-        const k = m.date?.slice(0,7);
-        if (k) byMonth[k] = (byMonth[k]||0)+1;
+      // Types de messages
+      const typeCounts = {};
+      allMessages.forEach(m => { typeCounts[m.type] = (typeCounts[m.type]||0)+1; });
+      const typeIcons = { texte:'💬', image:'🖼️', lien:'🔗', video:'🎥', fichier:'📎', sondage:'🗳️', autre:'❓' };
+
+      // Sondages
+      const totalSondages = typeCounts['sondage'] || 0;
+      const lastSondage   = allMessages.filter(m => m.type === 'sondage').sort((a,b) => b.date > a.date ? 1 : -1)[0];
+
+      // Interactions (Discord replies)
+      const totalReplies = allMessages.filter(m => m.est_reponse).length;
+      // Qui répond à qui : on n'a pas l'auteur cible dans la collecte actuelle, on compte par auteur
+      const replyByAuthor = {};
+      allMessages.filter(m => m.est_reponse).forEach(m => {
+        replyByAuthor[m.auteur_id] = (replyByAuthor[m.auteur_id]||0)+1;
       });
-      const monthSorted = Object.entries(byMonth).sort(([a],[b]) => a.localeCompare(b));
-      const maxM = Math.max(...monthSorted.map(([,v]) => v), 1);
+      const topRepliers = Object.entries(replyByAuthor)
+        .sort(([,a],[,b]) => b-a).slice(0,3)
+        .map(([id, n]) => {
+          const mb = allMembres.find(x => x.discord_id === id);
+          return { nom: mb?.display_name || mb?.nom || id.slice(0,8), n };
+        });
+      const maxReplies = topRepliers[0]?.n || 1;
 
-      document.getElementById('modal-body').innerHTML = `
-        <div class="mini-kpis">
-          <div class="mini-kpi"><div class="mini-kpi-val">${msgs.length}</div><div class="mini-kpi-lbl">Messages</div></div>
-          <div class="mini-kpi"><div class="mini-kpi-val">${msgs.filter(m=>m.est_reponse).length}</div><div class="mini-kpi-lbl">Réponses</div></div>
-          <div class="mini-kpi"><div class="mini-kpi-val">${msgs.filter(m=>m.type==='image').length}</div><div class="mini-kpi-lbl">Images</div></div>
-          <div class="mini-kpi"><div class="mini-kpi-val">${msgs.filter(m=>m.type==='sondage').length}</div><div class="mini-kpi-lbl">Sondages</div></div>
-        </div>
+      // ── Calcul membres actifs 30j ────
+      const d30 = new Date(); d30.setDate(d30.getDate()-30);
+      const d30str = d30.toISOString().slice(0,10);
+      const active30 = new Set(
+        allMessages.filter(m => m.date >= d30str).map(m => m.auteur_id)
+      ).size;
 
-        <div>
-          <div class="modal-section-title">Activité mensuelle</div>
-          <div class="chart-wrap" style="padding:.85rem">
-            <div class="chart-bars" style="height:130px">
-              ${monthSorted.map(([k,v],i) => {
-                const showL = i % Math.max(1, Math.ceil(48/20)) === 0 || i === monthSorted.length-1;
-                return `<div class="bar-wrap" style="width:20px">
-                  <div class="bar-col" style="width:100%;height:${Math.max(2,Math.round(v/maxM*108))}px" title="${k}:${v}"></div>
-                  ${showL ? `<div class="bar-lbl">${shortLabel(k)}</div>` : ''}
-                </div>`;
-              }).join('')}
+      // ── HTML des cartes ────
+      grid.innerHTML = `
+
+        <!-- Membres -->
+        <a href="/data-discord/membres.html?id=${GUILD_ID}" class="sec-card">
+          <div class="sec-card-head">
+            <div class="sec-card-title">👥 Membres</div>
+            <div class="sec-card-arrow">›</div>
+          </div>
+          <div class="sec-card-kpi">${totalMembres}</div>
+          <div class="sec-card-extras">
+            <div class="stat-pill">
+              <div class="stat-dot" style="background:var(--green)"></div>
+              <div class="stat-label">Actifs ces 30 derniers jours</div>
+              <div class="stat-val">${active30}</div>
             </div>
+            <div class="stat-pill">
+              <div class="stat-dot" style="background:var(--accent)"></div>
+              <div class="stat-label">Actifs ce mois-ci</div>
+              <div class="stat-val">${activeThisMonth}</div>
+            </div>
+          </div>
+        </a>
+
+        <!-- Messages -->
+        <div class="sec-card" style="cursor:default">
+          <div class="sec-card-head">
+            <div class="sec-card-title">💬 Messages</div>
+          </div>
+          <div class="sec-card-kpi">${totalMsgs.toLocaleString('fr')}</div>
+          <div class="types-inline">
+            ${['texte','image','lien','sondage','video','fichier','autre']
+              .filter(t => typeCounts[t])
+              .map(t => `
+                <div class="type-badge">
+                  <span>${typeIcons[t]||'❓'}</span>
+                  <span class="type-badge-count">${typeCounts[t]}</span>
+                  <span class="type-badge-lbl">${t[0].toUpperCase()+t.slice(1)}</span>
+                </div>`).join('')}
           </div>
         </div>
 
-        <div>
-          <div class="modal-section-title">Par salon</div>
-          <div class="bar-list">
-            ${topSalons.map(([nom, n]) => `
-              <div class="bar-row" style="cursor:default">
-                <div class="bar-avatar" style="background:var(--surface2);color:var(--muted);font-size:.75rem">#</div>
-                <div class="bar-label">#${esc(nom)}</div>
-                <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(n/maxS*100)}%"></div></div>
-                <div class="bar-count">${n}</div>
+        <!-- Salons -->
+        <a href="/data-discord/salons.html?id=${GUILD_ID}" class="sec-card">
+          <div class="sec-card-head">
+            <div class="sec-card-title">💬 Salons</div>
+            <div class="sec-card-arrow">›</div>
+          </div>
+          <div class="sec-card-kpi">${totalSalons}</div>
+          <div class="sec-card-extras">
+            ${topSalons.slice(0,3).map(s => `
+              <div class="mini-bar-row">
+                <div class="mini-bar-name">#${esc(s.nom || '—')}</div>
+                <div class="mini-bar-bg"><div class="mini-bar-fill" style="width:${Math.round(s.count/(topSalons[0]?.count||1)*100)}%"></div></div>
+                <div class="mini-bar-count">${s.count}</div>
               </div>`).join('')}
           </div>
-        </div>
+        </a>
 
-        <div>
-          <div class="modal-section-title">Types de contenu</div>
-          <div class="types-grid">
-            ${Object.entries(byType).sort(([,a],[,b])=>b-a).map(([t,n]) => {
-              const icons = {texte:'💬',image:'🖼️',lien:'🔗',video:'🎥',fichier:'📎',sondage:'🗳️',autre:'❓'};
-              return `<div class="type-card"><div class="type-icon">${icons[t]||'❓'}</div><div class="type-count">${n}</div><div class="type-label">${t[0].toUpperCase()+t.slice(1)}</div></div>`;
-            }).join('')}
+        <!-- Sondages -->
+        <a href="/data-discord/sondages.html?id=${GUILD_ID}" class="sec-card">
+          <div class="sec-card-head">
+            <div class="sec-card-title">🗳️ Sondages</div>
+            <div class="sec-card-arrow">›</div>
           </div>
-        </div>
+          <div class="sec-card-kpi">${totalSondages}</div>
+          <div class="sec-card-extras">
+            ${lastSondage ? `
+              <div class="stat-pill">
+                <div class="stat-dot"></div>
+                <div class="stat-label">Dernier sondage</div>
+                <div class="stat-val">${lastSondage.date?.slice(0,10) || '—'}</div>
+              </div>` : '<div class="sec-card-sub">Aucun sondage collecté</div>'}
+          </div>
+        </a>
+
+        <!-- Interactions -->
+        <a href="/data-discord/graphe.html?id=${GUILD_ID}" class="sec-card">
+          <div class="sec-card-head">
+            <div class="sec-card-title">🤝 Interactions</div>
+            <div class="sec-card-arrow">›</div>
+          </div>
+          <div class="sec-card-kpi">${totalReplies}</div>
+          <div class="sec-card-sub" style="margin-top:-.4rem">réponses directes</div>
+          <div class="sec-card-extras">
+            ${topRepliers.length ? topRepliers.map(r => `
+              <div class="mini-bar-row">
+                <div class="mini-bar-name">${esc(r.nom)}</div>
+                <div class="mini-bar-bg"><div class="mini-bar-fill" style="width:${Math.round(r.n/maxReplies*100)}%"></div></div>
+                <div class="mini-bar-count">${r.n}</div>
+              </div>`).join('') : '<div class="sec-card-sub">Aucune réponse directe</div>'}
+          </div>
+        </a>
+
       `;
-
-      document.getElementById('modal-overlay').classList.add('open');
-    };
-
-    // ── Modal salon ───────────────────────────────────────────────
-    window.openSalon = (id) => {
-      const msgs  = allMessages.filter(m => m.salon_id === id);
-      const nom   = msgs[0]?.salon_nom || id;
-
-      document.getElementById('modal-avatar').innerHTML = '#';
-      document.getElementById('modal-avatar').style.fontSize = '1rem';
-      document.getElementById('modal-title').textContent = `#${nom}`;
-      document.getElementById('modal-sub').textContent  = `${msgs.length} messages`;
-
-      // Top membres dans ce salon
-      const byMembre = {};
-      msgs.forEach(m => { byMembre[m.auteur_id] = (byMembre[m.auteur_id]||0)+1; });
-      const topMb = Object.entries(byMembre).sort(([,a],[,b]) => b-a).slice(0, 8);
-      const maxMb = topMb[0]?.[1] || 1;
-
-      // Activité mensuelle
-      const byMonth = {};
-      msgs.forEach(m => { const k = m.date?.slice(0,7); if(k) byMonth[k]=(byMonth[k]||0)+1; });
-      const monthSorted = Object.entries(byMonth).sort(([a],[b]) => a.localeCompare(b));
-      const maxM = Math.max(...monthSorted.map(([,v]) => v), 1);
-
-      // Types
-      const byType = {};
-      msgs.forEach(m => { byType[m.type] = (byType[m.type]||0)+1; });
-
-      document.getElementById('modal-body').innerHTML = `
-        <div class="mini-kpis">
-          <div class="mini-kpi"><div class="mini-kpi-val">${msgs.length}</div><div class="mini-kpi-lbl">Messages</div></div>
-          <div class="mini-kpi"><div class="mini-kpi-val">${new Set(msgs.map(m=>m.auteur_id)).size}</div><div class="mini-kpi-lbl">Auteurs</div></div>
-          <div class="mini-kpi"><div class="mini-kpi-val">${msgs.filter(m=>m.est_reponse).length}</div><div class="mini-kpi-lbl">Réponses</div></div>
-          <div class="mini-kpi"><div class="mini-kpi-val">${msgs.filter(m=>m.type==='sondage').length}</div><div class="mini-kpi-lbl">Sondages</div></div>
-        </div>
-
-        <div>
-          <div class="modal-section-title">Activité mensuelle</div>
-          <div class="chart-wrap" style="padding:.85rem">
-            <div class="chart-bars" style="height:130px">
-              ${monthSorted.map(([k,v],i) => {
-                const showL = i % Math.max(1, Math.ceil(48/20)) === 0 || i === monthSorted.length-1;
-                return `<div class="bar-wrap" style="width:20px">
-                  <div class="bar-col" style="width:100%;height:${Math.max(2,Math.round(v/maxM*108))}px" title="${k}:${v}"></div>
-                  ${showL ? `<div class="bar-lbl">${shortLabel(k)}</div>` : ''}
-                </div>`;
-              }).join('')}
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div class="modal-section-title">Membres actifs dans ce salon</div>
-          <div class="bar-list">
-            ${topMb.map(([mid, n]) => {
-              const mb  = allMembres.find(m => m.discord_id === mid);
-              const nom = mb?.display_name || mb?.nom || mid.slice(0,8);
-              const ini = nom.slice(0,2).toUpperCase();
-              const av  = mb?.avatar_url ? `<img src="${esc(mb.avatar_url)}" alt="">` : ini;
-              return `
-                <div class="bar-row" style="cursor:default">
-                  <div class="bar-avatar">${av}</div>
-                  <div class="bar-label">${esc(nom)}</div>
-                  <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(n/maxMb*100)}%"></div></div>
-                  <div class="bar-count">${n}</div>
-                </div>`;
-            }).join('')}
-          </div>
-        </div>
-
-        <div>
-          <div class="modal-section-title">Types de contenu</div>
-          <div class="types-grid">
-            ${Object.entries(byType).sort(([,a],[,b])=>b-a).map(([t,n]) => {
-              const icons = {texte:'💬',image:'🖼️',lien:'🔗',video:'🎥',fichier:'📎',sondage:'🗳️',autre:'❓'};
-              return `<div class="type-card"><div class="type-icon">${icons[t]||'❓'}</div><div class="type-count">${n}</div><div class="type-label">${t[0].toUpperCase()+t.slice(1)}</div></div>`;
-            }).join('')}
-          </div>
-        </div>
-      `;
-
-      document.getElementById('modal-overlay').classList.add('open');
-    };
-
-    // ── Fermeture modal ───────────────────────────────────────────
-    document.getElementById('btn-close-modal').onclick = () =>
-      document.getElementById('modal-overlay').classList.remove('open');
-    document.getElementById('modal-overlay').onclick = e => {
-      if (e.target === e.currentTarget) document.getElementById('modal-overlay').classList.remove('open');
-    };
+    }
 
     // ── Éditeur icône ─────────────────────────────────────────────
     document.getElementById('btn-edit-icon').onclick = () => {
@@ -663,8 +474,7 @@
       const url = document.getElementById('icon-url-input').value.trim();
       serverData.icon_url = url;
       await setDoc(doc(db, 'discord_serveurs', GUILD_ID), { ...serverData, icon_url: url }, { merge: true });
-      const avatarEl = document.getElementById('server-avatar');
-      avatarEl.innerHTML = url ? `<img src="${esc(url)}" alt="icône">` : '💬';
+      document.getElementById('server-avatar').innerHTML = url ? `<img src="${esc(url)}" alt="icône">` : '💬';
       document.getElementById('icon-edit-overlay').classList.remove('open');
     };
 
