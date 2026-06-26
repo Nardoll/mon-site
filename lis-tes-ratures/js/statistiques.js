@@ -153,7 +153,7 @@ async function init() {
   renderHistNotes10({ passees, membres });
   renderHistNotes5({ votes: votesChron, membres });
   renderParticipation({ votes: votesAvecExcept, membres });
-  renderColsLecteurs({ passees, statuts });
+  renderColsLecteurs({ reunions, livres, statuts, votes });
   renderPlotNotes({ passees, membreById });
   renderTblActifs({ membres, livres, votes: votesAvecExcept, reunions, statuts, commentaires });
   renderBilanProps({ membres, livres, votes: votesChron, reunions, livreById });
@@ -416,35 +416,72 @@ function renderParticipation({ votes, membres }) {
 // ════════════════════════════════════════════════════════════════════
 // 5. Colonnes lecteurs par séance (Archétype 3)
 // ════════════════════════════════════════════════════════════════════
-function renderColsLecteurs({ passees, statuts }) {
+function renderColsLecteurs({ reunions, livres, statuts, votes }) {
   const host = document.getElementById("cols-lecteurs");
-  if (!passees.length) {
-    host.innerHTML = `<p class="sx-note">Aucune séance enregistrée.</p>`;
+
+  // Un point par vote avec livre élu, trié par mois/année
+  const votesElus = [...votes]
+    .filter(v => !v.exceptionnel && v.livre_elu)
+    .sort((a, b) => a.annee !== b.annee ? a.annee - b.annee : a.mois - b.mois);
+
+  if (!votesElus.length) {
+    host.innerHTML = `<p class="sx-note">Aucun livre élu.</p>`;
     return;
   }
 
-  const counts = passees.map(r =>
-    membersWhoFinishedBook(r.livre_id, statuts, [r]).size
-  );
-  const maxVal = Math.max(1, ...counts);
+  const cols = votesElus.map(v => {
+    const livre   = livres.find(l => l.id === v.livre_elu);
+    const reunion = reunions.find(r => r.livre_id === v.livre_elu) ?? null;
+    const count   = membersWhoFinishedBook(v.livre_elu, statuts, reunion ? [reunion] : []).size;
+    const lab     = new Date(v.annee, v.mois - 1)
+      .toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
+    const titre   = livre?.titre ?? "?";
+    return { reunion, count, lab, titre };
+  });
 
-  host.innerHTML = passees.map((r, i) => {
-    const val = counts[i];
-    const d   = r.date
-      ? (typeof r.date.toDate === "function" ? r.date.toDate() : new Date(r.date))
-      : null;
-    const lab = d
-      ? d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" })
-      : "?";
-    const h = Math.max(val / maxVal * 100, val > 0 ? 10 : 2).toFixed(1);
-    return `<div class="sx-col">
+  const maxVal = Math.max(1, ...cols.map(c => c.count));
+
+  host.innerHTML = cols.map(({ reunion, count, lab, titre }) => {
+    const rid = reunion?.id ?? null;
+    const h   = Math.max(count / maxVal * 100, count > 0 ? 10 : 2).toFixed(1);
+    const tipText = `${titre} — ${count} lecteur${count !== 1 ? "s" : ""}`;
+    return `<div class="sx-col sx-col-tip"
+        ${rid ? `data-rid="${rid}" style="cursor:pointer"` : ""}
+        data-tip="${tipText.replace(/"/g, "&quot;")}">
       <div class="sx-col-bars" style="height:${h}%">
         <div class="sx-col-seg" style="height:100%;background:var(--accent)"></div>
       </div>
-      <div class="sx-col-v">${val}</div>
+      <div class="sx-col-v">${count}</div>
       <div class="sx-col-lab">${lab}</div>
     </div>`;
   }).join("");
+
+  // Tooltip flottant
+  let tip = document.getElementById("sx-float-tip");
+  if (!tip) {
+    tip = document.createElement("div");
+    tip.id = "sx-float-tip";
+    tip.className = "sx-float-tip";
+    document.body.appendChild(tip);
+  }
+  host.addEventListener("mousemove", e => {
+    const col = e.target.closest(".sx-col-tip[data-tip]");
+    if (col) {
+      tip.textContent = col.dataset.tip;
+      tip.style.left = (e.clientX + 14) + "px";
+      tip.style.top  = (e.clientY - 36) + "px";
+      tip.classList.add("sx-float-tip--vis");
+    } else {
+      tip.classList.remove("sx-float-tip--vis");
+    }
+  });
+  host.addEventListener("mouseleave", () => tip.classList.remove("sx-float-tip--vis"));
+
+  // Clic → réunion associée
+  host.addEventListener("click", e => {
+    const col = e.target.closest("[data-rid]");
+    if (col) window.location.href = `/lis-tes-ratures/reunions.html?open=${col.dataset.rid}`;
+  });
 }
 
 // ════════════════════════════════════════════════════════════════════
