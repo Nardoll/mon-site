@@ -3,13 +3,13 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import 'dotenv/config';
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-const GUILD_ID      = process.env.GUILD_ID;
+const GUILD_ID      = process.argv[2] || process.env.GUILD_ID;
 
 const FIREBASE_PROJECT = 'mon-site-e253f';
 const FIREBASE_API_KEY = 'AIzaSyBIMKnV2fpa8rvcWG8uNI-z9n_y-R0ILXI';
 const FIRESTORE_BASE   = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents`;
 
-const CHECKPOINT_FILE = './checkpoint.json';
+const CHECKPOINT_FILE = `./checkpoint_${GUILD_ID}.json`;
 
 // ── Checkpoint (reprise incrémentale) ───────────────────────────────────────
 function loadCheckpoint() {
