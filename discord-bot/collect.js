@@ -58,6 +58,87 @@ async function fsSet(collection, docId, data) {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+// ── Suivi de progression ──────────────────────────────────────────────────────
+const progress = {
+  startTime:      Date.now(),
+  totalChannels:  0,
+  doneChannels:   0,
+  totalMsgs:      0,       // messages collectés cette session
+  channelMsgs:    0,       // messages du salon en cours
+  channelName:    '',
+  lastPrintLen:   0,
+
+  fmt(ms) {
+    const s = Math.floor(ms / 1000);
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    return h > 0
+      ? `${h}h ${String(m).padStart(2,'0')}m`
+      : `${String(m).padStart(2,'0')}m ${String(sec).padStart(2,'0')}s`;
+  },
+
+  bar(ratio, width = 20) {
+    const filled = Math.round(ratio * width);
+    return '█'.repeat(filled) + '░'.repeat(width - filled);
+  },
+
+  print() {
+    const elapsed   = Date.now() - this.startTime;
+    const rate      = elapsed > 0 ? (this.totalMsgs / elapsed) * 60000 : 0; // msg/min
+    const chanRatio = this.totalChannels > 0 ? this.doneChannels / this.totalChannels : 0;
+
+    // ETA : basé sur la vitesse moyenne × messages estimés restants
+    // On estime les msgs restants = moyenne_par_salon × salons_restants
+    const avgPerChan = this.doneChannels > 0 ? this.totalMsgs / this.doneChannels : 0;
+    const remaining  = (this.totalChannels - this.doneChannels) * avgPerChan;
+    const etaMs      = rate > 0 ? (remaining / rate) * 60000 : null;
+
+    const lines = [
+      '',
+      `  ┌─────────────────────────────────────────────────────┐`,
+      `  │  📊 PROGRESSION DE LA COLLECTE                       │`,
+      `  ├─────────────────────────────────────────────────────┤`,
+      `  │  Salons     ${this.bar(chanRatio)} ${String(this.doneChannels).padStart(3)}/${this.totalChannels}   │`,
+      `  │  Messages   ${String(this.totalMsgs).padStart(6)} collectés cette session          │`,
+      `  │  Vitesse    ${String(Math.round(rate)).padStart(5)} msg/min                          │`,
+      `  │  Écoulé     ${this.fmt(elapsed).padEnd(10)}                           │`,
+      `  │  ETA        ${etaMs !== null ? this.fmt(etaMs).padEnd(10) : 'calcul…   '}                           │`,
+      `  ├─────────────────────────────────────────────────────┤`,
+      `  │  Salon actuel : #${this.channelName.slice(0,34).padEnd(34)}  │`,
+      `  │  Messages dans ce salon : ${String(this.channelMsgs).padStart(6)}                    │`,
+      `  └─────────────────────────────────────────────────────┘`,
+      '',
+    ];
+
+    // Efface les lignes précédentes et réaffiche
+    if (this.lastPrintLen > 0) {
+      process.stdout.write(`\x1b[${this.lastPrintLen}A\x1b[0J`);
+    }
+    process.stdout.write(lines.join('\n'));
+    this.lastPrintLen = lines.length;
+  },
+
+  startChannel(name) {
+    this.channelName = name;
+    this.channelMsgs = 0;
+    this.print();
+  },
+
+  addMsg() {
+    this.totalMsgs++;
+    this.channelMsgs++;
+  },
+
+  endChannel() {
+    this.doneChannels++;
+    this.print();
+  },
+
+  summary() {
+    const elapsed = Date.now() - this.startTime;
+    console.log(`\n  ✅  Terminé en ${this.fmt(elapsed)} — ${this.totalMsgs} messages collectés sur ${this.doneChannels} salons.\n`);
+  },
+};
+
 function getType(msg) {
   if (msg.poll) return 'sondage';
   if (msg.attachments.size > 0) {
@@ -76,6 +157,7 @@ async function processMessage(msg, channel) {
 
   const type = getType(msg);
 
+  progress.addMsg();
   await fsAdd('discord_messages', {
     serveur_id:           GUILD_ID,
     salon_id:             channel.id,
@@ -119,7 +201,7 @@ async function processMessage(msg, channel) {
 
 // ── Collecte d'un salon ──────────────────────────────────────────────────────
 async function collectChannel(channel, checkpoint) {
-  process.stdout.write(`  #${channel.name} ... `);
+  progress.startChannel(channel.name);
   let count   = 0;
   let newestId = checkpoint[channel.id] || null;
 
@@ -161,7 +243,7 @@ async function collectChannel(channel, checkpoint) {
     }
   }
 
-  console.log(`${count} messages`);
+  progress.endChannel();
   return newestId;
 }
 
@@ -224,6 +306,7 @@ async function main() {
     .sort((a, b) => a.position - b.position);
 
   console.log(`💬 ${textChannels.length} salons textuels\n`);
+  progress.totalChannels = textChannels.length;
 
   for (const channel of textChannels) {
     try {
@@ -242,7 +325,7 @@ async function main() {
     last_collected: new Date().toISOString(),
   });
 
-  console.log('\n✅ Collecte terminée ! Checkpoint sauvegardé.');
+  progress.summary();
   client.destroy();
 }
 
