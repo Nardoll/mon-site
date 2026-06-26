@@ -12,7 +12,8 @@ export function renderNav(activePage, servers = []) {
     { key: 'dashboard', label: '📊 Vue d\'ensemble', file: 'dashboard.html' },
     { key: 'membres',   label: '👥 Membres',          file: 'membres.html'   },
     { key: 'salons',    label: '💬 Salons',            file: 'salons.html'    },
-    { key: 'interactions', label: '🤝 Interactions',     file: 'interactions.html' },
+    { key: 'interactions', label: '🤝 Interactions',        file: 'interactions.html'  },
+    { key: 'graphe',       label: '🕸️ Représentation graphique', file: 'graphe.html'   },
     { key: 'sondages',  label: '🗳️ Sondages',          file: 'sondages.html'  },
   ];
 
