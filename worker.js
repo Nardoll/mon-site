@@ -22,17 +22,29 @@ async function handleLeaguepedia(request) {
     "format=json"
   ].join("&");
 
+  const cacheKey = new Request(lpUrl);
+  const cache = caches.default;
+  const cached = await cache.match(cacheKey);
+  if (cached) return addCors(cached);
+
   const res = await fetch(lpUrl, {
     headers: { "User-Agent": "Mozilla/5.0 (compatible; pronostics-bot/1.0)" }
   });
   const data = await res.text();
-  return new Response(data, {
+  const response = new Response(data, {
     headers: {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Cache-Control": "no-store"
+      "Cache-Control": "public, max-age=120"
     }
   });
+  if (res.ok) await cache.put(cacheKey, response.clone());
+  return addCors(response);
+}
+
+function addCors(res) {
+  const r = new Response(res.body, res);
+  r.headers.set("Access-Control-Allow-Origin", "*");
+  return r;
 }
 
 export default {
