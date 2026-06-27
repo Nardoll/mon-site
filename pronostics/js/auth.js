@@ -1,20 +1,28 @@
-const KEY_ID   = 'prono_profile_id';
-const KEY_NAME = 'prono_profile_name';
+const KEY_ID     = 'prono_profile_id';
+const KEY_NAME   = 'prono_profile_name';
+const KEY_AVATAR = 'prono_profile_avatar';
 
 export function getLocalProfile() {
   const id   = localStorage.getItem(KEY_ID);
   const name = localStorage.getItem(KEY_NAME);
-  return id && name ? { id, name } : null;
+  if (!id || !name) return null;
+  return { id, name, avatar_url: localStorage.getItem(KEY_AVATAR) || null };
 }
 
-export function setLocalProfile(id, name) {
+export function setLocalProfile(id, name, avatarUrl = null) {
   localStorage.setItem(KEY_ID, id);
   localStorage.setItem(KEY_NAME, name);
+  if (avatarUrl !== null) {
+    localStorage.setItem(KEY_AVATAR, avatarUrl);
+  } else {
+    localStorage.removeItem(KEY_AVATAR);
+  }
 }
 
 export function clearLocalProfile() {
   localStorage.removeItem(KEY_ID);
   localStorage.removeItem(KEY_NAME);
+  localStorage.removeItem(KEY_AVATAR);
 }
 
 export async function requireProfile(onReady) {

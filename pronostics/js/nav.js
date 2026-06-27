@@ -119,9 +119,8 @@ function showAvatarModal(profile) {
     btn.textContent = '…';
     try {
       await updateProfile(profile.id, { avatar_url: url });
-      // Update local cache
       import('./auth.js').then(({ setLocalProfile }) => {
-        setLocalProfile(profile.id, profile.name);
+        setLocalProfile(profile.id, profile.name, url);
       });
       profile.avatar_url = url;
       // Update top bar avatar
