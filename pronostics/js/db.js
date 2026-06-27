@@ -176,13 +176,16 @@ export async function scorePicksForMatch(match) {
   await batch.commit();
 }
 
-// ── Leaguepedia sync ──────────────────────────────────────────────
+// ── LoL Esports API sync ──────────────────────────────────────────
+// MSI league ID officiel
+const MSI_LEAGUE_ID = "98767991310872058";
+
 export async function syncTournament(tournamentId) {
   const tour = await getTournament(tournamentId);
   if (!tour) throw new Error('Tournoi introuvable');
 
   const now = Date.now();
-  const COOLDOWN_MS = 5 * 60 * 1000;
+  const COOLDOWN_MS = 2 * 60 * 1000;
 
   if (tour.sync_cooldown_until) {
     const until = tour.sync_cooldown_until.toMillis
@@ -193,66 +196,80 @@ export async function syncTournament(tournamentId) {
     }
   }
 
-  if (!tour.leaguepedia_key) throw new Error('Clé Leaguepedia manquante');
-
-  const key = tour.leaguepedia_key;
-  const url = `/api/leaguepedia?key=${encodeURIComponent(key)}`;
-
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
+  const leagueId = tour.lol_league_id || MSI_LEAGUE_ID;
+  const res = await fetch(`/api/lolesports?endpoint=getSchedule&leagueId=${leagueId}`);
+  if (!res.ok) throw new Error(`API LoL Esports : HTTP ${res.status}`);
   const data = await res.json();
-  if (data.error) throw new Error(data.error.info);
 
-  const rows = data.cargoquery || [];
-  const batch = writeBatch(db);
-  const finishedMatches = [];
-  const teamSet = new Set();
+  const events = data?.data?.schedule?.events || [];
+  if (events.length === 0) throw new Error('Aucun match retourné par l\'API');
 
-  for (const row of rows) {
-    const m = row.title;
-    const team1 = m.Team1 || '';
-    const team2 = m.Team2 || '';
-    const dateStr = m['DateTime UTC'] || '';
-
-    if (!team1 || !team2) continue;
-
-    teamSet.add(team1);
-    teamSet.add(team2);
-
-    const matchId = makeMatchId(tournamentId, team1, team2, dateStr);
-    const score1 = parseInt(m.Team1Score) || 0;
-    const score2 = parseInt(m.Team2Score) || 0;
-    const winner = m.Winner || null;
-
-    let status = 'scheduled';
-    if (winner) {
-      status = 'finished';
-    } else if (dateStr) {
-      const d = new Date(dateStr.endsWith('Z') ? dateStr : dateStr + ' UTC');
-      if (d < new Date()) status = 'live';
-    }
-
-    const matchData = {
-      tournament_id: tournamentId,
-      team1, team2, date_utc: dateStr,
-      best_of: parseInt(m.BestOf) || 5,
-      winner, score1, score2, status,
-      round: m.Round || '',
-      tab: m.Tab || ''
-    };
-
-    batch.set(doc(db, 'prono_matches', matchId), matchData, { merge: true });
-    if (status === 'finished') finishedMatches.push({ id: matchId, ...matchData });
+  // On charge les matchs existants pour matcher par équipes + date
+  const existingMatches = await getMatchesByTournament(tournamentId);
+  const existingByKey = {};
+  for (const m of existingMatches) {
+    const k = matchKey(m.team1, m.team2);
+    existingByKey[k] = m;
   }
 
-  // Mettre à jour la liste des équipes dans le tournoi
-  const teamsArray = Array.from(teamSet).sort();
+  const batch = writeBatch(db);
+  const finishedMatches = [];
+  const logos = { ...(tour.team_logos || {}) };
+  let updated = 0;
+
+  for (const ev of events) {
+    if (ev.type !== 'match') continue;
+    const match = ev.match;
+    if (!match?.teams || match.teams.length < 2) continue;
+
+    const [t1, t2] = match.teams;
+    const team1 = t1.code || t1.name || '';
+    const team2 = t2.code || t2.name || '';
+    if (!team1 || !team2) continue;
+
+    // Récupérer les logos depuis l'API
+    if (t1.image && !logos[team1]) logos[team1] = t1.image;
+    if (t2.image && !logos[team2]) logos[team2] = t2.image;
+
+    // Chercher le match existant dans Firebase
+    const key = matchKey(team1, team2);
+    const existing = existingByKey[key];
+    if (!existing) continue; // match pas dans notre bracket, on skip
+
+    const state = ev.state || 'unstarted';
+    const outcome1 = t1.result?.outcome;
+    const outcome2 = t2.result?.outcome;
+    const wins1 = t1.result?.gameWins ?? 0;
+    const wins2 = t2.result?.gameWins ?? 0;
+
+    let status = 'scheduled';
+    let winner = null;
+    let score1 = null, score2 = null;
+
+    if (state === 'completed') {
+      status = 'finished';
+      score1 = wins1;
+      score2 = wins2;
+      if (outcome1 === 'win') winner = team1;
+      else if (outcome2 === 'win') winner = team2;
+    } else if (state === 'inProgress') {
+      status = 'live';
+      score1 = wins1;
+      score2 = wins2;
+    }
+
+    if (existing.status === 'finished' && status !== 'finished') continue;
+
+    const update = { status, winner, score1, score2 };
+    batch.set(doc(db, 'prono_matches', existing.id), update, { merge: true });
+    if (status === 'finished') finishedMatches.push({ ...existing, ...update });
+    updated++;
+  }
 
   batch.set(doc(db, 'prono_tournaments', tournamentId), {
     last_sync: Timestamp.fromMillis(now),
     sync_cooldown_until: Timestamp.fromMillis(now + COOLDOWN_MS),
-    ...(teamsArray.length > 0 ? { teams: teamsArray } : {})
+    team_logos: logos
   }, { merge: true });
 
   await batch.commit();
@@ -261,14 +278,11 @@ export async function syncTournament(tournamentId) {
     await scorePicksForMatch(match);
   }
 
-  return { ok: true, count: rows.length, teams: teamsArray.length };
+  return { ok: true, count: updated, total: events.length };
 }
 
-function makeMatchId(tournamentId, t1, t2, date) {
-  return `${tournamentId}_${t1}_${t2}_${date}`
-    .replace(/[\s:]/g, '_')
-    .replace(/[^a-zA-Z0-9_-]/g, '')
-    .slice(0, 120);
+function matchKey(t1, t2) {
+  return [t1, t2].sort().join('__');
 }
 
 // ── Admin ─────────────────────────────────────────────────────────

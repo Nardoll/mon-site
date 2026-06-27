@@ -41,6 +41,39 @@ async function handleLeaguepedia(request) {
   return addCors(response);
 }
 
+const LOL_API_KEY = "0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z";
+const LOL_BASE = "https://esports-api.lolesports.com/persisted/gw";
+
+async function handleLolesports(request) {
+  const url = new URL(request.url);
+  const endpoint = url.searchParams.get("endpoint") || "getSchedule";
+  const leagueId = url.searchParams.get("leagueId") || "";
+  const tournamentId = url.searchParams.get("tournamentId") || "";
+
+  let apiUrl = `${LOL_BASE}/${endpoint}?hl=en-US`;
+  if (leagueId) apiUrl += `&leagueId=${leagueId}`;
+  if (tournamentId) apiUrl += `&tournamentId=${tournamentId}`;
+
+  const cacheKey = new Request(apiUrl);
+  const cache = caches.default;
+  const cached = await cache.match(cacheKey);
+  if (cached) return addCors(cached);
+
+  const res = await fetch(apiUrl, {
+    headers: { "x-api-key": LOL_API_KEY }
+  });
+  const data = await res.text();
+  const response = new Response(data, {
+    status: res.status,
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "public, max-age=120"
+    }
+  });
+  if (res.ok) await cache.put(cacheKey, response.clone());
+  return addCors(response);
+}
+
 function addCors(res) {
   const r = new Response(res.body, res);
   r.headers.set("Access-Control-Allow-Origin", "*");
@@ -57,6 +90,10 @@ export default {
 
     if (url.pathname === "/api/leaguepedia") {
       return handleLeaguepedia(request);
+    }
+
+    if (url.pathname === "/api/lolesports") {
+      return handleLolesports(request);
     }
 
 // Tout le reste : fichiers statiques (index.html, /lis-tes-ratures/…, etc.)
