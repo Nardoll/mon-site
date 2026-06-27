@@ -374,6 +374,90 @@
       flex-shrink: 0;
     }
 
+    /* ── Carte Pronostics (DA gaming sombre) ─ */
+    .prono-card {
+      background: linear-gradient(160deg, #0d0e14 0%, #161829 100%);
+      border-color: rgba(249,115,22,.3);
+      padding-left: 1.9rem;
+    }
+    .prono-card::after {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 6px;
+      background: linear-gradient(180deg, #f97316, #fbbf24);
+      border-radius: 13px 0 0 13px;
+    }
+    a.prono-card:hover {
+      background: linear-gradient(160deg, #121320 0%, #1c1f3a 100%) !important;
+      border-color: rgba(249,115,22,.65) !important;
+    }
+    .prono-eyebrow {
+      font-size: .6rem;
+      font-weight: 700;
+      letter-spacing: .17em;
+      text-transform: uppercase;
+      color: #f97316;
+    }
+    .prono-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #f1f2f8;
+      letter-spacing: -.01em;
+      line-height: 1.2;
+      margin-top: .1rem;
+    }
+    .prono-rule {
+      height: 1px;
+      background: linear-gradient(90deg, rgba(249,115,22,.5), transparent);
+      margin: .05rem 0;
+    }
+    .prono-desc {
+      font-size: .8rem;
+      color: #9ea0c0;
+      line-height: 1.57;
+    }
+    .prono-foot {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: .5rem;
+    }
+    .prono-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      padding: .28em .68em;
+      border-radius: 5px;
+      background: rgba(249,115,22,.15);
+      color: #f97316;
+      border: 1px solid rgba(249,115,22,.3);
+    }
+    /* pixel bracket decoration */
+    .prono-bracket {
+      display: grid;
+      grid-template-columns: 1fr 6px 1fr;
+      gap: 3px;
+      align-items: center;
+      opacity: .55;
+    }
+    .prono-bracket-team {
+      height: 4px;
+      background: #f97316;
+      border-radius: 2px;
+    }
+    .prono-bracket-line {
+      background: #fbbf24;
+      width: 6px;
+      border-radius: 1px;
+    }
+    .prono-bracket-line.t { height: 50%; align-self: start; margin-top: 2px; }
+    .prono-bracket-line.b { height: 50%; align-self: end; margin-bottom: 2px; }
+    .prono-card .card-arrow { color: #f97316; }
+
     /* ── Bouton personnel discret ─────────── */
     .perso-btn {
       position: fixed;
@@ -478,6 +562,30 @@
         <div class="card-desc">World-building solo procédural — carte hexagonale, oracle quotidien et wiki de l'univers.</div>
       </div>
       <span class="card-badge badge-locked">🔒 Mot de passe</span>
+      <span class="card-arrow">→</span>
+    </a>
+
+    <!-- Pronostics LoL — DA gaming sombre -->
+    <a href="/pronostics/"
+       class="section-card prono-card"
+       style="--card-accent:#f97316;--card-glow:rgba(249,115,22,.2)">
+      <div class="prono-eyebrow">E-sport · League of Legends</div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:.42rem">
+        <div class="prono-title">Pronostics</div>
+        <div class="prono-rule"></div>
+        <div class="prono-desc">Paris entre amis sur MSI, Worlds et les grands tournois LoL.</div>
+      </div>
+      <div class="prono-foot">
+        <span class="prono-badge">🏆 MSI 2026 · Live</span>
+        <div class="prono-bracket" aria-hidden="true" style="width:48px">
+          <div class="prono-bracket-team" style="opacity:.9"></div>
+          <div class="prono-bracket-line t"></div>
+          <div class="prono-bracket-team" style="height:6px;background:#fbbf24;opacity:1"></div>
+          <div class="prono-bracket-team" style="opacity:.6"></div>
+          <div class="prono-bracket-line b"></div>
+          <div></div>
+        </div>
+      </div>
       <span class="card-arrow">→</span>
     </a>
 
