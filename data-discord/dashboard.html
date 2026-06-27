@@ -246,29 +246,34 @@
     import { db } from './firebase-config.js';
     import { renderNav } from './nav.js';
     import {
-      collection, getDocs, query, where, doc, setDoc, getDoc
+      collection, getDocs, doc, setDoc, getDoc
     } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
     const params   = new URLSearchParams(location.search);
     const GUILD_ID = params.get('id') || '1499528679758364744';
 
-    let allMessages = [];
-    let allMembres  = [];
     let serverData  = {};
+    let statsServeur = {};
+    let statsSalons  = [];
+    let statsMembres = [];
     let timeGran    = 'month';
 
     // ── Chargement ────────────────────────────────────────────────
     async function load() {
-      const [msgSnap, mbSnap, srvSnap, srvDoc] = await Promise.all([
-        getDocs(query(collection(db, 'discord_messages'),     where('serveur_id', '==', GUILD_ID))),
-        getDocs(query(collection(db, 'discord_membres_bot'), where('serveur_id', '==', GUILD_ID))),
-        getDocs(query(collection(db, 'discord_serveurs'))),
-        getDoc(doc(db, 'discord_serveurs', GUILD_ID))
+      const [srvSnap, srvDoc, statsSrvDoc, statsSalonsDoc, statsMbDoc] = await Promise.all([
+        getDocs(collection(db, 'discord_serveurs')),
+        getDoc(doc(db, 'discord_serveurs',        GUILD_ID)),
+        getDoc(doc(db, 'discord_stats_serveur',   GUILD_ID)),
+        getDoc(doc(db, 'discord_stats_salons',    GUILD_ID)),
+        getDoc(doc(db, 'discord_stats_membres',   GUILD_ID)),
       ]);
 
-      allMessages = msgSnap.docs.map(d => d.data());
-      allMembres  = mbSnap.docs.map(d => d.data());
-      serverData  = srvDoc.exists() ? srvDoc.data() : {};
+      serverData   = srvDoc.exists()       ? srvDoc.data()       : {};
+      statsServeur = statsSrvDoc.exists()  ? statsSrvDoc.data()  : {};
+      statsSalons  = statsSalonsDoc.exists()
+        ? JSON.parse(statsSalonsDoc.data().salons  || '[]') : [];
+      statsMembres = statsMbDoc.exists()
+        ? JSON.parse(statsMbDoc.data().membres || '[]') : [];
 
       const allServers = srvSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderNav(GUILD_ID, allServers);
@@ -310,23 +315,12 @@
     function renderHeader() {
       document.getElementById('server-name').textContent = serverData.nom || 'Serveur Discord';
       document.getElementById('server-meta').textContent =
-        `${allMembres.length} membres · ${allMessages.length} messages collectés · dernière collecte : ${serverData.last_collected?.slice(0,10) || '—'}`;
+        `${statsServeur.total_membres || 0} membres · ${(statsServeur.total_messages || 0).toLocaleString('fr')} messages collectés · dernière collecte : ${serverData.last_collected?.slice(0,10) || '—'}`;
 
       const iconSrc = serverData.icon_url || serverData.guild_icon_url;
       if (iconSrc) {
         document.getElementById('server-avatar').innerHTML = `<img src="${esc(iconSrc)}" alt="icône">`;
       }
-    }
-
-    // ── Histogramme ───────────────────────────────────────────────
-    function getKey(dateStr, gran) {
-      if (!dateStr) return null;
-      if (gran === 'year')  return dateStr.slice(0, 4);
-      if (gran === 'month') return dateStr.slice(0, 7);
-      const d = new Date(dateStr);
-      const jan4 = new Date(d.getFullYear(), 0, 4);
-      const week = Math.ceil(((d - jan4) / 86400000 + jan4.getDay() + 1) / 7);
-      return `${d.getFullYear()}-W${String(week).padStart(2,'0')}`;
     }
 
     function shortLabel(k) {
@@ -337,11 +331,8 @@
     }
 
     function renderActivity() {
-      const counts = {};
-      allMessages.forEach(m => {
-        const k = getKey(m.date, timeGran);
-        if (k) counts[k] = (counts[k] || 0) + 1;
-      });
+      const rawKey = timeGran === 'year' ? 'msg_par_an' : timeGran === 'week' ? 'msg_par_semaine' : 'msg_par_mois';
+      const counts = JSON.parse(statsServeur[rawKey] || '{}');
       const sorted = Object.entries(counts).sort(([a],[b]) => a.localeCompare(b));
       if (!sorted.length) {
         document.getElementById('activity-chart').innerHTML = '<div style="color:var(--muted);font-size:.85rem;padding:2rem">Aucune donnée</div>';
@@ -407,54 +398,23 @@
     function renderCards() {
       const grid = document.getElementById('cards-grid');
 
-      // ── Stats globales ────
-      const totalMsgs   = allMessages.length;
-      const totalMembres = allMembres.length;
+      const totalMsgs    = statsServeur.total_messages  || 0;
+      const totalMembres = statsServeur.total_membres   || 0;
+      const totalSalons  = statsServeur.total_salons    || 0;
+      const totalSondages = statsServeur.total_sondages || 0;
+      const activeThisWeek  = statsServeur.actifs_semaine || 0;
+      const activeThisMonth = statsServeur.actifs_mois    || 0;
+      const typeCounts = JSON.parse(statsServeur.type_counts || '{}');
+      const typeIcons  = { texte:'💬', image:'🖼️', lien:'🔗', video:'🎥', fichier:'📎', sondage:'🗳️', autre:'❓' };
 
-      // Membres actifs ce mois
-      const thisMonth = new Date().toISOString().slice(0,7);
-      const activeThisMonth = new Set(
-        allMessages.filter(m => m.date?.slice(0,7) === thisMonth).map(m => m.auteur_id)
-      ).size;
+      const topSalons = [...statsSalons].sort((a,b) => b.msgs - a.msgs);
 
-      // Membres actifs cette semaine
-      const now7 = new Date(); now7.setDate(now7.getDate() - now7.getDay() + (now7.getDay()===0?-6:1));
-      const d7str = now7.toISOString().slice(0,10);
-      const activeThisWeek = new Set(
-        allMessages.filter(m => m.date >= d7str).map(m => m.auteur_id)
-      ).size;
+      const lastSondageDate = statsServeur.last_sondage_date?.slice(0,10) || null;
 
-      // Salons
-      const salonMap = {};
-      allMessages.forEach(m => {
-        if (!salonMap[m.salon_id]) salonMap[m.salon_id] = { nom: m.salon_nom, count: 0 };
-        salonMap[m.salon_id].count++;
-      });
-      const topSalons = Object.values(salonMap).sort((a,b) => b.count - a.count);
-      const totalSalons = topSalons.length;
-
-      // Types de messages
-      const typeCounts = {};
-      allMessages.forEach(m => { typeCounts[m.type] = (typeCounts[m.type]||0)+1; });
-      const typeIcons = { texte:'💬', image:'🖼️', lien:'🔗', video:'🎥', fichier:'📎', sondage:'🗳️', autre:'❓' };
-
-      // Sondages
-      const totalSondages = typeCounts['sondage'] || 0;
-      const lastSondage   = allMessages.filter(m => m.type === 'sondage').sort((a,b) => b.date > a.date ? 1 : -1)[0];
-
-      // Interactions (Discord replies)
-      const totalReplies = allMessages.filter(m => m.est_reponse).length;
-      // Qui répond à qui : on n'a pas l'auteur cible dans la collecte actuelle, on compte par auteur
-      const replyByAuthor = {};
-      allMessages.filter(m => m.est_reponse).forEach(m => {
-        replyByAuthor[m.auteur_id] = (replyByAuthor[m.auteur_id]||0)+1;
-      });
-      const topRepliers = Object.entries(replyByAuthor)
-        .sort(([,a],[,b]) => b-a).slice(0,3)
-        .map(([id, n]) => {
-          const mb = allMembres.find(x => x.discord_id === id);
-          return { nom: mb?.display_name || mb?.nom || id.slice(0,8), n };
-        });
+      const topRepliers = [...statsMembres]
+        .sort((a,b) => (b.nb_reponses||0) - (a.nb_reponses||0)).slice(0,3)
+        .map(m => ({ nom: m.display_name || m.nom, n: m.nb_reponses || 0 }));
+      const totalReplies = statsMembres.reduce((s,m) => s + (m.nb_reponses||0), 0);
       const maxReplies = topRepliers[0]?.n || 1;
 
 
@@ -510,9 +470,9 @@
           <div class="mini-bars-grid">
             ${topSalons.slice(0,3).map(s => `
               <div class="mini-bar-row">
-                <div class="mini-bar-name">#${esc(s.nom || '—')}</div>
-                <div class="mini-bar-bg"><div class="mini-bar-fill" style="width:${Math.round(s.count/(topSalons[0]?.count||1)*100)}%"></div></div>
-                <div class="mini-bar-count">${s.count}</div>
+                <div class="mini-bar-name">#${esc(s.salon_nom || '—')}</div>
+                <div class="mini-bar-bg"><div class="mini-bar-fill" style="width:${Math.round(s.msgs/(topSalons[0]?.msgs||1)*100)}%"></div></div>
+                <div class="mini-bar-count">${s.msgs}</div>
               </div>`).join('')}
           </div>
         </a>
@@ -525,11 +485,11 @@
           </div>
           <div class="sec-card-kpi">${totalSondages}</div>
           <div class="sec-card-extras">
-            ${lastSondage ? `
+            ${lastSondageDate ? `
               <div class="stat-pill">
                 <div class="stat-dot"></div>
                 <div class="stat-label">Dernier sondage</div>
-                <div class="stat-val">${lastSondage.date?.slice(0,10) || '—'}</div>
+                <div class="stat-val">${lastSondageDate}</div>
               </div>` : '<div class="sec-card-sub">Aucun sondage collecté</div>'}
           </div>
         </a>

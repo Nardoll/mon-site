@@ -125,45 +125,26 @@
   <script type="module">
     import { db } from './firebase-config.js';
     import { renderNav } from './nav.js';
-    import { collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { collection, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
     const params   = new URLSearchParams(location.search);
     const GUILD_ID = params.get('id') || '1499528679758364744';
-    let allMessages = [], allMembres = [], memberMap = {};
+    let statsMembres = [], memberMap = {};
     let sortKey = 'msgs', openId = null;
 
     async function load() {
-      const [msgSnap, mbSnap, srvSnap] = await Promise.all([
-        getDocs(query(collection(db,'discord_messages'),    where('serveur_id','==',GUILD_ID))),
-        getDocs(query(collection(db,'discord_membres_bot'), where('serveur_id','==',GUILD_ID))),
-        getDocs(collection(db,'discord_serveurs')),
+      const [srvSnap, statsMbDoc] = await Promise.all([
+        getDocs(collection(db, 'discord_serveurs')),
+        getDoc(doc(db, 'discord_stats_membres', GUILD_ID)),
       ]);
-      allMessages = msgSnap.docs.map(d=>d.data());
-      allMembres  = mbSnap.docs.map(d=>d.data());
-      allMembres.forEach(m=>{ memberMap[m.discord_id]=m; });
+      statsMembres = statsMbDoc.exists() ? JSON.parse(statsMbDoc.data().membres || '[]') : [];
+      statsMembres.forEach(m => { memberMap[m.auteur_id] = m; });
       renderNav('membres', srvSnap.docs.map(d=>({id:d.id,...d.data()})));
       renderList();
     }
 
-    function buildMemberData() {
-      const msgCount={}, firstMsg={}, lastMsg={};
-      allMessages.forEach(m => {
-        const id = m.auteur_id;
-        msgCount[id] = (msgCount[id]||0)+1;
-        if (!firstMsg[id]||m.date<firstMsg[id]) firstMsg[id]=m.date;
-        if (!lastMsg[id] ||m.date>lastMsg[id])  lastMsg[id] =m.date;
-      });
-      return allMembres.map(m => ({
-        ...m,
-        msgs:     msgCount[m.discord_id]||0,
-        firstMsg: firstMsg[m.discord_id]||null,
-        lastMsg:  lastMsg[m.discord_id]||null,
-      }));
-    }
-
     function renderList() {
-      const data   = buildMemberData();
-      const sorted = [...data].sort((a,b)=>{
+      const sorted = [...statsMembres].sort((a,b)=>{
         if (sortKey==='msgs')       return b.msgs-a.msgs;
         if (sortKey==='recent')     return (b.lastMsg||'').localeCompare(a.lastMsg||'');
         if (sortKey==='ancien-msg') return (a.firstMsg||'zzz').localeCompare(b.firstMsg||'zzz');
@@ -181,7 +162,7 @@
           m.date_arrivee ? `Depuis ${m.date_arrivee.slice(0,10)}${days!==null?` · ${days} j`:''}` : null,
           m.lastMsg ? `Dernier msg ${m.lastMsg.slice(0,10)}` : null,
         ].filter(Boolean).join('  ·  ');
-        return `<div class="member-row${openId===m.discord_id?' selected':''}" onclick="openMember('${m.discord_id}')">
+        return `<div class="member-row${openId===m.auteur_id?' selected':''}" onclick="openMember('${m.auteur_id}')">
           <div class="rank">#${i+1}</div>
           <div class="avatar">${av}</div>
           <div class="member-info">
@@ -197,20 +178,12 @@
       }).join('');
     }
 
-    let panelMsgs = [], panelGran = 'month';
-
-    function getKey(dateStr, gran) {
-      if (!dateStr) return null;
-      if (gran==='year')  return dateStr.slice(0,4);
-      if (gran==='month') return dateStr.slice(0,7);
-      const d=new Date(dateStr), jan4=new Date(d.getFullYear(),0,4);
-      const w=Math.ceil(((d-jan4)/86400000+jan4.getDay()+1)/7);
-      return `${d.getFullYear()}-W${String(w).padStart(2,'0')}`;
-    }
+    let panelMembre = null, panelGran = 'month';
 
     function renderPanelChart() {
-      const counts={};
-      panelMsgs.forEach(m=>{ const k=getKey(m.date,panelGran); if(k) counts[k]=(counts[k]||0)+1; });
+      if (!panelMembre) return;
+      const rawKey = panelGran==='year' ? 'msgParAn' : panelGran==='week' ? 'msgParSemaine' : 'msgParMois';
+      const counts = panelMembre[rawKey] || {};
       const sorted = Object.entries(counts).sort(([a],[b])=>a.localeCompare(b));
       const max  = Math.max(...sorted.map(([,v])=>v),1);
       const barH = 108;
@@ -231,31 +204,27 @@
     window.openMember = (id) => {
       openId = id; panelGran = 'month';
       renderList();
-      const m   = memberMap[id];
-      const nom = m?.display_name||m?.nom||id;
-      panelMsgs = allMessages.filter(x=>x.auteur_id===id);
-      const days = m?.date_arrivee ? Math.floor((Date.now()-new Date(m.date_arrivee))/86400000) : null;
+      panelMembre = memberMap[id];
+      const m   = panelMembre;
+      if (!m) return;
+      const nom  = m.display_name || m.nom || id;
+      const days = m.date_arrivee ? Math.floor((Date.now()-new Date(m.date_arrivee))/86400000) : null;
+      const byType   = m.byType   || {};
+      const topSalons = m.topSalons || [];
+      const maxS = topSalons[0]?.count || 1;
+      const icons = {texte:'💬',image:'🖼️',lien:'🔗',video:'🎥',fichier:'📎',sondage:'🗳️',autre:'❓'};
 
-      document.getElementById('p-avatar').innerHTML = m?.avatar_url ? `<img src="${esc(m.avatar_url)}" alt="">` : nom.slice(0,2).toUpperCase();
+      document.getElementById('p-avatar').innerHTML = m.avatar_url ? `<img src="${esc(m.avatar_url)}" alt="">` : nom.slice(0,2).toUpperCase();
       document.getElementById('p-name').textContent = nom;
-      document.getElementById('p-sub').textContent  = `${panelMsgs.length} messages${days!==null?' · '+days+' jours sur le serveur':''}`;
-
-      const bySalon={};
-      panelMsgs.forEach(x=>{ bySalon[x.salon_nom]=(bySalon[x.salon_nom]||0)+1; });
-      const topSalons = Object.entries(bySalon).sort(([,a],[,b])=>b-a);
-      const maxS = topSalons[0]?.[1]||1;
-
-      const byType={};
-      panelMsgs.forEach(x=>{ byType[x.type]=(byType[x.type]||0)+1; });
-      const icons={texte:'💬',image:'🖼️',lien:'🔗',video:'🎥',fichier:'📎',sondage:'🗳️',autre:'❓'};
+      document.getElementById('p-sub').textContent  = `${m.msgs} messages${days!==null?' · '+days+' jours sur le serveur':''}`;
 
       document.getElementById('p-body').innerHTML = `
         <div>
           <div class="mini-kpis">
-            <div class="mini-kpi"><div class="n">${panelMsgs.length}</div><div class="l">Messages</div></div>
-            <div class="mini-kpi"><div class="n">${panelMsgs.filter(x=>x.est_reponse).length}</div><div class="l">Réponses</div></div>
-            <div class="mini-kpi"><div class="n">${panelMsgs.filter(x=>x.type==='image').length}</div><div class="l">Images</div></div>
-            <div class="mini-kpi"><div class="n">${panelMsgs.filter(x=>x.type==='sondage').length}</div><div class="l">Sondages</div></div>
+            <div class="mini-kpi"><div class="n">${m.msgs}</div><div class="l">Messages</div></div>
+            <div class="mini-kpi"><div class="n">${m.nb_reponses||0}</div><div class="l">Réponses</div></div>
+            <div class="mini-kpi"><div class="n">${byType.image||0}</div><div class="l">Images</div></div>
+            <div class="mini-kpi"><div class="n">${byType.sondage||0}</div><div class="l">Sondages</div></div>
           </div>
         </div>
         <div>
@@ -271,11 +240,11 @@
         </div>
         <div>
           <div class="panel-section-title">Par salon</div>
-          <div class="salon-bars">${topSalons.map(([n2,c])=>`
+          <div class="salon-bars">${topSalons.map(s=>`
             <div class="salon-row">
-              <div class="salon-name">#${esc(n2)}</div>
-              <div class="salon-bar-bg"><div class="salon-bar-fill" style="width:${Math.round(c/maxS*100)}%"></div></div>
-              <div class="salon-count">${c}</div>
+              <div class="salon-name">#${esc(s.nom)}</div>
+              <div class="salon-bar-bg"><div class="salon-bar-fill" style="width:${Math.round(s.count/maxS*100)}%"></div></div>
+              <div class="salon-count">${s.count}</div>
             </div>`).join('')}</div>
         </div>
         <div>

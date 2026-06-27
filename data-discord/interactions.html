@@ -189,122 +189,55 @@
   <script type="module">
     import { db } from './firebase-config.js';
     import { renderNav } from './nav.js';
-    import { collection, getDocs, query, where, doc, getDoc }
+    import { collection, getDocs, doc, getDoc }
       from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
     const params   = new URLSearchParams(location.search);
     const GUILD_ID = params.get('id') || '1499528679758364744';
 
-    let allMessages = [];
-    let allMembres  = [];
-    let windowMin   = 30;
-    let convoView   = 'pairs';   // 'pairs' | 'groups'
-    let convoSort   = 'msgs';    // 'msgs' | 'parts'
+    let topPaires    = [];
+    let conversations = [];
+    let statsMembres  = [];
+    let convoView = 'pairs';
+    let convoSort = 'msgs';
 
     // ── Chargement ────────────────────────────────────────────────
     async function load() {
-      const [msgSnap, mbSnap, srvSnap, srvDoc] = await Promise.all([
-        getDocs(query(collection(db, 'discord_messages'),     where('serveur_id', '==', GUILD_ID))),
-        getDocs(query(collection(db, 'discord_membres_bot'), where('serveur_id', '==', GUILD_ID))),
-        getDocs(query(collection(db, 'discord_serveurs'))),
-        getDoc(doc(db, 'discord_serveurs', GUILD_ID))
+      const [srvSnap, srvDoc, statsIntDoc, statsMbDoc] = await Promise.all([
+        getDocs(collection(db, 'discord_serveurs')),
+        getDoc(doc(db, 'discord_serveurs',          GUILD_ID)),
+        getDoc(doc(db, 'discord_stats_interactions', GUILD_ID)),
+        getDoc(doc(db, 'discord_stats_membres',      GUILD_ID)),
       ]);
-
-      allMessages = msgSnap.docs.map(d => d.data());
-      allMembres  = mbSnap.docs.map(d => d.data());
 
       const srv = srvDoc.exists() ? srvDoc.data() : {};
       renderNav(GUILD_ID, srvSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
+      if (statsIntDoc.exists()) {
+        topPaires     = JSON.parse(statsIntDoc.data().top_paires   || '[]');
+        conversations = JSON.parse(statsIntDoc.data().conversations || '[]');
+      }
+      statsMembres = statsMbDoc.exists() ? JSON.parse(statsMbDoc.data().membres || '[]') : [];
+
       document.getElementById('page-sub').textContent =
-        `${srv.nom || 'Serveur'} · ${allMessages.length} messages`;
+        `${srv.nom || 'Serveur'} · ${(statsIntDoc.exists() ? statsIntDoc.data().nb_convos : 0) || 0} conversations détectées`;
 
       renderConvos();
       renderReponses();
     }
 
-    // ── Helpers ───────────────────────────────────────────────────
-    function memberName(id) {
-      const mb = allMembres.find(m => m.discord_id === id);
-      return mb?.display_name || mb?.nom || id.slice(0, 8);
-    }
-    function pairKey(a, b) { return a < b ? `${a}|${b}` : `${b}|${a}`; }
-
-    // ── Détection des conversations ───────────────────────────────
-    // Retourne :
-    //   pairCounts   : { 'id1|id2': N }  — nb conversations partagées entre chaque paire
-    //   conversations: [{ participants: [id…], msgCount, start, end, salon }]
-    function detectConversations(windowMs) {
-      const bySalon = {};
-      allMessages.forEach(m => {
-        if (!bySalon[m.salon_id]) bySalon[m.salon_id] = { nom: m.salon_nom, msgs: [] };
-        bySalon[m.salon_id].msgs.push(m);
-      });
-
-      const pairCounts   = {};
-      const conversations = [];
-
-      for (const { nom: salonNom, msgs } of Object.values(bySalon)) {
-        msgs.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-        let convo = { participants: new Set(), msgs: [], start: null, end: null };
-
-        const flushConvo = () => {
-          if (convo.participants.size < 1) { convo = { participants: new Set(), msgs: [], start: null, end: null }; return; }
-          const parts = [...convo.participants];
-          // Paires
-          for (let i = 0; i < parts.length; i++)
-            for (let j = i + 1; j < parts.length; j++) {
-              const k = pairKey(parts[i], parts[j]);
-              pairCounts[k] = (pairCounts[k] || 0) + 1;
-            }
-          // Conversation complète (ne garder que celles avec ≥2 participants)
-          if (parts.length >= 2) {
-            conversations.push({
-              participants: parts,
-              msgCount: convo.msgs.length,
-              start: convo.start,
-              end:   convo.end,
-              salon: salonNom,
-            });
-          }
-          convo = { participants: new Set(), msgs: [], start: null, end: null };
-        };
-
-        for (const m of msgs) {
-          const t = new Date(m.date).getTime();
-          if (convo.start !== null && t - new Date(convo.end).getTime() > windowMs) {
-            flushConvo();
-          }
-          convo.participants.add(m.auteur_id);
-          convo.msgs.push(m);
-          if (!convo.start) convo.start = m.date;
-          convo.end = m.date;
-        }
-        flushConvo();
-      }
-
-      return { pairCounts, conversations };
-    }
-
     // ── Rendu Conversations ───────────────────────────────────────
     function renderConvos() {
-      const { pairCounts, conversations } = detectConversations(windowMin * 60000);
+      renderPairsGrid('convo-pairs', topPaires);
+      renderMatrix('convo-matrix', topPaires);
 
-      // Vue paires
-      const sortedPairs = Object.entries(pairCounts).sort(([,a],[,b]) => b - a);
-      renderPairsGrid('convo-pairs', sortedPairs);
-      renderMatrix('convo-matrix', sortedPairs);
-
-      // Vue conversations groupées
       const sortedConvos = [...conversations].sort((a, b) =>
         convoSort === 'msgs'
           ? b.msgCount - a.msgCount
           : b.participants.length - a.participants.length
       );
 
-      document.getElementById('convo-count').textContent =
-        `— ${sortedConvos.length} au total`;
+      document.getElementById('convo-count').textContent = `— ${sortedConvos.length} au total`;
 
       const listEl = document.getElementById('convos-list');
       if (!sortedConvos.length) {
@@ -313,11 +246,11 @@
       }
 
       listEl.innerHTML = sortedConvos.slice(0, 30).map((c, i) => {
-        const names = c.participants.map(id => memberName(id)).join(', ');
+        const names    = (c.participantNames || c.participants || []).join(', ');
         const duration = c.start && c.end
-          ? Math.round((new Date(c.end) - new Date(c.start)) / 60000)
-          : 0;
-        const dateStr = c.start ? c.start.slice(0, 10) : '—';
+          ? Math.round((new Date(c.end) - new Date(c.start)) / 60000) : 0;
+        const dateStr  = c.start ? c.start.slice(0, 10) : '—';
+        const nbParts  = (c.participants || []).length;
         return `
           <div class="convo-card">
             <div class="convo-rank">#${i+1}</div>
@@ -332,66 +265,63 @@
             <div class="convo-stats">
               <div class="stat-big">${c.msgCount}</div>
               <div class="stat-lbl">messages</div>
-              <div class="stat-big" style="font-size:.9rem;margin-top:.2rem">${c.participants.length}</div>
-              <div class="stat-lbl">participant${c.participants.length > 1 ? 's' : ''}</div>
+              <div class="stat-big" style="font-size:.9rem;margin-top:.2rem">${nbParts}</div>
+              <div class="stat-lbl">participant${nbParts > 1 ? 's' : ''}</div>
             </div>
           </div>`;
       }).join('');
     }
 
     // ── Rendu paires (grille 3 colonnes) ─────────────────────────
-    function renderPairsGrid(elId, sorted) {
+    function renderPairsGrid(elId, paires) {
       const el  = document.getElementById(elId);
-      const top = sorted.slice(0, 20);
-      const max = top[0]?.[1] || 1;
+      const top = paires.slice(0, 20);
+      const max = top[0]?.count || 1;
       if (!top.length) { el.innerHTML = '<div class="empty">Aucune donnée</div>'; return; }
-      el.innerHTML = top.map(([key, n]) => {
-        const [a, b] = key.split('|');
-        const label  = `${esc(memberName(a))} & ${esc(memberName(b))}`;
+      el.innerHTML = top.map(p => {
+        const label = `${esc(p.nom1)} & ${esc(p.nom2)}`;
         return `
           <div class="pair-names" title="${label}">${label}</div>
-          <div class="pair-bar-bg"><div class="pair-bar-fill" style="width:${Math.round(n/max*100)}%"></div></div>
-          <div class="pair-count">${n}</div>`;
+          <div class="pair-bar-bg"><div class="pair-bar-fill" style="width:${Math.round(p.count/max*100)}%"></div></div>
+          <div class="pair-count">${p.count}</div>`;
       }).join('');
     }
 
     // ── Matrice heatmap ───────────────────────────────────────────
-    function renderMatrix(elId, sorted) {
+    function renderMatrix(elId, paires) {
       const el = document.getElementById(elId);
-      if (!sorted.length) { el.innerHTML = '<div class="empty">Aucune donnée</div>'; return; }
+      if (!paires.length) { el.innerHTML = '<div class="empty">Aucune donnée</div>'; return; }
 
       const totals = {};
-      sorted.forEach(([key, n]) => {
-        const [a, b] = key.split('|');
-        totals[a] = (totals[a] || 0) + n;
-        totals[b] = (totals[b] || 0) + n;
+      paires.forEach(p => {
+        totals[p.id1] = (totals[p.id1] || 0) + p.count;
+        totals[p.id2] = (totals[p.id2] || 0) + p.count;
       });
       const members = Object.entries(totals).sort(([,a],[,b]) => b-a).slice(0, 16).map(([id]) => id);
-      const pairMap = {};
-      sorted.forEach(([key, n]) => { pairMap[key] = n; });
-      const max = sorted[0]?.[1] || 1;
-
+      const nameMap = {}, pairMap = {};
+      paires.forEach(p => {
+        nameMap[p.id1] = p.nom1; nameMap[p.id2] = p.nom2;
+        const k = [p.id1, p.id2].sort().join('|');
+        pairMap[k] = p.count;
+      });
+      const max = paires[0]?.count || 1;
       const heat = n => {
         if (!n) return 'rgba(255,255,255,.03)';
-        const t = n / max;
-        return `rgba(88,101,242,${(0.1 + t * 0.7).toFixed(2)})`;
+        return `rgba(88,101,242,${(0.1 + (n/max) * 0.7).toFixed(2)})`;
       };
+      const nm = id => esc(nameMap[id] || id.slice(0,8));
 
       let html = `<table class="matrix-table"><thead><tr><th></th>`;
-      members.forEach(id => {
-        html += `<th class="col-head" title="${esc(memberName(id))}">${esc(memberName(id))}</th>`;
-      });
+      members.forEach(id => { html += `<th class="col-head" title="${nm(id)}">${nm(id)}</th>`; });
       html += '</tr></thead><tbody>';
       members.forEach(rowId => {
-        html += `<tr><th class="row-head" title="${esc(memberName(rowId))}">${esc(memberName(rowId))}</th>`;
+        html += `<tr><th class="row-head" title="${nm(rowId)}">${nm(rowId)}</th>`;
         members.forEach(colId => {
           if (rowId === colId) {
             html += `<td class="self">—</td>`;
           } else {
-            const n = pairMap[pairKey(rowId, colId)] || 0;
-            html += `<td style="background:${heat(n)}"
-              data-a="${esc(memberName(rowId))}" data-b="${esc(memberName(colId))}" data-n="${n}"
-              >${n || ''}</td>`;
+            const n = pairMap[[rowId, colId].sort().join('|')] || 0;
+            html += `<td style="background:${heat(n)}" data-a="${nm(rowId)}" data-b="${nm(colId)}" data-n="${n}">${n || ''}</td>`;
           }
         });
         html += '</tr>';
@@ -416,21 +346,19 @@
 
     // ── Réponses directes ─────────────────────────────────────────
     function renderReponses() {
-      const replierCounts = {};
-      allMessages.filter(m => m.est_reponse).forEach(m => {
-        replierCounts[m.auteur_id] = (replierCounts[m.auteur_id] || 0) + 1;
-      });
-      const sorted = Object.entries(replierCounts).sort(([,a],[,b]) => b - a);
-      const max    = sorted[0]?.[1] || 1;
+      const sorted = [...statsMembres]
+        .filter(m => (m.nb_reponses || 0) > 0)
+        .sort((a, b) => (b.nb_reponses || 0) - (a.nb_reponses || 0));
+      const max = sorted[0]?.nb_reponses || 1;
 
       const pairsEl = document.getElementById('reply-pairs');
       if (!sorted.length) {
         pairsEl.innerHTML = '<div class="empty">Aucune réponse directe collectée</div>';
       } else {
-        pairsEl.innerHTML = sorted.slice(0, 20).map(([id, n]) => `
-          <div class="pair-names">${esc(memberName(id))}</div>
-          <div class="pair-bar-bg"><div class="pair-bar-fill" style="width:${Math.round(n/max*100)}%"></div></div>
-          <div class="pair-count">${n}</div>`).join('');
+        pairsEl.innerHTML = sorted.slice(0, 20).map(m => `
+          <div class="pair-names">${esc(m.display_name || m.nom)}</div>
+          <div class="pair-bar-bg"><div class="pair-bar-fill" style="width:${Math.round(m.nb_reponses/max*100)}%"></div></div>
+          <div class="pair-count">${m.nb_reponses}</div>`).join('');
       }
 
       document.getElementById('reply-matrix-info').innerHTML =
@@ -438,13 +366,6 @@
         Disponible après la prochaine collecte — le champ <code style="background:rgba(255,255,255,.07);padding:.1em .4em;border-radius:3px">message_id</code>
         doit être ajouté à la collecte pour croiser les auteurs de réponses avec les auteurs des messages originaux.`;
     }
-
-    // ── Contrôles ─────────────────────────────────────────────────
-    document.getElementById('window-slider').addEventListener('input', e => {
-      windowMin = +e.target.value;
-      document.getElementById('window-val').textContent = windowMin;
-      renderConvos();
-    });
 
     document.querySelectorAll('[data-view]').forEach(btn => {
       btn.addEventListener('click', () => {

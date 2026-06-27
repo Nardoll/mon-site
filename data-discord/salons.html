@@ -134,42 +134,28 @@
   <script type="module">
     import { db } from './firebase-config.js';
     import { renderNav } from './nav.js';
-    import { collection, getDocs, query, where, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import { collection, getDocs, query, where, doc, getDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
     const params   = new URLSearchParams(location.search);
     const GUILD_ID = params.get('id') || '1499528679758364744';
-    let allMessages = [], allMembres = [], memberMap = {}, salonMetaMap = {};
+    let statsSalons = [], salonMap = {}, salonMetaMap = {};
     let sortKey = 'msgs', openId = null;
 
     async function load() {
-      const [msgSnap, mbSnap, srvSnap, salonMetaSnap] = await Promise.all([
-        getDocs(query(collection(db,'discord_messages'),    where('serveur_id','==',GUILD_ID))),
-        getDocs(query(collection(db,'discord_membres_bot'), where('serveur_id','==',GUILD_ID))),
-        getDocs(collection(db,'discord_serveurs')),
+      const [srvSnap, statsSalonsDoc, salonMetaSnap] = await Promise.all([
+        getDocs(collection(db, 'discord_serveurs')),
+        getDoc(doc(db, 'discord_stats_salons', GUILD_ID)),
         getDocs(query(collection(db,'discord_salons_bot'), where('serveur_id','==',GUILD_ID))),
       ]);
-      allMessages = msgSnap.docs.map(d=>d.data());
-      allMembres  = mbSnap.docs.map(d=>d.data());
-      allMembres.forEach(m=>{ memberMap[m.discord_id]=m; });
+      statsSalons = statsSalonsDoc.exists() ? JSON.parse(statsSalonsDoc.data().salons || '[]') : [];
+      statsSalons.forEach(s => { salonMap[s.salon_id] = s; });
       salonMetaSnap.docs.forEach(d=>{ const v=d.data(); salonMetaMap[v.salon_id]={docId:d.id,...v}; });
       renderNav('salons', srvSnap.docs.map(d=>({id:d.id,...d.data()})));
       renderList();
     }
 
-    function buildSalonData() {
-      const salonMap = {};
-      allMessages.forEach(m => {
-        const id = m.salon_id;
-        if (!salonMap[id]) salonMap[id] = { id, nom: m.salon_nom, msgs: 0, firstMsg: null, lastMsg: null };
-        salonMap[id].msgs++;
-        if (!salonMap[id].firstMsg || m.date < salonMap[id].firstMsg) salonMap[id].firstMsg = m.date;
-        if (!salonMap[id].lastMsg  || m.date > salonMap[id].lastMsg)  salonMap[id].lastMsg  = m.date;
-      });
-      return Object.values(salonMap);
-    }
-
     function renderList() {
-      const data = buildSalonData();
+      const data = statsSalons;
       const sorted = [...data].sort((a,b)=>{
         if (sortKey==='msgs')   return b.msgs-a.msgs;
         if (sortKey==='recent') return (b.lastMsg||'').localeCompare(a.lastMsg||'');
@@ -179,7 +165,7 @@
       const maxM = Math.max(...sorted.map(s=>s.msgs),1);
 
       document.getElementById('salon-list').innerHTML = sorted.map((s,i)=>{
-        const meta = salonMetaMap[s.id] || {};
+        const meta = salonMetaMap[s.salon_id] || {};
         const isArchive = meta.est_archive === true;
         const isPrive   = meta.est_prive   === true;
         const badges = [
@@ -187,11 +173,11 @@
           isPrive   ? `<span class="badge badge-prive">🔒 Cercle privé</span>` : '',
         ].join('');
         return `
-        <div class="salon-row${openId===s.id?' selected':''}${isArchive?' archived':''}" onclick="openSalon('${s.id}')">
+        <div class="salon-row${openId===s.salon_id?' selected':''}${isArchive?' archived':''}" onclick="openSalon('${s.salon_id}')">
           <div class="rank">#${i+1}</div>
           <div class="salon-hash">#</div>
           <div class="salon-info">
-            <div class="salon-name">#${esc(s.nom)} ${badges}</div>
+            <div class="salon-name">#${esc(s.salon_nom)} ${badges}</div>
             <div class="salon-sub">
               Premier msg : ${s.firstMsg?.slice(0,10)||'—'}
               &nbsp;·&nbsp;
@@ -207,20 +193,12 @@
       }).join('');
     }
 
-    let panelMsgs = [], panelGran = 'month';
-
-    function getKey(dateStr, gran) {
-      if (!dateStr) return null;
-      if (gran==='year')  return dateStr.slice(0,4);
-      if (gran==='month') return dateStr.slice(0,7);
-      const d=new Date(dateStr), jan4=new Date(d.getFullYear(),0,4);
-      const w=Math.ceil(((d-jan4)/86400000+jan4.getDay()+1)/7);
-      return `${d.getFullYear()}-W${String(w).padStart(2,'0')}`;
-    }
+    let panelSalon = null, panelGran = 'month';
 
     function renderPanelChart() {
-      const counts={};
-      panelMsgs.forEach(m=>{ const k=getKey(m.date,panelGran); if(k) counts[k]=(counts[k]||0)+1; });
+      if (!panelSalon) return;
+      const rawKey = panelGran==='year' ? 'msgParAn' : panelGran==='week' ? 'msgParSemaine' : 'msgParMois';
+      const counts = panelSalon[rawKey] || {};
       const sorted = Object.entries(counts).sort(([a],[b])=>a.localeCompare(b));
       const max  = Math.max(...sorted.map(([,v])=>v),1);
       const barH = 108;
@@ -253,25 +231,21 @@
     window.openSalon = (id) => {
       openId = id; panelGran = 'month';
       renderList();
-      panelMsgs = allMessages.filter(x=>x.salon_id===id);
-      const nom  = panelMsgs[0]?.salon_nom || id;
+      panelSalon = salonMap[id];
+      if (!panelSalon) return;
+      const s    = panelSalon;
       const meta = salonMetaMap[id] || {};
+      const topMb  = s.topMembres || [];
+      const maxMb  = topMb[0]?.count || 1;
+      const byType = s.byType || {};
+      const icons  = {texte:'💬',image:'🖼️',lien:'🔗',video:'🎥',fichier:'📎',sondage:'🗳️',autre:'❓'};
 
-      document.getElementById('p-name').textContent = `#${nom}`;
+      document.getElementById('p-name').textContent = `#${s.salon_nom}`;
       const panelBadges = [
         meta.est_archive ? `<span class="badge badge-archive">🗄️ Archivé</span>` : '',
         meta.est_prive   ? `<span class="badge badge-prive">🔒 Cercle privé</span>` : '',
       ].join(' ');
-      document.getElementById('p-sub').innerHTML = `${panelMsgs.length} messages · ${new Set(panelMsgs.map(m=>m.auteur_id)).size} auteurs ${panelBadges ? '&nbsp;' + panelBadges : ''}`;
-
-      const byMembre={};
-      panelMsgs.forEach(x=>{ byMembre[x.auteur_id]=(byMembre[x.auteur_id]||0)+1; });
-      const topMb = Object.entries(byMembre).sort(([,a],[,b])=>b-a);
-      const maxMb = topMb[0]?.[1]||1;
-
-      const byType={};
-      panelMsgs.forEach(x=>{ byType[x.type]=(byType[x.type]||0)+1; });
-      const icons={texte:'💬',image:'🖼️',lien:'🔗',video:'🎥',fichier:'📎',sondage:'🗳️',autre:'❓'};
+      document.getElementById('p-sub').innerHTML = `${s.msgs} messages · ${topMb.length} auteurs${panelBadges ? '&nbsp;&nbsp;' + panelBadges : ''}`;
 
       document.getElementById('p-body').innerHTML = `
         <div>
@@ -284,10 +258,10 @@
         </div>
         <div>
           <div class="mini-kpis">
-            <div class="mini-kpi"><div class="n">${panelMsgs.length}</div><div class="l">Messages</div></div>
-            <div class="mini-kpi"><div class="n">${new Set(panelMsgs.map(m=>m.auteur_id)).size}</div><div class="l">Auteurs</div></div>
-            <div class="mini-kpi"><div class="n">${panelMsgs.filter(x=>x.est_reponse).length}</div><div class="l">Réponses</div></div>
-            <div class="mini-kpi"><div class="n">${panelMsgs.filter(x=>x.type==='sondage').length}</div><div class="l">Sondages</div></div>
+            <div class="mini-kpi"><div class="n">${s.msgs}</div><div class="l">Messages</div></div>
+            <div class="mini-kpi"><div class="n">${topMb.length}</div><div class="l">Auteurs</div></div>
+            <div class="mini-kpi"><div class="n">${s.nb_reponses||0}</div><div class="l">Réponses</div></div>
+            <div class="mini-kpi"><div class="n">${byType.sondage||0}</div><div class="l">Sondages</div></div>
           </div>
         </div>
         <div>
@@ -303,15 +277,13 @@
         </div>
         <div>
           <div class="panel-section-title">Membres actifs</div>
-          <div class="member-bars">${topMb.map(([mid,c])=>{
-            const mb  = memberMap[mid];
-            const nom2= mb?.display_name||mb?.nom||mid.slice(0,8);
-            const av  = mb?.avatar_url?`<img src="${esc(mb.avatar_url)}" alt="">`:nom2.slice(0,2).toUpperCase();
+          <div class="member-bars">${topMb.map(mb=>{
+            const av = mb.avatar_url ? `<img src="${esc(mb.avatar_url)}" alt="">` : esc(mb.nom||'?').slice(0,2).toUpperCase();
             return `<div class="mb-row">
               <div class="mb-av">${av}</div>
-              <div class="mb-name">${esc(nom2)}</div>
-              <div class="mb-bar-bg"><div class="mb-bar-fill" style="width:${Math.round(c/maxMb*100)}%"></div></div>
-              <div class="mb-count">${c}</div>
+              <div class="mb-name">${esc(mb.nom||'—')}</div>
+              <div class="mb-bar-bg"><div class="mb-bar-fill" style="width:${Math.round(mb.count/maxMb*100)}%"></div></div>
+              <div class="mb-count">${mb.count}</div>
             </div>`;
           }).join('')}</div>
         </div>
