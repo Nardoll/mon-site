@@ -414,7 +414,14 @@ async function renderClassement() {
   const container = document.getElementById('tab-classement');
   container.innerHTML = '<div class="empty-state">Chargement…</div>';
 
-  const entries = await getLeaderboard(TOURNAMENT_ID);
+  let entries;
+  try {
+    entries = await getLeaderboard(TOURNAMENT_ID);
+  } catch (e) {
+    container.innerHTML = `<div class="empty-state" style="color:#ef4444">Erreur : ${e.message}</div>`;
+    console.error(e);
+    return;
+  }
   const rankClass = i => ['gold','silver','bronze'][i] || '';
   const rankIcon  = i => ['🥇','🥈','🥉'][i] || String(i + 1);
 
