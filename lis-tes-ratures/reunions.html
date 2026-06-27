@@ -185,6 +185,14 @@
     .pf-btn.ok:hover { background: #c46b41; }
     .pf-btn:disabled { opacity: .55; cursor: not-allowed; }
 
+    /* preview vidéo YouTube */
+    .video-preview { margin-top: 1.1rem; border: 1px solid rgba(120,90,50,.35); border-radius: 10px; overflow: hidden; cursor: pointer; }
+    .vp-thumb-wrap { position: relative; }
+    .vp-thumb { width: 100%; display: block; aspect-ratio: 16/9; object-fit: cover; }
+    .vp-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.15); transition: background .2s; }
+    .video-preview:hover .vp-play { background: rgba(0,0,0,.3); }
+    .vp-foot { background: rgba(255,248,235,.85); padding: .4rem 1rem; font-size: .74rem; color: #8a6b46; border-top: 1px solid rgba(120,90,50,.2); text-align: center; }
+
     /* preview exposé */
     .expose-preview { margin: 1.2rem 0 0; border: 1px solid rgba(120,90,50,.35); border-radius: 10px; overflow: hidden; cursor: pointer; }
     .ep-frame-wrap { position: relative; height: 220px; overflow: hidden; background: #0d0d0d; }

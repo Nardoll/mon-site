@@ -53,6 +53,10 @@ let editingReunionId = null;
 function esc(s) {
   return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
+function getYtId(url) {
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
 
 /**
  * Détermine si une réunion est "passée" de façon robuste.
@@ -652,9 +656,21 @@ function renderMeeting() {
        <div style="font-size:.9rem;line-height:1.6;color:#3a2b1c;white-space:pre-wrap">${esc(r.compte_rendu)}</div>`
     : "";
   // Vidéo + exposé
-  const videoBlock = r.lien_video
-    ? `<div style="margin-top:1.1rem"><a href="${esc(r.lien_video)}" target="_blank" rel="noopener" class="mtg-livre-link" style="margin-top:0">▶ Revoir la séance en vidéo ${IC.arrowR}</a></div>`
-    : "";
+  const videoBlock = r.lien_video ? (() => {
+    const ytId = getYtId(r.lien_video);
+    const vUrl = esc(r.lien_video);
+    if (ytId) {
+      const thumb = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+      return `<div class="video-preview" onclick="window.open('${vUrl}','_blank')" title="Revoir la séance en vidéo">
+        <div class="vp-thumb-wrap">
+          <img src="${esc(thumb)}" class="vp-thumb" alt="Miniature vidéo" loading="lazy">
+          <div class="vp-play"><svg viewBox="0 0 24 24" fill="white" width="28" height="28"><circle cx="12" cy="12" r="12" fill="rgba(0,0,0,.5)"/><polygon points="10,8 18,12 10,16" fill="white"/></svg></div>
+        </div>
+        <div class="vp-foot">▶ Revoir la séance en vidéo</div>
+      </div>`;
+    }
+    return `<div style="margin-top:1.1rem"><a href="${vUrl}" target="_blank" rel="noopener" class="mtg-livre-link" style="margin-top:0">▶ Revoir la séance en vidéo ${IC.arrowR}</a></div>`;
+  })() : "";
   const exposeBlock = r.lien_expose ? (() => {
     // Normalise en URL absolue : si ça commence par http on garde, sinon on s'assure du slash initial
     const raw = r.lien_expose.startsWith('http') ? r.lien_expose : ('/' + r.lien_expose.replace(/^\/+/, ''));
