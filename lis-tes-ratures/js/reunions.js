@@ -656,7 +656,9 @@ function renderMeeting() {
     ? `<div style="margin-top:1.1rem"><a href="${esc(r.lien_video)}" target="_blank" rel="noopener" class="mtg-livre-link" style="margin-top:0">▶ Revoir la séance en vidéo ${IC.arrowR}</a></div>`
     : "";
   const exposeBlock = r.lien_expose ? (() => {
-    const u = esc(r.lien_expose);
+    // Normalise en URL absolue : si ça commence par http on garde, sinon on s'assure du slash initial
+    const raw = r.lien_expose.startsWith('http') ? r.lien_expose : ('/' + r.lien_expose.replace(/^\/+/, ''));
+    const u = esc(raw);
     return `<div class="expose-preview" onclick="window.open('${u}','_blank')" title="Ouvrir la présentation en plein écran">
       <div class="ep-frame-wrap">
         <iframe src="${u}" class="ep-frame" scrolling="no" tabindex="-1"></iframe>
