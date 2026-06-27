@@ -33,13 +33,19 @@ async function loadPage() {
   const main = document.getElementById('main');
   main.innerHTML = '<div class="empty-state">Chargement…</div>';
 
-  [tournament, matches, myPicks, myLtPicks, allProfiles] = await Promise.all([
-    getTournament(TOURNAMENT_ID),
-    getMatchesByTournament(TOURNAMENT_ID),
-    getPicksByTournament(profile.id, TOURNAMENT_ID),
-    getLongTermPicks(profile.id, TOURNAMENT_ID),
-    getProfiles()
-  ]);
+  try {
+    [tournament, matches, myPicks, myLtPicks, allProfiles] = await Promise.all([
+      getTournament(TOURNAMENT_ID),
+      getMatchesByTournament(TOURNAMENT_ID),
+      getPicksByTournament(profile.id, TOURNAMENT_ID),
+      getLongTermPicks(profile.id, TOURNAMENT_ID),
+      getProfiles()
+    ]);
+  } catch (e) {
+    main.innerHTML = `<div class="empty-state" style="color:#ef4444">Erreur : ${e.message}</div>`;
+    console.error(e);
+    return;
+  }
 
   if (!tournament) {
     main.innerHTML = '<div class="empty-state">Tournoi introuvable.</div>';

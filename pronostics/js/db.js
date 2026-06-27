@@ -64,10 +64,11 @@ export async function createTournament(data) {
 export async function getMatchesByTournament(tournamentId) {
   const snap = await getDocs(query(
     collection(db, 'prono_matches'),
-    where('tournament_id', '==', tournamentId),
-    orderBy('date_utc', 'asc')
+    where('tournament_id', '==', tournamentId)
   ));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.date_utc || '').localeCompare(b.date_utc || ''));
 }
 
 // ── Picks ─────────────────────────────────────────────────────────
