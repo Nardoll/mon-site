@@ -211,7 +211,7 @@ async function processMessage(msg, channel) {
       } catch { /* sondage expiré ou sans votes */ }
       propositions.push({ texte: answer.text || `Option ${answerId}`, votants });
     }
-    await fsAdd('discord_sondages_bot', {
+    await fsSet('discord_sondages_bot', `${GUILD_ID}_${msg.id}`, {
       serveur_id:  GUILD_ID,
       message_id:  msg.id,
       salon_id:    channel.id,
