@@ -106,6 +106,10 @@ function renderAdminPanel() {
           <div class="admin-label">Équipes participantes (séparées par des virgules)</div>
           <input class="admin-input" id="adm-teams" placeholder="T1, Gen.G, Cloud9, G2 Esports…" />
         </div>
+        <div>
+          <div class="admin-label">URL wiki Leaguepedia (optionnel)</div>
+          <input class="admin-input" id="adm-wiki" placeholder="https://lol.fandom.com/wiki/2026_Mid-Season_Invitational" />
+        </div>
         <button class="btn-admin" id="btn-adm-save">Créer le tournoi</button>
       </div>
     </div>
@@ -122,6 +126,7 @@ function setupAdminPanel() {
     const end    = document.getElementById('adm-end').value;
     const teams  = document.getElementById('adm-teams').value
       .split(',').map(s => s.trim()).filter(Boolean);
+    const wiki = document.getElementById('adm-wiki').value.trim();
 
     if (!name || !key) {
       alert('Nom et clé Leaguepedia sont requis.');
@@ -133,7 +138,7 @@ function setupAdminPanel() {
     btn.textContent = 'Création…';
 
     try {
-      await createTournament({ name, leaguepedia_key: key, league, status, start_date: start, end_date: end, teams });
+      await createTournament({ name, leaguepedia_key: key, league, status, start_date: start, end_date: end, teams, ...(wiki ? { wiki_url: wiki } : {}) });
       btn.textContent = '✓ Tournoi créé !';
       setTimeout(() => location.reload(), 800);
     } catch (e) {

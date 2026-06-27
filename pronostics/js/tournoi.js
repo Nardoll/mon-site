@@ -516,10 +516,9 @@ function renderEquipes() {
   const container = document.getElementById('tab-equipes');
   const teams = tournament.teams || extractTeamsFromMatches();
 
-  const lpKey = tournament.leaguepedia_key;
-  const lpUrl = lpKey
-    ? `https://lol.fandom.com/wiki/${encodeURIComponent(lpKey.replace(/\s/g, '_'))}`
-    : null;
+  const lpUrl = tournament.wiki_url || (tournament.leaguepedia_key
+    ? `https://lol.fandom.com/wiki/${tournament.leaguepedia_key.replace(/\s/g, '_')}`
+    : null);
 
   // Séparer Bracket et Play-In
   const bracketTeams = teams.filter(t => (MSI_2026_TEAMS[t]?.stage || 'Bracket') === 'Bracket');
@@ -876,6 +875,14 @@ function renderAdmin() {
   const logos = tournament.team_logos || {};
 
   container.innerHTML = `
+    <div class="admin-section" style="margin-bottom:1.2rem">
+      <div class="admin-title">🔗 URL wiki Leaguepedia</div>
+      <input class="admin-input" id="adm-wiki-url" type="url"
+        placeholder="https://lol.fandom.com/wiki/2026_Mid-Season_Invitational"
+        value="${esc(tournament.wiki_url || '')}" style="width:100%" />
+      <button class="admin-save-btn" id="btn-save-wiki" style="margin-top:.5rem">Sauvegarder l'URL</button>
+    </div>
+
     <div class="admin-section">
       <div class="admin-title">🖼️ Logos des équipes</div>
       <div class="admin-logos-list">
@@ -904,6 +911,23 @@ function renderAdmin() {
       </div>
     </div>
   `;
+
+  // Sauvegarder l'URL wiki
+  document.getElementById('btn-save-wiki')?.addEventListener('click', async () => {
+    const url = document.getElementById('adm-wiki-url').value.trim();
+    const btn = document.getElementById('btn-save-wiki');
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      await updateTournament(TOURNAMENT_ID, { wiki_url: url || null });
+      tournament.wiki_url = url || null;
+      showToast('✓ URL sauvegardée');
+      btn.textContent = '✓';
+      setTimeout(() => { btn.disabled = false; btn.textContent = 'Sauvegarder l\'URL'; }, 1500);
+    } catch (e) {
+      showToast('Erreur : ' + e.message);
+      btn.disabled = false; btn.textContent = 'Sauvegarder l\'URL';
+    }
+  });
 
   // Sauvegarder les logos
   document.getElementById('btn-save-logos')?.addEventListener('click', async () => {
