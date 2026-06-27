@@ -655,9 +655,16 @@ function renderMeeting() {
   const videoBlock = r.lien_video
     ? `<div style="margin-top:1.1rem"><a href="${esc(r.lien_video)}" target="_blank" rel="noopener" class="mtg-livre-link" style="margin-top:0">▶ Revoir la séance en vidéo ${IC.arrowR}</a></div>`
     : "";
-  const exposeBlock = r.lien_expose
-    ? `<div style="margin-top:.7rem"><a href="${esc(r.lien_expose)}" target="_blank" rel="noopener" class="mtg-livre-link" style="margin-top:0">📖 Voir l'exposé ${IC.arrowR}</a></div>`
-    : "";
+  const exposeBlock = r.lien_expose ? (() => {
+    const u = esc(r.lien_expose);
+    return `<div class="expose-preview" onclick="window.open('${u}','_blank')" title="Ouvrir la présentation en plein écran">
+      <div class="ep-frame-wrap">
+        <iframe src="${u}" class="ep-frame" scrolling="no" tabindex="-1"></iframe>
+        <div class="ep-overlay"><span class="ep-cta">Ouvrir la présentation ↗</span></div>
+      </div>
+      <div class="ep-foot">📖 Exposé — cliquer pour ouvrir en plein écran</div>
+    </div>`;
+  })() : "";
 
   const sealHtml = prevue || avg === null
     ? `<div class="mtg-seal" style="--seal:#9a7a4e"><div class="mtg-seal-inner"><div class="mtg-seal-note">—<span>/10</span></div><div class="mtg-seal-label">${prevue ? "à venir" : "non noté"}</div></div></div>`

@@ -185,6 +185,15 @@
     .pf-btn.ok:hover { background: #c46b41; }
     .pf-btn:disabled { opacity: .55; cursor: not-allowed; }
 
+    /* preview exposé */
+    .expose-preview { margin: 1.2rem 0 0; border: 1px solid rgba(120,90,50,.35); border-radius: 10px; overflow: hidden; cursor: pointer; }
+    .ep-frame-wrap { position: relative; height: 220px; overflow: hidden; background: #0d0d0d; }
+    .ep-frame { position: absolute; top: 0; left: 50%; margin-left: -640px; width: 1280px; height: 720px; border: none; pointer-events: none; transform: scale(.32); transform-origin: top center; }
+    .ep-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.65) 0%, transparent 55%); opacity: 0; transition: opacity .25s; display: flex; align-items: flex-end; justify-content: center; padding-bottom: .75rem; }
+    .expose-preview:hover .ep-overlay { opacity: 1; }
+    .ep-cta { color: #fff; font-size: .82rem; font-family: var(--serif); font-style: italic; letter-spacing: .01em; }
+    .ep-foot { background: rgba(255,248,235,.85); padding: .4rem 1rem; font-size: .74rem; color: #8a6b46; border-top: 1px solid rgba(120,90,50,.2); text-align: center; }
+
     /* formulaire ajout */
     .pf-group { margin-bottom: 1.1rem; }
     .pf-group label { display: block; font-size: .8rem; font-weight: 600; color: #8a5a2a; margin-bottom: .35rem; }
