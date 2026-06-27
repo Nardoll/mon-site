@@ -516,9 +516,12 @@ function renderEquipes() {
   const container = document.getElementById('tab-equipes');
   const teams = tournament.teams || extractTeamsFromMatches();
 
-  const lpUrl = tournament.wiki_url || (tournament.leaguepedia_key
-    ? `https://lol.fandom.com/wiki/${tournament.leaguepedia_key.replace(/\s/g, '_')}`
-    : null);
+  const KNOWN_WIKI_URLS = {
+    '2026 Season Mid-Season Invitational': 'https://lol.fandom.com/wiki/2026_Mid-Season_Invitational',
+  };
+  const lpUrl = tournament.wiki_url
+    || KNOWN_WIKI_URLS[tournament.leaguepedia_key]
+    || (tournament.leaguepedia_key ? `https://lol.fandom.com/wiki/${tournament.leaguepedia_key.replace(/\s/g, '_')}` : null);
 
   // Séparer Bracket et Play-In
   const bracketTeams = teams.filter(t => (MSI_2026_TEAMS[t]?.stage || 'Bracket') === 'Bracket');
