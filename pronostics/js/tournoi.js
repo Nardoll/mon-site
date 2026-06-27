@@ -152,22 +152,34 @@ function setupSyncTopBar() {
   const cooldown = getSyncCooldown();
   const topBar = document.querySelector('.top-bar');
   if (!topBar || document.getElementById('btn-sync-top')) return;
-  const btn = document.createElement('button');
-  btn.className = 'btn-sync-icon' + (cooldown > 0 ? ' on-cooldown' : '');
-  btn.id = 'btn-sync-top';
-  btn.disabled = cooldown > 0;
-  btn.title = tournament.last_sync
-    ? 'Dernière sync : ' + formatRelative(tournament.last_sync)
-    : 'Synchroniser les données';
-  btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>`;
-  topBar.insertBefore(btn, topBar.querySelector('.top-user'));
 
+  const wrap = document.createElement('div');
+  wrap.className = 'sync-wrap';
+  wrap.id = 'sync-wrap';
+
+  const infoText = cooldown > 0
+    ? `dans ${fmtCountdown(cooldown)}`
+    : tournament.last_sync ? formatRelative(tournament.last_sync) : '';
+
+  wrap.innerHTML = `
+    ${infoText ? `<span class="sync-info" id="sync-info">${infoText}</span>` : '<span class="sync-info" id="sync-info"></span>'}
+    <button class="btn-sync-icon${cooldown > 0 ? ' on-cooldown' : ''}" id="btn-sync-top"
+      ${cooldown > 0 ? 'disabled' : ''}
+      title="${cooldown > 0 ? 'Sync disponible dans ' + fmtCountdown(cooldown) : 'Synchroniser les données'}">
+      <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+    </button>
+  `;
+  topBar.insertBefore(wrap, topBar.querySelector('.top-user'));
+
+  const btn = document.getElementById('btn-sync-top');
   if (cooldown > 0) startCountdownTopBar(cooldown);
 
   btn.addEventListener('click', async () => {
     if (btn.disabled) return;
     btn.disabled = true;
     btn.classList.add('spinning');
+    const info = document.getElementById('sync-info');
+    if (info) info.textContent = '…';
     try {
       const result = await syncTournament(TOURNAMENT_ID);
       btn.classList.remove('spinning');
@@ -181,6 +193,7 @@ function setupSyncTopBar() {
     } catch (e) {
       btn.classList.remove('spinning');
       btn.disabled = false;
+      if (info) info.textContent = tournament.last_sync ? formatRelative(tournament.last_sync) : '';
       showToast('Erreur : ' + e.message);
     }
   });
@@ -194,12 +207,15 @@ function startCountdownTopBar(secs) {
   let rem = secs;
   const tick = () => {
     rem--;
-    btn.title = 'Sync disponible dans ' + fmtCountdown(rem);
+    const info = document.getElementById('sync-info');
     if (rem <= 0) {
       btn.disabled = false;
       btn.classList.remove('on-cooldown');
       btn.title = 'Synchroniser les données';
+      if (info) info.textContent = tournament.last_sync ? formatRelative(tournament.last_sync) : '';
     } else {
+      btn.title = 'Sync disponible dans ' + fmtCountdown(rem);
+      if (info) info.textContent = 'dans ' + fmtCountdown(rem);
       setTimeout(tick, 1000);
     }
   };

@@ -1,5 +1,5 @@
 import { requireProfile }              from './auth.js';
-import { injectTopBar, injectSidebar } from './nav.js';
+import { injectTopBar, injectSidebar, setSidebarLive } from './nav.js';
 import { getTournaments, createTournament } from './db.js';
 
 const IS_ADMIN = new URLSearchParams(location.search).has('admin');
@@ -25,6 +25,7 @@ async function renderAccueil(profile) {
   const live     = tournaments.filter(t => t.status === 'live');
   const upcoming = tournaments.filter(t => t.status === 'upcoming');
   const finished = tournaments.filter(t => t.status === 'finished');
+  setSidebarLive(live);
 
   const container = document.getElementById('tours-container');
   container.innerHTML = `

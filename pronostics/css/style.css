@@ -147,6 +147,29 @@ body {
 .sb-link:hover { background: var(--surface2); color: var(--text); }
 .sb-link.active { background: rgba(249,115,22,.12); color: var(--accent); }
 .sb-link.active svg { opacity: 1; }
+
+.sb-divider {
+  height: 1px;
+  background: var(--border);
+  margin: .6rem .6rem;
+}
+.sb-section-label {
+  font-size: .58rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: .35rem .75rem .15rem;
+}
+.sb-live-link { gap: .5rem; }
+.sb-live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--win);
+  box-shadow: 0 0 5px var(--win);
+  flex-shrink: 0;
+}
+
 .sb-footer {
   padding: .75rem .6rem 0;
   border-top: 1px solid var(--border);
@@ -913,10 +936,12 @@ body {
 .tour-tabs::-webkit-scrollbar { display: none; }
 
 .tour-tab {
-  padding: .65rem 1rem;
+  flex: 1;
+  padding: .65rem .5rem;
   font-size: .78rem;
   font-weight: 600;
   color: var(--muted2);
+  text-align: center;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
@@ -1330,6 +1355,17 @@ body {
 }
 
 /* ── SYNC ICON (top bar) ─────────────────── */
+.sync-wrap {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-right: .5rem;
+}
+.sync-info {
+  font-size: .68rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
 .btn-sync-icon {
   width: 32px; height: 32px;
   border-radius: 6px;

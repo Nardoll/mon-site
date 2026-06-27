@@ -1,5 +1,5 @@
 import { requireProfile }                              from './auth.js';
-import { injectTopBar, injectSidebar, avatarHtml }     from './nav.js';
+import { injectTopBar, injectSidebar, setSidebarLive, avatarHtml } from './nav.js';
 import { getTournaments, getLeaderboard, getPlayerBreakdown } from './db.js';
 
 requireProfile(async (profile) => {
@@ -17,7 +17,6 @@ async function renderClassement(profile) {
       <div class="pts-legend-title">Comment sont calculés les points</div>
       <div class="pts-legend-row"><span class="pts-badge">5 pts</span> Score exact (bon gagnant + bon score)</div>
       <div class="pts-legend-row"><span class="pts-badge">3 pts</span> Bon gagnant (mauvais score)</div>
-      <div class="pts-legend-row"><span class="pts-badge">1 pt</span> Consolation BO5 (perdant ≥ 2 maps)</div>
       <div class="pts-legend-row"><span class="pts-badge">0 pt</span> Mauvais gagnant</div>
     </div>
     <div id="filter-wrap"></div>
@@ -26,6 +25,7 @@ async function renderClassement(profile) {
 
   const tournaments = await getTournaments();
   const withData = tournaments.filter(t => t.status !== 'upcoming');
+  setSidebarLive(tournaments.filter(t => t.status === 'live'));
 
   renderFilters(withData, profile, tournaments);
   await showLeaderboard(null, profile, tournaments);

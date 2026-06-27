@@ -69,6 +69,7 @@ export function injectSidebar(profile, active) {
         📊 Classement général
       </a>
     </nav>
+    <div id="sb-live-wrap"></div>
     <div class="sb-footer">
       <a href="/" class="sb-home" title="Accueil du site">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -78,6 +79,21 @@ export function injectSidebar(profile, active) {
     </div>
   `;
   document.body.prepend(sidebar);
+}
+
+export function setSidebarLive(tournaments) {
+  const wrap = document.getElementById('sb-live-wrap');
+  if (!wrap || !tournaments.length) return;
+  wrap.innerHTML = `
+    <div class="sb-divider"></div>
+    <div class="sb-section-label">En cours</div>
+    ${tournaments.map(t => `
+      <a href="/pronostics/tournoi.html?id=${esc(t.id)}" class="sb-link sb-live-link">
+        <span class="sb-live-dot"></span>
+        ${esc(t.short_name || t.name)}
+      </a>
+    `).join('')}
+  `;
 }
 
 // ── Avatar edit modal ──────────────────────────────────────────────

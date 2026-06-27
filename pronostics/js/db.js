@@ -161,13 +161,9 @@ export async function scorePicksForMatch(match) {
     let points = 0;
 
     if (pick.pick_winner === match.winner) {
-      // Bon gagnant — vérifier le score exact
       const ps1 = parseInt(pick.pick_score1) || 0;
       const ps2 = parseInt(pick.pick_score2) || 0;
       points = (ps1 === s1 && ps2 === s2) ? 5 : 3;
-    } else if (bo >= 5) {
-      // Mauvais gagnant en BO5 : consolation si le perdant a ≥2 maps
-      if (loserScore >= 2) points = 1;
     }
 
     batch.update(doc(db, 'prono_picks', d.id), { points, scored: true });
