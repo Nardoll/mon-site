@@ -364,6 +364,153 @@ async function loadAllPicks(match) {
   content.innerHTML = rows.join('') || '<div style="color:var(--muted);font-size:.75rem">Aucun pronostic encore.</div>';
 }
 
+// ── Données statiques MSI 2026 ─────────────────────────────────────
+const MSI_2026_TEAMS = {
+  'BLG': {
+    full: 'Bilibili Gaming',
+    league: 'LPL', region: 'Chine',
+    seed: '1ère graine LPL — champions de Chine',
+    stage: 'Bracket',
+    players: [
+      { role: 'Top',     name: 'Bin'      },
+      { role: 'Jungle',  name: 'Xun'      },
+      { role: 'Mid',     name: 'knight'   },
+      { role: 'Bot',     name: 'Viper'    },
+      { role: 'Support', name: 'ON'       },
+    ]
+  },
+  'TES': {
+    full: 'Top Esports',
+    league: 'LPL', region: 'Chine',
+    seed: '2ème graine LPL',
+    stage: 'Bracket',
+    players: [
+      { role: 'Top',     name: 'ZUIAN'     },
+      { role: 'Jungle',  name: 'Tian'      },
+      { role: 'Mid',     name: 'Creme'     },
+      { role: 'Bot',     name: 'JackeyLove'},
+      { role: 'Support', name: 'fengyue'   },
+    ]
+  },
+  'HLE': {
+    full: 'Hanwha Life Esports',
+    league: 'LCK', region: 'Corée du Sud',
+    seed: '1ère graine LCK',
+    stage: 'Bracket',
+    players: [
+      { role: 'Top',     name: 'Zeus'     },
+      { role: 'Jungle',  name: 'Kanavi'   },
+      { role: 'Mid',     name: 'Zeka'     },
+      { role: 'Bot',     name: 'Gumayusi' },
+      { role: 'Support', name: 'Delight'  },
+    ]
+  },
+  'LYON': {
+    full: 'LYON',
+    league: 'LCS', region: 'Amérique du Nord',
+    seed: '1ère graine LCS',
+    stage: 'Bracket',
+    players: [
+      { role: 'Top',     name: 'Dhokla'   },
+      { role: 'Jungle',  name: 'Inspired' },
+      { role: 'Mid',     name: 'Saint'    },
+      { role: 'Bot',     name: 'Berserker'},
+      { role: 'Support', name: 'Isles'    },
+    ]
+  },
+  'FUR': {
+    full: 'FURIA',
+    league: 'CBLOL', region: 'Brésil',
+    seed: '1ère graine CBLOL',
+    stage: 'Bracket',
+    players: [
+      { role: 'Top',     name: 'Guigo' },
+      { role: 'Jungle',  name: 'Tatu'  },
+      { role: 'Mid',     name: 'Tutsz' },
+      { role: 'Bot',     name: 'Ayu'   },
+      { role: 'Support', name: 'Jojo'  },
+    ]
+  },
+  'G2': {
+    full: 'G2 Esports',
+    league: 'LEC', region: 'Europe',
+    seed: '1ère graine LEC',
+    stage: 'Bracket',
+    players: [
+      { role: 'Top',     name: 'BrokenBlade' },
+      { role: 'Jungle',  name: 'SkewMond'    },
+      { role: 'Mid',     name: 'Caps'        },
+      { role: 'Bot',     name: 'Hans Sama'   },
+      { role: 'Support', name: 'Labrov'      },
+    ]
+  },
+  'TSW': {
+    full: 'Secret Whales',
+    league: 'LCP', region: 'Pacifique',
+    seed: '1ère graine LCP',
+    stage: 'Bracket',
+    players: [
+      { role: 'Top',     name: 'Pun'   },
+      { role: 'Jungle',  name: 'Hizto' },
+      { role: 'Mid',     name: 'Dire'  },
+      { role: 'Bot',     name: 'Eddie' },
+      { role: 'Support', name: 'Bie'   },
+    ]
+  },
+  'T1': {
+    full: 'T1',
+    league: 'LCK', region: 'Corée du Sud',
+    seed: '2ème graine LCK — équipe de Faker',
+    stage: 'Play-In',
+    players: [
+      { role: 'Top',     name: 'Doran' },
+      { role: 'Jungle',  name: 'Oner'  },
+      { role: 'Mid',     name: 'Faker' },
+      { role: 'Bot',     name: 'Peyz'  },
+      { role: 'Support', name: 'Keria' },
+    ]
+  },
+  'TLAW': {
+    full: 'Team Liquid',
+    league: 'LCS', region: 'Amérique du Nord',
+    seed: '2ème graine LCS',
+    stage: 'Play-In',
+    players: [
+      { role: 'Top',     name: 'Morgan'     },
+      { role: 'Jungle',  name: 'Josedeodo'  },
+      { role: 'Mid',     name: 'Quid'       },
+      { role: 'Bot',     name: 'Yeon'       },
+      { role: 'Support', name: 'CoreJJ'     },
+    ]
+  },
+  'KC': {
+    full: 'Karmine Corp',
+    league: 'LEC', region: 'Europe',
+    seed: '2ème graine LEC',
+    stage: 'Play-In',
+    players: [
+      { role: 'Top',     name: 'Canna'   },
+      { role: 'Jungle',  name: 'Yike'    },
+      { role: 'Mid',     name: 'kyeahoo' },
+      { role: 'Bot',     name: 'Caliste' },
+      { role: 'Support', name: 'Busio'   },
+    ]
+  },
+  'DCG': {
+    full: 'Deep Cross Gaming',
+    league: 'LCP', region: 'Pacifique',
+    seed: '2ème graine LCP',
+    stage: 'Play-In',
+    players: [
+      { role: 'Top',     name: 'Flauren' },
+      { role: 'Jungle',  name: 'POP9'    },
+      { role: 'Mid',     name: 'HongSuo' },
+      { role: 'Bot',     name: 'Feng'    },
+      { role: 'Support', name: 'ShiauC'  },
+    ]
+  },
+};
+
 // ── Onglet Équipes ─────────────────────────────────────────────────
 function renderEquipes() {
   const container = document.getElementById('tab-equipes');
@@ -374,13 +521,20 @@ function renderEquipes() {
     ? `https://lol.fandom.com/wiki/${encodeURIComponent(lpKey.replace(/\s/g, '_'))}`
     : null;
 
+  // Séparer Bracket et Play-In
+  const bracketTeams = teams.filter(t => (MSI_2026_TEAMS[t]?.stage || 'Bracket') === 'Bracket');
+  const playInTeams  = teams.filter(t => MSI_2026_TEAMS[t]?.stage === 'Play-In');
+  const otherTeams   = teams.filter(t => !MSI_2026_TEAMS[t]);
+
   container.innerHTML = `
-    ${lpUrl ? `<a href="${lpUrl}" target="_blank" rel="noopener" class="lp-link">
-      📖 Voir la page Leaguepedia →
-    </a>` : ''}
+    ${lpUrl ? `<a href="${lpUrl}" target="_blank" rel="noopener" class="lp-link">📖 Voir la page Leaguepedia →</a>` : ''}
     ${teams.length === 0
       ? '<div class="empty-state">Les équipes apparaîtront après la première synchronisation.</div>'
-      : `<div class="teams-grid">${teams.map(t => renderTeamCard(t)).join('')}</div>`
+      : `
+        ${bracketTeams.length ? `<div class="section-label">🏆 Bracket Stage</div><div class="teams-grid">${bracketTeams.map(t => renderTeamCard(t)).join('')}</div>` : ''}
+        ${playInTeams.length  ? `<div class="section-label">🎟️ Play-In</div><div class="teams-grid">${playInTeams.map(t => renderTeamCard(t)).join('')}</div>` : ''}
+        ${otherTeams.length   ? `<div class="section-label">Autres</div><div class="teams-grid">${otherTeams.map(t => renderTeamCard(t)).join('')}</div>` : ''}
+      `
     }
   `;
 }
@@ -399,13 +553,29 @@ function renderTeamCard(teamName) {
   const initial = teamName[0]?.toUpperCase() || '?';
   const logos   = tournament?.team_logos || {};
   const logo    = logos[teamName];
+  const info    = MSI_2026_TEAMS[teamName];
+
+  const logoHtml = logo
+    ? `<img src="${logo}" alt="${esc(teamName)}" class="team-logo-card" onerror="this.style.display='none'">`
+    : `<div class="team-initial" style="background:${color}">${initial}</div>`;
+
+  const playersHtml = info?.players
+    ? `<div class="team-players">${info.players.map(p =>
+        `<div class="team-player"><span class="player-role">${esc(p.role)}</span><span class="player-name">${esc(p.name)}</span></div>`
+      ).join('')}</div>`
+    : '';
+
   return `
     <div class="team-card">
-      ${logo
-        ? `<img src="${logo}" alt="${esc(teamName)}" class="team-logo-card" onerror="this.style.display='none'">`
-        : `<div class="team-initial" style="background:${color}">${initial}</div>`
-      }
-      <div class="team-name">${esc(teamName)}</div>
+      <div class="team-card-header">
+        ${logoHtml}
+        <div class="team-card-titles">
+          <div class="team-name">${esc(info?.full || teamName)}</div>
+          ${info ? `<div class="team-league">${esc(info.league)} · ${esc(info.region)}</div>` : ''}
+          ${info?.seed ? `<div class="team-seed">${esc(info.seed)}</div>` : ''}
+        </div>
+      </div>
+      ${playersHtml}
     </div>`;
 }
 
