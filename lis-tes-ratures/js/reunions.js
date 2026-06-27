@@ -651,9 +651,12 @@ function renderMeeting() {
        <div class="mtg-sec-title">${IC.note} Compte rendu</div>
        <div style="font-size:.9rem;line-height:1.6;color:#3a2b1c;white-space:pre-wrap">${esc(r.compte_rendu)}</div>`
     : "";
-  // Vidéo
+  // Vidéo + exposé
   const videoBlock = r.lien_video
     ? `<div style="margin-top:1.1rem"><a href="${esc(r.lien_video)}" target="_blank" rel="noopener" class="mtg-livre-link" style="margin-top:0">▶ Revoir la séance en vidéo ${IC.arrowR}</a></div>`
+    : "";
+  const exposeBlock = r.lien_expose
+    ? `<div style="margin-top:.7rem"><a href="${esc(r.lien_expose)}" target="_blank" rel="noopener" class="mtg-livre-link" style="margin-top:0">📖 Voir l'exposé ${IC.arrowR}</a></div>`
     : "";
 
   const sealHtml = prevue || avg === null
@@ -690,7 +693,8 @@ function renderMeeting() {
     ${notesBlock}
     ${sondageLink}
     ${crBlock}
-    ${videoBlock}`;
+    ${videoBlock}
+    ${exposeBlock}`;
 
   document.getElementById("mtg-close").addEventListener("click", closeMeeting);
   document.getElementById("mtg-modif-btn").addEventListener("click", () => {
@@ -839,8 +843,9 @@ function openAdd(r) {
   const presentsSet = new Set(r?.participant_ids || []);
   const lecteursSet = new Set(r?.lecteurs_ids || []);
   const dateVal = r?.date ? (r.date.toDate ? r.date.toDate() : new Date(r.date)).toISOString().split("T")[0] : '';
-  const crVal   = r?.compte_rendu || '';
+  const crVal    = r?.compte_rendu || '';
   const videoVal = r?.lien_video || '';
+  const exposeVal = r?.lien_expose || '';
   const statutVal = r?.statut || 'passée';
 
   // Checklist membres
@@ -916,6 +921,11 @@ function openAdd(r) {
       <input type="url" class="pf-input" id="add-video" value="${esc(videoVal)}" placeholder="https://youtube.com/…" />
     </div>
 
+    <div class="pf-group">
+      <label>Lien exposé <span class="pf-hint">(optionnel)</span></label>
+      <input type="text" class="pf-input" id="add-expose" value="${esc(exposeVal)}" placeholder="/lis-tes-ratures/exposes/1984/" />
+    </div>
+
     <div class="pf-foot">
       <button class="pf-btn cancel" id="add-cancel">Annuler</button>
       <button class="pf-btn ok" id="add-ok">${editingReunionId ? "Enregistrer les modifications" : "Enregistrer"}</button>
@@ -987,6 +997,7 @@ async function submitAdd() {
   const lecteurs = checkedMids("add-lu");
   const cr       = document.getElementById("add-cr").value.trim();
   const video    = document.getElementById("add-video").value.trim();
+  const expose   = document.getElementById("add-expose").value.trim();
 
   const btn = document.getElementById("add-ok");
   btn.disabled = true; btn.textContent = "Enregistrement…";
@@ -1003,6 +1014,7 @@ async function submitAdd() {
       lecteurs_ids:    lecteurs,
       compte_rendu:    cr,
       lien_video:      video || null,
+      lien_expose:     expose || null,
     };
 
     if (editingReunionId) {

@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orwell · 1984 · Exposé · Lis tes ratures</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;0,800;0,900;1,500;1,700&family=Inter:wght@400;500;600&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#E7DECE; --card:#F8F2E6; --card-2:#FBF7EE;
+    --ink:#2B2118; --ink-soft:#6F6353; --ink-faint:#9A8E7C;
+    --rust:#B0532D; --rust-deep:#8F3F1F; --green:#4E7A48; --teal:#2E7E72;
+    --red:#A23A28; --gold:#A9863B;
+    --line:rgba(43,33,24,.14); --line-soft:rgba(43,33,24,.08);
+    --serif:'Playfair Display',Georgia,serif; --sans:'Inter',system-ui,sans-serif; --hand:'Caveat',cursive;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:var(--sans);background:var(--ink);color:var(--ink);overflow:hidden;-webkit-font-smoothing:antialiased}
+
+  .deck{position:fixed;inset:0;background:var(--bg)}
+  .slide{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    padding:clamp(1.6rem,4.5vw,5rem);
+    opacity:0;visibility:hidden;transform:translateX(26px);
+    transition:opacity .5s ease,transform .5s ease,visibility .5s;background:var(--bg);
+  }
+  .slide.active{opacity:1;visibility:visible;transform:none;z-index:2}
+  .slide.prev{transform:translateX(-26px)}
+  .slide-inner{width:100%;max-width:1080px}
+  .slide-inner.center{text-align:center;max-width:920px}
+  .slide.dense{align-items:flex-start;padding-top:clamp(1.4rem,4vw,3rem)}
+
+  /* type */
+  .eyebrow{
+    font-weight:600;font-size:clamp(.68rem,.95vw,.8rem);letter-spacing:.2em;
+    text-transform:uppercase;color:var(--rust);margin-bottom:1.3rem;
+    display:flex;align-items:center;gap:.7rem;
+  }
+  .center .eyebrow{justify-content:center}
+  .eyebrow::before{content:"";width:24px;height:1px;background:var(--rust);opacity:.6}
+  .center .eyebrow::before{display:none}
+  .headline{font-family:var(--serif);font-weight:800;font-size:clamp(1.9rem,4.3vw,3.5rem);line-height:1.07;letter-spacing:-.01em;color:var(--ink);margin-bottom:1.4rem}
+  .lede{font-size:clamp(1rem,1.45vw,1.28rem);line-height:1.62;color:var(--ink-soft);font-weight:400;max-width:48ch}
+  .center .lede{margin-inline:auto}
+  .lede strong{color:var(--ink);font-weight:600}
+  .lede em{font-style:italic}
+  .takeaway{
+    margin-top:1.7rem;padding:1rem 1.3rem;border-left:3px solid var(--rust);
+    background:rgba(176,83,45,.07);border-radius:0 8px 8px 0;
+    font-size:clamp(.98rem,1.35vw,1.18rem);line-height:1.52;color:var(--ink);font-weight:400;max-width:54ch;
+  }
+  .takeaway strong{font-weight:600}
+  .aside{margin-top:1.3rem;font-style:italic;font-family:var(--serif);font-size:clamp(1rem,1.35vw,1.18rem);line-height:1.5;color:var(--ink-soft);max-width:50ch}
+
+  /* links */
+  .lnk{color:var(--rust-deep);text-decoration:none;border-bottom:1px solid rgba(176,83,45,.4);transition:border-color .2s,color .2s;white-space:nowrap}
+  .lnk:hover{border-bottom-color:var(--rust);color:var(--rust)}
+  .slide[data-dark] .lnk{color:#E9A983;border-bottom-color:rgba(216,138,94,.5)}
+  .slide[data-dark] .lnk:hover{color:#F0C2A2;border-bottom-color:#E9A983}
+
+  /* tooltip definitions */
+  .def{position:relative;border-bottom:1px dotted var(--rust);cursor:help;color:inherit;font-weight:500}
+  .slide[data-dark] .def{border-bottom-color:#D88A5E}
+  .def>.tip{
+    position:absolute;bottom:140%;left:50%;transform:translateX(-50%) translateY(4px);
+    width:max-content;max-width:min(330px,72vw);
+    background:var(--ink);color:#F3ECDC;font-weight:400;font-style:normal;
+    font-size:.86rem;line-height:1.45;letter-spacing:0;text-transform:none;
+    padding:.7rem .85rem;border-radius:9px;border:1px solid rgba(239,231,214,.18);
+    box-shadow:0 8px 26px rgba(0,0,0,.32);
+    opacity:0;visibility:hidden;transition:opacity .18s,transform .18s,visibility .18s;
+    z-index:30;text-align:left;pointer-events:none;
+  }
+  .def>.tip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);
+    border:6px solid transparent;border-top-color:var(--ink)}
+  .def:hover>.tip,.def:focus>.tip,.def.open>.tip{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+  .slide[data-dark] .def>.tip{background:#0F0B07;border-color:rgba(239,231,214,.22)}
+  .slide[data-dark] .def>.tip::after{border-top-color:#0F0B07}
+  .tip b{color:#E9A983;font-weight:600}
+
+  /* title */
+  .brandmark{font-family:var(--serif);font-weight:800;font-size:clamp(1rem,1.4vw,1.2rem);color:var(--rust-deep)}
+  .title-slide .slide-inner{display:flex;flex-direction:column;min-height:min(72vh,640px)}
+  .brandmark{margin-bottom:auto}
+  .title-h1{font-family:var(--serif);font-weight:900;font-size:clamp(2.5rem,6.8vw,5.4rem);line-height:1.03;letter-spacing:-.015em;color:var(--ink)}
+  .title-correction{font-family:var(--hand);font-weight:700;font-size:clamp(1.6rem,3.4vw,2.8rem);color:var(--rust);transform:rotate(-1.4deg);margin:.5rem 0 0 .2rem;display:inline-block}
+  .title-foot{margin-top:auto;display:flex;flex-wrap:wrap;gap:.5rem 1.3rem;align-items:baseline;font-size:clamp(.85rem,1.1vw,1rem);color:var(--ink-soft);padding-top:1.8rem;border-top:1px solid var(--line)}
+  .title-foot b{color:var(--ink);font-weight:600}
+  .title-foot .dot{color:var(--ink-faint)}
+
+  /* dark slides */
+  .slide[data-dark]{background:var(--ink);color:#EFE7D6}
+  .slide[data-dark] .headline,.slide[data-dark] .divider-title{color:#F3ECDC}
+  .slide[data-dark] .lede{color:#C9BFAC}
+  .slide[data-dark] .lede strong{color:#F3ECDC}
+  .slide[data-dark] .eyebrow{color:#D88A5E}
+  .slide[data-dark] .eyebrow::before{background:#D88A5E}
+  .slide[data-dark] .takeaway{background:rgba(216,138,94,.12);border-left-color:#D88A5E;color:#F3ECDC}
+  .slide[data-dark] .aside{color:#BBB09C}
+  .slide[data-dark] .rature{color:#7E7361}
+
+  /* rature motif */
+  .rature{position:relative;white-space:nowrap;color:var(--ink-faint)}
+  .rature::after{content:"";position:absolute;left:-3%;right:-3%;top:52%;height:.085em;min-height:3px;background:var(--red);transform:rotate(-2.4deg);border-radius:3px}
+
+  /* dividers */
+  .divider .slide-inner{position:relative}
+  .act-num{position:absolute;right:-1rem;top:50%;transform:translateY(-54%);font-family:var(--serif);font-weight:900;font-size:clamp(11rem,28vw,24rem);line-height:.7;color:rgba(216,138,94,.10);pointer-events:none;z-index:0}
+  .divider .eyebrow,.divider .divider-title,.divider .divider-sub{position:relative;z-index:1}
+  .divider-title{font-family:var(--serif);font-weight:800;font-size:clamp(2rem,4.8vw,3.8rem);line-height:1.06;letter-spacing:-.01em;max-width:18ch;margin-bottom:1rem}
+  .divider-sub{font-size:clamp(.95rem,1.3vw,1.12rem);color:#BBB09C;max-width:44ch;line-height:1.55}
+
+  /* split layout (text + illustration) */
+  .split{display:grid;grid-template-columns:1.08fr .92fr;gap:clamp(1.6rem,4vw,3.6rem);align-items:center}
+  .split.rev{grid-template-columns:.92fr 1.08fr}
+  @media(max-width:860px){.split,.split.rev{grid-template-columns:1fr;gap:1.2rem}.fig{max-width:380px;margin-inline:auto}}
+  .fig{width:100%;max-width:440px}
+  .fig svg{width:100%;height:auto;display:block}
+  .ill{--ill:var(--ink);--ill-2:var(--rust);--ill-soft:rgba(43,33,24,.10)}
+  .slide[data-dark] .ill{--ill:#E7DDCB;--ill-2:#D88A5E;--ill-soft:rgba(231,221,203,.10)}
+  .figcap{margin-top:.7rem;font-size:.8rem;line-height:1.4;color:var(--ink-faint);text-align:center;font-style:italic}
+  .slide[data-dark] .figcap{color:#9A8E78}
+
+  /* reading card */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:clamp(1.3rem,2.4vw,2.1rem)}
+  .card-top{display:flex;justify-content:space-between;align-items:center;padding-bottom:.85rem;margin-bottom:1.2rem;border-bottom:1px dashed var(--line);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);font-weight:600}
+  .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1.2rem 1.7rem}
+  .col-h{font-weight:600;font-size:.76rem;letter-spacing:.13em;text-transform:uppercase;color:var(--rust);margin-bottom:.6rem}
+  .col ul{list-style:none}
+  .col li{font-size:clamp(.9rem,1.1vw,1rem);line-height:1.4;color:var(--ink);padding:.24rem 0;border-bottom:1px solid var(--line-soft)}
+  .col li:last-child{border-bottom:0}
+  .col li span{color:var(--ink-faint);font-size:.82em}
+  .col li a{color:var(--ink);text-decoration:none;border-bottom:1px solid rgba(176,83,45,.3)}
+  .col li a:hover{border-bottom-color:var(--rust);color:var(--rust-deep)}
+
+  /* big accent */
+  .big-quote{font-family:var(--serif);font-weight:800;font-size:clamp(2.6rem,7vw,5.4rem);line-height:.95;color:var(--rust);letter-spacing:-.02em}
+  .big-quote small{display:block;font-family:var(--sans);font-weight:400;font-size:clamp(.85rem,1.05vw,.98rem);letter-spacing:.02em;color:var(--ink-faint);margin-top:.9rem;font-style:normal;line-height:1.45;max-width:32ch}
+
+  /* philosophy spectrum */
+  .spectrum{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin:1.4rem 0 .3rem}
+  @media(max-width:760px){.spectrum{grid-template-columns:1fr}}
+  .phil{border:1px solid var(--line);border-radius:12px;padding:1rem 1.1rem;background:var(--card)}
+  .phil .ph-svg{height:62px;margin-bottom:.6rem}
+  .phil .ph-svg svg{height:62px;width:auto}
+  .phil h4{font-family:var(--serif);font-weight:700;font-size:1.12rem;margin-bottom:.35rem;color:var(--ink)}
+  .phil.is-sol h4{color:var(--rust-deep)}
+  .phil p{font-size:.92rem;line-height:1.45;color:var(--ink-soft)}
+  .phil.is-sol{border-color:var(--rust);background:rgba(176,83,45,.05)}
+
+  /* viktorovitch covers */
+  .covers{display:flex;gap:1.1rem;flex-wrap:wrap;align-items:flex-end}
+  .cover{text-decoration:none;display:block;width:128px}
+  .cover .art{height:178px;border-radius:6px;border:1px solid var(--line);padding:.7rem;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 6px 18px rgba(43,33,24,.12);transition:transform .2s}
+  .cover:hover .art{transform:translateY(-4px)}
+  .cover .art.c1{background:#EFE7D6}
+  .cover .art.c2{background:#2B2118}
+  .cv-top{font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600}
+  .c1 .cv-top{color:var(--rust)} .c2 .cv-top{color:#D88A5E}
+  .cv-title{font-family:var(--serif);font-weight:800;font-size:1.02rem;line-height:1.08}
+  .c1 .cv-title{color:#2B2118} .c2 .cv-title{color:#F3ECDC}
+  .cv-auth{font-size:.6rem;letter-spacing:.04em}
+  .c1 .cv-auth{color:var(--ink-soft)} .c2 .cv-auth{color:#BBB09C}
+  .cover .cap{margin-top:.5rem;font-size:.72rem;color:var(--ink-faint);text-align:center}
+
+  /* doc poster */
+  .poster{position:relative;width:200px;border-radius:12px;overflow:hidden;border:1px solid rgba(239,231,214,.18);background:#1b150e;flex:0 0 auto}
+  .poster .scene{aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;position:relative}
+  .poster .play{position:absolute;width:54px;height:54px;border-radius:50%;background:rgba(216,138,94,.92);display:flex;align-items:center;justify-content:center;color:#1b150e;font-size:1.3rem;padding-left:4px}
+  .poster .pcap{padding:.7rem .8rem;border-top:1px solid rgba(239,231,214,.12)}
+  .poster .pcap .pt{font-family:var(--serif);color:#F3ECDC;font-weight:800;font-size:1.05rem}
+  .poster .pcap .ps{color:#BBB09C;font-size:.72rem}
+  .btn-row{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1.3rem}
+  .btn{display:inline-flex;align-items:center;gap:.45rem;text-decoration:none;font-size:.86rem;font-weight:500;padding:.55rem .95rem;border-radius:9px;border:1px solid var(--line);color:var(--ink);background:var(--card);transition:border-color .2s,background .2s}
+  .btn:hover{border-color:var(--rust);background:var(--card-2)}
+  .btn.primary{background:var(--rust);color:#fff;border-color:var(--rust)}
+  .btn.primary:hover{background:var(--rust-deep)}
+  .slide[data-dark] .btn{background:rgba(43,33,24,.4);color:#EFE7D6;border-color:rgba(239,231,214,.2)}
+  .slide[data-dark] .btn:hover{border-color:#D88A5E;background:rgba(43,33,24,.7)}
+
+  /* spain forces */
+  .camps{display:flex;flex-direction:column;gap:.7rem}
+  .camp{border-radius:10px;padding:.7rem .9rem;border:1px solid var(--line)}
+  .camp.rep{background:rgba(78,122,72,.08);border-color:rgba(78,122,72,.4)}
+  .camp.nat{background:rgba(176,83,45,.07);border-color:rgba(176,83,45,.4)}
+  .camp h4{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-bottom:.3rem}
+  .camp.rep h4{color:var(--green)} .camp.nat h4{color:var(--rust-deep)}
+  .camp p{font-size:.86rem;line-height:1.42;color:var(--ink)}
+  .camp .sup{color:var(--ink-faint);font-size:.8rem}
+  .strip{font-size:.92rem;line-height:1.5;color:var(--ink);margin-bottom:1rem;max-width:70ch}
+  .keynote{margin-top:1rem;font-size:.9rem;line-height:1.5;color:var(--ink);padding:.7rem 1rem;border-left:3px solid var(--rust);background:rgba(176,83,45,.06);border-radius:0 8px 8px 0;max-width:74ch}
+
+  /* facts / redaction */
+  .facts{display:flex;flex-direction:column;gap:1.3rem;margin-top:1.4rem}
+  .fact{display:flex;gap:1.1rem;align-items:flex-start}
+  .fact .stamp{flex:0 0 auto;width:48px;height:48px;border:2px solid var(--red);border-radius:50%;display:flex;align-items:center;justify-content:center;transform:rotate(-8deg);color:var(--red);font-family:var(--serif);font-weight:800;font-size:.62rem;text-align:center;line-height:1.05}
+  .fact .body{font-size:clamp(.96rem,1.3vw,1.12rem);line-height:1.5}
+  .redact{position:relative;border-radius:3px;padding:.04em .18em;color:#F3ECDC;transition:color .15s}
+  .redact:not(.revealed){color:transparent}
+  .redact::after{content:"";position:absolute;inset:0;background:#0E0A06;border-radius:3px;transform-origin:left;transition:transform .6s cubic-bezier(.7,0,.18,1)}
+  .redact.revealed::after{transform:scaleX(0);transform-origin:right}
+  .redact b{font-weight:600}
+  .reveal-hint{font-size:.82rem;color:#9A8E78;margin-top:.4rem;letter-spacing:.02em}
+
+  /* questions */
+  .qlist{display:flex;flex-direction:column;gap:1.05rem;margin-top:.4rem;counter-reset:q}
+  .qlist li{list-style:none;position:relative;padding-left:2.5rem;font-size:clamp(1rem,1.35vw,1.2rem);line-height:1.5;color:var(--ink);max-width:66ch}
+  .qlist li::before{counter-increment:q;content:counter(q);position:absolute;left:0;top:-.02em;font-family:var(--serif);font-weight:800;color:var(--rust);font-size:1.35em;line-height:1}
+
+  .credit{margin-top:1.4rem;padding-top:1rem;border-top:1px solid var(--line);font-size:.86rem;color:var(--ink-soft);line-height:1.5;max-width:none;width:100%}
+
+  /* chrome */
+  .progress{position:fixed;top:0;left:0;height:3px;background:var(--rust);width:0;z-index:50;transition:width .4s ease}
+  .actlabel{position:fixed;left:clamp(1rem,3vw,2.2rem);bottom:clamp(.9rem,2.4vw,1.5rem);z-index:40;display:flex;align-items:baseline;gap:.5rem;max-width:44vw;pointer-events:none;transition:color .4s}
+  .actlabel .al-act{font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--rust);font-weight:700;white-space:nowrap}
+  body.dark-chrome .actlabel .al-act{color:#D88A5E}
+  .actlabel .al-sep{font-size:.7rem;color:var(--ink-faint)}
+  body.dark-chrome .actlabel .al-sep{color:#9A8E78}
+  .actlabel .al-title{font-size:.74rem;color:var(--ink-soft);font-weight:500;letter-spacing:.01em;line-height:1.2}
+  body.dark-chrome .actlabel .al-title{color:#BBB09C}
+  .actlabel.no-title .al-sep,.actlabel.no-title .al-title{display:none}
+
+  /* historical timeline (frise chronologique) */
+  .timeline{position:fixed;left:50%;transform:translateX(-50%);bottom:clamp(.85rem,2.2vw,1.45rem);z-index:38;opacity:0;visibility:hidden;transition:opacity .4s,visibility .4s;pointer-events:none}
+  .timeline.show{opacity:1;visibility:visible}
+  .tl-track{position:relative;display:flex;align-items:flex-start;gap:clamp(1rem,3.2vw,2.6rem)}
+  .tl-track::before{content:"";position:absolute;left:16px;right:16px;top:3.5px;height:1.5px;background:var(--line)}
+  body.dark-chrome .tl-track::before{background:rgba(239,231,214,.16)}
+  .tl-pt{position:relative;display:flex;flex-direction:column;align-items:center;gap:.28rem}
+  .tl-pt i{width:8px;height:8px;border-radius:50%;background:var(--bg);border:1.5px solid var(--ink-faint);transition:transform .35s,background .35s,border-color .35s,box-shadow .35s}
+  body.dark-chrome .tl-pt i{background:var(--ink);border-color:#9A8E78}
+  .tl-pt b{font-size:.64rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ink-faint);letter-spacing:.02em;transition:color .35s}
+  body.dark-chrome .tl-pt b{color:#9A8E78}
+  .tl-pt em{position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%) translateY(3px);font-style:normal;font-size:.55rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--rust);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s}
+  .tl-pt.on i{background:var(--rust);border-color:var(--rust);transform:scale(1.4);box-shadow:0 0 0 4px rgba(176,83,45,.15)}
+  .tl-pt.on b{color:var(--rust);font-weight:700}
+  .tl-pt.on em{opacity:1;transform:translateX(-50%) translateY(0)}
+  body.dark-chrome .tl-pt.on i{background:#D88A5E;border-color:#D88A5E;box-shadow:0 0 0 4px rgba(216,138,94,.18)}
+  body.dark-chrome .tl-pt.on b,body.dark-chrome .tl-pt.on em{color:#D88A5E}
+
+  /* manual reveal (last-slide questions) */
+  .reveal-step{opacity:0;transform:translateY(12px);transition:opacity .5s ease,transform .4s ease}
+  .reveal-step.shown{opacity:1;transform:none}
+  .qlist li.reveal-step{opacity:0;transform:translateY(12px);transition:opacity .5s ease,transform .4s ease}
+  .qlist li.reveal-step.shown{opacity:1;transform:none}
+  .slide-inner.end{display:flex;flex-direction:column;min-height:74vh}
+  .slide-inner.end .qend{margin-top:auto;padding-top:1.6rem}
+
+  /* small locator map (slide 5) */
+  .locator{margin-top:1rem;max-width:320px}
+  .locator svg,.locator .loc-img{width:100%;height:auto;display:block;border-radius:10px;border:1px solid var(--line)}
+  .locator svg{background:rgba(46,126,114,.05)}
+  .locator .loc-img{object-fit:cover;box-shadow:0 8px 22px rgba(43,33,24,.14);transition:transform .35s ease,box-shadow .35s ease}
+  .locator .loc-img:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(43,33,24,.2)}
+  .locator .loc-img+svg{display:none}
+  .slide[data-dark] .locator svg,.slide[data-dark] .locator .loc-img{border-color:rgba(239,231,214,.18)}
+  .locator .figcap{margin-top:.5rem}
+  .controls{position:fixed;right:clamp(1rem,3vw,2.2rem);bottom:clamp(.9rem,2.4vw,1.5rem);z-index:40;display:flex;align-items:center;gap:.5rem}
+  .ctrl{width:37px;height:37px;border-radius:9px;border:1px solid var(--line);background:rgba(248,242,230,.7);backdrop-filter:blur(4px);color:var(--ink);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,transform .1s,border-color .2s}
+  .ctrl:hover{background:var(--card);border-color:var(--rust)}
+  .ctrl:active{transform:scale(.94)}
+  body.dark-chrome .ctrl{background:rgba(43,33,24,.5);border-color:rgba(239,231,214,.18);color:#EFE7D6}
+  body.dark-chrome .ctrl:hover{background:rgba(43,33,24,.8);border-color:#D88A5E}
+  .counter{font-variant-numeric:tabular-nums;font-size:.8rem;color:var(--ink-soft);min-width:3.6em;text-align:center;font-weight:500}
+  body.dark-chrome .counter{color:#BBB09C}
+  .hint{position:fixed;left:50%;bottom:clamp(.9rem,2.4vw,1.5rem);transform:translateX(-50%);z-index:40;font-size:.76rem;color:var(--ink-faint);letter-spacing:.03em;transition:opacity .6s;pointer-events:none}
+  .hint b{color:var(--ink-soft)}
+  body.dark-chrome .hint{color:#9A8E78}
+
+  .overview{position:fixed;inset:0;z-index:60;background:rgba(43,33,24,.97);padding:clamp(1.4rem,4vw,3rem);overflow-y:auto;display:none}
+  .overview.open{display:block}
+  .ov-title{font-family:var(--serif);color:#F3ECDC;font-size:1.4rem;font-weight:700;margin-bottom:1.4rem}
+  .ov-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.85rem}
+  .ov-cell{background:#392D20;border:1px solid rgba(239,231,214,.14);border-radius:10px;padding:.95rem;cursor:pointer;transition:border-color .2s,background .2s;min-height:88px;display:flex;flex-direction:column;gap:.35rem}
+  .ov-cell:hover{border-color:#D88A5E;background:#43352552}
+  .ov-cell .n{font-size:.7rem;color:#D88A5E;font-weight:600;letter-spacing:.1em}
+  .ov-cell .t{font-family:var(--serif);color:#EFE7D6;font-size:.95rem;line-height:1.2}
+  .ov-cell.current{border-color:#D88A5E;background:#4a392580}
+
+  /* ============ PHOTOS (real images, with SVG/fake fallback) ============ */
+  .fig .photo{
+    width:100%;height:auto;display:block;border-radius:10px;
+    border:1px solid var(--line);box-shadow:0 12px 30px rgba(43,33,24,.18);
+    filter:saturate(.92) contrast(1.02);
+    transition:transform .4s cubic-bezier(.2,.7,.2,1),box-shadow .4s ease,filter .4s ease;
+  }
+  .fig:hover .photo{transform:scale(1.025) rotate(-.5deg);box-shadow:0 20px 44px rgba(43,33,24,.28);filter:saturate(1) contrast(1.04)}
+  .slide[data-dark] .fig .photo{border-color:rgba(239,231,214,.2);box-shadow:0 16px 36px rgba(0,0,0,.5)}
+  .fig .photo+.ill{display:none}            /* hide SVG while the photo is present */
+  .cover .art.photo{height:178px;width:100%;object-fit:cover;padding:0}
+  .cover .art.photo+.fake{display:none}     /* hide fake cover while the photo is present */
+  .vik-portrait{width:120px;height:150px;object-fit:cover;border-radius:10px;border:1px solid var(--line);box-shadow:0 10px 24px rgba(43,33,24,.18);transition:transform .35s ease}
+  .vik-portrait:hover{transform:translateY(-4px) rotate(.6deg)}
+  .vik-portrait.gone{display:none}
+  .zoomable{cursor:zoom-in}
+
+  /* book cover (slide 2 · 1984) with styled fallback */
+  .bookcover{position:relative;width:100%;max-width:290px;margin-inline:auto;aspect-ratio:2/3}
+  .bc-img{width:100%;height:100%;object-fit:cover}
+  .bc-img+.bc-fake{display:none}
+  .bc-fake{position:absolute;inset:0;border-radius:10px;background:linear-gradient(158deg,#2A2016,#0C0905);
+    border:1px solid rgba(239,231,214,.16);box-shadow:0 16px 40px rgba(43,33,24,.32);
+    display:flex;flex-direction:column;align-items:center;padding:1.7rem 1.2rem;overflow:hidden}
+  .bc-author{font-size:.78rem;letter-spacing:.24em;text-transform:uppercase;color:#C9BFAC}
+  .bc-eye{width:76px;height:76px;border-radius:50%;border:2px solid #D88A5E;margin-top:1.5rem;
+    background:radial-gradient(circle,#D88A5E 0 21%,transparent 22%)}
+  .bc-title{margin-top:auto;font-family:var(--serif);font-weight:900;font-size:3.6rem;letter-spacing:.05em;color:#F3ECDC}
+
+  /* doc poster real image (slide 19) */
+  .poster-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+  .poster-img+svg{display:none}
+
+  /* ============ LIGHTBOX (clic sur une photo pour l'agrandir + zoom) ============ */
+  .lightbox{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;
+    background:rgba(12,9,5,0);backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0);
+    opacity:0;visibility:hidden;transition:opacity .35s ease,background .35s ease,backdrop-filter .35s ease,visibility .35s}
+  .lightbox.open{opacity:1;visibility:visible;background:rgba(12,9,5,.9);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+  .lb-stage{max-width:92vw;max-height:86vh;overflow:hidden;transform:scale(.9);opacity:0;
+    transition:transform .42s cubic-bezier(.2,.85,.2,1),opacity .35s ease}
+  .lightbox.open .lb-stage{transform:scale(1);opacity:1}
+  .lb-img{display:block;max-width:92vw;max-height:86vh;width:auto;height:auto;border-radius:8px;
+    box-shadow:0 30px 90px rgba(0,0,0,.65);transform-origin:center center;transition:transform .28s cubic-bezier(.2,.8,.2,1);cursor:zoom-in;user-select:none;-webkit-user-drag:none}
+  .lightbox.zoomed .lb-img{cursor:grab}
+  .lightbox.lb-drag .lb-img{transition:none;cursor:grabbing}
+  .lb-close{position:fixed;top:18px;right:20px;z-index:92;width:46px;height:46px;border-radius:50%;
+    border:1px solid rgba(239,231,214,.28);background:rgba(43,33,24,.55);color:#F3ECDC;font-size:1.2rem;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;transition:background .2s,transform .25s,border-color .2s}
+  .lb-close:hover{background:rgba(43,33,24,.92);border-color:#D88A5E;transform:rotate(90deg)}
+  .lb-hint{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:92;color:#BBB09C;
+    font-size:.78rem;letter-spacing:.03em;pointer-events:none;text-align:center;padding:0 1rem}
+  .lb-cap{position:fixed;top:22px;left:50%;transform:translateX(-50%);z-index:92;color:#E7DDCB;
+    font-size:.84rem;max-width:70vw;text-align:center;opacity:.9}
+
+  /* ============ SLIDE 9 · bascule censure avant/après ============ */
+  .censure{width:100%}
+  .censure-stage{
+    position:relative;width:100%;aspect-ratio:5/4;overflow:hidden;border-radius:10px;
+    border:1px solid rgba(239,231,214,.2);box-shadow:0 16px 36px rgba(0,0,0,.5);background:#0E0A06;
+  }
+  .censure-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 28%;display:block;filter:saturate(.9) contrast(1.05);transition:opacity .5s ease}
+  .is-apres{opacity:0}
+  .censure.censored .is-avant{opacity:0;transition:opacity .5s ease .35s}
+  .censure.censored .is-apres{opacity:1;transition:opacity .5s ease .35s}
+  .censure-sweep{position:absolute;top:0;bottom:0;left:-12%;width:9%;opacity:0;pointer-events:none;
+    background:linear-gradient(90deg,rgba(14,10,6,0),rgba(14,10,6,.92) 44%,rgba(233,169,131,.6) 50%,rgba(14,10,6,.92) 56%,rgba(14,10,6,0))}
+  .censure.censored .censure-sweep{animation:sweepAcross .95s cubic-bezier(.7,0,.18,1) forwards}
+  @keyframes sweepAcross{0%{opacity:0;left:-12%}8%{opacity:1}92%{opacity:1}100%{opacity:0;left:104%}}
+  .censure-note{position:absolute;left:10px;bottom:10px;max-width:72%;
+    background:rgba(14,10,6,.82);color:#F3ECDC;border:1px solid rgba(233,169,131,.35);
+    padding:.26rem .6rem;border-radius:7px;font-family:var(--hand);font-weight:700;
+    font-size:clamp(1rem,1.5vw,1.25rem);line-height:1.1;transition:opacity .4s ease}
+  .note-apres{opacity:0;color:#E9A983}
+  .censure.censored .note-avant{opacity:0}
+  .censure.censored .note-apres{opacity:1;transition-delay:.7s}
+  .censure.no-anim .censure-img,.censure.no-anim .censure-note{transition:none}
+  .censure-bar{display:flex;align-items:center;justify-content:space-between;gap:.8rem;margin-top:.75rem;flex-wrap:wrap}
+  .censure-state{font-size:.82rem;letter-spacing:.04em;color:#BBB09C;font-weight:500}
+  .censure.censored .censure-state{color:#E9A983}
+  .censure-btn{cursor:pointer}
+  .fig svg.censure-fallback{display:none}
+  .censure.imgfail{display:none}
+  .censure.imgfail+.censure-fallback{display:block}
+
+  /* ============ ENTRANCE ANIMATIONS (staggered, per element) ============ */
+  @keyframes riseIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes figIn{from{opacity:0;transform:translateY(22px) scale(.97)}to{opacity:1;transform:none}}
+  @keyframes strikeIn{from{transform:rotate(-2.4deg) scaleX(0)}to{transform:rotate(-2.4deg) scaleX(1)}}
+  @keyframes numIn{from{opacity:0;transform:translateY(-54%) translateX(46px)}to{opacity:1;transform:translateY(-54%) translateX(0)}}
+
+  .slide.active .eyebrow{animation:riseIn .5s .04s both}
+  .slide.active .headline,.slide.active .title-h1{animation:riseIn .55s .12s both}
+  .slide.active .title-correction{animation:riseIn .55s .32s both}
+  .slide.active .lede{animation:riseIn .55s .2s both}
+  .slide.active .aside{animation:riseIn .55s .32s both}
+  .slide.active .takeaway{animation:riseIn .55s .36s both}
+  .slide.active .btn-row{animation:riseIn .55s .44s both}
+  .slide.active .card,.slide.active .camps,.slide.active .spectrum,
+  .slide.active .qlist,.slide.active .facts,.slide.active .strip,
+  .slide.active .keynote{animation:riseIn .55s .26s both}
+  .slide.active .fig{animation:figIn .65s .22s both}
+  .slide.active .title-foot,.slide.active .credit,.slide.active .reveal-hint{animation:fadeIn .7s .5s both}
+  .slide.active .rature::after{animation:strikeIn .5s .55s both}
+  /* dividers get their own treatment: the act numeral slides in */
+  .slide.divider.active .act-num{animation:numIn .85s .08s both}
+  .slide.divider.active .divider-title{animation:riseIn .6s .26s both}
+  .slide.divider.active .divider-sub{animation:riseIn .6s .42s both}
+
+  /* ============ HOVER MICRO-INTERACTIONS ============ */
+  .takeaway{transition:transform .25s ease,box-shadow .25s ease}
+  .takeaway:hover{transform:translateX(3px);box-shadow:0 8px 22px rgba(176,83,45,.16)}
+  .card{transition:transform .3s ease,box-shadow .3s ease}
+  .card:hover{transform:translateY(-3px);box-shadow:0 16px 40px rgba(43,33,24,.14)}
+  .camp,.phil{transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease}
+  .camp:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(43,33,24,.1)}
+  .phil:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(43,33,24,.12)}
+  .qlist li{transition:transform .2s ease}
+  .qlist li:hover{transform:translateX(6px)}
+  .qlist li:hover::before{color:var(--rust-deep)}
+  .fact{transition:transform .25s ease}
+  .fact:hover{transform:translateX(3px)}
+  .stamp{transition:transform .35s cubic-bezier(.2,.7,.2,1)}
+  .fact:hover .stamp{transform:rotate(0deg) scale(1.08)}
+  .btn{transition:transform .2s ease,border-color .2s,background .2s,box-shadow .2s,color .2s}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(43,33,24,.16)}
+  .poster{transition:transform .3s ease,box-shadow .3s ease}
+  .poster:hover{transform:translateY(-3px) scale(1.012);box-shadow:0 20px 44px rgba(0,0,0,.45)}
+  .poster .play{transition:transform .3s cubic-bezier(.2,.7,.2,1),background .2s}
+  .poster:hover .play{transform:scale(1.14)}
+  .fig .ill{transition:transform .4s cubic-bezier(.2,.7,.2,1)}
+  .fig:hover .ill{transform:scale(1.025)}
+  .col li a,.lnk{transition:color .2s,border-color .2s}
+  .col li{transition:padding-left .2s ease}
+  .col li:hover{padding-left:.35rem}
+
+  @media (prefers-reduced-motion: reduce){
+    .slide{transition:opacity .01s}
+    .slide,.progress,.redact::after,.censure-img,.censure-note{transition:none}
+    *{animation:none!important}
+  }
+  @media (max-width:820px){.timeline{display:none!important}.actlabel{max-width:60vw}}
+  @media (max-width:600px){.act-num{font-size:9rem}.hint{display:none}}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+  <!-- 1 · TITLE -->
+  <section class="slide title-slide active" data-act="Ouverture" data-title="Titre">
+    <div class="slide-inner">
+      <div class="brandmark">Lis tes <span class="rature">ratures</span></div>
+      <p class="eyebrow">Mois Orwell · exposé</p>
+      <h1 class="title-h1">Orwell n'a pas <span class="rature">imaginé</span> <span style="white-space:nowrap">1984.</span></h1>
+      <div class="title-correction">il l'a vécu, observé, puis distillé.</div>
+      <div class="title-foot">
+        <span><b>Dorian</b></span><span class="dot">·</span>
+        <span>Débrief de <b>1984</b></span><span class="dot">·</span>
+        <span>27 juin 2026</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · AVANT-PROPOS -->
+  <section class="slide" data-act="Ouverture" data-title="D'où vient 1984 ?">
+    <div class="slide-inner">
+      <div class="split">
+        <div>
+          <p class="eyebrow">Avant-propos</p>
+          <h2 class="headline">D'où vient <em style="font-style:italic">1984</em>, au juste&nbsp;?</h2>
+          <p class="lede">On vient d'en débattre tous ensemble, donc je ne vais pas refaire le tour du roman. Ce qui m'a vraiment passionné ce mois-ci, c'est plutôt le hors-champ. J'ai lu sa vie, ses essais, ses reportages, et à chaque fois j'avais l'impression de retrouver <em>1984</em> en germe, déjà là, avant même qu'il l'écrive.</p>
+          <div class="takeaway">Mon idée, en une phrase&nbsp;: Orwell n'a presque rien inventé. Il a regardé le monde de très près, puis il l'a <strong>distillé</strong>. Et c'est cette distillation, je trouve, qui fait tout le génie du livre.</div>
+        </div>
+        <div class="fig">
+          <div class="bookcover">
+            <img class="photo zoomable bc-img" src="images/1984-cover.jpg" alt="Couverture de 1984, de George Orwell" onerror="this.remove()">
+            <div class="bc-fake" aria-hidden="true">
+              <span class="bc-author">George Orwell</span>
+              <span class="bc-eye"></span>
+              <span class="bc-title">1984</span>
+            </div>
+          </div>
+          <p class="figcap">L'édition que j'ai relue ce mois-ci.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · CARTE DE LECTURE -->
+  <section class="slide" data-act="Ouverture" data-title="Mon mois Orwell">
+    <div class="slide-inner">
+      <p class="eyebrow">Carte de lecture</p>
+      <h2 class="headline" style="margin-bottom:1.1rem">Mon mois Orwell</h2>
+      <div class="card">
+        <div class="card-top"><span>Relevé du lecteur</span><span>Juin 2026</span></div>
+        <div class="card-grid">
+          <div class="col">
+            <div class="col-h">Les essais</div>
+            <ul>
+              <li>Pourquoi j'écris</li>
+              <li><a class="lnk" href="https://fr.wikipedia.org/wiki/Politics_and_the_English_Language" target="_blank" rel="noopener">La politique et la langue anglaise</a></li>
+              <li>La littérature empêchée</li>
+              <li>Les écrivains et le Léviathan</li>
+              <li>Comment meurent les pauvres</li>
+            </ul>
+          </div>
+          <div class="col">
+            <div class="col-h">Les récits</div>
+            <ul>
+              <li><a class="lnk" href="https://fr.wikipedia.org/wiki/Dans_la_d%C3%A8che_%C3%A0_Paris_et_%C3%A0_Londres" target="_blank" rel="noopener">Dans la dèche à Paris et à Londres</a></li>
+              <li><a class="lnk" href="https://fr.wikipedia.org/wiki/Hommage_%C3%A0_la_Catalogne" target="_blank" rel="noopener">Hommage à la Catalogne</a></li>
+            </ul>
+            <div class="col-h" style="margin-top:1.1rem">Le roman</div>
+            <ul><li><a class="lnk" href="https://fr.wikipedia.org/wiki/1984_(roman)" target="_blank" rel="noopener">1984</a> <span>· 2ᵉ lecture</span></li></ul>
+          </div>
+          <div class="col">
+            <div class="col-h">Autour</div>
+            <ul>
+              <li><a class="lnk" href="https://le-pacte.com/france/film/orwell-225" target="_blank" rel="noopener">Orwell : 2+2=5</a> <span>· doc, R. Peck</span></li>
+              <li>La Compagnie des auteurs <span>· 4 épisodes</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · ACT I -->
+  <section class="slide divider" data-dark data-act="Acte I" data-title="Acte I · Vécu">
+    <div class="slide-inner">
+      <span class="act-num">I</span>
+      <p class="eyebrow">Acte un</p>
+      <h2 class="divider-title">L'homme qui voulait voir de ses propres yeux</h2>
+      <p class="divider-sub">Birmanie, Paris, Londres, l'Aragon. Avant d'écrire la dystopie, Orwell est allé chercher le réel là où ça fait mal.</p>
+    </div>
+  </section>
+
+  <!-- 5 · BIRMANIE -->
+  <section class="slide" data-act="Acte I" data-title="Birmanie" data-period="1922">
+    <div class="slide-inner">
+      <div class="split">
+        <div>
+          <p class="eyebrow">1922-1927 · Birmanie</p>
+          <h2 class="headline">Il commence du côté du manche.</h2>
+          <p class="lede">À dix-neuf ans, Eric Blair (le pseudo « Orwell » viendra plus tard) part en Birmanie comme policier de l'Empire britannique. Pendant cinq ans, il est donc l'instrument de la domination coloniale, du côté de l'oppresseur. Il en revient profondément dégoûté.</p>
+          <div class="takeaway">Du coup, il connaît le pouvoir de l'intérieur, comme un rouage. C'est ce qu'il raconte dans <em>Tirer sur un éléphant</em>, et c'est sa première fissure.</div>
+        </div>
+        <div class="fig">
+          <img class="photo zoomable" src="images/orwell-birmanie.jpg" alt="Eric Blair (Orwell) à l'époque de la police impériale en Birmanie" onerror="this.remove()">
+          <svg class="ill" viewBox="0 0 300 210" role="img" aria-label="Un éléphant, en référence à l'essai de Orwell">
+            <ellipse cx="170" cy="100" rx="78" ry="52" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <path d="M110 70 q-32 -6 -46 18 q-12 22 6 40" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <circle cx="86" cy="92" r="36" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <path d="M64 112 q-20 26 -10 56 q2 10 12 8 q8 -2 6 -12" fill="none" stroke="var(--ill)" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M70 124 q-10 14 -2 26" fill="none" stroke="var(--ill-2)" stroke-width="2.4" stroke-linecap="round"/>
+            <circle cx="92" cy="80" r="3.4" fill="var(--ill)"/>
+            <rect x="120" y="146" width="13" height="42" rx="6" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <rect x="150" y="148" width="13" height="42" rx="6" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <rect x="196" y="146" width="13" height="44" rx="6" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <rect x="224" y="144" width="13" height="44" rx="6" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <path d="M248 92 q16 -2 20 10" fill="none" stroke="var(--ill)" stroke-width="2.2" stroke-linecap="round"/>
+            <circle cx="278" cy="150" r="7" fill="none" stroke="var(--ill)" stroke-width="2"/>
+            <line x1="278" y1="157" x2="278" y2="186" stroke="var(--ill)" stroke-width="2"/>
+            <line x1="270" y1="170" x2="292" y2="162" stroke="var(--ill-2)" stroke-width="2.4" stroke-linecap="round"/>
+          </svg>
+          <div class="locator ill" role="img" aria-label="Carte situant la Birmanie en Asie du Sud-Est">
+            <img class="loc-img zoomable" src="images/carte-birmanie.jpg" alt="Carte situant la Birmanie en Asie du Sud-Est" onerror="this.remove()">
+            <svg viewBox="0 0 300 150">
+              <!-- Inde -->
+              <path d="M60 40 q44 -8 72 2 q-2 30 -22 56 q-13 17 -24 1 q-18 -25 -26 -47 q-2 -9 0 -12 Z" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="1.4"/>
+              <!-- Chine / continent (haut) -->
+              <path d="M150 18 q70 -6 118 12 q18 8 4 26 q-34 4 -74 2 q-36 -2 -60 -10 q-6 -16 12 -30 Z" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="1.4"/>
+              <!-- Indochine + péninsule -->
+              <path d="M176 56 q26 2 32 22 q4 16 -8 26 q-1 20 -14 32 q-9 8 -11 -5 q-2 -16 5 -27 q-13 -10 -11 -30 q1 -13 7 -20 Z" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="1.4"/>
+              <!-- Birmanie, en relief -->
+              <path d="M142 48 q15 2 17 21 q2 21 -8 41 q-5 9 -9 -1 q-9 -22 -9 -43 q0 -16 9 -19 Z" fill="rgba(176,83,45,.42)" stroke="var(--ill-2)" stroke-width="1.6"/>
+              <!-- repère -->
+              <line x1="148" y1="40" x2="148" y2="22" stroke="var(--ill-2)" stroke-width="1.4"/>
+              <circle cx="148" cy="20" r="4.5" fill="var(--ill-2)"/>
+              <text x="156" y="24" font-family="Inter,sans-serif" font-size="12" font-weight="700" fill="var(--ill-2)">Birmanie</text>
+            </svg>
+            <p class="figcap">Birmanie · Asie du Sud-Est (situation).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · LA DÈCHE -->
+  <section class="slide" data-act="Acte I" data-title="La dèche" data-period="1928">
+    <div class="slide-inner">
+      <div class="split rev">
+        <div class="fig">
+          <img class="photo zoomable" src="images/orwell-deche.jpg" alt="Plongeur dans les cuisines / scène de misère urbaine, années 1930" onerror="this.remove()">
+          <svg class="ill" viewBox="0 0 300 210" role="img" aria-label="Vaisselle empilée et vapeur, la plonge dans les cuisines">
+            <line x1="40" y1="170" x2="260" y2="170" stroke="var(--ill)" stroke-width="2"/>
+            <ellipse cx="118" cy="168" rx="58" ry="9" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <ellipse cx="118" cy="156" rx="58" ry="9" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <ellipse cx="118" cy="144" rx="54" ry="8" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <ellipse cx="118" cy="133" rx="50" ry="8" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <ellipse cx="118" cy="123" rx="44" ry="7" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <path d="M236 60 v44 q0 16 -16 16 h-12" fill="none" stroke="var(--ill)" stroke-width="2.4" stroke-linecap="round"/>
+            <rect x="226" y="52" width="20" height="10" rx="3" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <line x1="208" y1="126" x2="208" y2="140" stroke="var(--ill-2)" stroke-width="2" stroke-linecap="round"/>
+            <line x1="214" y1="126" x2="214" y2="138" stroke="var(--ill-2)" stroke-width="2" stroke-linecap="round"/>
+            <path d="M96 108 q-8 -14 2 -26 q8 -10 0 -22" fill="none" stroke="var(--ill-2)" stroke-width="2" stroke-linecap="round" opacity=".75"/>
+            <path d="M132 106 q-8 -14 2 -26 q8 -10 0 -22" fill="none" stroke="var(--ill-2)" stroke-width="2" stroke-linecap="round" opacity=".55"/>
+          </svg>
+        </div>
+        <div>
+          <p class="eyebrow">1928-1933 · Paris et Londres</p>
+          <h2 class="headline">Puis il choisit de descendre.</h2>
+          <p class="lede">Plongeur dans les cuisines parisiennes, vagabond sur les routes anglaises, et tout ça volontairement. Il ne veut pas observer la misère depuis la fenêtre, il veut la vivre par en dessous, pour de vrai.</p>
+          <div class="takeaway">La crasse, l'épuisement, l'humiliation de ceux qu'on n'écoute jamais&nbsp;: c'est déjà le Londres gris de Winston, et les prolétaires de <em>1984</em> qu'on regarde sans jamais leur donner la parole.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · ESPAGNE ENGAGEMENT -->
+  <section class="slide" data-act="Acte I" data-title="Espagne · l'engagement" data-period="1936">
+    <div class="slide-inner">
+      <div class="split">
+        <div>
+          <p class="eyebrow">1936-1937 · front d'Aragon</p>
+          <h2 class="headline">En Espagne, il prend les armes.</h2>
+          <p class="lede">Quand la guerre éclate, la riposte antifasciste s'organise surtout en dehors de l'État, par les syndicats et les milices ouvrières. Orwell s'engage dans la milice du <span class="def" tabindex="0">POUM<span class="tip"><b>POUM</b> : Parti ouvrier d'unification marxiste. Une milice marxiste antistalinienne, dans laquelle Orwell a combattu, et qui sera liquidée par les communistes en 1937.</span></span> pour combattre Franco. Sur le front, une balle de sniper lui traverse le cou, à quelques millimètres de le tuer.</p>
+          <p class="aside">Et pourtant il en garde un souvenir doux-amer&nbsp;: le froid, l'ennui des tranchées, l'absurdité de tout ça, et le sentiment de n'avoir, au fond, pas vraiment pesé sur le cours des choses.</p>
+          <div class="btn-row"><button class="btn jump" data-to="7">Contexte de la guerre d'Espagne →</button></div>
+        </div>
+        <div class="fig">
+          <img class="photo zoomable" src="images/orwell-espagne.jpg" alt="Orwell parmi les miliciens du POUM, Barcelone 1937" onerror="this.remove()">
+          <svg class="ill" viewBox="0 0 300 220" role="img" aria-label="Un milicien levant son fusil">
+            <circle cx="150" cy="52" r="20" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <path d="M132 44 q18 -14 36 0" fill="none" stroke="var(--ill)" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M150 72 q-34 6 -40 60 q-4 30 2 70" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <path d="M150 72 q34 6 40 60 q4 30 -2 70" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <path d="M120 96 q-26 -16 -44 -52" fill="none" stroke="var(--ill)" stroke-width="3" stroke-linecap="round"/>
+            <path d="M180 96 q30 -20 52 -54" fill="none" stroke="var(--ill)" stroke-width="3" stroke-linecap="round"/>
+            <line x1="232" y1="42" x2="270" y2="14" stroke="var(--ill-2)" stroke-width="4" stroke-linecap="round"/>
+            <line x1="226" y1="40" x2="240" y2="50" stroke="var(--ill-2)" stroke-width="4" stroke-linecap="round"/>
+            <line x1="60" y1="58" x2="60" y2="150" stroke="var(--ill)" stroke-width="2" stroke-dasharray="3 5" opacity=".5"/>
+            <path d="M60 58 q26 6 26 16 q0 10 -26 14" fill="var(--ill-2)" opacity=".5"/>
+            <circle cx="158" cy="74" r="3.4" fill="none" stroke="var(--ill-2)" stroke-width="1.6"/>
+            <path d="M176 70 l8 -6 m0 6 l-8 -6" stroke="var(--ill-2)" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <p class="figcap">Orwell s'engage dans une milice ouvrière, sur le front d'Aragon.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · APARTÉ · GUERRE D'ESPAGNE -->
+  <section class="slide dense" data-act="Acte I" data-title="Aparté · guerre d'Espagne" data-period="1936">
+    <div class="slide-inner">
+      <p class="eyebrow">Aparté · contexte</p>
+      <h2 class="headline" style="font-size:clamp(1.7rem,3.6vw,2.7rem);margin-bottom:1rem">La guerre d'Espagne, en bref.</h2>
+      <p class="strip">En juillet 1936, une partie de l'armée menée par <a class="lnk" href="https://fr.wikipedia.org/wiki/Guerre_d%27Espagne" target="_blank" rel="noopener">Franco</a> fait un coup d'État contre la République élue. Le pays se coupe en deux, et chaque camp s'appuie sur des soutiens étrangers.</p>
+      <div class="split" style="align-items:start;gap:2rem">
+        <div class="fig" style="max-width:330px">
+          <img class="photo zoomable" src="images/carte-espagne-1936.jpg" alt="Carte de l'Espagne coupée en deux, 1936" onerror="this.remove()">
+          <svg class="ill" viewBox="0 0 300 220" role="img" aria-label="Carte schématique de l'Espagne divisée en 1936">
+            <path d="M40 70 q-6 -34 40 -36 q40 -2 70 8 q40 -14 80 0 q30 10 26 40 q14 18 0 40 q8 30 -26 44 q-30 12 -70 6 q-44 12 -78 -8 q-30 -18 -22 -50 q-24 -16 -20 -44 Z"
+              fill="rgba(78,122,72,.14)" stroke="var(--ill)" stroke-width="2"/>
+            <path d="M40 70 q-6 -34 40 -36 q40 -2 70 8 q12 30 -2 70 q-18 40 -56 64 q-30 -18 -22 -50 q-24 -16 -20 -44 Z"
+              fill="rgba(176,83,45,.18)" stroke="none"/>
+            <path d="M150 42 q-2 40 -16 76 q-16 38 -52 84" fill="none" stroke="var(--ill)" stroke-width="1.6" stroke-dasharray="4 4" opacity=".7"/>
+            <circle cx="170" cy="118" r="3.6" fill="var(--ill)"/><text x="178" y="122" font-family="var(--sans)" font-size="11" fill="var(--ill)">Madrid</text>
+            <circle cx="232" cy="86" r="3.6" fill="var(--ill)"/><text x="206" y="78" font-family="var(--sans)" font-size="11" fill="var(--ill)">Barcelone</text>
+            <text x="70" y="120" font-family="var(--sans)" font-size="11" font-weight="600" fill="var(--rust-deep)">Nationalistes</text>
+            <text x="196" y="160" font-family="var(--sans)" font-size="11" font-weight="600" fill="var(--green)">Républicains</text>
+          </svg>
+          <p class="figcap">L'Espagne coupée en deux, été 1936 (tracé simplifié).</p>
+        </div>
+        <div class="camps">
+          <div class="camp rep">
+            <h4>Camp républicain (les loyalistes)</h4>
+            <p>La République et son gouvernement élu, les syndicats (<span class="def" tabindex="0">CNT<span class="tip"><b>CNT</b> : grand syndicat anarchiste, un des piliers de la résistance ouvrière en Espagne.</span></span> anarchiste, UGT), les communistes, le POUM, et les <span class="def" tabindex="0">Brigades internationales<span class="tip"><b>Brigades internationales</b> : volontaires venus du monde entier pour combattre aux côtés de la République (Orwell en fait partie, par le POUM).</span></span>. <span class="sup">Soutien : URSS, Mexique.</span></p>
+          </div>
+          <div class="camp nat">
+            <h4>Camp nationaliste (Franco)</h4>
+            <p>Une partie de l'armée, la <span class="def" tabindex="0">Phalange<span class="tip"><b>Phalange</b> : parti nationaliste d'extrême droite, allié de Franco.</span></span>, les monarchistes, une large part de l'Église. <span class="sup">Soutien : Allemagne nazie, Italie fasciste.</span></p>
+          </div>
+        </div>
+      </div>
+      <div class="keynote">Le point qui compte pour Orwell&nbsp;: à l'intérieur même du camp républicain, les communistes soutenus par Staline finissent par éliminer leurs propres alliés du POUM. Issue de la guerre&nbsp;: victoire de Franco en 1939, puis dictature jusqu'en 1975.</div>
+    </div>
+  </section>
+
+  <!-- 9 · ESPAGNE TRAHISON (dark, soviet before/after) -->
+  <section class="slide" data-dark data-act="Acte I" data-title="L'Histoire qui s'efface" data-period="1936">
+    <div class="slide-inner">
+      <div class="split">
+        <div>
+          <p class="eyebrow">Barcelone · mai 1937</p>
+          <h2 class="headline">Et là, il voit l'Histoire s'effacer en direct.</h2>
+          <p class="lede">Du jour au lendemain, les communistes staliniens se retournent contre le POUM, c'est-à-dire contre les camarades d'Orwell, et les accusent d'avoir comploté avec les fascistes. Les journaux sont réécrits. Ceux qui sont tombés au front deviennent des traîtres.</p>
+          <div class="takeaway">Pour moi, c'est vraiment ici que naît le Ministère de la Vérité. Et que <a class="lnk" href="https://fr.wikipedia.org/wiki/L%C3%A9on_Trotski" target="_blank" rel="noopener">Trotski</a>, l'ennemi qu'on désigne à la foule, deviendra Goldstein.</div>
+        </div>
+        <div class="fig">
+          <div class="censure" id="censure">
+            <div class="censure-stage">
+              <img class="censure-img is-avant" src="images/soviet-retouche-avant.jpg" alt="Photo officielle de 1937 : Staline et, à sa gauche sur l'image, le commissaire Iejov" onerror="document.getElementById('censure').classList.add('imgfail')">
+              <img class="censure-img is-apres" src="images/soviet-retouche-apres.jpg" alt="La même photo après retouche : Iejov a été effacé">
+              <span class="censure-sweep" aria-hidden="true"></span>
+              <span class="censure-note hand note-avant">à droite, le commissaire Iejov</span>
+              <span class="censure-note hand note-apres">…il n'a jamais existé.</span>
+            </div>
+            <div class="censure-bar">
+              <span class="censure-state" id="censureState">Photo officielle · 1937</span>
+              <button class="btn censure-btn" id="censureBtn" type="button">Effacer Iejov →</button>
+            </div>
+          </div>
+          <svg class="ill censure-fallback" viewBox="0 0 320 200" role="img" aria-label="Une photo officielle avant et après retouche, une personne effacée">
+            <rect x="6" y="20" width="140" height="150" rx="6" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <circle cx="52" cy="86" r="20" fill="none" stroke="var(--ill)" stroke-width="2"/>
+            <path d="M30 150 q0 -34 22 -34 q22 0 22 34" fill="none" stroke="var(--ill)" stroke-width="2"/>
+            <circle cx="100" cy="86" r="20" fill="none" stroke="var(--ill-2)" stroke-width="2"/>
+            <path d="M78 150 q0 -34 22 -34 q22 0 22 34" fill="none" stroke="var(--ill-2)" stroke-width="2"/>
+            <text x="76" y="186" text-anchor="middle" font-family="var(--sans)" font-size="11" fill="var(--ill)">Avant</text>
+            <rect x="174" y="20" width="140" height="150" rx="6" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2"/>
+            <circle cx="220" cy="86" r="20" fill="none" stroke="var(--ill)" stroke-width="2"/>
+            <path d="M198 150 q0 -34 22 -34 q22 0 22 34" fill="none" stroke="var(--ill)" stroke-width="2"/>
+            <g opacity=".9">
+              <path d="M250 64 l44 44 M294 64 l-44 44" stroke="#7E7361" stroke-width="3" stroke-linecap="round" opacity=".35"/>
+              <rect x="246" y="62" width="52" height="92" rx="4" fill="#0F0B07" opacity=".55"/>
+            </g>
+            <text x="244" y="186" text-anchor="middle" font-family="var(--sans)" font-size="11" fill="var(--ill)">Après retouche</text>
+            <line x1="160" y1="30" x2="160" y2="160" stroke="var(--ill)" stroke-width="1" stroke-dasharray="3 4" opacity=".4"/>
+          </svg>
+          <p class="figcap">Sous Staline, on effaçait littéralement les disgraciés des photos officielles (Iejov, Trotski…). <a class="lnk" href="https://fr.wikipedia.org/wiki/Censure_des_images_en_Union_sovi%C3%A9tique" target="_blank" rel="noopener">En savoir plus</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · ACT II -->
+  <section class="slide divider" data-dark data-act="Acte II" data-title="Acte II · La langue">
+    <div class="slide-inner">
+      <span class="act-num">II</span>
+      <p class="eyebrow">Acte deux</p>
+      <h2 class="divider-title">L'obsession de la langue</h2>
+      <p class="divider-sub">Pour Orwell, la langue n'est jamais neutre. C'est un terrain de pouvoir, et une arme de précision.</p>
+    </div>
+  </section>
+
+  <!-- 11 · LE STYLE -->
+  <section class="slide" data-act="Acte II" data-title="Une écriture comme une vitre">
+    <div class="slide-inner">
+      <div class="split rev">
+        <div class="fig" style="max-width:340px">
+          <svg class="ill" viewBox="0 0 260 200" role="img" aria-label="Une fenêtre aux carreaux transparents">
+            <rect x="50" y="24" width="160" height="150" rx="4" fill="none" stroke="var(--ill)" stroke-width="2.4"/>
+            <line x1="130" y1="24" x2="130" y2="174" stroke="var(--ill)" stroke-width="2.4"/>
+            <line x1="50" y1="99" x2="210" y2="99" stroke="var(--ill)" stroke-width="2.4"/>
+            <line x1="64" y1="40" x2="92" y2="40" stroke="var(--ill-2)" stroke-width="2" stroke-linecap="round" opacity=".7"/>
+            <line x1="146" y1="116" x2="178" y2="116" stroke="var(--ill-2)" stroke-width="2" stroke-linecap="round" opacity=".5"/>
+            <path d="M70 150 l40 -40" stroke="var(--ill)" stroke-width="1.4" opacity=".3"/>
+            <path d="M150 70 l44 -42" stroke="var(--ill)" stroke-width="1.4" opacity=".3"/>
+          </svg>
+        </div>
+        <div>
+          <p class="eyebrow">L'écriture</p>
+          <h2 class="headline">Une écriture comme une vitre.</h2>
+          <p class="lede">Orwell s'entraînait à recopier des pages qu'il jugeait « pures », débarrassées de tout mot en trop. Son idéal, c'était une prose si transparente qu'on en oublie le verre pour ne voir que la chose elle-même.</p>
+          <div class="takeaway">Là où Bradbury, dans <a class="lnk" href="https://fr.wikipedia.org/wiki/Fahrenheit_451" target="_blank" rel="noopener">Fahrenheit 451</a>, chauffe la langue et la rend très lyrique, Orwell fait l'inverse&nbsp;: il la dépouille. Deux dystopies, deux façons d'écrire en miroir. Et dans <em>1984</em>, je trouve que ça se sent&nbsp;: chaque phrase ne garde que l'essentiel.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 · NOVLANGUE + BBC -->
+  <section class="slide" data-act="Acte II" data-title="Le novlangue" data-period="1941">
+    <div class="slide-inner">
+      <div class="split">
+        <div>
+          <p class="eyebrow">« La politique et la langue anglaise »</p>
+          <h2 class="headline">Appauvrir les mots,<br>c'est appauvrir la pensée.</h2>
+          <p class="lede">Pour Orwell, une langue floue n'a rien d'innocent&nbsp;: c'est un outil du pouvoir. Si on réduit le vocabulaire, on rend certaines idées tout simplement impensables. De là vient le <span class="def" tabindex="0">novlangue<span class="tip"><b>Novlangue</b> : la langue officielle inventée par le Parti dans <i>1984</i>. En supprimant des mots chaque année, elle cherche à rendre la dissidence littéralement impensable.</span></span>&nbsp;: moins de mots chaque année, pour qu'un jour la révolte n'ait même plus les mots pour se dire.</p>
+          <p class="aside">Et il sait de quoi il parle&nbsp;: entre 1941 et 1943, il a lui-même travaillé à la BBC, à produire des émissions de guerre vers l'Inde. Il en ressort méfiant. On raconte que la cantine du Ministère de la Vérité et la fameuse <em>Salle 101</em> viennent de souvenirs de couloirs de la BBC.</p>
+        </div>
+        <div class="fig" style="max-width:280px">
+          <img class="photo zoomable" src="images/orwell-bbc.jpg" alt="George Orwell au micro de la BBC, années 1940" onerror="this.remove()">
+          <svg class="ill" viewBox="0 0 200 230" role="img" aria-label="Un micro de radio ancien, type BBC">
+            <rect x="78" y="24" width="44" height="78" rx="22" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2.4"/>
+            <line x1="84" y1="42" x2="116" y2="42" stroke="var(--ill)" stroke-width="1.6"/>
+            <line x1="84" y1="54" x2="116" y2="54" stroke="var(--ill)" stroke-width="1.6"/>
+            <line x1="84" y1="66" x2="116" y2="66" stroke="var(--ill)" stroke-width="1.6"/>
+            <line x1="84" y1="78" x2="116" y2="78" stroke="var(--ill)" stroke-width="1.6"/>
+            <path d="M64 78 q0 36 36 36 q36 0 36 -36" fill="none" stroke="var(--ill-2)" stroke-width="2.4"/>
+            <line x1="100" y1="114" x2="100" y2="150" stroke="var(--ill)" stroke-width="2.4"/>
+            <rect x="74" y="150" width="52" height="10" rx="5" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2.4"/>
+            <path d="M100 160 v30 M70 206 q30 -24 60 0" fill="none" stroke="var(--ill)" stroke-width="2.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13 · VIKTOROVITCH -->
+  <section class="slide" data-act="Acte II" data-title="Écho · Viktorovitch">
+    <div class="slide-inner">
+      <div class="split">
+        <div>
+          <p class="eyebrow">Écho contemporain</p>
+          <h2 class="headline">Et ça, ce n'est pas<br>de la science-fiction.</h2>
+          <p class="lede"><a class="lnk" href="https://fr.wikipedia.org/wiki/Cl%C3%A9ment_Viktorovitch" target="_blank" rel="noopener">Clément Viktorovitch</a> en fait carrément le diagnostic de notre époque. Dans <em>Le Pouvoir rhétorique</em> (2021), il montre que convaincre est un pouvoir, qui s'apprend et se déjoue. Dans <em>Logocratie</em> (2025), il décrit ce qui arrive quand le pouvoir vide les mots de leur sens&nbsp;: la <span class="def" tabindex="0">post-vérité<span class="tip"><b>Post-vérité</b> : situation où, dans le débat public, les faits comptent moins que l'appel aux émotions et aux croyances (ex. : des affirmations répétées même après avoir été démenties).</span></span> s'installe, et la démocratie commence à vaciller.</p>
+          <div class="takeaway">Autrement dit, ce qu'Orwell décrivait en 1949, un politologue le documente aujourd'hui, exemples réels à l'appui. (Et perso, ça m'a beaucoup parlé.)</div>
+        </div>
+        <div class="fig">
+          <div class="covers">
+            <img class="vik-portrait zoomable" src="images/viktorovitch-portrait.jpg" alt="Clément Viktorovitch" onerror="this.classList.add('gone')">
+            <a class="cover" href="https://www.seuil.com/auteur/clement-viktorovitch/34419" target="_blank" rel="noopener">
+              <img class="art photo" src="images/viktorovitch-pouvoir-rhetorique.jpg" alt="Couverture · Le Pouvoir rhétorique" onerror="this.remove()">
+              <div class="art c1 fake"><div class="cv-top">Essai · 2021</div><div class="cv-title">Le Pouvoir rhétorique</div><div class="cv-auth">C. Viktorovitch</div></div>
+              <div class="cap">Apprendre à convaincre</div>
+            </a>
+            <a class="cover" href="https://www.seuil.com/ouvrage/logocratie-clement-viktorovitch/9782021591163" target="_blank" rel="noopener">
+              <img class="art photo" src="images/viktorovitch-logocratie.jpg" alt="Couverture · Logocratie" onerror="this.remove()">
+              <div class="art c2 fake"><div class="cv-top">Essai · 2025</div><div class="cv-title">Logocratie</div><div class="cv-auth">C. Viktorovitch</div></div>
+              <div class="cap">Quand les mots se vident</div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14 · ACT III -->
+  <section class="slide divider" data-dark data-act="Acte III" data-title="Acte III · Lecture">
+    <div class="slide-inner">
+      <span class="act-num">III</span>
+      <p class="eyebrow">Acte trois</p>
+      <h2 class="divider-title">Mes trois portes d'entrée dans 1984</h2>
+      <p class="divider-sub">Ce que cette seconde lecture, nourrie de tout le reste, m'a fait voir autrement.</p>
+    </div>
+  </section>
+
+  <!-- 15 · PORTE I -->
+  <section class="slide" data-act="Acte III" data-title="Porte I · La mise en abyme">
+    <div class="slide-inner">
+      <div class="split rev">
+        <div class="fig" style="max-width:330px">
+          <svg class="ill" viewBox="0 0 260 200" role="img" aria-label="Des cadres emboîtés, mise en abyme">
+            <rect x="20" y="22" width="220" height="156" rx="6" fill="none" stroke="var(--ill)" stroke-width="2.4"/>
+            <rect x="56" y="48" width="148" height="104" rx="5" fill="none" stroke="var(--ill)" stroke-width="2" opacity=".75"/>
+            <rect x="92" y="74" width="76" height="52" rx="4" fill="none" stroke="var(--ill-2)" stroke-width="2"/>
+            <circle cx="130" cy="100" r="9" fill="none" stroke="var(--ill-2)" stroke-width="2"/>
+            <circle cx="130" cy="100" r="3" fill="var(--ill-2)"/>
+            <text x="130" y="170" text-anchor="middle" font-family="var(--sans)" font-size="11" fill="var(--ill)">« le livre » de Goldstein</text>
+          </svg>
+        </div>
+        <div>
+          <p class="eyebrow">Porte I · la <span class="def" tabindex="0">mise en abyme<span class="tip"><b>Mise en abyme</b> : procédé où une œuvre s'enchâsse dans elle-même (un récit dans le récit, un tableau dans le tableau).</span></span></p>
+          <h2 class="headline">Le livre dans le livre.</h2>
+          <p class="lede">Au milieu du roman, Winston lit « le livre » de Goldstein, l'ennemi public numéro un, qui est clairement calqué sur Trotski. Son titre parodie même <em>La Révolution trahie</em>, un vrai bouquin de Trotski.</p>
+          <div class="takeaway">Et là, vertige&nbsp;: O'Brien finit par laisser entendre que ce manifeste de la révolte a peut-être été écrit par le Parti lui-même. Le pouvoir fabrique sa propre opposition, pour mieux piéger ceux qui voudraient s'y rallier. C'est très exactement ce qu'Orwell a vu en Espagne.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16 · PORTE II · PHILO -->
+  <section class="slide dense" data-act="Acte III" data-title="Porte II · Le statut du réel">
+    <div class="slide-inner">
+      <p class="eyebrow">Porte II · le statut du réel</p>
+      <h2 class="headline" style="font-size:clamp(1.8rem,3.8vw,2.8rem);margin-bottom:.9rem">Et si la vérité devenait négociable&nbsp;?</h2>
+      <p class="lede" style="max-width:74ch">À la toute fin, l'enjeu n'est même plus politique, il devient philosophique. Pour bien voir ce qui se joue, deux familles d'idées, et un extrême.</p>
+      <div class="spectrum">
+        <div class="phil">
+          <div class="ph-svg"><svg class="ill" viewBox="0 0 90 62" role="img" aria-label="Matérialisme : la matière, solide et extérieure à l'esprit"><path d="M45 9 L67 21 L67 43 L45 55 L23 43 L23 21 Z" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2.4" stroke-linejoin="round"/><path d="M23 21 L45 33 L67 21 M45 33 L45 55" fill="none" stroke="var(--ill)" stroke-width="2" stroke-linejoin="round"/></svg></div>
+          <h4><span class="def" tabindex="0" style="border:none;color:inherit">Matérialisme<span class="tip"><b>Matérialisme</b> : la matière existe en soi, indépendamment de tout esprit qui la perçoit.</span></span></h4>
+          <p>Le réel existe en dehors de nous. Une pierre reste une pierre, que je la regarde ou non.</p>
+        </div>
+        <div class="phil">
+          <div class="ph-svg"><svg class="ill" viewBox="0 0 90 62" role="img" aria-label="Idéalisme : l'esprit et l'idée d'abord"><circle cx="45" cy="25" r="15" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2.4"/><path d="M38 43 h14 M40 48 h10" fill="none" stroke="var(--ill)" stroke-width="2.4" stroke-linecap="round"/><path d="M45 53 q3 0 3 -3" fill="none" stroke="var(--ill)" stroke-width="2.4" stroke-linecap="round"/><path d="M45 18 v6 M41 22 l4 3 4 -3" fill="none" stroke="var(--ill-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h4><span class="def" tabindex="0" style="border:none;color:inherit">Idéalisme<span class="tip"><b>Idéalisme</b> : courant pour lequel l'esprit (les idées) est premier, et le monde matériel en dépend.</span></span></h4>
+          <p>C'est l'esprit qui prime. Le monde n'existe que tel qu'une conscience le perçoit.</p>
+        </div>
+        <div class="phil is-sol">
+          <div class="ph-svg"><svg class="ill" viewBox="0 0 90 62" role="img" aria-label="Solipsisme : seul mon esprit perçoit"><path d="M16 31 Q45 9 74 31 Q45 53 16 31 Z" fill="rgba(176,83,45,.10)" stroke="var(--ill-2)" stroke-width="2.4" stroke-linejoin="round"/><circle cx="45" cy="31" r="9" fill="none" stroke="var(--ill-2)" stroke-width="2.4"/><circle cx="45" cy="31" r="3.4" fill="var(--ill-2)"/></svg></div>
+          <h4>Solipsisme</h4>
+          <p>L'idéalisme poussé à l'extrême&nbsp;: rien n'existe en dehors de mon esprit. Tout le reste est peut-être une illusion.</p>
+        </div>
+      </div>
+      <div class="takeaway" style="max-width:78ch">O'Brien défend une version <strong>collective</strong> de ce solipsisme&nbsp;: le réel, c'est ce que le Parti, à plusieurs, décide de tenir pour vrai. Si tout le monde croit que <strong>2&nbsp;+&nbsp;2&nbsp;=&nbsp;5</strong>, et qu'on a effacé toute preuve du contraire, alors où est la vérité&nbsp;? C'est, je trouve, la vraie question vertigineuse du livre.</div>
+    </div>
+  </section>
+
+  <!-- 17 · PORTE III · AMOUR -->
+  <section class="slide" data-act="Acte III" data-title="Porte III · L'intime">
+    <div class="slide-inner">
+      <div class="split rev">
+        <div class="fig" style="max-width:440px">
+          <img class="photo zoomable" src="images/winston-julia.jpg" alt="Winston et Julia réunis loin des regards (1984, film de Michael Radford)" onerror="this.remove()">
+          <svg class="ill" viewBox="0 0 300 190" role="img" aria-label="Deux silhouettes proches, un lien que la surveillance n'atteint pas">
+            <g opacity=".14"><path d="M0 40 H300 M0 95 H300 M0 150 H300 M60 0 V190 M150 0 V190 M240 0 V190" stroke="var(--ill)" stroke-width="1"/></g>
+            <circle cx="122" cy="95" r="34" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2.4"/>
+            <circle cx="178" cy="95" r="34" fill="var(--ill-soft)" stroke="var(--ill)" stroke-width="2.4"/>
+            <path d="M150 86 q-9 -10 -18 -2 q-9 8 18 25 q27 -17 18 -25 q-9 -8 -18 2 Z" fill="var(--ill-2)" stroke="none"/>
+          </svg>
+          <p class="figcap">Winston et Julia, un instant à l'abri des regards.</p>
+        </div>
+        <div>
+          <p class="eyebrow">Porte III · l'intime</p>
+          <h2 class="headline">Et au fond, aimer,<br>c'est déjà résister.</h2>
+          <p class="lede">Dans un monde où le Parti met la main sur absolument tout, y compris les sentiments, le simple fait que Winston et Julia se désirent librement devient un acte politique. Et je trouve ça d'une beauté folle&nbsp;: ce n'est pas l'histoire d'amour en elle-même qui compte, c'est qu'il existe enfin un petit espace, intime, que le pouvoir n'arrive pas à atteindre.</p>
+          <div class="takeaway">Et c'est précisément pour ça que la Chambre 101 vise ce lien-là, et rien d'autre. Quand Winston finit par crier « faites-le à Julia », sa vraie défaite n'est pas politique, elle est intime. Le Parti ne voulait pas seulement qu'il obéisse&nbsp;: il voulait qu'il cesse d'aimer.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 18 · ACT IV -->
+  <section class="slide divider" data-dark data-act="Acte IV" data-title="Acte IV · Aujourd'hui">
+    <div class="slide-inner">
+      <span class="act-num">IV</span>
+      <p class="eyebrow">Acte quatre</p>
+      <h2 class="divider-title">Pourquoi ça nous regarde encore</h2>
+      <p class="divider-sub">Le roman a plus de soixante-quinze ans. Le problème, lui, n'a pas pris une ride.</p>
+    </div>
+  </section>
+
+  <!-- 19 · DOC PECK -->
+  <section class="slide" data-act="Acte IV" data-title="Orwell : 2+2=5">
+    <div class="slide-inner">
+      <div class="split">
+        <div>
+          <p class="eyebrow">Raoul Peck · 2025</p>
+          <h2 class="headline">« Orwell : 2+2=5 »</h2>
+          <p class="lede">Le documentaire fait dire les textes d'Orwell par-dessus des images d'hier et d'aujourd'hui&nbsp;: fausses nouvelles, langue administrative qui noie tout, IA qui fabrique du faux, autoritarismes qui montent un peu partout. Le montage seul suffit à montrer que rien, chez Orwell, n'a pris une ride.</p>
+          <div class="takeaway">Honnêtement, si je devais conseiller une seule chose pour prolonger <em>1984</em>, ce serait ça. Je vous le recommande vraiment. Juste un avertissement&nbsp;: on en ressort un peu sonné, écœuré, presque « doomed ». Mais pour moi, ça vaut totalement le coup.</div>
+          <div class="btn-row">
+            <a class="btn primary" href="https://www.youtube.com/watch?v=whHEMMNb4ps" target="_blank" rel="noopener">▶ Voir la bande-annonce</a>
+            <a class="btn" href="https://le-pacte.com/france/film/orwell-225" target="_blank" rel="noopener">La fiche du film</a>
+          </div>
+        </div>
+        <div class="fig" style="display:flex;justify-content:center">
+          <a class="poster" href="https://www.youtube.com/watch?v=whHEMMNb4ps" target="_blank" rel="noopener">
+            <div class="scene">
+              <img class="poster-img" src="images/orwell-doc-poster.jpg" alt="Affiche du documentaire Orwell : 2+2=5, de Raoul Peck" onerror="this.remove()">
+              <svg viewBox="0 0 200 240" style="position:absolute;inset:0;width:100%;height:100%" aria-hidden="true">
+                <rect width="200" height="240" fill="#1b150e"/>
+                <ellipse cx="100" cy="118" rx="70" ry="40" fill="none" stroke="#3a2f22" stroke-width="2"/>
+                <ellipse cx="100" cy="118" rx="40" ry="40" fill="none" stroke="#5a4733" stroke-width="2"/>
+                <circle cx="100" cy="118" r="16" fill="#D88A5E"/><circle cx="100" cy="118" r="6" fill="#1b150e"/>
+                <text x="100" y="216" text-anchor="middle" font-family="Playfair Display,serif" font-weight="800" font-size="30" fill="#EFE7D6">2+2=5</text>
+              </svg>
+              <span class="play">▶</span>
+            </div>
+            <div class="pcap"><div class="pt">Orwell : 2+2=5</div><div class="ps">Documentaire · 1h59</div></div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 20 · IRONIE / REDACTION -->
+  <section class="slide" data-dark data-act="Acte IV" data-title="On efface encore">
+    <div class="slide-inner">
+      <p class="eyebrow">L'ironie finale</p>
+      <h2 class="headline" style="margin-bottom:.6rem">On continue d'effacer les <span class="rature">livres</span> qui parlent d'effacement.</h2>
+      <p class="reveal-hint">Cliquez pour déclassifier, un dossier après l'autre.</p>
+      <div class="facts">
+        <div class="fact">
+          <div class="stamp">INTER<br>DIT</div>
+          <div class="body"><span class="redact"><b>1984</b> a été retiré de la vente en Biélorussie en mai 2022. Un libraire a été arrêté, deux cents exemplaires saisis, pendant qu'on l'accusait de vendre des « livres nazis ».</span></div>
+        </div>
+        <div class="fact">
+          <div class="stamp">BAN<br>NED</div>
+          <div class="body"><span class="redact"><a class="lnk" href="https://fr.wikipedia.org/wiki/La_Servante_%C3%A9carlate" target="_blank" rel="noopener"><b>La Servante écarlate</b></a> de Margaret Atwood, contestée ou retirée d'écoles dans une trentaine d'États américains. La réponse d'Atwood&nbsp;: une édition ignifugée, impossible à brûler.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 21 · FIN / DÉBAT -->
+  <section class="slide dense" data-act="À vous" data-title="Trois questions">
+    <div class="slide-inner end">
+      <p class="eyebrow">À vous, maintenant</p>
+      <h2 class="headline" style="margin-bottom:1.2rem">Trois questions pour lancer le débat.</h2>
+      <ul class="qlist">
+        <li class="reveal-step">Le <span class="def" tabindex="0">novlangue<span class="tip"><b>Novlangue</b> : la langue du Parti dans <i>1984</i>, qui supprime des mots pour rendre la dissidence impensable.</span></span> voulait appauvrir la langue. Aujourd'hui, l'IA en produit à l'infini. Est-ce que trop de mots peut, à sa façon, tuer la pensée lui aussi&nbsp;?</li>
+        <li class="reveal-step">On dit qu'Orwell a su « distiller » le réel. Mais avec la <span class="def" tabindex="0">post-vérité<span class="tip"><b>Post-vérité</b> : moment où les faits comptent moins que les émotions et les croyances dans le débat public (ex. : des affirmations maintenues même après démenti).</span></span>, est-ce qu'on peut encore le faire, ou a-t-elle déjà pris de l'avance sur nous&nbsp;?</li>
+        <li class="reveal-step">Si lire, c'est résister à l'effacement, alors qu'est-ce qu'on défend, au fond, dans un club de lecture comme le nôtre&nbsp;?</li>
+      </ul>
+      <div class="qend">
+        <div style="font-family:var(--serif);font-weight:800;font-size:1.3rem;color:var(--rust-deep)">
+          Lis tes <span class="rature">ratures</span> &nbsp;·&nbsp; <span style="color:var(--ink-soft);font-weight:500;font-style:italic">merci.</span>
+        </div>
+        <p class="credit">Présentation co-rédigée avec Claude (Opus 4.8), à partir de mes notes et brouillons, pour les mettre au propre et en forme.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="actlabel no-title" id="actlabel"><span class="al-act">Ouverture</span><span class="al-sep">:</span><span class="al-title"></span></div>
+<div class="timeline" id="timeline" aria-hidden="true">
+  <div class="tl-track">
+    <span class="tl-pt" data-period="1922"><i></i><b>1922</b><em>Birmanie</em></span>
+    <span class="tl-pt" data-period="1928"><i></i><b>1928</b><em>Paris · Londres</em></span>
+    <span class="tl-pt" data-period="1936"><i></i><b>1936</b><em>Espagne</em></span>
+    <span class="tl-pt" data-period="1941"><i></i><b>1941</b><em>BBC</em></span>
+    <span class="tl-pt" data-period="1949"><i></i><b>1949</b><em>« 1984 »</em></span>
+  </div>
+</div>
+<div class="controls">
+  <button class="ctrl" id="prev" aria-label="Diapo précédente">‹</button>
+  <span class="counter" id="counter">1 / 21</span>
+  <button class="ctrl" id="next" aria-label="Diapo suivante">›</button>
+  <button class="ctrl" id="grid" aria-label="Vue d'ensemble">▦</button>
+  <button class="ctrl" id="full" aria-label="Plein écran">⛶</button>
+</div>
+<div class="hint" id="hint">Naviguez avec <b>→</b> &nbsp;·&nbsp; <b>O</b> vue d'ensemble &nbsp;·&nbsp; <b>F</b> plein écran</div>
+
+<div class="overview" id="overview">
+  <div class="ov-title">Vue d'ensemble · cliquez pour aller à la diapo</div>
+  <div class="ov-grid" id="ovGrid"></div>
+</div>
+
+<div class="lightbox" id="lightbox" aria-hidden="true">
+  <button class="lb-close" id="lbClose" aria-label="Fermer">✕</button>
+  <div class="lb-cap" id="lbCap"></div>
+  <div class="lb-stage" id="lbStage">
+    <img class="lb-img" id="lbImg" alt="">
+  </div>
+  <div class="lb-hint">Clic ou molette pour zoomer · glisser pour déplacer · Échap / clic au fond pour fermer</div>
+</div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var cur = 0;
+  var progress = document.getElementById('progress');
+  var counter = document.getElementById('counter');
+  var actlabel = document.getElementById('actlabel');
+  var actActEl = actlabel.querySelector('.al-act');
+  var actTitleEl = actlabel.querySelector('.al-title');
+  var timeline = document.getElementById('timeline');
+  var tlPts = Array.prototype.slice.call(timeline.querySelectorAll('.tl-pt'));
+  var hint = document.getElementById('hint');
+  var overview = document.getElementById('overview');
+  var ovGrid = document.getElementById('ovGrid');
+
+  // sous-titre de la partie en cours, affiché en bas à gauche
+  var ACT_SUB = {
+    'Acte I':'Voir de ses propres yeux',
+    'Acte II':"L'obsession de la langue",
+    'Acte III':'Trois portes dans 1984',
+    'Acte IV':'Pourquoi ça nous regarde encore'
+  };
+
+  slides.forEach(function(s,i){
+    var cell = document.createElement('div');
+    cell.className='ov-cell';
+    cell.innerHTML='<div class="n">'+String(i+1).padStart(2,'0')+'</div><div class="t">'+(s.getAttribute('data-title')||'')+'</div>';
+    cell.addEventListener('click',function(){ go(i); closeOverview(); });
+    ovGrid.appendChild(cell);
+  });
+  var ovCells = Array.prototype.slice.call(ovGrid.children);
+
+  function resetRedactions(slide){
+    var r = slide.querySelectorAll('.redact');
+    r.forEach(function(el){ el.classList.remove('revealed'); });
+  }
+  function nextRedaction(slide){
+    var el = slide.querySelector('.redact:not(.revealed)');
+    if(el){ el.classList.add('revealed'); return true; }
+    return false;
+  }
+
+  function resetSteps(slide){
+    slide.querySelectorAll('.reveal-step').forEach(function(el){ el.classList.remove('shown'); });
+  }
+  function nextStep(slide){
+    var el = slide.querySelector('.reveal-step:not(.shown)');
+    if(el){ el.classList.add('shown'); return true; }
+    return false;
+  }
+
+  function setCensored(c, on){
+    c.classList.toggle('censored', on);
+    var st = c.querySelector('.censure-state');
+    var btn = c.querySelector('.censure-btn');
+    if(st) st.textContent = on ? 'Après retouche · Iejov effacé' : 'Photo officielle · 1937';
+    if(btn) btn.textContent = on ? '↺ Revenir en arrière' : 'Effacer Iejov →';
+  }
+  function resetCensure(slide){
+    var c = slide.querySelector('.censure'); if(!c) return;
+    c.classList.add('no-anim'); setCensored(c, false);
+    void c.offsetWidth; c.classList.remove('no-anim');
+  }
+  function stepCensure(slide){
+    var c = slide.querySelector('.censure');
+    if(c && !c.classList.contains('censored')){ setCensored(c, true); return true; }
+    return false;
+  }
+
+  function render(){
+    slides.forEach(function(s,i){
+      s.classList.remove('active','prev');
+      if(i===cur){ s.classList.add('active'); resetRedactions(s); resetCensure(s); resetSteps(s); }
+      else if(i<cur) s.classList.add('prev');
+    });
+    progress.style.width = (total<=1?100:(cur/(total-1))*100)+'%';
+    counter.textContent = (cur+1)+' / '+total;
+    var act = slides[cur].getAttribute('data-act')||'';
+    var sub = ACT_SUB[act]||'';
+    actActEl.textContent = act;
+    actTitleEl.textContent = sub;
+    actlabel.classList.toggle('no-title', !sub);
+    var period = slides[cur].getAttribute('data-period');
+    timeline.classList.toggle('show', !!period);
+    tlPts.forEach(function(p){ p.classList.toggle('on', p.getAttribute('data-period')===period); });
+    document.body.classList.toggle('dark-chrome', slides[cur].hasAttribute('data-dark'));
+    if(cur>0 && hint) hint.style.opacity='0';
+    ovCells.forEach(function(c,i){ c.classList.toggle('current', i===cur); });
+  }
+  function go(i){ cur=Math.max(0,Math.min(total-1,i)); render(); }
+  function next(){
+    if(stepCensure(slides[cur])) return;
+    if(nextRedaction(slides[cur])) return;
+    if(nextStep(slides[cur])) return;
+    if(cur<total-1) go(cur+1);
+  }
+  function prev(){ if(cur>0) go(cur-1); }
+
+  function openOverview(){ overview.classList.add('open'); }
+  function closeOverview(){ overview.classList.remove('open'); }
+  function toggleOverview(){ overview.classList.toggle('open'); }
+  function toggleFull(){
+    var el = document.documentElement;
+    var isFull = document.fullscreenElement || document.webkitFullscreenElement;
+    if(!isFull){
+      var req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+      if(req){ var r = req.call(el); if(r && r.catch) r.catch(function(){}); }
+    } else {
+      var exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+      if(exit){ exit.call(document); }
+    }
+  }
+
+  document.getElementById('next').addEventListener('click', next);
+  document.getElementById('prev').addEventListener('click', prev);
+  document.getElementById('grid').addEventListener('click', toggleOverview);
+  document.getElementById('full').addEventListener('click', toggleFull);
+
+  document.addEventListener('keydown', function(e){
+    if(lightbox.classList.contains('open')){
+      if(e.key==='Escape'){ closeLightbox(); }
+      else if(e.key==='+'||e.key==='='){ setZoom(lbZoom+0.4); }
+      else if(e.key==='-'){ setZoom(lbZoom-0.4); }
+      return;
+    }
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'||e.key==='ArrowDown'){ e.preventDefault(); next(); }
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'||e.key==='ArrowUp'){ e.preventDefault(); prev(); }
+    else if(e.key==='Home'){ go(0); }
+    else if(e.key==='End'){ go(total-1); }
+    else if(e.key==='f'||e.key==='F'){ toggleFull(); }
+    else if(e.key==='o'||e.key==='O'){ toggleOverview(); }
+    else if(e.key==='Escape'){ closeOverview(); }
+  });
+
+  // definition tooltips: tap to toggle (mobile), never advance
+  document.querySelectorAll('.def').forEach(function(d){
+    d.addEventListener('click', function(e){
+      e.stopPropagation();
+      document.querySelectorAll('.def.open').forEach(function(o){ if(o!==d) o.classList.remove('open'); });
+      d.classList.toggle('open');
+    });
+  });
+
+  // jump buttons
+  document.querySelectorAll('.jump').forEach(function(b){
+    b.addEventListener('click', function(e){ e.stopPropagation(); go(parseInt(b.getAttribute('data-to'),10)); });
+  });
+
+  // censorship before/after toggle (replayable both ways)
+  document.querySelectorAll('.censure-btn').forEach(function(b){
+    b.addEventListener('click', function(e){
+      e.stopPropagation();
+      var c = b.closest('.censure');
+      setCensored(c, !c.classList.contains('censored'));
+    });
+  });
+
+  // ===== Lightbox : clic sur une photo pour l'agrandir + zoom/pan =====
+  var lightbox = document.getElementById('lightbox');
+  var lbImg = document.getElementById('lbImg');
+  var lbStage = document.getElementById('lbStage');
+  var lbClose = document.getElementById('lbClose');
+  var lbCap = document.getElementById('lbCap');
+  var lbZoom = 1, lbX = 0, lbY = 0, lbDrag = false, dsx = 0, dsy = 0;
+
+  function lbApply(){ lbImg.style.transform = 'translate('+lbX+'px,'+lbY+'px) scale('+lbZoom+')'; }
+  // Zoom centré sur un point écran (clientX/clientY) : le point sous le curseur reste fixe.
+  function setZoomAt(z, clientX, clientY){
+    z = Math.max(1, Math.min(4, z));
+    if(z === lbZoom) return;
+    var rect = lbImg.getBoundingClientRect();
+    var ox = clientX - (rect.left + rect.width/2);
+    var oy = clientY - (rect.top + rect.height/2);
+    var k = 1 - z/lbZoom;
+    lbX += ox * k;
+    lbY += oy * k;
+    lbZoom = z;
+    if(z === 1){ lbX = 0; lbY = 0; }
+    lightbox.classList.toggle('zoomed', z > 1);
+    lbApply();
+  }
+  // Zoom centré sur l'image (clavier / sans curseur).
+  function setZoom(z){
+    var rect = lbImg.getBoundingClientRect();
+    setZoomAt(z, rect.left + rect.width/2, rect.top + rect.height/2);
+  }
+  function openLightbox(src, alt){
+    lbImg.src = src; lbImg.alt = alt || '';
+    lbCap.textContent = alt || '';
+    lbZoom = 1; lbX = 0; lbY = 0; lbApply();
+    lightbox.classList.remove('zoomed');
+    lightbox.classList.add('open');
+    lightbox.setAttribute('aria-hidden', 'false');
+  }
+  function closeLightbox(){
+    lightbox.classList.remove('open', 'zoomed', 'lb-drag');
+    lightbox.setAttribute('aria-hidden', 'true');
+  }
+
+  document.querySelectorAll('.zoomable').forEach(function(img){
+    img.addEventListener('click', function(e){
+      e.stopPropagation(); e.preventDefault();
+      openLightbox(img.currentSrc || img.src, img.getAttribute('alt'));
+    });
+  });
+  lbClose.addEventListener('click', function(e){ e.stopPropagation(); closeLightbox(); });
+  lightbox.addEventListener('click', function(e){
+    if(e.target === lbImg || e.target.closest('.lb-close')) return;
+    closeLightbox();
+  });
+  lbImg.addEventListener('click', function(e){
+    e.stopPropagation();
+    if(lbZoom > 1) setZoom(1);
+    else setZoomAt(2.4, e.clientX, e.clientY);
+  });
+  lbStage.addEventListener('wheel', function(e){
+    if(!lightbox.classList.contains('open')) return;
+    e.preventDefault();
+    setZoomAt(lbZoom + (e.deltaY < 0 ? 0.35 : -0.35), e.clientX, e.clientY);
+  }, {passive:false});
+  lbImg.addEventListener('mousedown', function(e){
+    if(lbZoom <= 1) return;
+    e.preventDefault();
+    lbDrag = true; lightbox.classList.add('lb-drag');
+    dsx = e.clientX - lbX; dsy = e.clientY - lbY;
+  });
+  window.addEventListener('mousemove', function(e){
+    if(!lbDrag) return;
+    lbX = e.clientX - dsx; lbY = e.clientY - dsy; lbApply();
+  });
+  window.addEventListener('mouseup', function(){
+    if(!lbDrag) return;
+    lbDrag = false; lightbox.classList.remove('lb-drag');
+  });
+
+  // Pas de changement de slide au clic : navigation au clavier (flèches) uniquement.
+  // Seuls les liens internes (zoom d'image, boutons, définitions) restent cliquables,
+  // via leurs propres gestionnaires.
+
+  render();
+})();
+</script>
+</body>
+</html>
