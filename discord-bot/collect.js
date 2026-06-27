@@ -1,6 +1,11 @@
 import { Client, GatewayIntentBits, ChannelType } from 'discord.js';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 import 'dotenv/config';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const GUILD_ID      = process.argv[2] || process.env.GUILD_ID;
@@ -384,6 +389,13 @@ async function main() {
 
   await progress.summary(GUILD_ID);
   client.destroy();
+
+  // Agrégation automatique
+  console.log('📊 Agrégation des stats en cours…\n');
+  await new Promise((resolve, reject) => {
+    const agg = spawn('node', ['aggregate.js', GUILD_ID], { cwd: __dirname, stdio: 'inherit' });
+    agg.on('close', code => code === 0 ? resolve() : reject(new Error(`aggregate exit ${code}`)));
+  });
 }
 
 main().catch(err => { console.error(err); process.exit(1); });
