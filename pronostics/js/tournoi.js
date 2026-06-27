@@ -4,11 +4,50 @@ import {
   getTournament, getMatchesByTournament, getPicksByTournament,
   getAllPicksByMatch, getProfiles, savePick,
   syncTournament, getLongTermPicks, saveLongTermPick,
-  getLeaderboard
+  getLeaderboard, updateMatch
 } from './db.js';
+
+// ── Logos équipes ──────────────────────────────────────────────────
+const TEAM_LOGOS = {
+  'T1':                   'https://liquipedia.net/commons/images/e/e4/T1_2019_allmode.png',
+  'Hanwha Life Esports':  'https://liquipedia.net/commons/images/1/10/Hanwha_Life_Esports_darkmode.png',
+  'Bilibili Gaming':      'https://liquipedia.net/commons/images/5/50/Bilibili_Gaming_2021_allmode.png',
+  'Top Esports':          'https://liquipedia.net/commons/images/e/e0/Top_Esports_allmode.png',
+  'G2 Esports':           'https://liquipedia.net/commons/images/c/cd/G2_Esports_2019_darkmode.png',
+  'Karmine Corp':         'https://liquipedia.net/commons/images/d/d1/Karmine_Corp_allmode.png',
+  'LYON':                 'https://liquipedia.net/commons/images/a/ae/LYON_2025_allmode.png',
+  'Team Liquid':          'https://liquipedia.net/commons/images/5/59/Team_Liquid_2024_darkmode.png',
+  'Secret Whales':        'https://liquipedia.net/commons/images/5/58/Secret_Whales_darkmode.png',
+  'Deep Cross Gaming':    'https://liquipedia.net/commons/images/a/af/Deep_Cross_Gaming_darkmode.png',
+  'FURIA':                'https://liquipedia.net/commons/images/a/aa/FURIA_Esports_allmode.png',
+};
+
+function teamLogo(name, size = 22) {
+  const src = TEAM_LOGOS[name];
+  if (!src) return '';
+  return `<img src="${src}" alt="${esc(name)}" class="team-logo" style="width:${size}px;height:${size}px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">`;
+}
+
+// ── Structure bracket MSI 2026 ─────────────────────────────────────
+const PLAY_IN_ROUNDS = [
+  { label: 'Round 1',       upper: ['msi2026_playin_r1_T1_TLA','msi2026_playin_r1_KC_DCG'], lower: [] },
+  { label: 'Round 2',       upper: ['msi2026_playin_r2_upper'],                              lower: ['msi2026_playin_r2_lower'] },
+  { label: 'Round 3',       upper: [],                                                       lower: ['msi2026_playin_r3'] },
+  { label: 'Qualification', upper: ['msi2026_playin_gf'],                                    lower: [] },
+];
+
+const BRACKET_ROUNDS = [
+  { label: 'Round 1', upper: ['msi2026_bracket_ur1_BLG','msi2026_bracket_ur1_HLE','msi2026_bracket_ur1_LYON','msi2026_bracket_ur1_G2'], lower: [] },
+  { label: 'Round 2', upper: ['msi2026_bracket_ur2_a','msi2026_bracket_ur2_b'],               lower: ['msi2026_bracket_lr1_a','msi2026_bracket_lr1_b'] },
+  { label: 'Round 3', upper: ['msi2026_bracket_ubf'],                                         lower: ['msi2026_bracket_lr2_a','msi2026_bracket_lr2_b'] },
+  { label: 'Round 4', upper: [],                                                              lower: ['msi2026_bracket_lr3'] },
+  { label: 'LB Final',upper: [],                                                              lower: ['msi2026_bracket_lbf'] },
+  { label: 'Grand Final', upper: ['msi2026_bracket_gf'],                                     lower: [] },
+];
 
 const params        = new URLSearchParams(location.search);
 const TOURNAMENT_ID = params.get('id');
+const IS_ADMIN      = params.has('admin');
 
 let profile    = null;
 let tournament = null;
@@ -91,15 +130,19 @@ function renderPage(main) {
 
     <div class="tour-tabs">
       <button class="tour-tab active" data-tab="calendrier">🗓️ Calendrier</button>
+      <button class="tour-tab" data-tab="bracket">🏆 Bracket</button>
       <button class="tour-tab" data-tab="equipes">👥 Équipes</button>
       <button class="tour-tab" data-tab="classement">📊 Classement</button>
       <button class="tour-tab" data-tab="longterme">🎯 Long terme</button>
+      ${IS_ADMIN ? '<button class="tour-tab" data-tab="admin">⚙️ Admin</button>' : ''}
     </div>
 
     <div id="tab-calendrier" class="tab-pane active"></div>
+    <div id="tab-bracket"    class="tab-pane"></div>
     <div id="tab-equipes"    class="tab-pane"></div>
     <div id="tab-classement" class="tab-pane"></div>
     <div id="tab-longterme"  class="tab-pane"></div>
+    ${IS_ADMIN ? '<div id="tab-admin" class="tab-pane"></div>' : ''}
   `;
 
   // Onglets
@@ -125,9 +168,11 @@ function renderPage(main) {
 
 function renderTab(key) {
   if (key === 'calendrier') renderCalendrier();
+  if (key === 'bracket')    renderBracket();
   if (key === 'equipes')    renderEquipes();
   if (key === 'classement') renderClassement();
   if (key === 'longterme')  renderLongTerme();
+  if (key === 'admin')      renderAdmin();
 }
 
 // ── Onglet Calendrier ─────────────────────────────────────────────
@@ -200,6 +245,7 @@ function renderMatchCard(match) {
          id="mc-${match.id}" data-match-id="${match.id}" data-locked="${isLocked ? '1' : ''}">
       <div class="match-main">
         <div class="match-team">
+          ${teamLogo(match.team1, 24)}
           <div class="match-team-name${t1win ? ' winner' : t2win ? ' loser' : ''}">${esc(match.team1 || 'TBD')}</div>
         </div>
         <div class="match-vs">
@@ -210,6 +256,7 @@ function renderMatchCard(match) {
         </div>
         <div class="match-team">
           <div class="match-team-name${t2win ? ' winner' : t1win ? ' loser' : ''}">${esc(match.team2 || 'TBD')}</div>
+          ${teamLogo(match.team2, 24)}
         </div>
       </div>
       ${pickSection}
@@ -362,14 +409,16 @@ function extractTeamsFromMatches() {
 }
 
 function renderTeamCard(teamName) {
-  const color  = avatarColor(teamName);
+  const color   = avatarColor(teamName);
   const initial = teamName[0]?.toUpperCase() || '?';
+  const logo    = TEAM_LOGOS[teamName];
   return `
     <div class="team-card">
-      <div class="team-initial" style="background:${color}">${initial}</div>
-      <div>
-        <div class="team-name">${esc(teamName)}</div>
-      </div>
+      ${logo
+        ? `<img src="${logo}" alt="${esc(teamName)}" class="team-logo-card" onerror="this.style.display='none'">`
+        : `<div class="team-initial" style="background:${color}">${initial}</div>`
+      }
+      <div class="team-name">${esc(teamName)}</div>
     </div>`;
 }
 
@@ -484,6 +533,165 @@ function renderAllLongTermPicks() {
     </div>
   `;
   // Note : chargé dans setupLongTermAllPicks()
+}
+
+// ── Onglet Bracket ────────────────────────────────────────────────
+function renderBracket() {
+  const container = document.getElementById('tab-bracket');
+  const byId = {};
+  matches.forEach(m => { byId[m.id] = m; });
+
+  container.innerHTML = `
+    ${renderBracketStage('Stage 1 — Play-In', PLAY_IN_ROUNDS, byId)}
+    ${renderBracketStage('Stage 2 — Bracket', BRACKET_ROUNDS, byId)}
+  `;
+}
+
+function renderBracketStage(title, rounds, byId) {
+  return `
+    <div class="bk-stage">
+      <div class="bk-stage-title">${title}</div>
+      <div class="bk-rounds">
+        ${rounds.map(r => `
+          <div class="bk-col">
+            <div class="bk-col-label">${r.label}</div>
+            ${r.upper.length > 0 ? `
+              <div class="bk-section">
+                ${r.upper.map(id => renderBkMatch(byId[id])).join('')}
+              </div>` : ''}
+            ${r.lower.length > 0 ? `
+              <div class="bk-section bk-lower">
+                <div class="bk-lower-tag">Losers'</div>
+                ${r.lower.map(id => renderBkMatch(byId[id])).join('')}
+              </div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderBkMatch(m) {
+  if (!m) return '<div class="bk-match bk-empty"></div>';
+  const t1win = m.status === 'finished' && m.winner === m.team1;
+  const t2win = m.status === 'finished' && m.winner === m.team2;
+  return `
+    <div class="bk-match${m.status === 'finished' ? ' done' : ''}">
+      <div class="bk-team${t1win ? ' win' : t2win ? ' lose' : ''}">
+        ${teamLogo(m.team1, 16)}
+        <span class="bk-team-name">${esc(m.team1 || 'TBD')}</span>
+        ${m.status === 'finished' ? `<span class="bk-score">${m.score1}</span>` : ''}
+      </div>
+      <div class="bk-team${t2win ? ' win' : t1win ? ' lose' : ''}">
+        ${teamLogo(m.team2, 16)}
+        <span class="bk-team-name">${esc(m.team2 || 'TBD')}</span>
+        ${m.status === 'finished' ? `<span class="bk-score">${m.score2}</span>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+// ── Onglet Admin ───────────────────────────────────────────────────
+function renderAdmin() {
+  const container = document.getElementById('tab-admin');
+  if (!container) return;
+
+  const teams = tournament.teams || [];
+
+  container.innerHTML = `
+    <div class="admin-section">
+      <div class="admin-title">⚙️ Gestion des matchs</div>
+      <div class="admin-list">
+        ${matches.map(m => renderAdminMatch(m, teams)).join('')}
+      </div>
+    </div>
+  `;
+
+  container.querySelectorAll('.admin-match-form').forEach(form => {
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const id = form.dataset.matchId;
+      const team1   = form.querySelector('[name=team1]').value.trim();
+      const team2   = form.querySelector('[name=team2]').value.trim();
+      const winner  = form.querySelector('[name=winner]').value;
+      const score1  = form.querySelector('[name=score1]').value;
+      const score2  = form.querySelector('[name=score2]').value;
+      const status  = form.querySelector('[name=status]').value;
+
+      const btn = form.querySelector('.admin-save-btn');
+      btn.disabled = true;
+      btn.textContent = '…';
+
+      try {
+        await updateMatch(id, {
+          team1: team1 || 'TBD',
+          team2: team2 || 'TBD',
+          winner: winner || null,
+          score1: score1 !== '' ? parseInt(score1) : null,
+          score2: score2 !== '' ? parseInt(score2) : null,
+          status
+        });
+        // Update local data
+        const local = matches.find(m => m.id === id);
+        if (local) Object.assign(local, { team1, team2, winner: winner || null, score1: score1 !== '' ? parseInt(score1) : null, score2: score2 !== '' ? parseInt(score2) : null, status });
+        showToast('✓ Match mis à jour');
+        btn.textContent = '✓ Sauvé';
+        setTimeout(() => { btn.disabled = false; btn.textContent = 'Sauvegarder'; }, 1500);
+      } catch (err) {
+        showToast('Erreur : ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Sauvegarder';
+      }
+    });
+  });
+}
+
+function renderAdminMatch(m, teams) {
+  const teamOpts = teams.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  const winnerOpts = `
+    <option value="">— Pas de gagnant —</option>
+    <option value="${esc(m.team1)}"${m.winner === m.team1 ? ' selected' : ''}>${esc(m.team1)}</option>
+    <option value="${esc(m.team2)}"${m.winner === m.team2 ? ' selected' : ''}>${esc(m.team2)}</option>
+  `;
+  return `
+    <details class="admin-match">
+      <summary class="admin-match-header">
+        <span class="admin-match-label">${esc(m.round)}</span>
+        <span class="admin-match-teams">${esc(m.team1)} vs ${esc(m.team2)}</span>
+        <span class="admin-match-status ${m.status}">${m.status}</span>
+      </summary>
+      <form class="admin-match-form" data-match-id="${m.id}">
+        <div class="admin-row">
+          <label>Équipe 1</label>
+          <input list="al-teams" name="team1" value="${esc(m.team1 || '')}" />
+        </div>
+        <div class="admin-row">
+          <label>Équipe 2</label>
+          <input list="al-teams" name="team2" value="${esc(m.team2 || '')}" />
+        </div>
+        <datalist id="al-teams">${teamOpts}</datalist>
+        <div class="admin-row">
+          <label>Statut</label>
+          <select name="status">
+            <option value="scheduled"${m.status==='scheduled'?' selected':''}>Planifié</option>
+            <option value="live"${m.status==='live'?' selected':''}>En cours</option>
+            <option value="finished"${m.status==='finished'?' selected':''}>Terminé</option>
+          </select>
+        </div>
+        <div class="admin-row">
+          <label>Gagnant</label>
+          <select name="winner">${winnerOpts}</select>
+        </div>
+        <div class="admin-row">
+          <label>Score</label>
+          <input type="number" name="score1" min="0" max="3" value="${m.score1 ?? ''}" style="width:52px" />
+          <span style="color:var(--muted)">—</span>
+          <input type="number" name="score2" min="0" max="3" value="${m.score2 ?? ''}" style="width:52px" />
+        </div>
+        <button type="submit" class="admin-save-btn">Sauvegarder</button>
+      </form>
+    </details>
+  `;
 }
 
 // ── Sync bar ───────────────────────────────────────────────────────

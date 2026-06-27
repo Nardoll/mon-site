@@ -271,6 +271,11 @@ function makeMatchId(tournamentId, t1, t2, date) {
     .slice(0, 120);
 }
 
+// ── Admin ─────────────────────────────────────────────────────────
+export async function updateMatch(matchId, data) {
+  await fsSet('prono_matches', matchId, data);
+}
+
 // ── Classement ────────────────────────────────────────────────────
 export async function getLeaderboard(tournamentId) {
   const profiles = await getProfiles();
