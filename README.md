@@ -1314,6 +1314,16 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 
 ## Historique des modifications
 
+### 2026-06-28
+**Lis tes ratures — Suppression mode test sondage + exposé 1984 + correctifs membres**
+
+- `lis-tes-ratures/js/sondage-dispo.js` : suppression complète du mode test (SD_TEST_KEY, sessionStorage, badge TEST, branches `_test`). `submitAvail()` écrit toujours dans Firebase. Ajout de `buildRanking(s)` : classement visuel des dates par score (médailles, barres proportionnelles, nb dispo/si besoin) injecté dans `#ranking-mount` avant la grille Framadate, mis à jour à chaque réponse.
+- `lis-tes-ratures/js/accueil.js` : suppression mode test (loadTestSondage). `init()` charge le sondage actif uniquement depuis Firebase. Lien "Répondre →" pointe vers `sondage-dispo.html`.
+- `lis-tes-ratures/js/reunions.js` : suppression mode test (SD_TEST_KEY, checkbox, branche sessionStorage). Panneau vide redesigné : lignes horizontales sépia + note italique serif (fini l'emoji calendrier). Poller simplifié à 30s fixe. Ajout champ `lien_expose` : champ texte dans le formulaire d'ajout/édition de réunion, stocké en Firestore (`lien_expose: string|null`), affiché dans la fiche sous la vidéo si renseigné ("📖 Voir l'exposé →").
+- `lis-tes-ratures/js/membres.js` : `nbExceptByMembre` déplacé au niveau module (fix scope — était dans `init()`, inaccessible depuis `renderRack()` et `openMember()`). Les votes exceptionnels (Piranèse) sont comptés dans "N votes" sur les cartes membres via `v.sondage` (même source que `statistiques.js`).
+- `lis-tes-ratures/exposes/1984/` : nouveau dossier — présentation HTML standalone de Dorian sur 1984/Orwell (21 slides, 15 images). Accessible à `/lis-tes-ratures/exposes/1984/`. **Action Tom :** dans la fiche réunion 1984, cliquer Modifier → renseigner "Lien exposé" : `/lis-tes-ratures/exposes/1984/`.
+- `lis-tes-ratures/reunions.html` + `sondage-dispo.html` : CSS correspondants (état vide, classement).
+
 ### 2026-06-21
 **Lis tes ratures — Sondage de disponibilité (Framadate-style) + mode test**
 
