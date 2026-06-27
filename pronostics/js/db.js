@@ -1,7 +1,7 @@
 import { db } from '../firebase-config.js';
 import {
   collection, doc, getDoc, getDocs, setDoc, addDoc,
-  query, where, orderBy, serverTimestamp, Timestamp, writeBatch
+  query, where, orderBy, serverTimestamp, Timestamp, writeBatch, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ── Helpers ───────────────────────────────────────────────────────
@@ -11,9 +11,6 @@ async function fsSet(col, id, data) {
 async function fsGet(col, id) {
   return getDoc(doc(db, col, id));
 }
-async function fsQuery(col, ...constraints) {
-  return getDocs(query(collection(db, col), ...constraints));
-}
 
 // ── Profiles ──────────────────────────────────────────────────────
 export async function getProfiles() {
@@ -21,12 +18,22 @@ export async function getProfiles() {
   return snap.docs.map(d => ({ id: d.id, name: d.data().pseudo, ...d.data() }));
 }
 
+export async function getProfile(id) {
+  const snap = await fsGet('prono_profiles', id);
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
 export async function createProfile(pseudo) {
   const ref = await addDoc(collection(db, 'prono_profiles'), {
     pseudo,
+    avatar_url: null,
     created_at: serverTimestamp()
   });
   return ref.id;
+}
+
+export async function updateProfile(id, data) {
+  await fsSet('prono_profiles', id, data);
 }
 
 // ── Tournaments ───────────────────────────────────────────────────
@@ -55,22 +62,32 @@ export async function createTournament(data) {
 
 // ── Matches ───────────────────────────────────────────────────────
 export async function getMatchesByTournament(tournamentId) {
-  const snap = await fsQuery('prono_matches',
+  const snap = await getDocs(query(
+    collection(db, 'prono_matches'),
     where('tournament_id', '==', tournamentId),
     orderBy('date_utc', 'asc')
-  );
+  ));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
 // ── Picks ─────────────────────────────────────────────────────────
 export async function getPicksByTournament(profileId, tournamentId) {
-  const snap = await fsQuery('prono_picks',
+  const snap = await getDocs(query(
+    collection(db, 'prono_picks'),
     where('profile_id', '==', profileId),
     where('tournament_id', '==', tournamentId)
-  );
+  ));
   const result = {};
   snap.docs.forEach(d => { result[d.data().match_id] = { id: d.id, ...d.data() }; });
   return result;
+}
+
+export async function getAllPicksByMatch(matchId) {
+  const snap = await getDocs(query(
+    collection(db, 'prono_picks'),
+    where('match_id', '==', matchId)
+  ));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
 export async function savePick(profileId, matchId, tournamentId, pickWinner, pickScore1, pickScore2) {
@@ -89,13 +106,22 @@ export async function savePick(profileId, matchId, tournamentId, pickWinner, pic
 
 // ── Long-term picks ────────────────────────────────────────────────
 export async function getLongTermPicks(profileId, tournamentId) {
-  const snap = await fsQuery('prono_long_term',
+  const snap = await getDocs(query(
+    collection(db, 'prono_long_term'),
     where('profile_id', '==', profileId),
     where('tournament_id', '==', tournamentId)
-  );
+  ));
   const result = {};
   snap.docs.forEach(d => { result[d.data().type] = { id: d.id, ...d.data() }; });
   return result;
+}
+
+export async function getAllLongTermByTournament(tournamentId) {
+  const snap = await getDocs(query(
+    collection(db, 'prono_long_term'),
+    where('tournament_id', '==', tournamentId)
+  ));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
 export async function saveLongTermPick(profileId, tournamentId, type, value) {
@@ -114,25 +140,33 @@ export async function saveLongTermPick(profileId, tournamentId, type, value) {
 export async function scorePicksForMatch(match) {
   if (match.status !== 'finished' || !match.winner) return;
 
-  const snap = await fsQuery('prono_picks',
+  const snap = await getDocs(query(
+    collection(db, 'prono_picks'),
     where('match_id', '==', match.id),
     where('scored', '==', false)
-  );
+  ));
   if (snap.empty) return;
 
   const batch = writeBatch(db);
+  const bo = parseInt(match.best_of) || 5;
+  const s1 = parseInt(match.score1) || 0;
+  const s2 = parseInt(match.score2) || 0;
+
+  // Score du perdant dans le match réel
+  const loserScore = match.winner === match.team1 ? s2 : s1;
 
   snap.docs.forEach(d => {
     const pick = d.data();
     let points = 0;
 
     if (pick.pick_winner === match.winner) {
-      // Bon gagnant — vérifier si le score est exact
-      const s1 = parseInt(match.score1) || 0;
-      const s2 = parseInt(match.score2) || 0;
+      // Bon gagnant — vérifier le score exact
       const ps1 = parseInt(pick.pick_score1) || 0;
       const ps2 = parseInt(pick.pick_score2) || 0;
       points = (ps1 === s1 && ps2 === s2) ? 5 : 3;
+    } else if (bo >= 5) {
+      // Mauvais gagnant en BO5 : consolation si le perdant a ≥2 maps
+      if (loserScore >= 2) points = 1;
     }
 
     batch.update(doc(db, 'prono_picks', d.id), { points, scored: true });
@@ -149,7 +183,6 @@ export async function syncTournament(tournamentId) {
   const now = Date.now();
   const COOLDOWN_MS = 5 * 60 * 1000;
 
-  // Vérifier le cooldown
   if (tour.sync_cooldown_until) {
     const until = tour.sync_cooldown_until.toMillis
       ? tour.sync_cooldown_until.toMillis()
@@ -159,7 +192,7 @@ export async function syncTournament(tournamentId) {
     }
   }
 
-  if (!tour.leaguepedia_key) throw new Error('Clé Leaguepedia manquante pour ce tournoi');
+  if (!tour.leaguepedia_key) throw new Error('Clé Leaguepedia manquante');
 
   const key = tour.leaguepedia_key;
   const url = [
@@ -174,14 +207,15 @@ export async function syncTournament(tournamentId) {
   ].join('&');
 
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Erreur réseau : HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
   const data = await res.json();
   if (data.error) throw new Error(data.error.info);
 
-  const rows = (data.cargoquery || []);
+  const rows = data.cargoquery || [];
   const batch = writeBatch(db);
   const finishedMatches = [];
+  const teamSet = new Set();
 
   for (const row of rows) {
     const m = row.title;
@@ -189,7 +223,10 @@ export async function syncTournament(tournamentId) {
     const team2 = m.Team2 || '';
     const dateStr = m['DateTime UTC'] || '';
 
-    if (!team1 || !team2) continue; // Skip TBD
+    if (!team1 || !team2) continue;
+
+    teamSet.add(team1);
+    teamSet.add(team2);
 
     const matchId = makeMatchId(tournamentId, team1, team2, dateStr);
     const score1 = parseInt(m.Team1Score) || 0;
@@ -217,20 +254,22 @@ export async function syncTournament(tournamentId) {
     if (status === 'finished') finishedMatches.push({ id: matchId, ...matchData });
   }
 
-  // Mettre à jour le cooldown
+  // Mettre à jour la liste des équipes dans le tournoi
+  const teamsArray = Array.from(teamSet).sort();
+
   batch.set(doc(db, 'prono_tournaments', tournamentId), {
     last_sync: Timestamp.fromMillis(now),
-    sync_cooldown_until: Timestamp.fromMillis(now + COOLDOWN_MS)
+    sync_cooldown_until: Timestamp.fromMillis(now + COOLDOWN_MS),
+    ...(teamsArray.length > 0 ? { teams: teamsArray } : {})
   }, { merge: true });
 
   await batch.commit();
 
-  // Scorer les picks des matchs terminés
   for (const match of finishedMatches) {
     await scorePicksForMatch(match);
   }
 
-  return { ok: true, count: rows.length };
+  return { ok: true, count: rows.length, teams: teamsArray.length };
 }
 
 function makeMatchId(tournamentId, t1, t2, date) {
@@ -243,7 +282,6 @@ function makeMatchId(tournamentId, t1, t2, date) {
 // ── Classement ────────────────────────────────────────────────────
 export async function getLeaderboard(tournamentId) {
   const profiles = await getProfiles();
-
   const constraints = [where('scored', '==', true)];
   if (tournamentId) constraints.push(where('tournament_id', '==', tournamentId));
 
@@ -253,7 +291,7 @@ export async function getLeaderboard(tournamentId) {
   snap.docs.forEach(d => {
     const p = d.data();
     const pid = p.profile_id;
-    pts[pid] = (pts[pid] || 0) + (p.points || 0);
+    pts[pid]     = (pts[pid] || 0) + (p.points || 0);
     if ((p.points || 0) >= 3) correct[pid] = (correct[pid] || 0) + 1;
     if ((p.points || 0) >= 5) perfect[pid] = (perfect[pid] || 0) + 1;
   });
@@ -262,6 +300,7 @@ export async function getLeaderboard(tournamentId) {
     .map(p => ({
       id: p.id,
       name: p.name || p.pseudo,
+      avatar_url: p.avatar_url || null,
       points: pts[p.id] || 0,
       correct: correct[p.id] || 0,
       perfect: perfect[p.id] || 0

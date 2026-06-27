@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Seed — Pronostics</title>
+  <style>
+    body { background:#0d0e14; color:#e2e4f0; font-family:system-ui,sans-serif;
+           display:flex; flex-direction:column; align-items:center; justify-content:center;
+           min-height:100vh; gap:1.5rem; padding:2rem; }
+    h2 { color:#f97316; margin:0; font-size:1.1rem; }
+    .card { background:#141520; border:1px solid #252640; border-radius:12px;
+            padding:1.5rem 2rem; max-width:480px; width:100%; }
+    label { font-size:.75rem; color:#9294b0; display:block; margin-bottom:.3rem; margin-top:.75rem; }
+    input,select { width:100%; background:#1a1c2e; border:1px solid #2e3055; border-radius:7px;
+                   color:#e2e4f0; font-size:.85rem; padding:.6rem .8rem; outline:none;
+                   font-family:inherit; box-sizing:border-box; }
+    button { width:100%; padding:.8rem; background:#f97316; color:#fff; border:none;
+             border-radius:8px; font-size:.9rem; font-weight:700; cursor:pointer; margin-top:1.2rem; }
+    #msg { font-size:.85rem; color:#22c55e; text-align:center; min-height:1.2rem; }
+    #err { font-size:.82rem; color:#ef4444; text-align:center; }
+    a { color:#60a5fa; text-decoration:none; font-size:.8rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>⚡ Créer un tournoi — Pronostics LoL</h2>
+    <p style="font-size:.8rem;color:#9294b0;margin:.5rem 0 0">
+      Remplis les infos et clique sur Créer. À faire une seule fois par tournoi.
+    </p>
+
+    <label>Nom du tournoi</label>
+    <input id="f-name" value="MSI 2026" />
+
+    <label>Nom court (affiché dans les filtres)</label>
+    <input id="f-short" value="MSI 2026" />
+
+    <label>Clé Leaguepedia (OverviewPage exact)</label>
+    <input id="f-key" value="2026 Season Mid-Season Invitational" />
+
+    <label>Ligue / Région</label>
+    <input id="f-league" value="International" />
+
+    <label>Statut</label>
+    <select id="f-status">
+      <option value="live" selected>🔴 Live (en cours)</option>
+      <option value="upcoming">📅 À venir</option>
+      <option value="finished">✅ Terminé</option>
+    </select>
+
+    <label>Date de début</label>
+    <input id="f-start" type="date" value="2026-06-28" />
+
+    <label>Date de fin</label>
+    <input id="f-end" type="date" value="2026-07-13" />
+
+    <button id="btn-create">Créer le tournoi →</button>
+    <div id="msg"></div>
+    <div id="err"></div>
+  </div>
+
+  <a href="/pronostics/">← Retour à l'accueil Pronostics</a>
+
+  <script type="module">
+    import { createTournament } from '/pronostics/js/db.js';
+
+    document.getElementById('btn-create').addEventListener('click', async () => {
+      const name   = document.getElementById('f-name').value.trim();
+      const short  = document.getElementById('f-short').value.trim();
+      const key    = document.getElementById('f-key').value.trim();
+      const league = document.getElementById('f-league').value.trim();
+      const status = document.getElementById('f-status').value;
+      const start  = document.getElementById('f-start').value;
+      const end    = document.getElementById('f-end').value;
+
+      if (!name || !key) {
+        document.getElementById('err').textContent = 'Nom et clé Leaguepedia requis.';
+        return;
+      }
+
+      const btn = document.getElementById('btn-create');
+      btn.disabled = true;
+      btn.textContent = 'Création…';
+      document.getElementById('err').textContent = '';
+
+      try {
+        const id = await createTournament({ name, short_name: short, leaguepedia_key: key, league, status, start_date: start, end_date: end, teams: [] });
+        document.getElementById('msg').textContent = `✓ Tournoi créé ! ID : ${id}`;
+        btn.textContent = '✓ Créé !';
+        setTimeout(() => { location.href = '/pronostics/'; }, 1500);
+      } catch (e) {
+        document.getElementById('err').textContent = 'Erreur : ' + e.message;
+        btn.disabled = false;
+        btn.textContent = 'Créer le tournoi →';
+      }
+    });
+  </script>
+</body>
+</html>

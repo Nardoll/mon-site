@@ -1,6 +1,6 @@
-import { requireProfile }                from './auth.js';
-import { injectTopBar, injectBottomNav } from './nav.js';
-import { getTournaments, getLeaderboard } from './db.js';
+import { requireProfile }                      from './auth.js';
+import { injectTopBar, injectBottomNav, avatarHtml } from './nav.js';
+import { getTournaments, getLeaderboard }         from './db.js';
 
 requireProfile(async (profile) => {
   injectTopBar(profile);
@@ -11,7 +11,8 @@ requireProfile(async (profile) => {
 async function renderClassement(profile) {
   const main = document.getElementById('main');
   main.innerHTML = `
-    <div class="page-title">Classement</div>
+    <div class="page-title">Classement général</div>
+    <div class="page-subtitle">Tous les tournois confondus.</div>
     <div id="filter-wrap"></div>
     <div id="lb-wrap"><div class="empty-state">Chargement…</div></div>
   `;
@@ -29,7 +30,7 @@ function renderFilters(tournaments, profile) {
 
   wrap.innerHTML = `
     <div class="tour-filters">
-      <button class="btn-filter active" data-id="">Tous les tournois</button>
+      <button class="btn-filter active" data-id="">Tous</button>
       ${tournaments.map(t =>
         `<button class="btn-filter" data-id="${t.id}">${esc(t.short_name || t.name)}</button>`
       ).join('')}
@@ -52,7 +53,7 @@ async function showLeaderboard(tournamentId, profile) {
   const entries = await getLeaderboard(tournamentId);
 
   if (entries.every(e => e.points === 0)) {
-    wrap.innerHTML = '<div class="empty-state">Aucune donnée de score pour le moment.</div>';
+    wrap.innerHTML = '<div class="empty-state">Aucun point encore. Les scores apparaîtront après les premiers matchs.</div>';
     return;
   }
 
@@ -64,12 +65,15 @@ async function showLeaderboard(tournamentId, profile) {
       ${entries.map((e, i) => `
         <div class="lb-row${e.id === profile.id ? ' me' : ''}">
           <div class="lb-rank ${rankClass(i)}">${rankIcon(i)}</div>
-          <div class="lb-info">
-            <div class="lb-name-row">
-              <span class="lb-name">${esc(e.name)}</span>
-              ${e.id === profile.id ? '<span class="lb-you">Toi</span>' : ''}
+          <div class="lb-info" style="display:flex;align-items:center;gap:.55rem;flex:1">
+            ${avatarHtml({ name: e.name, avatar_url: e.avatar_url }, 'avatar-sm')}
+            <div>
+              <div class="lb-name-row">
+                <span class="lb-name">${esc(e.name)}</span>
+                ${e.id === profile.id ? '<span class="lb-you">Toi</span>' : ''}
+              </div>
+              <div class="lb-detail">${e.correct} bon${e.correct !== 1 ? 's' : ''} · ${e.perfect} parfait${e.perfect !== 1 ? 's' : ''}</div>
             </div>
-            <div class="lb-detail">${e.correct} bon${e.correct !== 1 ? 's' : ''} · ${e.perfect} parfait${e.perfect !== 1 ? 's' : ''}</div>
           </div>
           <div class="lb-pts-wrap">
             <div class="lb-pts">${e.points}</div>
