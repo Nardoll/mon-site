@@ -55,7 +55,7 @@ Site **personnel et privé** de Tom. Multi-sections indépendantes. La page d'ac
 
 ## Bot Discord (`/discord-bot/`)
 
-Script Node.js de collecte des données du serveur Discord vers Firebase.
+Script Node.js de collecte + agrégation des données Discord vers Firebase. Architecture en deux étapes : `collect.js` remplit les collections raw, `aggregate.js` calcule 4 docs résumés lus par le site.
 
 ### ⚠️ Mise en place sur un nouveau PC (à faire une seule fois)
 
@@ -72,10 +72,9 @@ npm install
 DISCORD_TOKEN=<token du bot Statisticsman>
 GUILD_ID=1499528679758364744
 ```
-> **Où trouver le token** : discord.com/developers/applications → application "Statisticsman" → onglet Bot → Reset Token (génère un nouveau token, l'ancien ne fonctionnera plus).
-> Le token n'est visible qu'une seule fois après génération — le noter quelque part en sécurité (gestionnaire de mots de passe, note privée).
+> **Où trouver le token** : Tom se l'est envoyé à lui-même sur **WhatsApp**. Aller le chercher là-bas. Ne pas le regénérer sur Discord Developer Portal (ça invaliderait l'ancien).
 
-**4. Vérifier que le bot est bien sur le serveur.** Si besoin le réinviter :
+**4. Vérifier que le bot est bien sur les serveurs.** Si besoin le réinviter :
 - Discord Developer Portal → OAuth2 → URL Generator → cocher `bot` → permissions : "Voir les salons" + "Voir les anciens messages" → copier l'URL → l'ouvrir dans le navigateur.
 
 **5. Vérifier que les Privileged Intents sont activés** :
@@ -85,41 +84,61 @@ GUILD_ID=1499528679758364744
 
 ### Lancer une collecte
 
-Double-clic sur `collecter.bat` **ou** depuis un terminal :
 ```bash
 cd discord-bot
-npm run collect
+node collect.js GUILD_ID
 ```
-- Première exécution : scan complet de tout l'historique
-- Exécutions suivantes : reprise automatique depuis le dernier message connu (rapide)
-- Le `checkpoint.json` est sauvegardé après chaque salon — si ça coupe, ça repart là où ça s'est arrêté
 
-**Pour demander à Claude de lancer la collecte :** dire "relance la collecte Discord" — Claude peut exécuter le script directement depuis le terminal.
+- L'agrégation se lance **automatiquement** à la fin de chaque collecte
+- Checkpoint par serveur : `checkpoint_GUILD_ID.json` (non commité) — reprend là où ça s'est arrêté si interrompu
+- Première exécution : scan complet (peut prendre 30–60 min sur un grand serveur)
+- Exécutions suivantes : incrémental depuis le dernier message connu (rapide)
+
+**Forcer une re-agrégation sans re-collecter :**
+```bash
+node aggregate.js GUILD_ID
+```
 
 ---
 
 ### Serveurs configurés
 | ID | Nom | Statut |
 |---|---|---|
-| `1499528679758364744` | Lis tes ratures (club de lecture) | ✅ Collecte initiale faite le 2026-06-25 |
+| `770300375638474822` | Encore une game | ✅ Collecte initiale faite le 2026-06-25 (~66K messages) |
+| `1499528679758364744` | Nardoll (Lis tes ratures) | ✅ Collecte initiale faite le 2026-06-25 |
 
 ---
 
 ### Fichiers
 | Fichier | Rôle |
 |---|---|
-| `collect.js` | Script principal |
-| `collecter.bat` | Double-clic pour lancer sur Windows |
-| `.env` | Token + ID serveur — **jamais commité, à recréer** |
-| `.env.example` | Modèle du `.env` |
-| `checkpoint.json` | Reprise incrémentale — **jamais commité** |
+| `collect.js` | Collecte messages, sondages, membres, salons |
+| `aggregate.js` | Calcule les 4 docs stats agrégés (lancé auto après collect) |
+| `recollect-sondages.js` | Récupère les sondages depuis Discord avec les bons IDs (outil de récupération) |
+| `cleanup-sondages.js` | Supprime les doublons de sondages avec IDs auto-générés (legacy) |
+| `.env` | Token + ID serveur — **jamais commité, à recréer depuis WhatsApp** |
+| `checkpoint_GUILD_ID.json` | Reprise incrémentale — **jamais commité** |
 
-### Collections Firebase créées
+### Collections Firebase
+
+**Raw (écrites par collect.js) :**
 | Collection | Contenu |
 |---|---|
-| `discord_messages` | auteur, salon, date, type (texte/image/lien/sondage…), est_reponse |
-| `discord_sondages_bot` | Sondages natifs Discord avec question, propositions, votes par personne |
-| `discord_membres_bot` | Membres du serveur (pseudo, avatar, date d'arrivée) |
+| `discord_messages` | Tous les messages — ID = `${GUILD_ID}_${msg.id}` |
+| `discord_sondages_bot` | Sondages natifs Discord — ID = `${GUILD_ID}_${msg.id}` |
+| `discord_membres_bot` | Membres (pseudo, avatar, date d'arrivée) |
+| `discord_salons_bot` | Salons (est_archive, est_prive) |
+| `discord_serveurs` | Liste des serveurs |
+
+**Agrégées (écrites par aggregate.js, lues par le site) :**
+| Collection / doc | Contenu |
+|---|---|
+| `discord_stats_serveur/{GUILD_ID}` | Totaux + séries temporelles (msg_par_mois, msg_par_semaine, etc.) |
+| `discord_stats_salons/{GUILD_ID}` | Tableau salons avec topMembres, msgParMois, byType... |
+| `discord_stats_membres/{GUILD_ID}` | Tableau membres avec byType, topSalons, actif_semaine... |
+| `discord_stats_interactions/{GUILD_ID}` | top_paires + conversations pré-calculées |
+
+> **Règle absolue : toujours `fsSet` (PATCH), jamais `fsAdd` (POST)** — fsAdd génère de nouveaux IDs à chaque run et crée des doublons.
 
 ---
 
