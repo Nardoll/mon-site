@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Seed Matchs MSI 2026</title>
+  <style>
+    body { background:#0d0e14; color:#e2e4f0; font-family:system-ui,sans-serif;
+           display:flex; flex-direction:column; align-items:center; padding:2rem; gap:1rem; }
+    h2 { color:#f97316; margin:0; }
+    .card { background:#141520; border:1px solid #252640; border-radius:12px;
+            padding:1.5rem 2rem; max-width:560px; width:100%; }
+    button { width:100%; padding:.8rem; background:#f97316; color:#fff; border:none;
+             border-radius:8px; font-size:.9rem; font-weight:700; cursor:pointer; margin-top:.8rem; }
+    #log { font-size:.8rem; color:#9294b0; max-height:300px; overflow-y:auto;
+           background:#0d0e14; border-radius:8px; padding:1rem; margin-top:.5rem; }
+    .ok  { color:#22c55e; }
+    .err { color:#ef4444; }
+    a { color:#60a5fa; text-decoration:none; font-size:.8rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>⚡ Seed matchs — MSI 2026</h2>
+    <p style="font-size:.8rem;color:#9294b0;margin:.5rem 0 0">
+      Insère tous les matchs connus du MSI 2026 et met à jour la liste des équipes.
+      À faire une seule fois.
+    </p>
+    <button id="btn">Insérer les matchs →</button>
+    <div id="log"></div>
+  </div>
+  <a href="/pronostics/tournoi.html?id=jXIP8tk3D62pud8fpl20">← Voir le tournoi MSI 2026</a>
+
+  <script type="module">
+    import { db } from '/pronostics/firebase-config.js';
+    import {
+      doc, setDoc, updateDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const TOURNAMENT_ID = 'jXIP8tk3D62pud8fpl20';
+
+    const TEAMS = [
+      'T1', 'Hanwha Life Esports',
+      'Bilibili Gaming', 'Top Esports',
+      'G2 Esports', 'Karmine Corp',
+      'LYON', 'Team Liquid',
+      'Secret Whales', 'Deep Cross Gaming',
+      'FURIA'
+    ];
+
+    const MATCHES = [
+      // ── Play-In Round 1 (28 juin) ─────────────────────────────────
+      {
+        id: 'msi2026_playin_r1_T1_TLA',
+        team1: 'T1', team2: 'Team Liquid',
+        date_utc: '2026-06-28 03:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Play-In Round 1', tab: 'Play-In',
+        winner: null, score1: null, score2: null
+      },
+      {
+        id: 'msi2026_playin_r1_KC_DCG',
+        team1: 'Karmine Corp', team2: 'Deep Cross Gaming',
+        date_utc: '2026-06-28 08:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Play-In Round 1', tab: 'Play-In',
+        winner: null, score1: null, score2: null
+      },
+      // ── Play-In Round 2 (29 juin) ─────────────────────────────────
+      {
+        id: 'msi2026_playin_r2_upper',
+        team1: 'TBD', team2: 'TBD',
+        date_utc: '2026-06-29 03:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Play-In Round 2 (Upper)', tab: 'Play-In',
+        winner: null, score1: null, score2: null
+      },
+      {
+        id: 'msi2026_playin_r2_lower',
+        team1: 'TBD', team2: 'TBD',
+        date_utc: '2026-06-29 08:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Play-In Round 2 (Lower)', tab: 'Play-In',
+        winner: null, score1: null, score2: null
+      },
+      // ── Play-In Round 3 (30 juin) ─────────────────────────────────
+      {
+        id: 'msi2026_playin_r3',
+        team1: 'TBD', team2: 'TBD',
+        date_utc: '2026-06-30 08:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Play-In Round 3 (Lower)', tab: 'Play-In',
+        winner: null, score1: null, score2: null
+      },
+      // ── Play-In Grand Final (1er juillet) ─────────────────────────
+      {
+        id: 'msi2026_playin_gf',
+        team1: 'TBD', team2: 'TBD',
+        date_utc: '2026-07-01 08:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Play-In Grand Final', tab: 'Play-In',
+        winner: null, score1: null, score2: null
+      },
+      // ── Bracket Stage Upper R1 (3-4 juillet) ─────────────────────
+      {
+        id: 'msi2026_bracket_ur1_BLG',
+        team1: 'Bilibili Gaming', team2: 'TBD',
+        date_utc: '2026-07-03 03:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Upper Bracket Round 1', tab: 'Bracket',
+        winner: null, score1: null, score2: null
+      },
+      {
+        id: 'msi2026_bracket_ur1_HLE',
+        team1: 'Hanwha Life Esports', team2: 'TBD',
+        date_utc: '2026-07-03 08:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Upper Bracket Round 1', tab: 'Bracket',
+        winner: null, score1: null, score2: null
+      },
+      {
+        id: 'msi2026_bracket_ur1_LYON',
+        team1: 'LYON', team2: 'TBD',
+        date_utc: '2026-07-04 03:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Upper Bracket Round 1', tab: 'Bracket',
+        winner: null, score1: null, score2: null
+      },
+      {
+        id: 'msi2026_bracket_ur1_G2',
+        team1: 'G2 Esports', team2: 'Top Esports',
+        date_utc: '2026-07-04 08:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Upper Bracket Round 1', tab: 'Bracket',
+        winner: null, score1: null, score2: null
+      },
+      // ── Bracket Upper R2 (5 juillet) ─────────────────────────────
+      {
+        id: 'msi2026_bracket_ur2_a',
+        team1: 'TBD', team2: 'TBD',
+        date_utc: '2026-07-05 03:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Upper Bracket Round 2', tab: 'Bracket',
+        winner: null, score1: null, score2: null
+      },
+      {
+        id: 'msi2026_bracket_ur2_b',
+        team1: 'TBD', team2: 'TBD',
+        date_utc: '2026-07-05 08:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Upper Bracket Round 2', tab: 'Bracket',
+        winner: null, score1: null, score2: null
+      },
+      // ── Lower Bracket R1 (6 juillet) ─────────────────────────────
+      {
+        id: 'msi2026_bracket_lr1_a',
+        team1: 'TBD', team2: 'TBD',
+        date_utc: '2026-07-06 03:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Lower Bracket Round 1', tab: 'Bracket',
+        winner: null, score1: null, score2: null
+      },
+      {
+        id: 'msi2026_bracket_lr1_b',
+        team1: 'TBD', team2: 'TBD',
+        date_utc: '2026-07-06 08:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Lower Bracket Round 1', tab: 'Bracket',
+        winner: null, score1: null, score2: null
+      },
+      // ── Lower Bracket R2 (8 juillet) ─────────────────────────────
+      {
+        id: 'msi2026_bracket_lr2_a',
+        team1: 'TBD', team2: 'TBD',
+        date_utc: '2026-07-08 03:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Lower Bracket Round 2', tab: 'Bracket',
+        winner: null, score1: null, score2: null
+      },
+      {
+        id: 'msi2026_bracket_lr2_b',
+        team1: 'TBD', team2: 'TBD',
+        date_utc: '2026-07-08 08:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Lower Bracket Round 2', tab: 'Bracket',
+        winner: null, score1: null, score2: null
+      },
+      // ── Upper Bracket Final (9 juillet) ──────────────────────────
+      {
+        id: 'msi2026_bracket_ubf',
+        team1: 'TBD', team2: 'TBD',
+        date_utc: '2026-07-09 08:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Upper Bracket Final', tab: 'Bracket',
+        winner: null, score1: null, score2: null
+      },
+      // ── Lower Bracket R3 (10 juillet) ────────────────────────────
+      {
+        id: 'msi2026_bracket_lr3',
+        team1: 'TBD', team2: 'TBD',
+        date_utc: '2026-07-10 08:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Lower Bracket Round 3', tab: 'Bracket',
+        winner: null, score1: null, score2: null
+      },
+      // ── Lower Bracket Final (11 juillet) ─────────────────────────
+      {
+        id: 'msi2026_bracket_lbf',
+        team1: 'TBD', team2: 'TBD',
+        date_utc: '2026-07-11 08:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Lower Bracket Final', tab: 'Bracket',
+        winner: null, score1: null, score2: null
+      },
+      // ── Grand Final (12 juillet) ──────────────────────────────────
+      {
+        id: 'msi2026_bracket_gf',
+        team1: 'TBD', team2: 'TBD',
+        date_utc: '2026-07-12 06:00:00',
+        best_of: 5, status: 'scheduled',
+        round: 'Grand Final', tab: 'Bracket',
+        winner: null, score1: null, score2: null
+      },
+    ];
+
+    const log = document.getElementById('log');
+    function addLog(msg, type = '') {
+      const p = document.createElement('p');
+      p.style.margin = '2px 0';
+      p.className = type;
+      p.textContent = msg;
+      log.appendChild(p);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    document.getElementById('btn').addEventListener('click', async () => {
+      const btn = document.getElementById('btn');
+      btn.disabled = true;
+      btn.textContent = 'Insertion…';
+      log.innerHTML = '';
+
+      try {
+        // Mettre à jour les équipes du tournoi
+        await updateDoc(doc(db, 'prono_tournaments', TOURNAMENT_ID), {
+          teams: TEAMS,
+          status: 'live'
+        });
+        addLog('✓ Tournoi mis à jour (équipes + statut live)', 'ok');
+
+        // Insérer les matchs
+        let ok = 0, skip = 0;
+        for (const m of MATCHES) {
+          try {
+            const { id, ...data } = m;
+            await setDoc(doc(db, 'prono_matches', id), {
+              ...data,
+              tournament_id: TOURNAMENT_ID
+            }, { merge: true });
+            addLog(`✓ ${m.round} : ${m.team1} vs ${m.team2}`, 'ok');
+            ok++;
+          } catch (e) {
+            addLog(`✗ Erreur ${m.id} : ${e.message}`, 'err');
+            skip++;
+          }
+        }
+
+        addLog(`\n✓ Terminé — ${ok} matchs insérés, ${skip} erreurs`, 'ok');
+        btn.textContent = '✓ Fait !';
+      } catch (e) {
+        addLog('✗ Erreur fatale : ' + e.message, 'err');
+        btn.disabled = false;
+        btn.textContent = 'Insérer les matchs →';
+      }
+    });
+  </script>
+</body>
+</html>
