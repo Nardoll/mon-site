@@ -1,12 +1,12 @@
 import { requireProfile }              from './auth.js';
-import { injectTopBar, injectBottomNav } from './nav.js';
+import { injectTopBar, injectSidebar } from './nav.js';
 import { getTournaments, createTournament } from './db.js';
 
 const IS_ADMIN = new URLSearchParams(location.search).has('admin');
 
 requireProfile(async (profile) => {
   injectTopBar(profile);
-  injectBottomNav('accueil');
+  injectSidebar(profile, 'accueil');
   await renderAccueil(profile);
 });
 

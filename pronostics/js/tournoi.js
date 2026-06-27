@@ -1,5 +1,5 @@
 import { requireProfile }                           from './auth.js';
-import { injectTopBar, injectBottomNav, showToast, avatarHtml, avatarColor } from './nav.js';
+import { injectTopBar, injectSidebar, showToast, avatarHtml, avatarColor } from './nav.js';
 import {
   getTournament, getMatchesByTournament, getPicksByTournament,
   getAllPicksByMatch, getProfiles, savePick,
@@ -46,7 +46,7 @@ let activeTab  = 'calendrier';
 requireProfile(async (p) => {
   profile = p;
   injectTopBar(p);
-  injectBottomNav(null);
+  injectSidebar(p, null);
   if (!TOURNAMENT_ID) {
     document.getElementById('main').innerHTML = '<div class="empty-state">Tournoi introuvable.</div>';
     return;
@@ -112,14 +112,11 @@ function renderPage(main) {
       </div>
     </div>
 
-    ${isLive ? renderSyncBar(cooldown) : ''}
-
     <div class="tour-tabs">
       <button class="tour-tab active" data-tab="calendrier">🗓️ Calendrier</button>
       <button class="tour-tab" data-tab="bracket">🏆 Bracket</button>
       <button class="tour-tab" data-tab="equipes">👥 Équipes</button>
       <button class="tour-tab" data-tab="classement">📊 Classement</button>
-      <button class="tour-tab" data-tab="longterme">🎯 Long terme</button>
       ${IS_ADMIN ? '<button class="tour-tab" data-tab="admin">⚙️ Admin</button>' : ''}
     </div>
 
@@ -127,7 +124,6 @@ function renderPage(main) {
     <div id="tab-bracket"    class="tab-pane"></div>
     <div id="tab-equipes"    class="tab-pane"></div>
     <div id="tab-classement" class="tab-pane"></div>
-    <div id="tab-longterme"  class="tab-pane"></div>
     ${IS_ADMIN ? '<div id="tab-admin" class="tab-pane"></div>' : ''}
   `;
 
@@ -149,7 +145,65 @@ function renderPage(main) {
 
   // Charger l'onglet par défaut
   renderTab('calendrier');
-  setupSync(cooldown);
+  if (isLive) setupSyncTopBar();
+}
+
+function setupSyncTopBar() {
+  const cooldown = getSyncCooldown();
+  const topBar = document.querySelector('.top-bar');
+  if (!topBar || document.getElementById('btn-sync-top')) return;
+  const btn = document.createElement('button');
+  btn.className = 'btn-sync-icon' + (cooldown > 0 ? ' on-cooldown' : '');
+  btn.id = 'btn-sync-top';
+  btn.disabled = cooldown > 0;
+  btn.title = tournament.last_sync
+    ? 'Dernière sync : ' + formatRelative(tournament.last_sync)
+    : 'Synchroniser les données';
+  btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>`;
+  topBar.insertBefore(btn, topBar.querySelector('.top-user'));
+
+  if (cooldown > 0) startCountdownTopBar(cooldown);
+
+  btn.addEventListener('click', async () => {
+    if (btn.disabled) return;
+    btn.disabled = true;
+    btn.classList.add('spinning');
+    try {
+      const result = await syncTournament(TOURNAMENT_ID);
+      btn.classList.remove('spinning');
+      if (!result.ok) {
+        btn.classList.add('on-cooldown');
+        startCountdownTopBar(result.remaining);
+        return;
+      }
+      showToast('✓ ' + result.count + ' matchs synchronisés');
+      await loadPage();
+    } catch (e) {
+      btn.classList.remove('spinning');
+      btn.disabled = false;
+      showToast('Erreur : ' + e.message);
+    }
+  });
+}
+
+function startCountdownTopBar(secs) {
+  const btn = document.getElementById('btn-sync-top');
+  if (!btn) return;
+  btn.disabled = true;
+  btn.classList.add('on-cooldown');
+  let rem = secs;
+  const tick = () => {
+    rem--;
+    btn.title = 'Sync disponible dans ' + fmtCountdown(rem);
+    if (rem <= 0) {
+      btn.disabled = false;
+      btn.classList.remove('on-cooldown');
+      btn.title = 'Synchroniser les données';
+    } else {
+      setTimeout(tick, 1000);
+    }
+  };
+  setTimeout(tick, 1000);
 }
 
 function renderTab(key) {
@@ -157,7 +211,6 @@ function renderTab(key) {
   if (key === 'bracket')    renderBracket();
   if (key === 'equipes')    renderEquipes();
   if (key === 'classement') renderClassement();
-  if (key === 'longterme')  renderLongTerme();
   if (key === 'admin')      renderAdmin();
 }
 
@@ -246,7 +299,6 @@ function renderMatchCard(match) {
         </div>
       </div>
       ${pickSection}
-      ${isLocked ? renderAllPicksSection(match) : ''}
     </div>`;
 }
 
@@ -314,22 +366,34 @@ function renderPickLocked(match, pick, isFinished) {
     </div>`;
 }
 
-function renderAllPicksSection(match) {
-  // Chargé en lazy au clic (voir setupMatchHandlers)
-  return `<div class="all-picks" id="ap-${match.id}">
-    <div class="all-picks-title">Pronostics de tous les joueurs</div>
-    <div id="ap-content-${match.id}"><div style="color:var(--muted);font-size:.75rem">Chargement…</div></div>
-  </div>`;
-}
+// ── Picks Drawer ──────────────────────────────────────────────────
+async function openPicksDrawer(match) {
+  let drawer = document.getElementById('picks-drawer');
+  if (!drawer) {
+    drawer = document.createElement('div');
+    drawer.id = 'picks-drawer';
+    drawer.className = 'picks-drawer';
+    document.body.appendChild(drawer);
+  }
 
-async function loadAllPicks(match) {
-  const content = document.getElementById(`ap-content-${match.id}`);
-  if (!content || content.dataset.loaded) return;
-  content.dataset.loaded = '1';
+  drawer.innerHTML = `
+    <div class="pd-header">
+      <div class="pd-match-title">${esc(match.team1)} <span style="color:var(--muted)">vs</span> ${esc(match.team2)}</div>
+      <div class="pd-match-score">${match.score1} — ${match.score2}</div>
+      <button class="pd-close" id="pd-close">✕</button>
+    </div>
+    <div class="pd-section-label">Pronostics</div>
+    <div class="pd-picks" id="pd-picks">
+      <div class="empty-state" style="padding:1rem">Chargement…</div>
+    </div>
+  `;
+  drawer.classList.add('open');
+
+  document.getElementById('pd-close').addEventListener('click', () => {
+    drawer.classList.remove('open');
+  });
 
   const allPicks = await getAllPicksByMatch(match.id);
-
-  // Créer un mapping profile_id → pick
   const pickByProfile = {};
   allPicks.forEach(p => { pickByProfile[p.profile_id] = p; });
 
@@ -338,30 +402,33 @@ async function loadAllPicks(match) {
     const isMe = prof.id === profile.id;
     const name = prof.pseudo || prof.name || '?';
 
-    if (!pk || !pk.pick_winner) {
-      return `<div class="pick-row${isMe ? ' me' : ''}">
-        <span class="pick-row-name">${esc(name)}</span>
-        <span class="pick-row-no-pick">—</span>
+    if (!pk?.pick_winner) {
+      return `<div class="pd-pick-row${isMe ? ' me' : ''}">
+        <span class="pd-pick-name">${esc(name)}</span>
+        <span class="pd-pick-none">—</span>
       </div>`;
     }
 
-    const scoreStr = pk.pick_score1 != null ? `${pk.pick_score1}-${pk.pick_score2}` : '';
     const isCorrect = pk.pick_winner === match.winner;
-    const ptsHtml = match.status === 'finished' && pk.scored
+    const isPerfect = isCorrect && pk.pick_score1 === match.score1 && pk.pick_score2 === match.score2;
+    const scoreStr = pk.pick_score1 != null ? `${pk.pick_score1}-${pk.pick_score2}` : '';
+    const color = isPerfect ? 'var(--win)' : isCorrect ? 'var(--blue)' : 'var(--muted2)';
+    const ptsHtml = pk.scored
       ? (pk.points > 0
-          ? `<span class="pick-row-pts">+${pk.points}pts</span>`
-          : `<span class="pick-row-pts zero">0pt</span>`)
+          ? `<span class="pd-pick-pts" style="color:var(--gold)">+${pk.points}pts</span>`
+          : `<span class="pd-pick-pts" style="color:var(--muted)">0pt</span>`)
       : '';
 
-    return `<div class="pick-row${isMe ? ' me' : ''}">
-      <span class="pick-row-name">${esc(name)}</span>
-      <span class="pick-row-pick" style="${match.status === 'finished' ? (isCorrect ? 'color:var(--win)' : 'color:var(--muted2)') : ''}">${esc(pk.pick_winner)}</span>
-      ${scoreStr ? `<span class="pick-row-score">${scoreStr}</span>` : ''}
+    return `<div class="pd-pick-row${isMe ? ' me' : ''}">
+      <span class="pd-pick-name">${esc(name)}</span>
+      <span class="pd-pick-team" style="color:${color}">${esc(pk.pick_winner)}</span>
+      ${scoreStr ? `<span class="pd-pick-score">${scoreStr}</span>` : ''}
       ${ptsHtml}
     </div>`;
   });
 
-  content.innerHTML = rows.join('') || '<div style="color:var(--muted);font-size:.75rem">Aucun pronostic encore.</div>';
+  const content = document.getElementById('pd-picks');
+  if (content) content.innerHTML = rows.join('') || '<div class="empty-state">Aucun pronostic.</div>';
 }
 
 // ── Données statiques MSI 2026 ─────────────────────────────────────
@@ -562,7 +629,8 @@ async function renderClassement() {
   container.innerHTML = `
     <div class="leaderboard">
       ${entries.map((e, i) => `
-        <div class="lb-row${e.id === profile.id ? ' me' : ''}">
+        <div class="lb-row clickable${e.id === profile.id ? ' me' : ''}"
+             data-player-id="${esc(e.id)}" data-player-name="${esc(e.name)}">
           <div class="lb-rank ${rankClass(i)}">${rankIcon(i)}</div>
           <div class="lb-info" style="display:flex;align-items:center;gap:.55rem;flex:1">
             ${avatarHtml({ name: e.name, avatar_url: e.avatar_url }, 'avatar-sm')}
@@ -582,80 +650,102 @@ async function renderClassement() {
       `).join('')}
     </div>
   `;
-}
 
-// ── Onglet Long terme ──────────────────────────────────────────────
-function renderLongTerme() {
-  const container = document.getElementById('tab-longterme');
-  const teams = tournament.teams || extractTeamsFromMatches();
-  const isLocked = tournament.long_term_locked || false;
-
-  const PICKS = [
-    { type: 'winner',   label: '🏆 Vainqueur du tournoi',     pts: '10 pts' },
-    { type: 'finalist', label: '🥈 Finaliste',                 pts: '5 pts'  },
-    { type: 'semifinal1', label: '4⃣ Demi-finaliste 1',       pts: '3 pts'  },
-    { type: 'semifinal2', label: '4⃣ Demi-finaliste 2',       pts: '3 pts'  },
-  ];
-
-  container.innerHTML = `
-    <div class="long-term-section">
-      <div class="lt-title">🎯 Pronostics avant le tournoi</div>
-      ${PICKS.map(pk => {
-        const cur = myLtPicks[pk.type]?.value || '';
-        return `
-          <div class="lt-row">
-            <span class="lt-pick-label">${pk.label}</span>
-            ${isLocked
-              ? `<span class="lt-locked-val">${esc(cur) || '—'}</span>`
-              : teams.length > 0
-                ? `<select class="lt-select" data-lt-type="${pk.type}">
-                     <option value="">— Choisir —</option>
-                     ${teams.map(t => `<option value="${esc(t)}"${t === cur ? ' selected' : ''}>${esc(t)}</option>`).join('')}
-                   </select>`
-                : `<input class="lt-select" type="text" data-lt-type="${pk.type}"
-                     placeholder="Nom de l'équipe" value="${esc(cur)}"
-                     style="max-width:160px" />`
-            }
-          </div>`;
-      }).join('')}
-
-      <div class="lt-pts-info">
-        💡 Ces pronostics se verrouillent au lancement du tournoi.<br>
-        Vainqueur exact : <b>10 pts</b> · Finaliste : <b>5 pts</b> · Demi-finaliste : <b>3 pts</b>
-      </div>
-    </div>
-
-    ${renderAllLongTermPicks()}
-  `;
-
-  // Handlers
-  container.querySelectorAll('[data-lt-type]').forEach(el => {
-    const save = async () => {
-      const value = el.value.trim();
-      if (!value) return;
-      await saveLongTermPick(profile.id, TOURNAMENT_ID, el.dataset.ltType, value);
-      myLtPicks[el.dataset.ltType] = { ...myLtPicks[el.dataset.ltType], value };
-      showToast(`✓ ${value} enregistré`);
-    };
-    if (el.tagName === 'SELECT') {
-      el.addEventListener('change', save);
-    } else {
-      el.addEventListener('blur', save);
-      el.addEventListener('keydown', e => { if (e.key === 'Enter') save(); });
-    }
+  container.querySelectorAll('.lb-row.clickable').forEach(row => {
+    row.addEventListener('click', () => {
+      showPlayerBracket(row.dataset.playerId, row.dataset.playerName);
+    });
   });
 }
 
-function renderAllLongTermPicks() {
-  // Afficher un résumé des pronostics long terme de tous
-  // (chargé en lazy — pour l'instant juste un placeholder)
-  return `
-    <div style="margin-top:1.1rem">
-      <div class="section-label">Pronostics des participants</div>
-      <div id="all-lt-picks"><div class="empty-state" style="padding:.5rem 0">Chargement…</div></div>
+// ── Player Bracket Modal ──────────────────────────────────────────
+async function showPlayerBracket(playerId, playerName) {
+  const overlay = document.createElement('div');
+  overlay.className = 'player-bracket-overlay';
+  overlay.innerHTML = `
+    <div class="player-bracket-modal">
+      <div class="pbm-header">
+        <div class="pbm-title">🏆 Bracket de ${esc(playerName)}</div>
+        <button class="pbm-close" id="pbm-close">Fermer</button>
+      </div>
+      <div class="pbm-legend">
+        <div class="pbm-legend-item"><div class="pbm-legend-dot" style="background:var(--win)"></div> Score exact (+5pts)</div>
+        <div class="pbm-legend-item"><div class="pbm-legend-dot" style="background:var(--blue)"></div> Bon gagnant (+3pts)</div>
+        <div class="pbm-legend-item"><div class="pbm-legend-dot" style="background:var(--loss)"></div> Mauvais gagnant (0pt)</div>
+        <div class="pbm-legend-item"><div class="pbm-legend-dot" style="background:var(--accent)"></div> Pick non encore scoré</div>
+      </div>
+      <div id="pbm-content"><div class="empty-state">Chargement…</div></div>
     </div>
   `;
-  // Note : chargé dans setupLongTermAllPicks()
+  document.body.appendChild(overlay);
+
+  document.getElementById('pbm-close').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+  const playerPicks = await import('./db.js').then(m => m.getPicksByTournament(playerId, TOURNAMENT_ID));
+
+  const byId = {};
+  matches.forEach(m => { byId[m.id] = m; });
+
+  const content = document.getElementById('pbm-content');
+  content.innerHTML = `
+    ${renderBracketStageWithPicks('Stage 1 — Play-In', PLAY_IN_ROUNDS, byId, playerPicks)}
+    ${renderBracketStageWithPicks('Stage 2 — Bracket', BRACKET_ROUNDS, byId, playerPicks)}
+  `;
+}
+
+function renderBracketStageWithPicks(title, rounds, byId, playerPicks) {
+  return `
+    <div class="bk-stage">
+      <div class="bk-stage-title">${title}</div>
+      <div class="bk-rounds">
+        ${rounds.map(r => `
+          <div class="bk-col">
+            <div class="bk-col-label">${r.label}</div>
+            ${r.upper.length > 0 ? `<div class="bk-section">${r.upper.map(id => renderBkMatchWithPicks(byId[id], playerPicks)).join('')}</div>` : ''}
+            ${r.lower.length > 0 ? `<div class="bk-section bk-lower"><div class="bk-lower-tag">Losers'</div>${r.lower.map(id => renderBkMatchWithPicks(byId[id], playerPicks)).join('')}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderBkMatchWithPicks(m, playerPicks) {
+  if (!m) return '<div class="bk-match bk-empty"></div>';
+  const t1win = m.status === 'finished' && m.winner === m.team1;
+  const t2win = m.status === 'finished' && m.winner === m.team2;
+  const pick = playerPicks[m.id];
+
+  let pickClass = '';
+  let pickBadge = '';
+
+  if (pick?.pick_winner) {
+    if (m.status === 'finished' && pick.scored) {
+      if (pick.points >= 5) { pickClass = 'pick-perfect'; pickBadge = `<span class="bk-pick-badge perfect">+5</span>`; }
+      else if (pick.points >= 3) { pickClass = 'pick-correct'; pickBadge = `<span class="bk-pick-badge correct">+3</span>`; }
+      else { pickClass = 'pick-wrong'; pickBadge = `<span class="bk-pick-badge wrong">0</span>`; }
+    } else if (m.status !== 'finished') {
+      pickClass = 'pick-pending';
+      pickBadge = `<span class="bk-pick-badge pending">${esc(pick.pick_winner)}</span>`;
+    }
+  }
+
+  return `
+    <div class="bk-match${m.status === 'finished' ? ' done' : ''} ${pickClass}">
+      <div class="bk-team${t1win ? ' win' : t2win ? ' lose' : ''}">
+        ${teamLogo(m.team1, 16)}
+        <span class="bk-team-name">${esc(m.team1 || 'TBD')}</span>
+        ${m.status === 'finished' ? `<span class="bk-score">${m.score1}</span>` : ''}
+      </div>
+      <div class="bk-team${t2win ? ' win' : t1win ? ' lose' : ''}">
+        ${teamLogo(m.team2, 16)}
+        <span class="bk-team-name">${esc(m.team2 || 'TBD')}</span>
+        ${m.status === 'finished' ? `<span class="bk-score">${m.score2}</span>` : ''}
+      </div>
+      ${pickBadge ? `<div style="text-align:center;padding:.15rem 0">${pickBadge}</div>` : ''}
+    </div>
+  `;
 }
 
 // ── Onglet Bracket ────────────────────────────────────────────────
@@ -1075,26 +1165,21 @@ function startCountdown(secs) {
 
 // ── Handlers picks ─────────────────────────────────────────────────
 function setupMatchHandlers() {
-  // Clic sur .match-main → expand/collapse pick & all-picks
+  // Clic sur .match-main → drawer pour matchs terminés, expand/collapse sinon
   document.querySelectorAll('.match-main').forEach(el => {
     el.addEventListener('click', () => {
       const card = el.closest('.match-card');
       const matchId = card.dataset.matchId;
-      const isLocked = card.dataset.locked === '1';
+      const match = matches.find(m => m.id === matchId);
 
-      card.classList.toggle('expanded');
-
-      // Lazy-load all picks
-      if (card.classList.contains('expanded') && isLocked) {
-        const match = matches.find(m => m.id === matchId);
-        if (match) loadAllPicks(match);
+      if (match?.status === 'finished') {
+        openPicksDrawer(match);
+        return;
       }
 
-      // Show/hide pick & all-picks sections
+      card.classList.toggle('expanded');
       const pickEl = card.querySelector('.match-pick');
-      const apEl   = card.querySelector('.all-picks');
       if (pickEl) pickEl.style.display = card.classList.contains('expanded') ? 'block' : 'none';
-      if (apEl)   apEl.style.display   = card.classList.contains('expanded') ? 'block' : 'none';
     });
   });
 

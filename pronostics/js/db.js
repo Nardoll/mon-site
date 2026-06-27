@@ -285,6 +285,25 @@ function matchKey(t1, t2) {
   return [t1, t2].sort().join('__');
 }
 
+// ── Player breakdown ───────────────────────────────────────────────
+export async function getPlayerBreakdown(profileId) {
+  const snap = await getDocs(query(
+    collection(db, 'prono_picks'),
+    where('profile_id', '==', profileId),
+    where('scored', '==', true)
+  ));
+  const byTournament = {};
+  snap.docs.forEach(d => {
+    const p = d.data();
+    const tid = p.tournament_id;
+    if (!byTournament[tid]) byTournament[tid] = { points: 0, correct: 0, perfect: 0 };
+    byTournament[tid].points += p.points || 0;
+    if ((p.points || 0) >= 3) byTournament[tid].correct++;
+    if ((p.points || 0) >= 5) byTournament[tid].perfect++;
+  });
+  return byTournament;
+}
+
 // ── Admin ─────────────────────────────────────────────────────────
 export async function updateMatch(matchId, data) {
   await fsSet('prono_matches', matchId, data);

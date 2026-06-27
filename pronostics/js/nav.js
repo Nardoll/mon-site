@@ -23,16 +23,12 @@ export function avatarHtml(profile, sizeClass = '') {
   return `<div class="avatar ${sizeClass}" style="background:${color}" title="${esc(profile.name)}">${initial}</div>`;
 }
 
-// ── Top bar ────────────────────────────────────────────────────────
+// ── Top bar (utilisateur uniquement, sans logo) ────────────────────
 export function injectTopBar(profile) {
   const bar = document.createElement('header');
   bar.className = 'top-bar';
   bar.innerHTML = `
-    <a href="/pronostics/" class="top-logo">
-      <span class="top-logo-icon">⚡</span>
-      <span class="top-logo-text">Pronostics</span>
-    </a>
-    <div class="top-user" style="gap:.55rem">
+    <div class="top-user" style="gap:.55rem;margin-left:auto">
       <div id="top-avatar" style="cursor:pointer" title="Modifier le profil">
         ${avatarHtml(profile, '')}
       </div>
@@ -52,6 +48,36 @@ export function injectTopBar(profile) {
   document.getElementById('top-avatar').addEventListener('click', () => {
     showAvatarModal(profile);
   });
+}
+
+// ── Sidebar gauche fixe ────────────────────────────────────────────
+export function injectSidebar(profile, active) {
+  const sidebar = document.createElement('aside');
+  sidebar.className = 'sidebar';
+  sidebar.innerHTML = `
+    <div class="sb-header">
+      <a href="/pronostics/" class="sb-logo">
+        <span class="sb-logo-icon">⚡</span>
+        <span class="sb-logo-text">Pronostics</span>
+      </a>
+    </div>
+    <nav class="sb-nav">
+      <a href="/pronostics/" class="sb-link${active === 'accueil' ? ' active' : ''}">
+        🏆 Tournois
+      </a>
+      <a href="/pronostics/classement.html" class="sb-link${active === 'classement' ? ' active' : ''}">
+        📊 Classement général
+      </a>
+    </nav>
+    <div class="sb-footer">
+      <a href="/" class="sb-home" title="Accueil du site">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+        </svg>
+      </a>
+    </div>
+  `;
+  document.body.prepend(sidebar);
 }
 
 // ── Avatar edit modal ──────────────────────────────────────────────
@@ -110,33 +136,6 @@ function showAvatarModal(profile) {
   });
 
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-}
-
-// ── Bottom nav + home button ───────────────────────────────────────
-export function injectBottomNav(active) {
-  const items = [
-    { href: '/pronostics/',               icon: '🏠', label: 'Accueil',    key: 'accueil' },
-    { href: '/pronostics/classement.html', icon: '🏆', label: 'Classement', key: 'classement' },
-  ];
-  const nav = document.createElement('nav');
-  nav.className = 'bottom-nav';
-  nav.innerHTML = items.map(i => `
-    <a href="${i.href}" class="nav-item${i.key === active ? ' active' : ''}">
-      <span class="nav-icon">${i.icon}</span>
-      <span class="nav-label">${i.label}</span>
-    </a>
-  `).join('');
-  document.body.appendChild(nav);
-
-  // Bouton retour accueil site (bas gauche)
-  const homeBtn = document.createElement('a');
-  homeBtn.href  = '/';
-  homeBtn.className = 'home-btn';
-  homeBtn.title = 'Accueil du site';
-  homeBtn.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-  </svg>`;
-  document.body.appendChild(homeBtn);
 }
 
 // ── Toast ──────────────────────────────────────────────────────────

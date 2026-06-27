@@ -1,10 +1,10 @@
-import { requireProfile }                      from './auth.js';
-import { injectTopBar, injectBottomNav, avatarHtml } from './nav.js';
-import { getTournaments, getLeaderboard }         from './db.js';
+import { requireProfile }                              from './auth.js';
+import { injectTopBar, injectSidebar, avatarHtml }     from './nav.js';
+import { getTournaments, getLeaderboard, getPlayerBreakdown } from './db.js';
 
 requireProfile(async (profile) => {
   injectTopBar(profile);
-  injectBottomNav('classement');
+  injectSidebar(profile, 'classement');
   await renderClassement(profile);
 });
 
@@ -13,6 +13,13 @@ async function renderClassement(profile) {
   main.innerHTML = `
     <div class="page-title">Classement général</div>
     <div class="page-subtitle">Tous les tournois confondus.</div>
+    <div class="pts-legend">
+      <div class="pts-legend-title">Comment sont calculés les points</div>
+      <div class="pts-legend-row"><span class="pts-badge">5 pts</span> Score exact (bon gagnant + bon score)</div>
+      <div class="pts-legend-row"><span class="pts-badge">3 pts</span> Bon gagnant (mauvais score)</div>
+      <div class="pts-legend-row"><span class="pts-badge">1 pt</span> Consolation BO5 (perdant ≥ 2 maps)</div>
+      <div class="pts-legend-row"><span class="pts-badge">0 pt</span> Mauvais gagnant</div>
+    </div>
     <div id="filter-wrap"></div>
     <div id="lb-wrap"><div class="empty-state">Chargement…</div></div>
   `;
@@ -20,11 +27,11 @@ async function renderClassement(profile) {
   const tournaments = await getTournaments();
   const withData = tournaments.filter(t => t.status !== 'upcoming');
 
-  renderFilters(withData, profile);
-  await showLeaderboard(null, profile);
+  renderFilters(withData, profile, tournaments);
+  await showLeaderboard(null, profile, tournaments);
 }
 
-function renderFilters(tournaments, profile) {
+function renderFilters(tournaments, profile, allTournaments) {
   const wrap = document.getElementById('filter-wrap');
   if (tournaments.length <= 1) return;
 
@@ -41,21 +48,16 @@ function renderFilters(tournaments, profile) {
     btn.addEventListener('click', async () => {
       wrap.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      await showLeaderboard(btn.dataset.id || null, profile);
+      await showLeaderboard(btn.dataset.id || null, profile, allTournaments);
     });
   });
 }
 
-async function showLeaderboard(tournamentId, profile) {
+async function showLeaderboard(tournamentId, profile, tournaments) {
   const wrap = document.getElementById('lb-wrap');
   wrap.innerHTML = '<div class="empty-state">Chargement…</div>';
 
   const entries = await getLeaderboard(tournamentId);
-
-  if (entries.every(e => e.points === 0)) {
-    wrap.innerHTML = '<div class="empty-state">Aucun point encore. Les scores apparaîtront après les premiers matchs.</div>';
-    return;
-  }
 
   const rankClass = i => ['gold','silver','bronze'][i] || '';
   const rankIcon  = i => ['🥇','🥈','🥉'][i] || String(i + 1);
@@ -63,7 +65,8 @@ async function showLeaderboard(tournamentId, profile) {
   wrap.innerHTML = `
     <div class="leaderboard">
       ${entries.map((e, i) => `
-        <div class="lb-row${e.id === profile.id ? ' me' : ''}">
+        <div class="lb-row clickable${e.id === profile.id ? ' me' : ''}"
+             data-player-id="${esc(e.id)}" data-player-name="${esc(e.name)}">
           <div class="lb-rank ${rankClass(i)}">${rankIcon(i)}</div>
           <div class="lb-info" style="display:flex;align-items:center;gap:.55rem;flex:1">
             ${avatarHtml({ name: e.name, avatar_url: e.avatar_url }, 'avatar-sm')}
@@ -83,8 +86,58 @@ async function showLeaderboard(tournamentId, profile) {
       `).join('')}
     </div>
   `;
+
+  wrap.querySelectorAll('.lb-row.clickable').forEach(row => {
+    row.addEventListener('click', () => {
+      showPlayerBreakdown(row.dataset.playerId, row.dataset.playerName, tournaments);
+    });
+  });
+}
+
+async function showPlayerBreakdown(playerId, playerName, tournaments) {
+  const overlay = document.createElement('div');
+  overlay.className = 'player-bd-overlay';
+  overlay.innerHTML = `
+    <div class="player-bd-modal">
+      <div class="player-bd-header">
+        <div class="player-bd-title">${esc(playerName)}</div>
+        <button class="player-bd-close" id="pbd-close">Fermer</button>
+      </div>
+      <div id="pbd-content"><div class="empty-state">Chargement…</div></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  document.getElementById('pbd-close').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+  const breakdown = await getPlayerBreakdown(playerId);
+  const content = document.getElementById('pbd-content');
+
+  const rows = tournaments
+    .filter(t => t.status !== 'upcoming')
+    .map(t => {
+      const d = breakdown[t.id] || { points: 0, correct: 0, perfect: 0 };
+      return `
+        <div class="player-bd-row">
+          <span class="player-bd-tour">${esc(t.short_name || t.name)}</span>
+          <span class="player-bd-detail">${d.correct} bon${d.correct !== 1 ? 's' : ''} · ${d.perfect} parfait${d.perfect !== 1 ? 's' : ''}</span>
+          <span class="player-bd-pts">${d.points} pts</span>
+        </div>
+      `;
+    });
+
+  const total = Object.values(breakdown).reduce((s, d) => s + (d.points || 0), 0);
+
+  content.innerHTML = `
+    ${rows.join('')}
+    <div class="player-bd-total">
+      <span>Total</span>
+      <span style="color:var(--gold)">${total} pts</span>
+    </div>
+  `;
 }
 
 function esc(s) {
-  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }

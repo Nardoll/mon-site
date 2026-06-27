@@ -1324,6 +1324,23 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 - `lis-tes-ratures/exposes/1984/` : nouveau dossier — présentation HTML standalone de Dorian sur 1984/Orwell (21 slides, 15 images). Accessible à `/lis-tes-ratures/exposes/1984/`. **Action Tom :** dans la fiche réunion 1984, cliquer Modifier → renseigner "Lien exposé" : `/lis-tes-ratures/exposes/1984/`.
 - `lis-tes-ratures/reunions.html` + `sondage-dispo.html` : CSS correspondants (état vide, classement, `.video-preview`, `.expose-preview`).
 
+### 2026-06-28 (suite)
+**Pronostics LoL Esport — Sidebar + Picks drawer + Player bracket + UX**
+
+`pronostics/` — refonte UX complète en 6 fichiers :
+
+- **`pronostics/js/nav.js`** : suppression de `injectBottomNav`. Ajout de `injectSidebar(profile, active)` — sidebar gauche fixe 210px avec logo ⚡ Pronostics, liens "Tournois" et "Classement général", icône 🏠 en bas pour revenir au site. `injectTopBar` épuré : seulement `.top-user` (avatar + nom + logout), aligné à droite.
+
+- **`pronostics/css/style.css`** : ajout de `--sidebar-w: 210px`. `body` : padding-left remplace padding-bottom. `.top-bar` : `left: var(--sidebar-w)`. Suppression des styles `.bottom-nav` / `.home-btn`. Nouveaux styles : `.sidebar`, `.sb-*`, `.btn-sync-icon` (icône rotation + spinning), `.picks-drawer` (panneau droit slide-in), `.player-bracket-overlay` + `.pbm-*` (modal bracket joueur), `.pts-legend` + `.pts-badge`, `.lb-row.clickable`, `.player-bd-overlay` + `.player-bd-*`.
+
+- **`pronostics/js/accueil.js`** : `injectSidebar(profile, 'accueil')` à la place de `injectBottomNav`.
+
+- **`pronostics/js/classement.js`** : `injectSidebar(profile, 'classement')`. Suppression du guard "tous à 0 pts → message vide". Bloc `.pts-legend` avec explication du barème (5pts/3pts/1pt/0pt). Lignes lb-row `clickable` → clic ouvre modal `showPlayerBreakdown` : points par tournoi + total.
+
+- **`pronostics/js/db.js`** : ajout de `getPlayerBreakdown(profileId)` — agrège tous les picks scorés par tournoi pour un joueur.
+
+- **`pronostics/js/tournoi.js`** : `injectSidebar(profile, null)`. Onglet "Long terme" supprimé. Sync bar → icône `btn-sync-icon` dans la `.top-bar` (spinning + cooldown). Matchs terminés : clic → `openPicksDrawer(match)` (panneau droit). Classement tournoi : clic joueur → `showPlayerBracket` (modal bracket coloré).
+
 ### 2026-06-21
 **Lis tes ratures — Sondage de disponibilité (Framadate-style) + mode test**
 
