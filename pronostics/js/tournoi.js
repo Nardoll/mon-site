@@ -418,11 +418,6 @@ async function renderClassement() {
   const rankClass = i => ['gold','silver','bronze'][i] || '';
   const rankIcon  = i => ['🥇','🥈','🥉'][i] || String(i + 1);
 
-  if (entries.every(e => e.points === 0)) {
-    container.innerHTML = '<div class="empty-state">Aucun point encore. Lance-toi !</div>';
-    return;
-  }
-
   container.innerHTML = `
     <div class="leaderboard">
       ${entries.map((e, i) => `
