@@ -7,12 +7,44 @@
 // ─────────────────────────────────────────────────────────────────────
 import { handleEnrich } from "./api/enrich.js";
 
+async function handleLeaguepedia(request) {
+  const url = new URL(request.url);
+  const key = url.searchParams.get("key");
+  if (!key) return new Response(JSON.stringify({ error: "missing key" }), { status: 400 });
+
+  const lpUrl = [
+    "https://lol.fandom.com/api.php?action=cargoquery",
+    "tables=MatchSchedule",
+    "fields=Team1,Team2,DateTime+UTC,BestOf,Winner,Team1Score,Team2Score,Tab,Round",
+    `where=OverviewPage%3D"${encodeURIComponent(key)}"`,
+    "order_by=DateTime+UTC+ASC",
+    "limit=500",
+    "format=json"
+  ].join("&");
+
+  const res = await fetch(lpUrl, {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; pronostics-bot/1.0)" }
+  });
+  const data = await res.text();
+  return new Response(data, {
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "no-store"
+    }
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/enrich") {
       return handleEnrich(request, env);
+    }
+
+    if (url.pathname === "/api/leaguepedia") {
+      return handleLeaguepedia(request);
     }
 
     // Tout le reste : fichiers statiques (index.html, /lis-tes-ratures/…, etc.)

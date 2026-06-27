@@ -196,16 +196,7 @@ export async function syncTournament(tournamentId) {
   if (!tour.leaguepedia_key) throw new Error('Clé Leaguepedia manquante');
 
   const key = tour.leaguepedia_key;
-  const url = [
-    'https://lol.fandom.com/api.php?action=cargoquery',
-    'tables=MatchSchedule',
-    'fields=Team1,Team2,DateTime+UTC,BestOf,Winner,Team1Score,Team2Score,Tab,Round',
-    `where=OverviewPage%3D"${encodeURIComponent(key)}"`,
-    'order_by=DateTime+UTC+ASC',
-    'limit=500',
-    'format=json',
-    'origin=*'
-  ].join('&');
+  const url = `/api/leaguepedia?key=${encodeURIComponent(key)}`;
 
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
