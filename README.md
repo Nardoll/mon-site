@@ -7,7 +7,7 @@
 ## ⚠️ Notes importantes pour Claude Code
 
 > **Push sans confirmation.** Tom a demandé de pusher directement après chaque modification, sans demander son feu vert.
-> Le site est hébergé sur **Cloudflare Worker**. Le déploiement **n'est pas automatique** — lancer `npx wrangler deploy` manuellement après chaque push.
+> Le site est hébergé sur **Cloudflare Worker**. Le déploiement est **automatique après chaque push** sur `main` — pas besoin de `npx wrangler deploy` manuellement.
 
 > **Mettre à jour ce README à chaque modification significative.** À la fin de chaque session de développement, Claude doit documenter les changements effectués dans la section "Historique des modifications" ci-dessous. C'est une consigne permanente à appliquer sans que Tom ait besoin de le rappeler.
 
