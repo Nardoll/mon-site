@@ -276,6 +276,10 @@ export async function updateMatch(matchId, data) {
   await fsSet('prono_matches', matchId, data);
 }
 
+export async function updateTournament(id, data) {
+  await fsSet('prono_tournaments', id, data);
+}
+
 // ── Classement ────────────────────────────────────────────────────
 export async function getLeaderboard(tournamentId) {
   const profiles = await getProfiles();

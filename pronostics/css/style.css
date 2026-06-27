@@ -1190,6 +1190,50 @@ body {
   flex-shrink: 0;
 }
 .bk-team.win .bk-score { color: var(--win); }
+.bk-clickable { cursor: pointer; }
+.bk-clickable:hover { border-color: var(--accent); background: rgba(249,115,22,.04); }
+.bk-pick-indicator {
+  position: absolute; top: 3px; right: 4px;
+  font-size: .6rem; color: var(--win); font-weight: 800;
+}
+
+/* ── PICK MODAL ──────────────────────────── */
+.pick-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.65);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300;
+  padding: 1rem;
+}
+.pick-modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 1.25rem 1.4rem;
+  width: 100%; max-width: 340px;
+  display: flex; flex-direction: column; gap: .65rem;
+}
+.pick-modal-title {
+  font-size: .7rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--muted2); text-align: center;
+}
+.pick-modal-match {
+  display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  padding: .5rem 0;
+}
+.pick-modal-team {
+  display: flex; align-items: center; gap: .4rem;
+  font-size: .82rem; font-weight: 600;
+}
+.pick-modal-close {
+  margin-top: .25rem;
+  padding: .5rem;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 7px; color: var(--muted2); font-size: .78rem;
+  cursor: pointer; font-family: inherit; width: 100%;
+}
+.pick-modal-close:hover { border-color: var(--muted); color: var(--text); }
 
 /* ── ADMIN MATCHES ───────────────────────── */
 .admin-section { display: flex; flex-direction: column; gap: .5rem; }
@@ -1238,6 +1282,10 @@ body {
 }
 .admin-save-btn:hover { background: rgba(96,165,250,.25); }
 .admin-save-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.admin-logos-list { display: flex; flex-direction: column; gap: .5rem; }
+.admin-logo-row { display: flex; align-items: center; gap: .65rem; }
+.admin-logo-preview { width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 
 /* ── RESPONSIVE ──────────────────────────── */
 @media (max-width: 480px) {

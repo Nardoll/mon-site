@@ -4,26 +4,12 @@ import {
   getTournament, getMatchesByTournament, getPicksByTournament,
   getAllPicksByMatch, getProfiles, savePick,
   syncTournament, getLongTermPicks, saveLongTermPick,
-  getLeaderboard, updateMatch
+  getLeaderboard, updateMatch, updateTournament
 } from './db.js';
 
-// ── Logos équipes ──────────────────────────────────────────────────
-const TEAM_LOGOS = {
-  'T1':                   'https://liquipedia.net/commons/images/e/e4/T1_2019_allmode.png',
-  'Hanwha Life Esports':  'https://liquipedia.net/commons/images/1/10/Hanwha_Life_Esports_darkmode.png',
-  'Bilibili Gaming':      'https://liquipedia.net/commons/images/5/50/Bilibili_Gaming_2021_allmode.png',
-  'Top Esports':          'https://liquipedia.net/commons/images/e/e0/Top_Esports_allmode.png',
-  'G2 Esports':           'https://liquipedia.net/commons/images/c/cd/G2_Esports_2019_darkmode.png',
-  'Karmine Corp':         'https://liquipedia.net/commons/images/d/d1/Karmine_Corp_allmode.png',
-  'LYON':                 'https://liquipedia.net/commons/images/a/ae/LYON_2025_allmode.png',
-  'Team Liquid':          'https://liquipedia.net/commons/images/5/59/Team_Liquid_2024_darkmode.png',
-  'Secret Whales':        'https://liquipedia.net/commons/images/5/58/Secret_Whales_darkmode.png',
-  'Deep Cross Gaming':    'https://liquipedia.net/commons/images/a/af/Deep_Cross_Gaming_darkmode.png',
-  'FURIA':                'https://liquipedia.net/commons/images/a/aa/FURIA_Esports_allmode.png',
-};
-
 function teamLogo(name, size = 22) {
-  const src = TEAM_LOGOS[name];
+  const logos = tournament?.team_logos || {};
+  const src = logos[name];
   if (!src) return '';
   return `<img src="${src}" alt="${esc(name)}" class="team-logo" style="width:${size}px;height:${size}px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">`;
 }
@@ -411,7 +397,8 @@ function extractTeamsFromMatches() {
 function renderTeamCard(teamName) {
   const color   = avatarColor(teamName);
   const initial = teamName[0]?.toUpperCase() || '?';
-  const logo    = TEAM_LOGOS[teamName];
+  const logos   = tournament?.team_logos || {};
+  const logo    = logos[teamName];
   return `
     <div class="team-card">
       ${logo
@@ -545,6 +532,8 @@ function renderBracket() {
     ${renderBracketStage('Stage 1 — Play-In', PLAY_IN_ROUNDS, byId)}
     ${renderBracketStage('Stage 2 — Bracket', BRACKET_ROUNDS, byId)}
   `;
+
+  setupBracketHandlers();
 }
 
 function renderBracketStage(title, rounds, byId) {
@@ -573,10 +562,16 @@ function renderBracketStage(title, rounds, byId) {
 
 function renderBkMatch(m) {
   if (!m) return '<div class="bk-match bk-empty"></div>';
-  const t1win = m.status === 'finished' && m.winner === m.team1;
-  const t2win = m.status === 'finished' && m.winner === m.team2;
+  const t1win  = m.status === 'finished' && m.winner === m.team1;
+  const t2win  = m.status === 'finished' && m.winner === m.team2;
+  const locked = isMatchLocked(m);
+  const pick   = myPicks[m.id];
+  const hasTbd = m.team1 === 'TBD' || m.team2 === 'TBD';
+  const clickable = !locked && !hasTbd;
+
   return `
-    <div class="bk-match${m.status === 'finished' ? ' done' : ''}">
+    <div class="bk-match${m.status === 'finished' ? ' done' : ''}${clickable ? ' bk-clickable' : ''}"
+         ${clickable ? `data-bk-match="${m.id}"` : ''}>
       <div class="bk-team${t1win ? ' win' : t2win ? ' lose' : ''}">
         ${teamLogo(m.team1, 16)}
         <span class="bk-team-name">${esc(m.team1 || 'TBD')}</span>
@@ -587,8 +582,116 @@ function renderBkMatch(m) {
         <span class="bk-team-name">${esc(m.team2 || 'TBD')}</span>
         ${m.status === 'finished' ? `<span class="bk-score">${m.score2}</span>` : ''}
       </div>
+      ${pick && !locked ? `<div class="bk-pick-indicator" title="Ton pick : ${esc(pick.pick_winner)}">✓</div>` : ''}
     </div>
   `;
+}
+
+function setupBracketHandlers() {
+  document.querySelectorAll('[data-bk-match]').forEach(el => {
+    el.addEventListener('click', () => {
+      const m = matches.find(x => x.id === el.dataset.bkMatch);
+      if (m) openPickModal(m);
+    });
+  });
+}
+
+function openPickModal(match) {
+  const pick    = myPicks[match.id];
+  const bo      = match.best_of || 5;
+  const maxWins = Math.ceil(bo / 2);
+  const opts    = getScoreOpts(maxWins);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'pick-modal-overlay';
+
+  const pickedWinner = pick?.pick_winner || null;
+
+  overlay.innerHTML = `
+    <div class="pick-modal">
+      <div class="pick-modal-title">Pronostic</div>
+      <div class="pick-modal-match">
+        <div class="pick-modal-team">
+          ${teamLogo(match.team1, 28)}
+          <span>${esc(match.team1)}</span>
+        </div>
+        <span style="color:var(--muted);font-size:.75rem">BO${bo}</span>
+        <div class="pick-modal-team">
+          <span>${esc(match.team2)}</span>
+          ${teamLogo(match.team2, 28)}
+        </div>
+      </div>
+      <div class="pick-label">Gagnant</div>
+      <div class="pick-teams" style="margin-bottom:.75rem">
+        <button class="pick-team-btn${pickedWinner === match.team1 ? ' selected' : ''}" data-modal-team="${escAttr(match.team1)}">${esc(match.team1)}</button>
+        <button class="pick-team-btn${pickedWinner === match.team2 ? ' selected' : ''}" data-modal-team="${escAttr(match.team2)}">${esc(match.team2)}</button>
+      </div>
+      <div class="pick-scores" id="modal-scores" style="${!pickedWinner ? 'opacity:.35;pointer-events:none' : ''}">
+        <span class="pick-score-label">Score :</span>
+        <div class="score-opts" id="modal-score-opts">
+          ${opts.map(([w, l]) => {
+            const s1 = pickedWinner === match.team1 ? w : l;
+            const s2 = pickedWinner === match.team1 ? l : w;
+            const isSel = pick?.pick_score1 === s1 && pick?.pick_score2 === s2;
+            return `<button class="score-btn${isSel ? ' selected' : ''}" data-ms1="${s1}" data-ms2="${s2}">${w}-${l}</button>`;
+          }).join('')}
+        </div>
+      </div>
+      <button class="pick-modal-close">Fermer</button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  let currentWinner = pickedWinner;
+
+  overlay.querySelectorAll('[data-modal-team]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      currentWinner = btn.dataset.modalTeam;
+      overlay.querySelectorAll('[data-modal-team]').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+
+      const scoresEl = document.getElementById('modal-scores');
+      if (scoresEl) { scoresEl.style.opacity = '1'; scoresEl.style.pointerEvents = ''; }
+
+      // Régénérer les score-btns
+      const optsEl = document.getElementById('modal-score-opts');
+      if (optsEl) {
+        optsEl.innerHTML = opts.map(([w, l]) => {
+          const s1 = currentWinner === match.team1 ? w : l;
+          const s2 = currentWinner === match.team1 ? l : w;
+          return `<button class="score-btn" data-ms1="${s1}" data-ms2="${s2}">${w}-${l}</button>`;
+        }).join('');
+        optsEl.querySelectorAll('.score-btn').forEach(sb => attachModalScoreBtn(sb, match, () => currentWinner));
+      }
+
+      await savePick(profile.id, match.id, TOURNAMENT_ID, currentWinner, null, null);
+      myPicks[match.id] = { ...myPicks[match.id], pick_winner: currentWinner, pick_score1: null, pick_score2: null };
+      showToast(`✓ ${currentWinner}`);
+    });
+  });
+
+  overlay.querySelectorAll('.score-btn').forEach(sb => attachModalScoreBtn(sb, match, () => currentWinner));
+
+  overlay.querySelector('.pick-modal-close').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
+function attachModalScoreBtn(btn, match, getWinner) {
+  btn.addEventListener('click', async e => {
+    e.stopPropagation();
+    const s1 = parseInt(btn.dataset.ms1);
+    const s2 = parseInt(btn.dataset.ms2);
+    const winner = getWinner();
+    if (!winner) return;
+
+    btn.closest('.score-opts')?.querySelectorAll('.score-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+
+    await savePick(profile.id, match.id, TOURNAMENT_ID, winner, s1, s2);
+    myPicks[match.id] = { ...myPicks[match.id], pick_winner: winner, pick_score1: s1, pick_score2: s2 };
+    showToast(`✓ ${s1}-${s2}`);
+  });
 }
 
 // ── Onglet Admin ───────────────────────────────────────────────────
@@ -598,14 +701,58 @@ function renderAdmin() {
 
   const teams = tournament.teams || [];
 
+  const logos = tournament.team_logos || {};
+
   container.innerHTML = `
     <div class="admin-section">
+      <div class="admin-title">🖼️ Logos des équipes</div>
+      <div class="admin-logos-list">
+        ${teams.map(t => `
+          <div class="admin-logo-row">
+            <div class="admin-logo-preview">
+              ${logos[t]
+                ? `<img src="${logos[t]}" alt="${esc(t)}" style="width:32px;height:32px;object-fit:contain" onerror="this.style.display='none'">`
+                : `<div style="width:32px;height:32px;border-radius:50%;background:${avatarColor(t)};display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:#fff">${t[0]}</div>`
+              }
+            </div>
+            <span style="font-size:.8rem;font-weight:600;min-width:130px">${esc(t)}</span>
+            <input class="admin-logo-input" type="url" data-team="${escAttr(t)}"
+              placeholder="https://…" value="${esc(logos[t] || '')}"
+              style="flex:1" />
+          </div>
+        `).join('')}
+      </div>
+      <button class="admin-save-btn" id="btn-save-logos" style="margin-top:.75rem">Sauvegarder les logos</button>
+    </div>
+
+    <div class="admin-section" style="margin-top:1.5rem">
       <div class="admin-title">⚙️ Gestion des matchs</div>
       <div class="admin-list">
         ${matches.map(m => renderAdminMatch(m, teams)).join('')}
       </div>
     </div>
   `;
+
+  // Sauvegarder les logos
+  document.getElementById('btn-save-logos')?.addEventListener('click', async () => {
+    const newLogos = {};
+    container.querySelectorAll('.admin-logo-input').forEach(inp => {
+      const v = inp.value.trim();
+      if (v) newLogos[inp.dataset.team] = v;
+    });
+    const btn = document.getElementById('btn-save-logos');
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      await updateTournament(TOURNAMENT_ID, { team_logos: newLogos });
+      tournament.team_logos = newLogos;
+      showToast('✓ Logos sauvegardés');
+      btn.textContent = '✓';
+      setTimeout(() => { btn.disabled = false; btn.textContent = 'Sauvegarder les logos'; }, 1500);
+    } catch (e) {
+      showToast('Erreur : ' + e.message);
+      btn.disabled = false; btn.textContent = 'Sauvegarder les logos';
+    }
+  });
 
   container.querySelectorAll('.admin-match-form').forEach(form => {
     form.addEventListener('submit', async e => {

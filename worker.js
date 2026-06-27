@@ -59,7 +59,7 @@ export default {
       return handleLeaguepedia(request);
     }
 
-    // Tout le reste : fichiers statiques (index.html, /lis-tes-ratures/…, etc.)
+// Tout le reste : fichiers statiques (index.html, /lis-tes-ratures/…, etc.)
     const res = await env.ASSETS.fetch(request);
 
     // Les pages HTML ne doivent jamais être servies depuis un cache navigateur
