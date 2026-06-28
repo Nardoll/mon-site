@@ -4,7 +4,7 @@ import {
   getTournament, getMatchesByTournament, getPicksByTournament,
   getAllPicksByMatch, getProfiles, savePick,
   syncTournament, getLongTermPicks, saveLongTermPick,
-  getLeaderboard, updateMatch, updateTournament
+  getLeaderboard, updateMatch, updateTournament, scorePicksForMatch
 } from './db.js';
 
 function teamLogo(name, size = 22) {
@@ -804,27 +804,29 @@ function renderBracketStage(title, rounds, byId) {
 
 function renderBkMatch(m) {
   if (!m) return '<div class="bk-match bk-empty"></div>';
-  const t1win  = m.status === 'finished' && m.winner === m.team1;
-  const t2win  = m.status === 'finished' && m.winner === m.team2;
+  const isFinished = m.status === 'finished';
+  const t1win  = isFinished && m.winner === m.team1;
+  const t2win  = isFinished && m.winner === m.team2;
   const locked = isMatchLocked(m);
   const pick   = myPicks[m.id];
   const hasTbd = m.team1 === 'TBD' || m.team2 === 'TBD';
-  const clickable = !locked && !hasTbd;
+  // Terminé → ouvre le drawer picks. Ouvert non-TBD → ouvre modal pick.
+  const clickable = isFinished || (!locked && !hasTbd);
 
   return `
-    <div class="bk-match${m.status === 'finished' ? ' done' : ''}${clickable ? ' bk-clickable' : ''}"
+    <div class="bk-match${isFinished ? ' done' : ''}${clickable ? ' bk-clickable' : ''}"
          ${clickable ? `data-bk-match="${m.id}"` : ''}>
       <div class="bk-team${t1win ? ' win' : t2win ? ' lose' : ''}">
         ${teamLogo(m.team1, 16)}
         <span class="bk-team-name">${esc(m.team1 || 'TBD')}</span>
-        ${m.status === 'finished' ? `<span class="bk-score">${m.score1}</span>` : ''}
+        ${isFinished ? `<span class="bk-score">${m.score1}</span>` : ''}
       </div>
       <div class="bk-team${t2win ? ' win' : t1win ? ' lose' : ''}">
         ${teamLogo(m.team2, 16)}
         <span class="bk-team-name">${esc(m.team2 || 'TBD')}</span>
-        ${m.status === 'finished' ? `<span class="bk-score">${m.score2}</span>` : ''}
+        ${isFinished ? `<span class="bk-score">${m.score2}</span>` : ''}
       </div>
-      ${pick && !locked ? `<div class="bk-pick-indicator" title="Ton pick : ${esc(pick.pick_winner)}">✓</div>` : ''}
+      ${pick && !locked && !isFinished ? `<div class="bk-pick-indicator" title="Ton pick : ${esc(pick.pick_winner)}">✓</div>` : ''}
     </div>
   `;
 }
@@ -833,7 +835,12 @@ function setupBracketHandlers() {
   document.querySelectorAll('[data-bk-match]').forEach(el => {
     el.addEventListener('click', () => {
       const m = matches.find(x => x.id === el.dataset.bkMatch);
-      if (m) openPickModal(m);
+      if (!m) return;
+      if (m.status === 'finished') {
+        openPicksDrawer(m);
+      } else {
+        openPickModal(m);
+      }
     });
   });
 }
@@ -1037,18 +1044,24 @@ function renderAdmin() {
       btn.textContent = '…';
 
       try {
-        await updateMatch(id, {
+        const matchData = {
           team1: team1 || 'TBD',
           team2: team2 || 'TBD',
           winner: winner || null,
           score1: score1 !== '' ? parseInt(score1) : null,
           score2: score2 !== '' ? parseInt(score2) : null,
           status
-        });
+        };
+        await updateMatch(id, matchData);
+        // Scorer les picks si le match est marqué terminé avec un gagnant
+        if (status === 'finished' && winner) {
+          const matchForScoring = { id, ...matchData };
+          await scorePicksForMatch(matchForScoring);
+        }
         // Update local data
         const local = matches.find(m => m.id === id);
-        if (local) Object.assign(local, { team1, team2, winner: winner || null, score1: score1 !== '' ? parseInt(score1) : null, score2: score2 !== '' ? parseInt(score2) : null, status });
-        showToast('✓ Match mis à jour');
+        if (local) Object.assign(local, matchData);
+        showToast('✓ Match mis à jour' + (status === 'finished' && winner ? ' + picks scorés' : ''));
         btn.textContent = '✓ Sauvé';
         setTimeout(() => { btn.disabled = false; btn.textContent = 'Sauvegarder'; }, 1500);
       } catch (err) {
