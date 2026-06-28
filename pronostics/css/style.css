@@ -121,6 +121,38 @@ body {
 
 #nav-sync-slot { display: flex; align-items: center; gap: .5rem; }
 
+#nav-live-wrap { display: flex; align-items: center; gap: .4rem; }
+.nav-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .22em .65em;
+  font: 700 11px 'Rajdhani', sans-serif;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--loss);
+  background: rgba(239,68,68,.1);
+  border: 1px solid rgba(239,68,68,.3);
+  text-decoration: none;
+  transition: background .15s, border-color .15s;
+}
+.nav-live-badge:hover {
+  background: rgba(239,68,68,.2);
+  border-color: rgba(239,68,68,.6);
+}
+.nav-live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--loss);
+  color: var(--loss);
+  animation: pulse-live 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes pulse-live {
+  0%, 100% { box-shadow: 0 0 3px currentColor; }
+  50%       { box-shadow: 0 0 8px currentColor, 0 0 14px currentColor; }
+}
+
 .nav-pts {
   font: 700 13px 'JetBrains Mono', monospace;
   color: var(--accent);
