@@ -1333,6 +1333,25 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 - `lis-tes-ratures/membres.html` : CSS `.rf-book-focus*` pour la vue ciblée.
 - `lis-tes-ratures/js/reunions.js` : lien "Voir la fiche du livre" dans la fiche réunion pointe désormais vers `bibliotheque.html?open=<livre_id>` — ouvre directement la fiche du bon livre.
 
+### 2026-06-28 (suite 2)
+**Pronostics LoL Esport — Double score bracket, panel admin intégré, timezone Paris, fix scoring**
+
+`pronostics/` — suite d'améliorations UX et corrections :
+
+- **`pronostics/js/db.js`** : `scorePicksForMatch` reécrit — plus de double `where` (évite l'index composite Firestore requis) : requête `where('match_id', '==', id)` unique, filtre JS `!d.data().scored`. Même correction pour `getPlayerBreakdown` (plus de filtre `scored` en Firestore) et `getLeaderboard` (plus de double filtre).
+
+- **`pronostics/css/style.css`** : refonte du bloc `.bk-match` — `display:flex` avec `.bk-teams-col` (flex:1) + `.bk-score-col` (colonne fixe séparée par une bordure). Couleurs : `.real` → muted, `.pick-perfect` → var(--win), `.pick-correct` → #5b9cf6, `.pick-wrong` → var(--loss). Nouveaux styles : `.bk-legend` + `.bk-legend-item` (légende couleurs), `.match-pick-score` (deux scores dans le calendrier), `.bkap-form` / `.bkap-row` / `.bkap-save` (section admin dans le drawer).
+
+- **`pronostics/js/tournoi.js`** :
+  - `renderBkMatch` / `renderBkMatchWithPicks` : deux colonnes de scores côte à côte — colonne gris `real` (score officiel) + colonne colorée `pick-*` (pronostic du joueur).
+  - Légende des couleurs ajoutée en haut du bracket (`bk-legend`).
+  - Même affichage double-score dans `renderMatchCard` (vue calendrier).
+  - `setupBracketHandlers` : matchs `live` ouvrent `openPicksDrawer` (comme les terminés). Tous les matchs cliquables en mode `?admin` (y compris TBD).
+  - `setupMatchHandlers` (calendrier) : matchs `live` et mode `?admin` ouvrent le drawer au lieu de la modale de pick.
+  - `openPicksDrawer` : section admin fusionnée en bas du drawer (visible seulement si `IS_ADMIN`). Équipes : `<select>` peuplé depuis les codes d'équipes réels des matchs (pas `tournament.teams`). Horaire : `<select id="bkap-cal-slot">` listant les matchs du calendrier pour recopier l'horaire, + `<input type="datetime-local" id="bkap-dt">` affichant l'heure en heure Paris. Après sauvegarde : `renderBracket()` + `renderCalendrier()` appelés.
+  - `renderAdminMatch` (onglet admin) : même logique `<select>` équipes + `utcToParisLocal()` pour l'affichage.
+  - Deux fonctions utilitaires ajoutées : `parisToUtc(localStr)` et `utcToParisLocal(dateStr)` — conversion DST-correcte via `Intl.DateTimeFormat('Europe/Paris')`.
+
 ### 2026-06-28 (suite)
 **Pronostics LoL Esport — Sidebar + Picks drawer + Player bracket + UX**
 
