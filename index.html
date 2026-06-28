@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Site personnel</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="apple-touch-icon" href="/favicon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -374,48 +380,68 @@
       flex-shrink: 0;
     }
 
-    /* ── Carte Pronostics (DA gaming sombre) ─ */
+    /* ── Carte Pronostics — DA Hextech ─────────────────────────── */
+    @keyframes livep {
+      0%, 100% { box-shadow: 0 0 4px currentColor; }
+      50%      { box-shadow: 0 0 10px currentColor, 0 0 18px currentColor; }
+    }
     .prono-card {
-      background: linear-gradient(160deg, #0d0e14 0%, #161829 100%);
-      border-color: rgba(249,115,22,.3);
-      padding-left: 1.9rem;
+      background: linear-gradient(150deg, #0e1626 0%, #0a0f1a 72%);
+      border: 1px solid rgba(216,169,85,.38);
+      border-radius: 0;
+      clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+      padding: 1.6rem 1.4rem 1.4rem 1.65rem;
+      gap: .55rem;
+      font-family: 'Rajdhani', system-ui, sans-serif;
     }
     .prono-card::after {
       content: '';
       position: absolute;
-      left: 0; top: 0; bottom: 0;
-      width: 6px;
-      background: linear-gradient(180deg, #f97316, #fbbf24);
-      border-radius: 13px 0 0 13px;
+      left: 0; top: 14px; bottom: 14px;
+      width: 3px;
+      background: linear-gradient(180deg, #d8a955, #38bdf8);
+      border-radius: 0;
     }
     a.prono-card:hover {
-      background: linear-gradient(160deg, #121320 0%, #1c1f3a 100%) !important;
-      border-color: rgba(249,115,22,.65) !important;
+      background: linear-gradient(150deg, #12192b 0%, #0c111e 72%) !important;
+      border-color: rgba(216,169,85,.7) !important;
+      box-shadow: 0 10px 30px rgba(216,169,85,.16) !important;
     }
     .prono-eyebrow {
       font-size: .6rem;
       font-weight: 700;
       letter-spacing: .17em;
       text-transform: uppercase;
-      color: #f97316;
+      color: #d8a955;
     }
     .prono-title {
-      font-size: 1.2rem;
-      font-weight: 800;
-      color: #f1f2f8;
-      letter-spacing: -.01em;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-family: 'Chakra Petch', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #f1f5fc;
+      letter-spacing: .01em;
       line-height: 1.2;
       margin-top: .1rem;
     }
+    .prono-hex {
+      width: 14px; height: 15px;
+      flex-shrink: 0;
+      background: #d8a955;
+      clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+    }
     .prono-rule {
       height: 1px;
-      background: linear-gradient(90deg, rgba(249,115,22,.5), transparent);
+      background: linear-gradient(90deg, rgba(216,169,85,.55), rgba(56,189,248,.25), transparent);
       margin: .05rem 0;
     }
     .prono-desc {
-      font-size: .8rem;
-      color: #9ea0c0;
-      line-height: 1.57;
+      font-size: .82rem;
+      font-weight: 500;
+      color: #9aa4ba;
+      line-height: 1.55;
     }
     .prono-foot {
       display: flex;
@@ -426,37 +452,39 @@
     .prono-badge {
       display: inline-flex;
       align-items: center;
-      gap: .3rem;
+      gap: .45rem;
       font-size: .68rem;
       font-weight: 700;
-      letter-spacing: .04em;
-      padding: .28em .68em;
-      border-radius: 5px;
-      background: rgba(249,115,22,.15);
-      color: #f97316;
-      border: 1px solid rgba(249,115,22,.3);
+      letter-spacing: .03em;
+      padding: .3em .7em;
+      border-radius: 0;
+      background: rgba(216,169,85,.14);
+      color: #d8a955;
+      border: 1px solid rgba(216,169,85,.32);
     }
-    /* pixel bracket decoration */
+    .prono-live {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #ef4444;
+      color: #ef4444;
+      animation: livep 1.5s ease-in-out infinite;
+      flex-shrink: 0;
+    }
     .prono-bracket {
       display: grid;
       grid-template-columns: 1fr 6px 1fr;
       gap: 3px;
       align-items: center;
-      opacity: .55;
+      width: 46px;
+      opacity: .7;
     }
-    .prono-bracket-team {
-      height: 4px;
-      background: #f97316;
-      border-radius: 2px;
-    }
-    .prono-bracket-line {
-      background: #fbbf24;
-      width: 6px;
-      border-radius: 1px;
-    }
+    .prono-bracket-team { height: 4px; background: #d8a955; }
+    .prono-bracket-team.alt { background: #38bdf8; height: 6px; }
+    .prono-bracket-team.dim { opacity: .6; }
+    .prono-bracket-line { background: #38bdf8; width: 6px; }
     .prono-bracket-line.t { height: 50%; align-self: start; margin-top: 2px; }
     .prono-bracket-line.b { height: 50%; align-self: end; margin-bottom: 2px; }
-    .prono-card .card-arrow { color: #f97316; }
+    .prono-card .card-arrow { color: #d8a955; }
 
     /* ── Bouton personnel discret ─────────── */
     .perso-btn {
@@ -565,23 +593,23 @@
       <span class="card-arrow">→</span>
     </a>
 
-    <!-- Pronostics LoL — DA gaming sombre -->
+    <!-- Pronostics LoL — DA Hextech -->
     <a href="/pronostics/"
        class="section-card prono-card"
-       style="--card-accent:#f97316;--card-glow:rgba(249,115,22,.2)">
+       style="--card-accent:#d8a955;--card-glow:rgba(216,169,85,.2)">
       <div class="prono-eyebrow">E-sport · League of Legends</div>
       <div class="card-body" style="display:flex;flex-direction:column;gap:.42rem">
-        <div class="prono-title">Pronostics</div>
+        <div class="prono-title"><span class="prono-hex"></span>Pronostics</div>
         <div class="prono-rule"></div>
         <div class="prono-desc">Paris entre amis sur MSI, Worlds et les grands tournois LoL.</div>
       </div>
       <div class="prono-foot">
-        <span class="prono-badge">🏆 MSI 2026 · Live</span>
-        <div class="prono-bracket" aria-hidden="true" style="width:48px">
-          <div class="prono-bracket-team" style="opacity:.9"></div>
+        <span class="prono-badge"><span class="prono-live"></span>MSI 2026 · Live</span>
+        <div class="prono-bracket" aria-hidden="true">
+          <div class="prono-bracket-team"></div>
           <div class="prono-bracket-line t"></div>
-          <div class="prono-bracket-team" style="height:6px;background:#fbbf24;opacity:1"></div>
-          <div class="prono-bracket-team" style="opacity:.6"></div>
+          <div class="prono-bracket-team alt"></div>
+          <div class="prono-bracket-team dim"></div>
           <div class="prono-bracket-line b"></div>
           <div></div>
         </div>
