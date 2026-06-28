@@ -827,6 +827,16 @@ function renderBkMatch(m) {
         ${isFinished ? `<span class="bk-score">${m.score2}</span>` : ''}
       </div>
       ${pick && !locked && !isFinished ? `<div class="bk-pick-indicator" title="Ton pick : ${esc(pick.pick_winner)}">✓</div>` : ''}
+      ${(() => {
+        if (!isFinished || !pick?.pick_winner) return '';
+        const isCorrect = pick.pick_winner === m.winner;
+        const ps1 = pick.pick_score1 != null ? parseInt(pick.pick_score1) : null;
+        const ps2 = pick.pick_score2 != null ? parseInt(pick.pick_score2) : null;
+        const isPerfect = isCorrect && ps1 === parseInt(m.score1) && ps2 === parseInt(m.score2);
+        const cls = isPerfect ? 'pick-perfect' : isCorrect ? 'pick-correct' : 'pick-wrong';
+        const label = (ps1 != null && ps2 != null) ? `${ps1} — ${ps2}` : esc(pick.pick_winner);
+        return `<div class="bk-pick-result ${cls}">${label}</div>`;
+      })()}
     </div>
   `;
 }

@@ -141,22 +141,22 @@ export async function saveLongTermPick(profileId, tournamentId, type, value) {
 export async function scorePicksForMatch(match) {
   if (match.status !== 'finished' || !match.winner) return;
 
+  // Requête simple sur match_id uniquement (pas de double where → pas d'index composite requis)
   const snap = await getDocs(query(
     collection(db, 'prono_picks'),
-    where('match_id', '==', match.id),
-    where('scored', '==', false)
+    where('match_id', '==', match.id)
   ));
   if (snap.empty) return;
 
+  // Filtrer les non-scorés en JS
+  const unscored = snap.docs.filter(d => !d.data().scored);
+  if (unscored.length === 0) return;
+
   const batch = writeBatch(db);
-  const bo = parseInt(match.best_of) || 5;
   const s1 = parseInt(match.score1) || 0;
   const s2 = parseInt(match.score2) || 0;
 
-  // Score du perdant dans le match réel
-  const loserScore = match.winner === match.team1 ? s2 : s1;
-
-  snap.docs.forEach(d => {
+  unscored.forEach(d => {
     const pick = d.data();
     let points = 0;
 
