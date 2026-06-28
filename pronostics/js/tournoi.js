@@ -821,7 +821,8 @@ function renderBkMatch(m) {
   const locked = isMatchLocked(m);
   const pick   = myPicks[m.id];
   const hasTbd = m.team1 === 'TBD' || m.team2 === 'TBD';
-  const clickable = isFinished || (!locked && !hasTbd);
+  const isLive = m.status === 'live';
+  const clickable = isFinished || isLive || (!locked && !hasTbd);
 
   let pickColHtml = '';
   if (isFinished && pick?.pick_winner) {
@@ -857,7 +858,7 @@ function setupBracketHandlers() {
     el.addEventListener('click', () => {
       const m = matches.find(x => x.id === el.dataset.bkMatch);
       if (!m) return;
-      if (m.status === 'finished') {
+      if (m.status === 'finished' || m.status === 'live') {
         openPicksDrawer(m);
       } else {
         openPickModal(m);
@@ -1222,7 +1223,7 @@ function setupMatchHandlers() {
       const matchId = card.dataset.matchId;
       const match = matches.find(m => m.id === matchId);
 
-      if (match?.status === 'finished') {
+      if (match?.status === 'finished' || match?.status === 'live') {
         openPicksDrawer(match);
         return;
       }
