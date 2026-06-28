@@ -624,15 +624,95 @@ input[type="number"]::-webkit-inner-spin-button { display: none; }
 
 /* ── Responsive ──────────────────────────── */
 @media (max-width: 768px) {
-  .sidebar { width: 100%; height: auto; position: relative; flex-direction: row; flex-wrap: wrap; padding: .75rem 1rem; gap: .25rem; }
-  .sidebar-logo { border-bottom: none; margin-bottom: 0; padding: 0; flex: 1; }
+  /* ── Navigation mobile « marque-pages » ──────────────────────
+     La sidebar devient une barre fixée en bas : chaque onglet = un
+     marque-page en papier voisin, légèrement incliné/décalé, dont le
+     bas est coupé sous le bord de l'écran. L'actif se relève d'un cran.
+     Le logo passe en fine barre de titre fixée en haut. */
+  .sidebar {
+    position: fixed; left: 0; right: 0; bottom: -30px; top: auto; width: 100%; height: auto;
+    flex-direction: row; flex-wrap: nowrap; align-items: flex-end; gap: 0;
+    padding: 0 6px; border: none; overflow: visible; z-index: 200;
+    background: none;
+  }
+  /* pied solide derrière les marque-pages (cache le contenu entre les bords hauts) */
+  .sidebar::before {
+    content: ""; position: fixed; left: 0; right: 0; bottom: 0; height: 30px;
+    background: var(--sidebar-bg); border-top: 1px solid var(--border); z-index: -1;
+  }
+  /* barre de titre en haut */
+  .sidebar-logo {
+    position: fixed; top: 0; left: 0; right: 0; margin: 0; padding: .5rem 1rem;
+    background: var(--sidebar-bg); border-bottom: 1px solid var(--border);
+    border-right: none; z-index: 200; display: flex; flex-direction: column; gap: .05rem;
+  }
+  .sidebar-logo h2 { font-size: 1rem; }
+  .sidebar-logo p { font-size: .58rem; }
   .sidebar-bottom { display: none; }
-  .main { margin-left: 0; padding: 1.25rem; }
-  .nav-item { padding: .45rem .7rem; border-left: none; border-bottom: 3px solid transparent; font-size: .8rem; align-items: center; min-height: 0; }
-  .sidebar .nav-item, .sidebar .nav-item:nth-child(n) { transform: none; margin: 0; margin-top: 0; flex: 0 0 auto; border-radius: 6px; box-shadow: none; min-height: 0; }
-  .sidebar .nav-item:hover, .sidebar .nav-item.active { transform: none; }
-  .sidebar .nav-item.active::before { display: none; }
-  .nav-item.active { border-left-color: transparent; border-bottom-color: var(--accent); }
+  .main { margin-left: 0; padding: 4rem 1.1rem 5.2rem; }
+
+  /* un marque-page */
+  .sidebar .nav-item,
+  .sidebar .nav-item:nth-child(n) {
+    flex: 1 1 0; position: relative; display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-start; gap: 3px;
+    height: 92px; min-height: 0; margin: 0 -4px 0 0; padding: .5rem .12rem 0;
+    font-size: .5rem; font-weight: 600; letter-spacing: -.01em; line-height: 1;
+    color: var(--muted); text-align: center; white-space: nowrap;
+    border: 1px solid var(--border); border-bottom: none; border-radius: 9px 9px 0 0;
+    box-shadow: 0 -3px 8px -4px rgba(40,25,10,.30);
+    transition: transform .28s cubic-bezier(.34,1.25,.5,1), color .2s, box-shadow .26s;
+    transform-origin: bottom center; overflow: hidden;
+  }
+  .sidebar .nav-item:last-of-type { margin-right: 0; }
+  .sidebar .nav-item .nav-icon { margin: 0; flex: none; }
+  .sidebar .nav-item .nav-icon svg { width: 20px; height: 20px; }
+
+  /* papiers voisins + rotations + hauteurs de repos variées (bords hauts désalignés) */
+  .sidebar .nav-item:nth-child(2) { background:#f7ecd6; transform:rotate(-1.6deg) translateY(8px);  z-index:6; }
+  .sidebar .nav-item:nth-child(3) { background:#fbf2e2; transform:rotate(1.1deg)  translateY(12px); z-index:5; }
+  .sidebar .nav-item:nth-child(4) { background:#f0e2c8; transform:rotate(-0.9deg) translateY(6px);  z-index:4; }
+  .sidebar .nav-item:nth-child(5) { background:#f9efdd; transform:rotate(1.5deg)  translateY(11px); z-index:3; }
+  .sidebar .nav-item:nth-child(6) { background:#f3e6cd; transform:rotate(-1.2deg) translateY(8px);  z-index:2; }
+  .sidebar .nav-item:nth-child(7) { background:#fcf4e8; transform:rotate(0.8deg)  translateY(12px); z-index:1; flex:1 1 0; border-bottom:none; }
+
+  /* survol = on neutralise l'effet desktop (chaque onglet garde sa pose) */
+  .sidebar .nav-item:hover { transform: none; box-shadow: 0 -3px 8px -4px rgba(40,25,10,.30); }
+  .sidebar .nav-item:nth-child(2):hover { transform:rotate(-1.6deg) translateY(8px); }
+  .sidebar .nav-item:nth-child(3):hover { transform:rotate(1.1deg)  translateY(12px); }
+  .sidebar .nav-item:nth-child(4):hover { transform:rotate(-0.9deg) translateY(6px); }
+  .sidebar .nav-item:nth-child(5):hover { transform:rotate(1.5deg)  translateY(11px); }
+  .sidebar .nav-item:nth-child(6):hover { transform:rotate(-1.2deg) translateY(8px); }
+  .sidebar .nav-item:nth-child(7):hover { transform:rotate(0.8deg)  translateY(12px); }
+
+  /* actif : se redresse, MONTE (plus de longueur visible), papier plus clair, encre terracotta */
+  .sidebar .nav-item.active,
+  .sidebar .nav-item:nth-child(2).active,
+  .sidebar .nav-item:nth-child(3).active,
+  .sidebar .nav-item:nth-child(4).active,
+  .sidebar .nav-item:nth-child(5).active,
+  .sidebar .nav-item:nth-child(6).active,
+  .sidebar .nav-item:nth-child(7).active {
+    transform: rotate(0deg) translateY(-10px);
+    background: #fffdf7; color: var(--accent); font-weight: 700; overflow: visible;
+    box-shadow: 0 -8px 18px -7px rgba(40,25,10,.38); z-index: 9;
+  }
+  .sidebar .nav-item.active .nav-icon { color: var(--accent); }
+  /* fin liseré terracotta sur le bord haut du marque-page actif */
+  .sidebar .nav-item.active::before {
+    content: ""; position: absolute; left: 8px; right: 8px; top: -1px; bottom: auto;
+    width: auto; height: 2.5px; background: var(--accent); border-radius: 2px;
+  }
+
+  /* papiers en thème sombre (bois) */
+  [data-theme="dark"] .sidebar .nav-item:nth-child(2) { background:#2a2018; }
+  [data-theme="dark"] .sidebar .nav-item:nth-child(3) { background:#322619; }
+  [data-theme="dark"] .sidebar .nav-item:nth-child(4) { background:#241b12; }
+  [data-theme="dark"] .sidebar .nav-item:nth-child(5) { background:#2f241a; }
+  [data-theme="dark"] .sidebar .nav-item:nth-child(6) { background:#281f16; }
+  [data-theme="dark"] .sidebar .nav-item:nth-child(7) { background:#342820; }
+  [data-theme="dark"] .sidebar .nav-item.active { background:#3a2c1d; }
+
   .current-grid { grid-template-columns: 1fr; }
   .form-row { grid-template-columns: 1fr; }
   .book-detail-meta { grid-template-columns: 1fr; }
