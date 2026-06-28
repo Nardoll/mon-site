@@ -285,12 +285,12 @@ function matchKey(t1, t2) {
 export async function getPlayerBreakdown(profileId) {
   const snap = await getDocs(query(
     collection(db, 'prono_picks'),
-    where('profile_id', '==', profileId),
-    where('scored', '==', true)
+    where('profile_id', '==', profileId)
   ));
   const byTournament = {};
   snap.docs.forEach(d => {
     const p = d.data();
+    if (!p.scored) return;
     const tid = p.tournament_id;
     if (!byTournament[tid]) byTournament[tid] = { points: 0, correct: 0, perfect: 0 };
     byTournament[tid].points += p.points || 0;
@@ -312,14 +312,16 @@ export async function updateTournament(id, data) {
 // ── Classement ────────────────────────────────────────────────────
 export async function getLeaderboard(tournamentId) {
   const profiles = await getProfiles();
-  const constraints = [where('scored', '==', true)];
-  if (tournamentId) constraints.push(where('tournament_id', '==', tournamentId));
+  const constraints = tournamentId
+    ? [where('tournament_id', '==', tournamentId)]
+    : [];
 
   const snap = await getDocs(query(collection(db, 'prono_picks'), ...constraints));
 
   const pts = {}, correct = {}, perfect = {};
   snap.docs.forEach(d => {
     const p = d.data();
+    if (!p.scored) return;
     const pid = p.profile_id;
     pts[pid]     = (pts[pid] || 0) + (p.points || 0);
     if ((p.points || 0) >= 3) correct[pid] = (correct[pid] || 0) + 1;

@@ -705,6 +705,12 @@ async function showPlayerBracket(playerId, playerName) {
 
   const content = document.getElementById('pbm-content');
   content.innerHTML = `
+    <div class="bk-legend">
+      <span class="bk-legend-item real">Score réel</span>
+      <span class="bk-legend-item pick-perfect">Parfait +5</span>
+      <span class="bk-legend-item pick-correct">Bon gagnant +3</span>
+      <span class="bk-legend-item pick-wrong">Mauvais 0pt</span>
+    </div>
     ${renderBracketStageWithPicks('Stage 1 — Play-In', PLAY_IN_ROUNDS, byId, playerPicks)}
     ${renderBracketStageWithPicks('Stage 2 — Bracket', BRACKET_ROUNDS, byId, playerPicks)}
   `;
@@ -729,37 +735,36 @@ function renderBracketStageWithPicks(title, rounds, byId, playerPicks) {
 
 function renderBkMatchWithPicks(m, playerPicks) {
   if (!m) return '<div class="bk-match bk-empty"></div>';
-  const t1win = m.status === 'finished' && m.winner === m.team1;
-  const t2win = m.status === 'finished' && m.winner === m.team2;
+  const isFinished = m.status === 'finished';
+  const t1win = isFinished && m.winner === m.team1;
+  const t2win = isFinished && m.winner === m.team2;
   const pick = playerPicks[m.id];
 
-  let pickClass = '';
-  let pickBadge = '';
-
-  if (pick?.pick_winner) {
-    if (m.status === 'finished' && pick.scored) {
-      if (pick.points >= 5) { pickClass = 'pick-perfect'; pickBadge = `<span class="bk-pick-badge perfect">+5</span>`; }
-      else if (pick.points >= 3) { pickClass = 'pick-correct'; pickBadge = `<span class="bk-pick-badge correct">+3</span>`; }
-      else { pickClass = 'pick-wrong'; pickBadge = `<span class="bk-pick-badge wrong">0</span>`; }
-    } else if (m.status !== 'finished') {
-      pickClass = 'pick-pending';
-      pickBadge = `<span class="bk-pick-badge pending">${esc(pick.pick_winner)}</span>`;
-    }
+  let pickColHtml = '';
+  if (isFinished && pick?.pick_winner) {
+    const isCorrect = pick.pick_winner === m.winner;
+    const ps1 = pick.pick_score1 != null ? parseInt(pick.pick_score1) : null;
+    const ps2 = pick.pick_score2 != null ? parseInt(pick.pick_score2) : null;
+    const isPerfect = isCorrect && ps1 === parseInt(m.score1) && ps2 === parseInt(m.score2);
+    const cls = isPerfect ? 'pick-perfect' : isCorrect ? 'pick-correct' : 'pick-wrong';
+    pickColHtml = `<div class="bk-score-col ${cls}"><span>${ps1 ?? '?'}</span><span>${ps2 ?? '?'}</span></div>`;
+  } else if (!isFinished && pick?.pick_winner) {
+    pickColHtml = `<div class="bk-pick-indicator pending" title="Pick : ${esc(pick.pick_winner)}">✓</div>`;
   }
 
   return `
-    <div class="bk-match${m.status === 'finished' ? ' done' : ''} ${pickClass}">
-      <div class="bk-team${t1win ? ' win' : t2win ? ' lose' : ''}">
-        ${teamLogo(m.team1, 16)}
-        <span class="bk-team-name">${esc(m.team1 || 'TBD')}</span>
-        ${m.status === 'finished' ? `<span class="bk-score">${m.score1}</span>` : ''}
+    <div class="bk-match${isFinished ? ' done' : ''}">
+      <div class="bk-teams-col">
+        <div class="bk-team${t1win ? ' win' : t2win ? ' lose' : ''}">
+          ${teamLogo(m.team1, 16)}
+          <span class="bk-team-name">${esc(m.team1 || 'TBD')}</span>
+        </div>
+        <div class="bk-team${t2win ? ' win' : t1win ? ' lose' : ''}">
+          ${teamLogo(m.team2, 16)}
+          <span class="bk-team-name">${esc(m.team2 || 'TBD')}</span>
+        </div>
       </div>
-      <div class="bk-team${t2win ? ' win' : t1win ? ' lose' : ''}">
-        ${teamLogo(m.team2, 16)}
-        <span class="bk-team-name">${esc(m.team2 || 'TBD')}</span>
-        ${m.status === 'finished' ? `<span class="bk-score">${m.score2}</span>` : ''}
-      </div>
-      ${pickBadge ? `<div style="text-align:center;padding:.15rem 0">${pickBadge}</div>` : ''}
+      ${isFinished ? `<div class="bk-score-col real"><span>${m.score1}</span><span>${m.score2}</span></div>${pickColHtml}` : pickColHtml}
     </div>
   `;
 }
@@ -771,6 +776,12 @@ function renderBracket() {
   matches.forEach(m => { byId[m.id] = m; });
 
   container.innerHTML = `
+    <div class="bk-legend">
+      <span class="bk-legend-item real">Score réel</span>
+      <span class="bk-legend-item pick-perfect">Parfait +5</span>
+      <span class="bk-legend-item pick-correct">Bon gagnant +3</span>
+      <span class="bk-legend-item pick-wrong">Mauvais 0pt</span>
+    </div>
     ${renderBracketStage('Stage 1 — Play-In', PLAY_IN_ROUNDS, byId)}
     ${renderBracketStage('Stage 2 — Bracket', BRACKET_ROUNDS, byId)}
   `;
@@ -810,33 +821,33 @@ function renderBkMatch(m) {
   const locked = isMatchLocked(m);
   const pick   = myPicks[m.id];
   const hasTbd = m.team1 === 'TBD' || m.team2 === 'TBD';
-  // Terminé → ouvre le drawer picks. Ouvert non-TBD → ouvre modal pick.
   const clickable = isFinished || (!locked && !hasTbd);
+
+  let pickColHtml = '';
+  if (isFinished && pick?.pick_winner) {
+    const isCorrect = pick.pick_winner === m.winner;
+    const ps1 = pick.pick_score1 != null ? parseInt(pick.pick_score1) : null;
+    const ps2 = pick.pick_score2 != null ? parseInt(pick.pick_score2) : null;
+    const isPerfect = isCorrect && ps1 === parseInt(m.score1) && ps2 === parseInt(m.score2);
+    const cls = isPerfect ? 'pick-perfect' : isCorrect ? 'pick-correct' : 'pick-wrong';
+    pickColHtml = `<div class="bk-score-col ${cls}"><span>${ps1 ?? '?'}</span><span>${ps2 ?? '?'}</span></div>`;
+  }
 
   return `
     <div class="bk-match${isFinished ? ' done' : ''}${clickable ? ' bk-clickable' : ''}"
          ${clickable ? `data-bk-match="${m.id}"` : ''}>
-      <div class="bk-team${t1win ? ' win' : t2win ? ' lose' : ''}">
-        ${teamLogo(m.team1, 16)}
-        <span class="bk-team-name">${esc(m.team1 || 'TBD')}</span>
-        ${isFinished ? `<span class="bk-score">${m.score1}</span>` : ''}
+      <div class="bk-teams-col">
+        <div class="bk-team${t1win ? ' win' : t2win ? ' lose' : ''}">
+          ${teamLogo(m.team1, 16)}
+          <span class="bk-team-name">${esc(m.team1 || 'TBD')}</span>
+        </div>
+        <div class="bk-team${t2win ? ' win' : t1win ? ' lose' : ''}">
+          ${teamLogo(m.team2, 16)}
+          <span class="bk-team-name">${esc(m.team2 || 'TBD')}</span>
+        </div>
       </div>
-      <div class="bk-team${t2win ? ' win' : t1win ? ' lose' : ''}">
-        ${teamLogo(m.team2, 16)}
-        <span class="bk-team-name">${esc(m.team2 || 'TBD')}</span>
-        ${isFinished ? `<span class="bk-score">${m.score2}</span>` : ''}
-      </div>
-      ${pick && !locked && !isFinished ? `<div class="bk-pick-indicator" title="Ton pick : ${esc(pick.pick_winner)}">✓</div>` : ''}
-      ${(() => {
-        if (!isFinished || !pick?.pick_winner) return '';
-        const isCorrect = pick.pick_winner === m.winner;
-        const ps1 = pick.pick_score1 != null ? parseInt(pick.pick_score1) : null;
-        const ps2 = pick.pick_score2 != null ? parseInt(pick.pick_score2) : null;
-        const isPerfect = isCorrect && ps1 === parseInt(m.score1) && ps2 === parseInt(m.score2);
-        const cls = isPerfect ? 'pick-perfect' : isCorrect ? 'pick-correct' : 'pick-wrong';
-        const label = (ps1 != null && ps2 != null) ? `${ps1} — ${ps2}` : esc(pick.pick_winner);
-        return `<div class="bk-pick-result ${cls}">${label}</div>`;
-      })()}
+      ${isFinished ? `<div class="bk-score-col real"><span>${m.score1}</span><span>${m.score2}</span></div>${pickColHtml}` : ''}
+      ${!isFinished && pick && !locked ? `<div class="bk-pick-indicator" title="Ton pick : ${esc(pick.pick_winner)}">✓</div>` : ''}
     </div>
   `;
 }
