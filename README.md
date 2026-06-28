@@ -1324,6 +1324,15 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 - `lis-tes-ratures/exposes/1984/` : nouveau dossier — présentation HTML standalone de Dorian sur 1984/Orwell (21 slides, 15 images). Accessible à `/lis-tes-ratures/exposes/1984/`. **Action Tom :** dans la fiche réunion 1984, cliquer Modifier → renseigner "Lien exposé" : `/lis-tes-ratures/exposes/1984/`.
 - `lis-tes-ratures/reunions.html` + `sondage-dispo.html` : CSS correspondants (état vide, classement, `.video-preview`, `.expose-preview`).
 
+### 2026-06-28 (suite 2)
+**Lis tes ratures — Seuil d'élimination dynamique + recherche livre membres + lien fiche livre**
+
+- `lis-tes-ratures/js/votes.js` : `const SEUIL = 2.9` remplacé par `seuilVote(v)` → retourne `v.seuil ?? 2.5`. Les votes passés (sans champ `seuil` en Firestore) affichent le seuil 2,5 historique ; le graphique, la légende et le tableau d'émargement reflètent chacun le bon seuil.
+- `lis-tes-ratures/js/db.js` : `addVote` stocke `seuil: 2.9` sur tout nouveau document `votes`.
+- `lis-tes-ratures/js/membres.js` : recherche dans les fiches membres refaite — champ avec `<datalist>` autocomplete (titres des livres votés par ce membre). Sélection exacte d'un livre → vue ciblée "Notes pour [Titre]" (mois + étoiles + note /5). Saisie partielle → filtre les sessions de vote comme avant.
+- `lis-tes-ratures/membres.html` : CSS `.rf-book-focus*` pour la vue ciblée.
+- `lis-tes-ratures/js/reunions.js` : lien "Voir la fiche du livre" dans la fiche réunion pointe désormais vers `bibliotheque.html?open=<livre_id>` — ouvre directement la fiche du bon livre.
+
 ### 2026-06-28 (suite)
 **Pronostics LoL Esport — Sidebar + Picks drawer + Player bracket + UX**
 
