@@ -47,10 +47,10 @@ function _buildNav(profile, active) {
     <nav class="nav-links">
       <a href="/pronostics/" class="nav-link${active === 'accueil' ? ' active' : ''}">Tournois</a>
       <a href="/pronostics/classement.html" class="nav-link${active === 'classement' ? ' active' : ''}">Classement</a>
+      <div id="nav-live-wrap"></div>
     </nav>
     <div class="nav-right">
       <div id="nav-sync-slot"></div>
-      <div id="nav-live-wrap"></div>
       <span class="nav-pts" id="nav-pts" style="display:none"></span>
       <div id="top-avatar" style="cursor:pointer" title="Modifier le profil">
         ${avatarHtml(profile, '')}
