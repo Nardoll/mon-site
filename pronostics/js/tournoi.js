@@ -403,22 +403,105 @@ async function openPicksDrawer(match) {
     document.body.appendChild(drawer);
   }
 
+  const scoreDisplay = (match.score1 != null && match.score2 != null)
+    ? `${match.score1} — ${match.score2}` : '';
+
+  const teams = tournament.teams || [];
+  const teamOpts = ['', ...teams].map(t =>
+    `<option value="${esc(t)}">${esc(t) || '—'}</option>`
+  ).join('');
+  const dtValue = match.date_utc ? match.date_utc.slice(0, 16) : '';
+
+  const adminSection = IS_ADMIN ? `
+    <div class="pd-section-label" style="margin-top:.5rem;border-top:1px solid var(--border);padding-top:.5rem">⚙️ Admin</div>
+    <form class="bkap-form" id="bkap-form">
+      <div class="bkap-row">
+        <label>Équipe 1</label>
+        <input list="bkap-teams" name="team1" value="${esc(match.team1 || '')}" />
+      </div>
+      <div class="bkap-row">
+        <label>Équipe 2</label>
+        <input list="bkap-teams" name="team2" value="${esc(match.team2 || '')}" />
+      </div>
+      <datalist id="bkap-teams">${teamOpts}</datalist>
+      <div class="bkap-row">
+        <label>Statut</label>
+        <select name="status">
+          <option value="scheduled"${match.status==='scheduled'?' selected':''}>Planifié</option>
+          <option value="live"${match.status==='live'?' selected':''}>En cours</option>
+          <option value="finished"${match.status==='finished'?' selected':''}>Terminé</option>
+        </select>
+      </div>
+      <div class="bkap-row">
+        <label>Gagnant</label>
+        <select name="winner">
+          <option value="">—</option>
+          <option value="${esc(match.team1)}"${match.winner===match.team1?' selected':''}>${esc(match.team1)}</option>
+          <option value="${esc(match.team2)}"${match.winner===match.team2?' selected':''}>${esc(match.team2)}</option>
+        </select>
+      </div>
+      <div class="bkap-row">
+        <label>Score</label>
+        <input type="number" name="score1" min="0" max="3" value="${match.score1 ?? ''}" style="width:46px" />
+        <span style="color:var(--muted);padding:0 .2rem">—</span>
+        <input type="number" name="score2" min="0" max="3" value="${match.score2 ?? ''}" style="width:46px" />
+      </div>
+      <div class="bkap-row">
+        <label>Date / heure</label>
+        <input type="datetime-local" name="date_utc" value="${dtValue}" style="flex:1;font-size:.72rem" />
+      </div>
+      <button type="submit" class="bkap-save" id="bkap-save">Sauvegarder</button>
+    </form>
+  ` : '';
+
   drawer.innerHTML = `
     <div class="pd-header">
       <div class="pd-match-title">${esc(match.team1)} <span style="color:var(--muted)">vs</span> ${esc(match.team2)}</div>
-      <div class="pd-match-score">${match.score1} — ${match.score2}</div>
+      ${scoreDisplay ? `<div class="pd-match-score">${scoreDisplay}</div>` : ''}
       <button class="pd-close" id="pd-close">✕</button>
     </div>
     <div class="pd-section-label">Pronostics</div>
     <div class="pd-picks" id="pd-picks">
       <div class="empty-state" style="padding:1rem">Chargement…</div>
     </div>
+    ${adminSection}
   `;
   drawer.classList.add('open');
 
   document.getElementById('pd-close').addEventListener('click', () => {
     drawer.classList.remove('open');
   });
+
+  if (IS_ADMIN) {
+    document.getElementById('bkap-form')?.addEventListener('submit', async e => {
+      e.preventDefault();
+      const f = e.target;
+      const team1    = f.team1.value.trim() || 'TBD';
+      const team2    = f.team2.value.trim() || 'TBD';
+      const status   = f.status.value;
+      const winner   = f.winner.value || null;
+      const score1   = f.score1.value !== '' ? parseInt(f.score1.value) : null;
+      const score2   = f.score2.value !== '' ? parseInt(f.score2.value) : null;
+      const date_utc = f.date_utc.value ? f.date_utc.value + ':00' : (match.date_utc || null);
+      const btn = document.getElementById('bkap-save');
+      btn.disabled = true; btn.textContent = '…';
+      try {
+        const matchData = { team1, team2, winner, score1, score2, status, date_utc };
+        await updateMatch(match.id, matchData);
+        if (status === 'finished' && winner) {
+          await scorePicksForMatch({ id: match.id, ...matchData });
+        }
+        Object.assign(match, matchData);
+        showToast('✓ Match mis à jour');
+        btn.textContent = '✓ Sauvé';
+        setTimeout(() => { btn.disabled = false; btn.textContent = 'Sauvegarder'; }, 1500);
+        renderBracket();
+      } catch (err) {
+        showToast('Erreur : ' + err.message);
+        btn.disabled = false; btn.textContent = 'Sauvegarder';
+      }
+    });
+  }
 
   const allPicks = await getAllPicksByMatch(match.id);
   const pickByProfile = {};
@@ -833,7 +916,7 @@ function renderBkMatch(m) {
   const pick   = myPicks[m.id];
   const hasTbd = m.team1 === 'TBD' || m.team2 === 'TBD';
   const isLive = m.status === 'live';
-  const clickable = isFinished || isLive || (!locked && !hasTbd);
+  const clickable = IS_ADMIN || isFinished || isLive || (!locked && !hasTbd);
 
   let pickColHtml = '';
   if (isFinished && pick?.pick_winner) {
@@ -869,108 +952,12 @@ function setupBracketHandlers() {
     el.addEventListener('click', () => {
       const m = matches.find(x => x.id === el.dataset.bkMatch);
       if (!m) return;
-      if (IS_ADMIN) {
-        openAdminMatchPanel(m);
-      } else if (m.status === 'finished' || m.status === 'live') {
+      if (m.status === 'finished' || m.status === 'live' || IS_ADMIN) {
         openPicksDrawer(m);
       } else {
         openPickModal(m);
       }
     });
-  });
-}
-
-function openAdminMatchPanel(m) {
-  document.getElementById('bk-admin-panel')?.remove();
-
-  const teams = tournament.teams || [];
-  const teamOpts = ['', ...teams].map(t =>
-    `<option value="${esc(t)}"${(m.team1 === t || m.team2 === t) ? '' : ''}>${esc(t) || '—'}</option>`
-  ).join('');
-
-  // Formater date_utc en valeur datetime-local (YYYY-MM-DDTHH:MM)
-  const dtValue = m.date_utc ? m.date_utc.slice(0, 16) : '';
-
-  const panel = document.createElement('div');
-  panel.id = 'bk-admin-panel';
-  panel.innerHTML = `
-    <div class="bkap-header">
-      <span class="bkap-title">⚙️ ${esc(m.team1)} vs ${esc(m.team2)}</span>
-      <button class="bkap-close" id="bkap-close">✕</button>
-    </div>
-    <form class="bkap-form" id="bkap-form">
-      <div class="bkap-row">
-        <label>Équipe 1</label>
-        <input list="bkap-teams" name="team1" value="${esc(m.team1 || '')}" />
-      </div>
-      <div class="bkap-row">
-        <label>Équipe 2</label>
-        <input list="bkap-teams" name="team2" value="${esc(m.team2 || '')}" />
-      </div>
-      <datalist id="bkap-teams">${teamOpts}</datalist>
-      <div class="bkap-row">
-        <label>Statut</label>
-        <select name="status">
-          <option value="scheduled"${m.status==='scheduled'?' selected':''}>Planifié</option>
-          <option value="live"${m.status==='live'?' selected':''}>En cours</option>
-          <option value="finished"${m.status==='finished'?' selected':''}>Terminé</option>
-        </select>
-      </div>
-      <div class="bkap-row">
-        <label>Gagnant</label>
-        <select name="winner">
-          <option value="">—</option>
-          <option value="${esc(m.team1)}"${m.winner===m.team1?' selected':''}>${esc(m.team1)}</option>
-          <option value="${esc(m.team2)}"${m.winner===m.team2?' selected':''}>${esc(m.team2)}</option>
-        </select>
-      </div>
-      <div class="bkap-row">
-        <label>Score</label>
-        <input type="number" name="score1" min="0" max="3" value="${m.score1 ?? ''}" style="width:46px" />
-        <span style="color:var(--muted);padding:0 .2rem">—</span>
-        <input type="number" name="score2" min="0" max="3" value="${m.score2 ?? ''}" style="width:46px" />
-      </div>
-      <div class="bkap-row">
-        <label>Date / heure</label>
-        <input type="datetime-local" name="date_utc" value="${dtValue}" style="width:100%;font-size:.72rem" />
-      </div>
-      <button type="submit" class="bkap-save" id="bkap-save">Sauvegarder</button>
-    </form>
-  `;
-  document.body.appendChild(panel);
-
-  document.getElementById('bkap-close').addEventListener('click', () => panel.remove());
-
-  document.getElementById('bkap-form').addEventListener('submit', async e => {
-    e.preventDefault();
-    const f = e.target;
-    const team1  = f.team1.value.trim() || 'TBD';
-    const team2  = f.team2.value.trim() || 'TBD';
-    const status = f.status.value;
-    const winner = f.winner.value || null;
-    const score1 = f.score1.value !== '' ? parseInt(f.score1.value) : null;
-    const score2 = f.score2.value !== '' ? parseInt(f.score2.value) : null;
-    const date_utc = f.date_utc.value ? f.date_utc.value + ':00' : (m.date_utc || null);
-
-    const btn = document.getElementById('bkap-save');
-    btn.disabled = true; btn.textContent = '…';
-
-    try {
-      const matchData = { team1, team2, winner, score1, score2, status, date_utc };
-      await updateMatch(m.id, matchData);
-      if (status === 'finished' && winner) {
-        await scorePicksForMatch({ id: m.id, ...matchData });
-      }
-      Object.assign(m, matchData);
-      showToast('✓ Match mis à jour');
-      btn.textContent = '✓ Sauvé';
-      setTimeout(() => { btn.disabled = false; btn.textContent = 'Sauvegarder'; }, 1500);
-      // Rafraîchir le bracket
-      renderBracket();
-    } catch (err) {
-      showToast('Erreur : ' + err.message);
-      btn.disabled = false; btn.textContent = 'Sauvegarder';
-    }
   });
 }
 
