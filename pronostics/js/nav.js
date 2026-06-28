@@ -1,4 +1,4 @@
-import { updateProfile } from './db.js';
+import { updateProfile, getTournaments } from './db.js';
 
 // ── Avatar helpers ─────────────────────────────────────────────────
 const AVATAR_COLORS = [
@@ -61,17 +61,15 @@ function _buildNav(profile, active) {
   document.body.prepend(nav);
 
   // Tournois live dans la nav
-  import('./db.js').then(({ getTournaments }) => {
-    getTournaments().then(tournaments => {
-      const live = tournaments.filter(t => t.status === 'live');
-      const wrap = document.getElementById('nav-live-wrap');
-      if (!wrap || !live.length) return;
-      wrap.innerHTML = live.map(t => `
-        <a class="nav-live-badge" href="/pronostics/tournoi.html?id=${esc(t.id)}">
-          <span class="nav-live-dot"></span>${esc(t.short_name || t.name)}
-        </a>
-      `).join('');
-    });
+  getTournaments().then(tournaments => {
+    const live = tournaments.filter(t => t.status === 'live');
+    const wrap = document.getElementById('nav-live-wrap');
+    if (!wrap || !live.length) return;
+    wrap.innerHTML = live.map(t => `
+      <a class="nav-live-badge" href="/pronostics/tournoi.html?id=${esc(t.id)}">
+        <span class="nav-live-dot"></span>${esc(t.short_name || t.name)}
+      </a>
+    `).join('');
   });
 
   // Bouton retour site (bas gauche)
