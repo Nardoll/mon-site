@@ -1219,6 +1219,53 @@ body {
 }
 .phase-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
+/* ── HOME BUTTON (fixed bottom-left) ────── */
+.home-btn {
+  position: fixed;
+  bottom: 22px;
+  left: 22px;
+  width: 44px; height: 44px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  clip-path: var(--clip-hex);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: var(--muted);
+  z-index: 90;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.home-btn:hover {
+  background: var(--surface3);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.home-btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+/* ── LEAGUEPEDIA LINK ────────────────────── */
+.lp-link {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  font: 700 11px 'Chakra Petch', sans-serif;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 8px 16px;
+  background: var(--accent-bg);
+  border: 1px solid rgba(216,169,85,.25);
+  clip-path: var(--clip-btn);
+  margin-bottom: 16px;
+  transition: background .15s, border-color .15s;
+}
+.lp-link:hover {
+  background: rgba(216,169,85,.12);
+  border-color: rgba(216,169,85,.5);
+}
+.lp-link svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
+
 /* ── RESPONSIVE ──────────────────────────── */
 @media (max-width: 900px) {
   .main { padding: 20px 16px; }

@@ -60,6 +60,14 @@ function _buildNav(profile, active) {
   `;
   document.body.prepend(nav);
 
+  // Bouton retour site (bas gauche)
+  const homeBtn = document.createElement('a');
+  homeBtn.href = '/';
+  homeBtn.className = 'home-btn';
+  homeBtn.title = "Retour à l'accueil du site";
+  homeBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>`;
+  document.body.appendChild(homeBtn);
+
   document.getElementById('btn-logout').addEventListener('click', () => {
     import('./auth.js').then(({ clearLocalProfile }) => {
       clearLocalProfile();
