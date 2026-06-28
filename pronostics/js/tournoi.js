@@ -406,44 +406,53 @@ async function openPicksDrawer(match) {
   const scoreDisplay = (match.score1 != null && match.score2 != null)
     ? `${match.score1} — ${match.score2}` : '';
 
-  // Équipes : toutes les équipes uniques des matchs existants (hors TBD)
+  // Équipes uniques des matchs existants (hors TBD)
   const allTeams = [...new Set(
     matches.flatMap(m => [m.team1, m.team2]).filter(t => t && t !== 'TBD')
   )].sort();
-  const teamOpts = allTeams.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  const teamSelectOpts = (current) => [
+    `<option value="">— Équipe —</option>`,
+    ...allTeams.map(t => `<option value="${esc(t)}"${t === current ? ' selected' : ''}>${esc(t)}</option>`)
+  ].join('');
 
-  // Matchs du calendrier pour le sélecteur d'horaire (tous sauf le match actuel)
+  // Matchs du calendrier pour le sélecteur d'horaire
   const otherMatches = matches
     .filter(m => m.id !== match.id && m.date_utc)
     .sort((a, b) => a.date_utc.localeCompare(b.date_utc));
 
-  function matchLabel(m) {
+  function calMatchLabel(m) {
     const t = formatMatchTime(m.date_utc);
-    const d = m.date_utc ? new Date(m.date_utc.endsWith('Z') ? m.date_utc : m.date_utc + ' UTC')
-      .toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'Europe/Paris' }) : '';
+    const d = new Date(m.date_utc.endsWith('Z') ? m.date_utc : m.date_utc + ' UTC')
+      .toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'Europe/Paris' });
     return `${esc(m.team1)} vs ${esc(m.team2)} — ${d} ${t}`;
   }
 
   const slotOpts = [
-    `<option value="">— Choisir un créneau calendrier —</option>`,
-    ...otherMatches.map(m => {
-      const sel = m.date_utc === match.date_utc ? ' selected' : '';
-      return `<option value="${esc(m.id)}"${sel}>${matchLabel(m)}</option>`;
-    })
+    `<option value="">— Copier l'heure d'un match —</option>`,
+    ...otherMatches.map(m => `<option value="${esc(m.id)}">${calMatchLabel(m)}</option>`)
   ].join('');
+
+  // Heure actuelle du match (en heure locale pour datetime-local)
+  const existingDt = match.date_utc
+    ? (() => {
+        const d = new Date(match.date_utc.endsWith('Z') ? match.date_utc : match.date_utc + ' UTC');
+        const pad = n => String(n).padStart(2, '0');
+        // Afficher en UTC pour la saisie (on stocke en UTC)
+        return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+      })()
+    : '';
 
   const adminSection = IS_ADMIN ? `
     <div class="pd-section-label" style="margin-top:.5rem;border-top:1px solid var(--border);padding-top:.5rem">⚙️ Admin</div>
     <form class="bkap-form" id="bkap-form">
       <div class="bkap-row">
         <label>Équipe 1</label>
-        <input list="bkap-teams" name="team1" value="${esc(match.team1 || '')}" />
+        <select name="team1">${teamSelectOpts(match.team1)}</select>
       </div>
       <div class="bkap-row">
         <label>Équipe 2</label>
-        <input list="bkap-teams" name="team2" value="${esc(match.team2 || '')}" />
+        <select name="team2">${teamSelectOpts(match.team2)}</select>
       </div>
-      <datalist id="bkap-teams">${teamOpts}</datalist>
       <div class="bkap-row">
         <label>Statut</label>
         <select name="status">
@@ -466,9 +475,10 @@ async function openPicksDrawer(match) {
         <span style="color:var(--muted);padding:0 .2rem">—</span>
         <input type="number" name="score2" min="0" max="3" value="${match.score2 ?? ''}" style="width:46px" />
       </div>
-      <div class="bkap-row" style="align-items:flex-start;flex-direction:column;gap:.2rem">
-        <label style="width:auto;text-align:left">Créneau calendrier</label>
-        <select name="cal_slot" id="bkap-cal-slot" style="width:100%;font-size:.68rem">${slotOpts}</select>
+      <div class="bkap-row" style="flex-direction:column;align-items:stretch;gap:.3rem">
+        <label style="width:auto">Heure (UTC)</label>
+        <input type="datetime-local" name="date_utc" id="bkap-dt" value="${existingDt}" style="font-size:.72rem" />
+        <select id="bkap-cal-slot" style="font-size:.68rem">${slotOpts}</select>
       </div>
       <button type="submit" class="bkap-save" id="bkap-save">Sauvegarder</button>
     </form>
@@ -493,19 +503,28 @@ async function openPicksDrawer(match) {
   });
 
   if (IS_ADMIN) {
+    // Quand on sélectionne un créneau → préremplit le datetime-local
+    document.getElementById('bkap-cal-slot')?.addEventListener('change', e => {
+      const calMatch = matches.find(m => m.id === e.target.value);
+      if (!calMatch?.date_utc) return;
+      const d = new Date(calMatch.date_utc.endsWith('Z') ? calMatch.date_utc : calMatch.date_utc + ' UTC');
+      const pad = n => String(n).padStart(2, '0');
+      document.getElementById('bkap-dt').value =
+        `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    });
+
     document.getElementById('bkap-form')?.addEventListener('submit', async e => {
       e.preventDefault();
       const f = e.target;
-      const team1    = f.team1.value.trim() || 'TBD';
-      const team2    = f.team2.value.trim() || 'TBD';
+      const team1    = f.team1.value || 'TBD';
+      const team2    = f.team2.value || 'TBD';
       const status   = f.status.value;
       const winner   = f.winner.value || null;
       const score1   = f.score1.value !== '' ? parseInt(f.score1.value) : null;
       const score2   = f.score2.value !== '' ? parseInt(f.score2.value) : null;
-      // Récupérer l'horaire depuis le match calendrier sélectionné
-      const calSlotId = f.cal_slot?.value;
-      const calMatch  = calSlotId ? matches.find(m => m.id === calSlotId) : null;
-      const date_utc  = calMatch ? calMatch.date_utc : (match.date_utc || null);
+      // Heure saisie en UTC → stocker tel quel avec Z
+      const dtRaw    = f.date_utc?.value;
+      const date_utc = dtRaw ? dtRaw + ':00Z' : (match.date_utc || null);
       const btn = document.getElementById('bkap-save');
       btn.disabled = true; btn.textContent = '…';
       try {
@@ -1170,20 +1189,31 @@ function renderAdmin() {
     }
   });
 
+  // Créneau calendrier → préremplit le datetime-local correspondant
+  container.querySelectorAll('.adm-cal-slot').forEach(sel => {
+    sel.addEventListener('change', e => {
+      const calMatch = matches.find(m => m.id === e.target.value);
+      if (!calMatch?.date_utc) return;
+      const d = new Date(calMatch.date_utc.endsWith('Z') ? calMatch.date_utc : calMatch.date_utc + ' UTC');
+      const p = n => String(n).padStart(2, '0');
+      const dtInput = sel.closest('form').querySelector('.adm-dt');
+      if (dtInput) dtInput.value = `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+    });
+  });
+
   container.querySelectorAll('.admin-match-form').forEach(form => {
     form.addEventListener('submit', async e => {
       e.preventDefault();
       const id = form.dataset.matchId;
-      const team1      = form.querySelector('[name=team1]').value.trim();
-      const team2      = form.querySelector('[name=team2]').value.trim();
+      const team1      = form.querySelector('[name=team1]').value;
+      const team2      = form.querySelector('[name=team2]').value;
       const winner     = form.querySelector('[name=winner]').value;
       const score1     = form.querySelector('[name=score1]').value;
       const score2     = form.querySelector('[name=score2]').value;
       const status     = form.querySelector('[name=status]').value;
-      const calSlotId  = form.querySelector('[name=cal_slot]')?.value;
-      const calMatch   = calSlotId ? matches.find(m => m.id === calSlotId) : null;
+      const dtRaw      = form.querySelector('[name=date_utc]')?.value;
       const local      = matches.find(m => m.id === id);
-      const date_utc   = calMatch ? calMatch.date_utc : (local?.date_utc || null);
+      const date_utc   = dtRaw ? dtRaw + ':00Z' : (local?.date_utc || null);
 
       const btn = form.querySelector('.admin-save-btn');
       btn.disabled = true;
@@ -1219,25 +1249,35 @@ function renderAdmin() {
 }
 
 function renderAdminMatch(m, teams) {
-  const teamOpts = teams.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  const teamSelectOpts = (current) => [
+    `<option value="">— Équipe —</option>`,
+    ...teams.map(t => `<option value="${esc(t)}"${t === current ? ' selected' : ''}>${esc(t)}</option>`)
+  ].join('');
+
   const winnerOpts = `
     <option value="">— Pas de gagnant —</option>
     <option value="${esc(m.team1)}"${m.winner === m.team1 ? ' selected' : ''}>${esc(m.team1)}</option>
     <option value="${esc(m.team2)}"${m.winner === m.team2 ? ' selected' : ''}>${esc(m.team2)}</option>
   `;
+
   const otherMatches = matches
     .filter(x => x.id !== m.id && x.date_utc)
     .sort((a, b) => a.date_utc.localeCompare(b.date_utc));
   const slotOpts = [
-    `<option value="">— Créneau calendrier —</option>`,
+    `<option value="">— Copier l'heure d'un match —</option>`,
     ...otherMatches.map(x => {
       const t = formatMatchTime(x.date_utc);
       const d = new Date(x.date_utc.endsWith('Z') ? x.date_utc : x.date_utc + ' UTC')
         .toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'Europe/Paris' });
-      const sel = x.date_utc === m.date_utc ? ' selected' : '';
-      return `<option value="${esc(x.id)}"${sel}>${esc(x.team1)} vs ${esc(x.team2)} — ${d} ${t}</option>`;
+      return `<option value="${esc(x.id)}">${esc(x.team1)} vs ${esc(x.team2)} — ${d} ${t}</option>`;
     })
   ].join('');
+
+  const existingDt = m.date_utc ? (() => {
+    const d = new Date(m.date_utc.endsWith('Z') ? m.date_utc : m.date_utc + ' UTC');
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+  })() : '';
 
   return `
     <details class="admin-match">
@@ -1249,12 +1289,11 @@ function renderAdminMatch(m, teams) {
       <form class="admin-match-form" data-match-id="${m.id}">
         <div class="admin-row">
           <label>Équipe 1</label>
-          <input list="al-teams-${m.id}" name="team1" value="${esc(m.team1 || '')}" />
-          <datalist id="al-teams-${m.id}">${teamOpts}</datalist>
+          <select name="team1">${teamSelectOpts(m.team1)}</select>
         </div>
         <div class="admin-row">
           <label>Équipe 2</label>
-          <input list="al-teams-${m.id}" name="team2" value="${esc(m.team2 || '')}" />
+          <select name="team2">${teamSelectOpts(m.team2)}</select>
         </div>
         <div class="admin-row">
           <label>Statut</label>
@@ -1275,8 +1314,9 @@ function renderAdminMatch(m, teams) {
           <input type="number" name="score2" min="0" max="3" value="${m.score2 ?? ''}" style="width:52px" />
         </div>
         <div class="admin-row" style="flex-wrap:wrap;gap:.3rem">
-          <label style="width:100%">Créneau calendrier</label>
-          <select name="cal_slot" style="flex:1;font-size:.7rem">${slotOpts}</select>
+          <label style="width:100%">Heure (UTC)</label>
+          <input type="datetime-local" name="date_utc" class="adm-dt" value="${existingDt}" style="flex:1;min-width:0;font-size:.7rem" />
+          <select class="adm-cal-slot" data-match-id="${m.id}" style="width:100%;font-size:.68rem">${slotOpts}</select>
         </div>
         <button type="submit" class="admin-save-btn">Sauvegarder</button>
       </form>
