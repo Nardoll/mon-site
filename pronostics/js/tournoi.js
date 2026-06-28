@@ -1404,7 +1404,7 @@ function setupMatchHandlers() {
       const matchId = card.dataset.matchId;
       const match = matches.find(m => m.id === matchId);
 
-      if (match?.status === 'finished' || match?.status === 'live') {
+      if (match?.status === 'finished' || match?.status === 'live' || IS_ADMIN) {
         openPicksDrawer(match);
         return;
       }
