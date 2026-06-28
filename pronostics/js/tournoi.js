@@ -432,15 +432,7 @@ async function openPicksDrawer(match) {
     ...otherMatches.map(m => `<option value="${esc(m.id)}">${calMatchLabel(m)}</option>`)
   ].join('');
 
-  // Heure actuelle du match (en heure locale pour datetime-local)
-  const existingDt = match.date_utc
-    ? (() => {
-        const d = new Date(match.date_utc.endsWith('Z') ? match.date_utc : match.date_utc + ' UTC');
-        const pad = n => String(n).padStart(2, '0');
-        // Afficher en UTC pour la saisie (on stocke en UTC)
-        return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
-      })()
-    : '';
+  const existingDt = utcToParisLocal(match.date_utc);
 
   const adminSection = IS_ADMIN ? `
     <div class="pd-section-label" style="margin-top:.5rem;border-top:1px solid var(--border);padding-top:.5rem">⚙️ Admin</div>
@@ -476,7 +468,7 @@ async function openPicksDrawer(match) {
         <input type="number" name="score2" min="0" max="3" value="${match.score2 ?? ''}" style="width:46px" />
       </div>
       <div class="bkap-row" style="flex-direction:column;align-items:stretch;gap:.3rem">
-        <label style="width:auto">Heure (UTC)</label>
+        <label style="width:auto">Heure (Paris)</label>
         <input type="datetime-local" name="date_utc" id="bkap-dt" value="${existingDt}" style="font-size:.72rem" />
         <select id="bkap-cal-slot" style="font-size:.68rem">${slotOpts}</select>
       </div>
@@ -503,14 +495,11 @@ async function openPicksDrawer(match) {
   });
 
   if (IS_ADMIN) {
-    // Quand on sélectionne un créneau → préremplit le datetime-local
+    // Quand on sélectionne un créneau → préremplit le datetime-local en heure Paris
     document.getElementById('bkap-cal-slot')?.addEventListener('change', e => {
       const calMatch = matches.find(m => m.id === e.target.value);
       if (!calMatch?.date_utc) return;
-      const d = new Date(calMatch.date_utc.endsWith('Z') ? calMatch.date_utc : calMatch.date_utc + ' UTC');
-      const pad = n => String(n).padStart(2, '0');
-      document.getElementById('bkap-dt').value =
-        `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+      document.getElementById('bkap-dt').value = utcToParisLocal(calMatch.date_utc);
     });
 
     document.getElementById('bkap-form')?.addEventListener('submit', async e => {
@@ -522,9 +511,9 @@ async function openPicksDrawer(match) {
       const winner   = f.winner.value || null;
       const score1   = f.score1.value !== '' ? parseInt(f.score1.value) : null;
       const score2   = f.score2.value !== '' ? parseInt(f.score2.value) : null;
-      // Heure saisie en UTC → stocker tel quel avec Z
-      const dtRaw    = f.date_utc?.value;
-      const date_utc = dtRaw ? dtRaw + ':00Z' : (match.date_utc || null);
+      // Heure saisie en heure Paris → convertir en UTC pour stockage
+      const dtRaw    = document.getElementById('bkap-dt')?.value;
+      const date_utc = dtRaw ? parisToUtc(dtRaw) : (match.date_utc || null);
       const btn = document.getElementById('bkap-save');
       btn.disabled = true; btn.textContent = '…';
       try {
@@ -1194,10 +1183,8 @@ function renderAdmin() {
     sel.addEventListener('change', e => {
       const calMatch = matches.find(m => m.id === e.target.value);
       if (!calMatch?.date_utc) return;
-      const d = new Date(calMatch.date_utc.endsWith('Z') ? calMatch.date_utc : calMatch.date_utc + ' UTC');
-      const p = n => String(n).padStart(2, '0');
       const dtInput = sel.closest('form').querySelector('.adm-dt');
-      if (dtInput) dtInput.value = `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+      if (dtInput) dtInput.value = utcToParisLocal(calMatch.date_utc);
     });
   });
 
@@ -1211,9 +1198,9 @@ function renderAdmin() {
       const score1     = form.querySelector('[name=score1]').value;
       const score2     = form.querySelector('[name=score2]').value;
       const status     = form.querySelector('[name=status]').value;
-      const dtRaw      = form.querySelector('[name=date_utc]')?.value;
+      const dtRaw      = form.querySelector('.adm-dt')?.value;
       const local      = matches.find(m => m.id === id);
-      const date_utc   = dtRaw ? dtRaw + ':00Z' : (local?.date_utc || null);
+      const date_utc   = dtRaw ? parisToUtc(dtRaw) : (local?.date_utc || null);
 
       const btn = form.querySelector('.admin-save-btn');
       btn.disabled = true;
@@ -1273,11 +1260,7 @@ function renderAdminMatch(m, teams) {
     })
   ].join('');
 
-  const existingDt = m.date_utc ? (() => {
-    const d = new Date(m.date_utc.endsWith('Z') ? m.date_utc : m.date_utc + ' UTC');
-    const p = n => String(n).padStart(2, '0');
-    return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
-  })() : '';
+  const existingDt = utcToParisLocal(m.date_utc);
 
   return `
     <details class="admin-match">
@@ -1314,7 +1297,7 @@ function renderAdminMatch(m, teams) {
           <input type="number" name="score2" min="0" max="3" value="${m.score2 ?? ''}" style="width:52px" />
         </div>
         <div class="admin-row" style="flex-wrap:wrap;gap:.3rem">
-          <label style="width:100%">Heure (UTC)</label>
+          <label style="width:100%">Heure (Paris)</label>
           <input type="datetime-local" name="date_utc" class="adm-dt" value="${existingDt}" style="flex:1;min-width:0;font-size:.7rem" />
           <select class="adm-cal-slot" data-match-id="${m.id}" style="width:100%;font-size:.68rem">${slotOpts}</select>
         </div>
@@ -1518,6 +1501,46 @@ function formatMatchTime(dateStr) {
   try {
     const d = new Date(dateStr.endsWith('Z') ? dateStr : dateStr + ' UTC');
     return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' });
+  } catch { return ''; }
+}
+
+// Convertit "YYYY-MM-DDTHH:MM" (heure Paris) → chaîne ISO UTC
+function parisToUtc(localStr) {
+  if (!localStr) return null;
+  // Construire une date en interprétant la valeur comme heure Paris
+  const parts = localStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  if (!parts) return null;
+  const [, y, mo, d, h, mi] = parts;
+  // Utiliser Intl pour trouver le décalage Paris à cette date
+  const testDate = new Date(`${y}-${mo}-${d}T${h}:${mi}:00Z`);
+  const parisFmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false
+  });
+  const parisStr = parisFmt.format(testDate).replace(', ', 'T').replace(' ', 'T');
+  // Calculer le décalage : diff entre ce que Paris lit et l'heure UTC qu'on a testée
+  const parisH = parseInt(parisStr.slice(11, 13));
+  const parisM = parseInt(parisStr.slice(14, 16));
+  const inputH = parseInt(h);
+  const inputM = parseInt(mi);
+  const offsetMin = (parisH * 60 + parisM) - (inputH * 60 + inputM);
+  // Soustraire le décalage pour obtenir l'UTC
+  const utcMs = testDate.getTime() - offsetMin * 60000;
+  return new Date(utcMs).toISOString();
+}
+
+// Retourne "YYYY-MM-DDTHH:MM" en heure Paris depuis un date_utc
+function utcToParisLocal(dateStr) {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr.endsWith('Z') ? dateStr : dateStr + ' UTC');
+    const p = n => String(n).padStart(2, '0');
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    }).formatToParts(d);
+    const get = type => parts.find(x => x.type === type)?.value ?? '00';
+    return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
   } catch { return ''; }
 }
 
