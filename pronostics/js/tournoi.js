@@ -281,8 +281,19 @@ function renderMatchCard(match) {
   const t1win = isFinished && match.winner === match.team1;
   const t2win = isFinished && match.winner === match.team2;
 
+  let pickScoreHtml = '';
+  if (isFinished && pick?.pick_winner) {
+    const isCorrect = pick.pick_winner === match.winner;
+    const ps1 = pick.pick_score1 != null ? parseInt(pick.pick_score1) : null;
+    const ps2 = pick.pick_score2 != null ? parseInt(pick.pick_score2) : null;
+    const isPerfect = isCorrect && ps1 === parseInt(match.score1) && ps2 === parseInt(match.score2);
+    const cls = isPerfect ? 'pick-perfect' : isCorrect ? 'pick-correct' : 'pick-wrong';
+    const label = ps1 != null ? `${ps1} — ${ps2}` : esc(pick.pick_winner);
+    pickScoreHtml = `<div class="match-pick-score ${cls}">${label}</div>`;
+  }
+
   const scoreHtml = isFinished
-    ? `<div class="match-score">${match.score1} — ${match.score2}</div>`
+    ? `<div class="match-score">${match.score1} — ${match.score2}</div>${pickScoreHtml}`
     : `<div class="match-score pending">VS</div>`;
 
   const statusTag = isFinished ? '✓ Terminé' : isLocked ? '🔒 Verrouillé' : '📝 Pronostic ouvert';

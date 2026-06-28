@@ -623,6 +623,14 @@ body {
   letter-spacing: .08em;
 }
 .match-score.pending { color: var(--muted); font-size: .9rem; }
+.match-pick-score {
+  font-size: .72rem; font-weight: 700;
+  font-variant-numeric: tabular-nums; letter-spacing: .07em;
+  text-align: center; margin-top: .1rem;
+}
+.match-pick-score.pick-perfect { color: var(--win); }
+.match-pick-score.pick-correct { color: #5b9cf6; }
+.match-pick-score.pick-wrong   { color: var(--loss); }
 .match-bo { font-size: .58rem; color: var(--muted); letter-spacing: .05em; text-transform: uppercase; }
 .match-time { font-size: .67rem; color: var(--muted2); text-align: center; }
 
