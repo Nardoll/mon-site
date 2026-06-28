@@ -10,8 +10,12 @@ import {
 function teamLogo(name, size = 22) {
   const logos = tournament?.team_logos || {};
   const src = logos[name];
-  if (!src) return '';
-  return `<img src="${src}" alt="${esc(name)}" class="team-logo" style="width:${size}px;height:${size}px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">`;
+  const abbr = (name || 'TBD').replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase();
+  const cls = size >= 36 ? 'team-crest lg' : size >= 28 ? 'team-crest' : 'team-crest sm';
+  if (src) {
+    return `<div class="${cls}"><img src="${esc(src)}" alt="${esc(name)}" onerror="this.parentElement.innerHTML='${abbr}'"></div>`;
+  }
+  return `<div class="${cls}">${abbr}</div>`;
 }
 
 // ── Structure bracket MSI 2026 ─────────────────────────────────────
@@ -113,11 +117,11 @@ function renderPage(main) {
     </div>
 
     <div class="tour-tabs">
-      <button class="tour-tab active" data-tab="calendrier">🗓️ Calendrier</button>
-      <button class="tour-tab" data-tab="bracket">🏆 Bracket</button>
-      <button class="tour-tab" data-tab="equipes">👥 Équipes</button>
-      <button class="tour-tab" data-tab="classement">📊 Classement</button>
-      ${IS_ADMIN ? '<button class="tour-tab" data-tab="admin">⚙️ Admin</button>' : ''}
+      <button class="tour-tab active" data-tab="calendrier">Calendrier</button>
+      <button class="tour-tab" data-tab="bracket">Bracket</button>
+      <button class="tour-tab" data-tab="equipes">Équipes</button>
+      <button class="tour-tab" data-tab="classement">Classement</button>
+      ${IS_ADMIN ? '<button class="tour-tab" data-tab="admin">Admin</button>' : ''}
     </div>
 
     <div id="tab-calendrier" class="tab-pane active"></div>
@@ -150,11 +154,11 @@ function renderPage(main) {
 
 function setupSyncTopBar() {
   const cooldown = getSyncCooldown();
-  const topBar = document.querySelector('.top-bar');
-  if (!topBar || document.getElementById('btn-sync-top')) return;
+  const slot = document.getElementById('nav-sync-slot');
+  if (!slot || document.getElementById('btn-sync-top')) return;
 
   const wrap = document.createElement('div');
-  wrap.className = 'sync-wrap';
+  wrap.style.cssText = 'display:flex;align-items:center;gap:.5rem';
   wrap.id = 'sync-wrap';
 
   const infoText = cooldown > 0
@@ -169,7 +173,7 @@ function setupSyncTopBar() {
       <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
     </button>
   `;
-  topBar.insertBefore(wrap, topBar.querySelector('.top-user'));
+  slot.appendChild(wrap);
 
   const btn = document.getElementById('btn-sync-top');
   if (cooldown > 0) startCountdownTopBar(cooldown);
@@ -306,23 +310,23 @@ function renderMatchCard(match) {
     pickSection = renderPickLocked(match, pick, isFinished);
   }
 
+  const isLive = match.status === 'live';
   return `
-    <div class="match-card${pick ? ' has-pick' : ''}${isLocked ? ' is-locked' : ''}${isFinished ? ' is-finished' : ''}"
+    <div class="match-card${pick ? ' has-pick' : ''}${isLocked ? ' is-locked' : ''}${isFinished ? ' is-finished' : ''}${isLive ? ' is-live' : ''}"
          id="mc-${match.id}" data-match-id="${match.id}" data-locked="${isLocked ? '1' : ''}">
       <div class="match-main">
         <div class="match-team">
-          ${teamLogo(match.team1, 24)}
+          ${teamLogo(match.team1, 40)}
           <div class="match-team-name${t1win ? ' winner' : t2win ? ' loser' : ''}">${esc(match.team1 || 'TBD')}</div>
         </div>
-        <div class="match-vs">
+        <div class="match-center">
           ${scoreHtml}
-          <div class="match-bo">BO${bo}</div>
-          <div class="match-time">${formatMatchTime(match.date_utc)}</div>
-          <div class="match-tag">${esc(match.tab || match.round || '')}</div>
+          <div class="match-bo-time">BO${bo}${formatMatchTime(match.date_utc) ? ' · ' + formatMatchTime(match.date_utc) : ''}</div>
+          ${match.round ? `<div class="match-round">${esc(match.round)}</div>` : ''}
         </div>
-        <div class="match-team">
+        <div class="match-team right">
           <div class="match-team-name${t2win ? ' winner' : t1win ? ' loser' : ''}">${esc(match.team2 || 'TBD')}</div>
-          ${teamLogo(match.team2, 24)}
+          ${teamLogo(match.team2, 40)}
         </div>
       </div>
       ${pickSection}
@@ -345,10 +349,11 @@ function renderPickOpen(match, pick, bo, maxWins) {
 
   return `
     <div class="match-pick">
-      <div class="pick-label">Ton pronostic
-        ${bo === 1 ? '' : '<span style="float:right;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">Verrouillé 1h avant le match</span>'}
+      <div class="pick-header">
+        <span class="pick-label">Ton pronostic</span>
+        ${bo !== 1 ? '<span class="pick-locked-label">Verrouillé 1h avant</span>' : ''}
       </div>
-      <div class="pick-teams">
+      <div class="pick-teams" style="margin-bottom:10px">
         <button class="pick-team-btn${picked1 ? ' selected' : ''}"
           data-match="${match.id}" data-name="${escAttr(match.team1)}"
           data-bo="${bo}" data-t1="${escAttr(match.team1)}" data-t2="${escAttr(match.team2)}">
@@ -765,16 +770,20 @@ async function renderClassement() {
     console.error(e);
     return;
   }
-  const rankClass = i => ['gold','silver','bronze'][i] || '';
-  const rankIcon  = i => ['🥇','🥈','🥉'][i] || String(i + 1);
+  const rankIcon = i => {
+    if (i === 0) return `<span class="lb-rank gold">1</span>`;
+    if (i === 1) return `<span class="lb-rank silver">2</span>`;
+    if (i === 2) return `<span class="lb-rank bronze">3</span>`;
+    return `<span class="lb-rank">${i + 1}</span>`;
+  };
 
   container.innerHTML = `
     <div class="leaderboard">
       ${entries.map((e, i) => `
         <div class="lb-row clickable${e.id === profile.id ? ' me' : ''}"
              data-player-id="${esc(e.id)}" data-player-name="${esc(e.name)}">
-          <div class="lb-rank ${rankClass(i)}">${rankIcon(i)}</div>
-          <div class="lb-info" style="display:flex;align-items:center;gap:.55rem;flex:1">
+          ${rankIcon(i)}
+          <div style="display:flex;align-items:center;gap:.55rem;flex:1">
             ${avatarHtml({ name: e.name, avatar_url: e.avatar_url }, 'avatar-sm')}
             <div>
               <div class="lb-name-row">
@@ -1270,15 +1279,15 @@ function renderAdminMatch(m, teams) {
         <span class="admin-match-status ${m.status}">${m.status}</span>
       </summary>
       <form class="admin-match-form" data-match-id="${m.id}">
-        <div class="admin-row">
+        <div class="admin-row-form">
           <label>Équipe 1</label>
           <select name="team1">${teamSelectOpts(m.team1)}</select>
         </div>
-        <div class="admin-row">
+        <div class="admin-row-form">
           <label>Équipe 2</label>
           <select name="team2">${teamSelectOpts(m.team2)}</select>
         </div>
-        <div class="admin-row">
+        <div class="admin-row-form">
           <label>Statut</label>
           <select name="status">
             <option value="scheduled"${m.status==='scheduled'?' selected':''}>Planifié</option>
@@ -1286,17 +1295,17 @@ function renderAdminMatch(m, teams) {
             <option value="finished"${m.status==='finished'?' selected':''}>Terminé</option>
           </select>
         </div>
-        <div class="admin-row">
+        <div class="admin-row-form">
           <label>Gagnant</label>
           <select name="winner">${winnerOpts}</select>
         </div>
-        <div class="admin-row">
+        <div class="admin-row-form">
           <label>Score</label>
           <input type="number" name="score1" min="0" max="3" value="${m.score1 ?? ''}" style="width:52px" />
           <span style="color:var(--muted)">—</span>
           <input type="number" name="score2" min="0" max="3" value="${m.score2 ?? ''}" style="width:52px" />
         </div>
-        <div class="admin-row" style="flex-wrap:wrap;gap:.3rem">
+        <div class="admin-row-form" style="flex-wrap:wrap;gap:.3rem">
           <label style="width:100%">Heure (Paris)</label>
           <input type="datetime-local" name="date_utc" class="adm-dt" value="${existingDt}" style="flex:1;min-width:0;font-size:.7rem" />
           <select class="adm-cal-slot" data-match-id="${m.id}" style="width:100%;font-size:.68rem">${slotOpts}</select>

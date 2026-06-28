@@ -15,28 +15,50 @@ export function avatarColor(name) {
 export function avatarHtml(profile, sizeClass = '') {
   const color = avatarColor(profile.name || profile.pseudo || '?');
   const initial = (profile.name || profile.pseudo || '?')[0].toUpperCase();
+  const hex = sizeClass === 'avatar-sm' ? 'avatar-hex avatar-hex-sm'
+            : sizeClass === 'avatar-lg' ? 'avatar-hex avatar-hex-lg'
+            : 'avatar-hex';
   if (profile.avatar_url) {
-    return `<div class="avatar ${sizeClass}" style="background:${color}" title="${esc(profile.name)}">
-      <img src="${esc(profile.avatar_url)}" alt="${esc(profile.name)}" onerror="this.style.display='none'">
+    return `<div class="${hex}" style="background:${color}" title="${esc(profile.name || profile.pseudo)}">
+      <img src="${esc(profile.avatar_url)}" alt="${esc(profile.name || profile.pseudo)}" onerror="this.style.display='none'">
     </div>`;
   }
-  return `<div class="avatar ${sizeClass}" style="background:${color}" title="${esc(profile.name)}">${initial}</div>`;
+  return `<div class="${hex}" style="background:${color}" title="${esc(profile.name || profile.pseudo)}">${initial}</div>`;
 }
 
-// ── Top bar (utilisateur uniquement, sans logo) ────────────────────
+// ── Top navigation (desktop horizontal) ────────────────────────────
 export function injectTopBar(profile) {
-  const bar = document.createElement('header');
-  bar.className = 'top-bar';
-  bar.innerHTML = `
-    <div class="top-user" style="gap:.55rem;margin-left:auto">
+  // no-op: kept for tournoi.js which calls both injectTopBar + injectSidebar
+  // real nav is built by injectSidebar
+}
+
+export function injectSidebar(profile, active) {
+  _buildNav(profile, active);
+}
+
+function _buildNav(profile, active) {
+  const nav = document.createElement('header');
+  nav.className = 'top-nav';
+  nav.innerHTML = `
+    <a href="/pronostics/" class="nav-logo">
+      <div class="nav-logo-hex"></div>
+      <span class="nav-logo-text">Pronos</span>
+    </a>
+    <nav class="nav-links">
+      <a href="/pronostics/" class="nav-link${active === 'accueil' ? ' active' : ''}">Tournois</a>
+      <a href="/pronostics/classement.html" class="nav-link${active === 'classement' ? ' active' : ''}">Classement</a>
+    </nav>
+    <div class="nav-right">
+      <div id="nav-sync-slot"></div>
+      <div id="nav-live-wrap"></div>
+      <span class="nav-pts" id="nav-pts" style="display:none"></span>
       <div id="top-avatar" style="cursor:pointer" title="Modifier le profil">
         ${avatarHtml(profile, '')}
       </div>
-      <span class="top-user-name">${esc(profile.name)}</span>
       <button class="btn-logout" id="btn-logout" title="Se déconnecter">✕</button>
     </div>
   `;
-  document.body.prepend(bar);
+  document.body.prepend(nav);
 
   document.getElementById('btn-logout').addEventListener('click', () => {
     import('./auth.js').then(({ clearLocalProfile }) => {
@@ -50,51 +72,15 @@ export function injectTopBar(profile) {
   });
 }
 
-// ── Sidebar gauche fixe ────────────────────────────────────────────
-export function injectSidebar(profile, active) {
-  const sidebar = document.createElement('aside');
-  sidebar.className = 'sidebar';
-  sidebar.innerHTML = `
-    <div class="sb-header">
-      <a href="/pronostics/" class="sb-logo">
-        <span class="sb-logo-icon">⚡</span>
-        <span class="sb-logo-text">Pronostics</span>
-      </a>
-    </div>
-    <nav class="sb-nav">
-      <a href="/pronostics/" class="sb-link${active === 'accueil' ? ' active' : ''}">
-        🏆 Tournois
-      </a>
-      <a href="/pronostics/classement.html" class="sb-link${active === 'classement' ? ' active' : ''}">
-        📊 Classement général
-      </a>
-    </nav>
-    <div id="sb-live-wrap"></div>
-    <div class="sb-footer">
-      <a href="/" class="sb-home" title="Accueil du site">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-        </svg>
-      </a>
-    </div>
-  `;
-  document.body.prepend(sidebar);
+export function setNavPts(pts) {
+  const el = document.getElementById('nav-pts');
+  if (!el) return;
+  el.textContent = `${pts} pts`;
+  el.style.display = '';
 }
 
-export function setSidebarLive(tournaments) {
-  const wrap = document.getElementById('sb-live-wrap');
-  if (!wrap || !tournaments.length) return;
-  wrap.innerHTML = `
-    <div class="sb-divider"></div>
-    <div class="sb-section-label">En cours</div>
-    ${tournaments.map(t => `
-      <a href="/pronostics/tournoi.html?id=${esc(t.id)}" class="sb-link sb-live-link">
-        <span class="sb-live-dot"></span>
-        ${esc(t.short_name || t.name)}
-      </a>
-    `).join('')}
-  `;
-}
+// kept for backwards compat — live tournaments could appear here if needed
+export function setSidebarLive() {}
 
 // ── Avatar edit modal ──────────────────────────────────────────────
 function showAvatarModal(profile) {
@@ -102,7 +88,7 @@ function showAvatarModal(profile) {
   overlay.className = 'avatar-modal-overlay';
   overlay.innerHTML = `
     <div class="avatar-modal">
-      <div class="avatar-modal-title">✏️ Modifier mon profil</div>
+      <div class="avatar-modal-title">Modifier mon profil</div>
       <div class="avatar-preview">
         <div id="av-preview">${avatarHtml({ ...profile }, 'avatar-lg')}</div>
       </div>
@@ -118,7 +104,6 @@ function showAvatarModal(profile) {
   `;
   document.body.appendChild(overlay);
 
-  // Preview live
   const urlInput = document.getElementById('av-url');
   const preview  = document.getElementById('av-preview');
   urlInput.addEventListener('input', () => {
@@ -131,22 +116,19 @@ function showAvatarModal(profile) {
   document.getElementById('av-save').addEventListener('click', async () => {
     const url = urlInput.value.trim() || null;
     const btn = document.getElementById('av-save');
-    btn.disabled = true;
-    btn.textContent = '…';
+    btn.disabled = true; btn.textContent = '…';
     try {
       await updateProfile(profile.id, { avatar_url: url });
       import('./auth.js').then(({ setLocalProfile }) => {
         setLocalProfile(profile.id, profile.name, url);
       });
       profile.avatar_url = url;
-      // Update top bar avatar
       const topAv = document.getElementById('top-avatar');
       if (topAv) topAv.innerHTML = avatarHtml(profile, '');
       overlay.remove();
       showToast('✓ Profil mis à jour');
     } catch (e) {
-      btn.disabled = false;
-      btn.textContent = 'Enregistrer';
+      btn.disabled = false; btn.textContent = 'Enregistrer';
     }
   });
 
