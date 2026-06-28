@@ -374,8 +374,13 @@ function closeMember() {
 
 // ── Votes repliables + recherche ─────────────────────────────────────────────
 function buildVoteSection(votesArr) {
+  const titles = [...new Set(
+    votesArr.flatMap(({ ballot }) => Object.keys(ballot).map(lid => livreById[lid]?.titre).filter(Boolean))
+  )].sort();
+  const opts = titles.map(t => `<option value="${esc(t)}">`).join("");
   return `
-    <input type="text" class="rf-search" id="rf-vote-search" placeholder="Rechercher un mois ou un livre…" />
+    <input type="text" class="rf-search" id="rf-vote-search" list="rf-vote-books" autocomplete="off" placeholder="Rechercher un livre ou un mois…" />
+    <datalist id="rf-vote-books">${opts}</datalist>
     <div id="rf-vote-list">${voteRows(votesArr)}</div>`;
 }
 
@@ -411,22 +416,58 @@ function wireVoteSearch(votesArr) {
 
   const search = document.getElementById("rf-vote-search");
   if (!search) return;
+
+  // Index titre → livre_id pour détecter une sélection exacte depuis la datalist
+  const titreToLid = {};
+  votesArr.forEach(({ ballot }) => {
+    Object.keys(ballot).forEach(lid => {
+      const t = livreById[lid]?.titre;
+      if (t) titreToLid[t.toLowerCase()] = lid;
+    });
+  });
+
   search.addEventListener("input", () => {
-    const q = search.value.trim().toLowerCase();
+    const q = search.value.trim();
+    const qLow = q.toLowerCase();
+    const list = document.getElementById("rf-vote-list");
+
     if (!q) {
-      document.getElementById("rf-vote-list").innerHTML = voteRows(votesArr);
-    } else {
-      const filtered = votesArr.filter(entry => {
-        const { v, ballot } = entry;
-        if (formatMois(v.mois, v.annee).toLowerCase().includes(q)) return true;
-        return Object.keys(ballot).some(lid =>
-          (livreById[lid]?.titre || "").toLowerCase().includes(q)
-        );
-      });
-      document.getElementById("rf-vote-list").innerHTML = filtered.length
-        ? voteRows(filtered)
-        : `<div class="rf-empty">Aucun vote ne correspond.</div>`;
+      list.innerHTML = voteRows(votesArr);
+      bindRows();
+      return;
     }
+
+    // Sélection exacte d'un livre (via datalist ou frappe précise) → vue ciblée
+    const matchedLid = titreToLid[qLow];
+    if (matchedLid) {
+      const titre = livreById[matchedLid]?.titre || q;
+      const entries = votesArr.filter(({ ballot }) => matchedLid in ballot);
+      list.innerHTML = entries.length
+        ? `<div class="rf-book-focus">
+            <div class="rf-book-focus-title">Notes pour <em>${esc(titre)}</em></div>
+            ${entries.map(({ v, ballot }) => {
+              const note = Number(ballot[matchedLid]);
+              return `<div class="rf-book-focus-row">
+                <span class="rf-book-focus-mois">${formatMois(v.mois, v.annee)}</span>
+                <span class="rf-ballot-stars">${stars5(note)}</span>
+                <span class="rf-book-focus-note">${note}/5</span>
+              </div>`;
+            }).join("")}
+          </div>`
+        : `<div class="rf-empty">Aucun vote pour ce livre.</div>`;
+      return;
+    }
+
+    // Filtre souple par mois ou titre partiel
+    const filtered = votesArr.filter(({ v, ballot }) => {
+      if (formatMois(v.mois, v.annee).toLowerCase().includes(qLow)) return true;
+      return Object.keys(ballot).some(lid =>
+        (livreById[lid]?.titre || "").toLowerCase().includes(qLow)
+      );
+    });
+    list.innerHTML = filtered.length
+      ? voteRows(filtered)
+      : `<div class="rf-empty">Aucun vote ne correspond.</div>`;
     bindRows();
   });
 }

@@ -110,6 +110,7 @@ export async function addVote({ mois, annee, resultats, livre_elu, date, tour2 }
     annee: Number(annee),
     resultats,
     livre_elu: livre_elu || null,
+    seuil: 2.9,
     date: date ? Timestamp.fromDate(new Date(date)) : serverTimestamp(),
     cree_le: serverTimestamp()
   };

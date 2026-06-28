@@ -8,7 +8,8 @@ await requireAuth();
 initNav("votes");
 
 // ── Constantes ─────────────────────────────────────────────────────────────
-const SEUIL = 2.9;
+// Le seuil d'élimination est stocké sur chaque vote (v.seuil). Fallback 2.5 pour les votes antérieurs au changement.
+function seuilVote(v) { return (typeof v?.seuil === 'number') ? v.seuil : 2.5; }
 const MOIS_FR = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
 const PALETTE = ["#b5572d","#3f7a52","#6840d8","#bf8a2f","#5a7d8c","#a8503f","#3f5340","#8a5a6b","#46708a","#9a6a2f"];
 const COVERS = [
@@ -186,7 +187,7 @@ function renderScrutins() {
     const eluR = (v.resultats || []).find(r => r.livre_id === v.livre_elu);
     const score = eluR?.score ?? eluR?.moyenne ?? null;
     const nb    = (v.resultats || []).length;
-    const elim  = (v.resultats || []).filter(r => (r.score ?? r.moyenne ?? 0) <= SEUIL).length;
+    const elim  = (v.resultats || []).filter(r => (r.score ?? r.moyenne ?? 0) <= seuilVote(v)).length;
     const [g1, g2] = getBookCover(v.livre_elu);
 
     return `
@@ -454,7 +455,8 @@ function openResult(vote) {
   const resultats = [...(vote.resultats || [])].sort(
     (a, b) => (b.score ?? b.moyenne ?? 0) - (a.score ?? a.moyenne ?? 0)
   );
-  const elim = resultats.filter(r => (r.score ?? r.moyenne ?? 0) <= SEUIL).length;
+  const seuil = seuilVote(vote);
+  const elim = resultats.filter(r => (r.score ?? r.moyenne ?? 0) <= seuil).length;
   const hasNotes = resultats.some(r => r.notes && Object.keys(r.notes).length > 0);
   const votants  = hasNotes
     ? [...new Set(resultats.flatMap(r => Object.keys(r.notes || {})))]
@@ -463,7 +465,7 @@ function openResult(vote) {
   const depTitle = hasTour2 ? "Premier tour — égalité" : "Dépouillement";
   const depSub   = hasTour2
     ? `Score de chaque livre : <b>(moyenne + médiane) ÷ 2</b>. Deux titres arrivent à égalité en tête — d'où le second tour ci-dessous.`
-    : `Score de chaque livre : <b>(moyenne + médiane) ÷ 2</b> — ce qui atténue les notes extrêmes. Le plus haut score est élu ; tout score <b>≤ ${SEUIL}</b> élimine le livre.`;
+    : `Score de chaque livre : <b>(moyenne + médiane) ÷ 2</b> — ce qui atténue les notes extrêmes. Le plus haut score est élu ; tout score <b>≤ ${seuil}</b> élimine le livre.`;
 
   document.getElementById("result-paper").innerHTML = `
     <button class="paper-close" id="result-close" aria-label="Fermer">✕</button>
@@ -513,12 +515,13 @@ function openResult(vote) {
 
 function buildDepChart(resultats, vote) {
   const H = 200;
-  const tBottom = Math.round(SEUIL / 5 * H);
+  const seuil = seuilVote(vote);
+  const tBottom = Math.round(seuil / 5 * H);
   const cols = resultats.map(r => {
     const sc     = r.score ?? r.moyenne ?? 0;
     const isWin  = r.livre_id === vote.livre_elu && !vote.tour2;
     const isTie  = vote.tour2 && (vote.tour2.enLice || []).includes(r.livre_id);
-    const isElim = sc <= SEUIL;
+    const isElim = sc <= seuil;
     const col    = isWin ? "#1a8a55" : isTie ? "#b5572d" : isElim ? "#a89a82" : "#6840d8";
     const h      = Math.max(3, Math.round(sc / 5 * H));
     return `<div class="dep-col">
@@ -539,12 +542,12 @@ function buildDepChart(resultats, vote) {
   return `
     <div class="dep-legend">
       ${legend}
-      <span class="dep-legend-item"><span class="dep-legend-dot" style="background:#6840d8"></span>Conservé (&gt; ${SEUIL})</span>
-      <span class="dep-legend-item"><span class="dep-legend-dot" style="background:#a89a82"></span>Éliminé (≤ ${SEUIL})</span>
+      <span class="dep-legend-item"><span class="dep-legend-dot" style="background:#6840d8"></span>Conservé (&gt; ${seuil})</span>
+      <span class="dep-legend-item"><span class="dep-legend-dot" style="background:#a89a82"></span>Éliminé (≤ ${seuil})</span>
     </div>
     <div class="dep-chart-wrap">
       <div class="dep-chart">
-        <div class="dep-threshold" style="bottom:${tBottom}px"><span>Seuil ${SEUIL}</span></div>
+        <div class="dep-threshold" style="bottom:${tBottom}px"><span>Seuil ${seuil}</span></div>
         ${cols}
       </div>
       <div class="dep-labels">${labels}</div>
@@ -582,9 +585,10 @@ function buildTour2(vote) {
 }
 
 function buildTallyTable(resultats, vote, votants) {
+  const seuil = seuilVote(vote);
   const heads = resultats.map(r => {
     const isWin  = r.livre_id === vote.livre_elu && !vote.tour2;
-    const isElim = (r.score ?? r.moyenne ?? 0) <= SEUIL;
+    const isElim = (r.score ?? r.moyenne ?? 0) <= seuil;
     const l = livreById[r.livre_id];
     return `<th class="${isWin ? "win" : isElim ? "elim" : ""}">${esc(l?.titre ?? r.livre_id)}</th>`;
   }).join("");
@@ -593,7 +597,7 @@ function buildTallyTable(resultats, vote, votants) {
     const m = membreById[mId] || { nom: mId, _color: "#888" };
     const cells = resultats.map(r => {
       const isWin  = r.livre_id === vote.livre_elu && !vote.tour2;
-      const isElim = (r.score ?? r.moyenne ?? 0) <= SEUIL;
+      const isElim = (r.score ?? r.moyenne ?? 0) <= seuil;
       const n = r.notes?.[mId];
       if (n == null) return `<td class="skip">passe</td>`;
       return `<td class="${isWin ? "win" : isElim ? "elim" : ""}">${Number(n)}/5<span class="stars">${stars(Number(n))}</span></td>`;
@@ -608,7 +612,7 @@ function buildTallyTable(resultats, vote, votants) {
   const foot = resultats.map(r => {
     const isWin  = r.livre_id === vote.livre_elu && !vote.tour2;
     const sc     = r.score ?? r.moyenne ?? null;
-    const isElim = sc !== null && sc <= SEUIL;
+    const isElim = sc !== null && sc <= seuil;
     return `<td class="${isWin ? "win" : isElim ? "elim" : ""}">${sc != null ? Number(sc).toFixed(2) : "—"}</td>`;
   }).join("");
 

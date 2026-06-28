@@ -697,7 +697,7 @@ function renderMeeting() {
         <span class="mtg-eyebrow${prevue ? " prevue" : ""}">${prevue ? IC.cal : IC.check} ${prevue ? "Séance prévue" : "Séance passée"}</span>
         <div class="mtg-livre">${esc(titre)}</div>
         <div class="mtg-meta">Séance du ${dotDate(r.date)}<span class="sep">·</span>livre de ${formatMois(r.mois, r.annee)}</div>
-        <a class="mtg-livre-link" href="bibliotheque.html">Voir la fiche du livre ${IC.arrowR}</a>
+        <a class="mtg-livre-link" href="bibliotheque.html?open=${esc(r.livre_id)}">Voir la fiche du livre ${IC.arrowR}</a>
       </div>
       ${sealHtml}
     </div>
