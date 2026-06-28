@@ -406,11 +406,31 @@ async function openPicksDrawer(match) {
   const scoreDisplay = (match.score1 != null && match.score2 != null)
     ? `${match.score1} — ${match.score2}` : '';
 
-  const teams = tournament.teams || [];
-  const teamOpts = ['', ...teams].map(t =>
-    `<option value="${esc(t)}">${esc(t) || '—'}</option>`
-  ).join('');
-  const dtValue = match.date_utc ? match.date_utc.slice(0, 16) : '';
+  // Équipes : toutes les équipes uniques des matchs existants (hors TBD)
+  const allTeams = [...new Set(
+    matches.flatMap(m => [m.team1, m.team2]).filter(t => t && t !== 'TBD')
+  )].sort();
+  const teamOpts = allTeams.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+
+  // Matchs du calendrier pour le sélecteur d'horaire (tous sauf le match actuel)
+  const otherMatches = matches
+    .filter(m => m.id !== match.id && m.date_utc)
+    .sort((a, b) => a.date_utc.localeCompare(b.date_utc));
+
+  function matchLabel(m) {
+    const t = formatMatchTime(m.date_utc);
+    const d = m.date_utc ? new Date(m.date_utc.endsWith('Z') ? m.date_utc : m.date_utc + ' UTC')
+      .toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'Europe/Paris' }) : '';
+    return `${esc(m.team1)} vs ${esc(m.team2)} — ${d} ${t}`;
+  }
+
+  const slotOpts = [
+    `<option value="">— Choisir un créneau calendrier —</option>`,
+    ...otherMatches.map(m => {
+      const sel = m.date_utc === match.date_utc ? ' selected' : '';
+      return `<option value="${esc(m.id)}"${sel}>${matchLabel(m)}</option>`;
+    })
+  ].join('');
 
   const adminSection = IS_ADMIN ? `
     <div class="pd-section-label" style="margin-top:.5rem;border-top:1px solid var(--border);padding-top:.5rem">⚙️ Admin</div>
@@ -446,9 +466,9 @@ async function openPicksDrawer(match) {
         <span style="color:var(--muted);padding:0 .2rem">—</span>
         <input type="number" name="score2" min="0" max="3" value="${match.score2 ?? ''}" style="width:46px" />
       </div>
-      <div class="bkap-row">
-        <label>Date / heure</label>
-        <input type="datetime-local" name="date_utc" value="${dtValue}" style="flex:1;font-size:.72rem" />
+      <div class="bkap-row" style="align-items:flex-start;flex-direction:column;gap:.2rem">
+        <label style="width:auto;text-align:left">Créneau calendrier</label>
+        <select name="cal_slot" id="bkap-cal-slot" style="width:100%;font-size:.68rem">${slotOpts}</select>
       </div>
       <button type="submit" class="bkap-save" id="bkap-save">Sauvegarder</button>
     </form>
@@ -482,7 +502,10 @@ async function openPicksDrawer(match) {
       const winner   = f.winner.value || null;
       const score1   = f.score1.value !== '' ? parseInt(f.score1.value) : null;
       const score2   = f.score2.value !== '' ? parseInt(f.score2.value) : null;
-      const date_utc = f.date_utc.value ? f.date_utc.value + ':00' : (match.date_utc || null);
+      // Récupérer l'horaire depuis le match calendrier sélectionné
+      const calSlotId = f.cal_slot?.value;
+      const calMatch  = calSlotId ? matches.find(m => m.id === calSlotId) : null;
+      const date_utc  = calMatch ? calMatch.date_utc : (match.date_utc || null);
       const btn = document.getElementById('bkap-save');
       btn.disabled = true; btn.textContent = '…';
       try {
@@ -496,6 +519,7 @@ async function openPicksDrawer(match) {
         btn.textContent = '✓ Sauvé';
         setTimeout(() => { btn.disabled = false; btn.textContent = 'Sauvegarder'; }, 1500);
         renderBracket();
+        renderCalendrier();
       } catch (err) {
         showToast('Erreur : ' + err.message);
         btn.disabled = false; btn.textContent = 'Sauvegarder';
@@ -1064,7 +1088,9 @@ function renderAdmin() {
   const container = document.getElementById('tab-admin');
   if (!container) return;
 
-  const teams = tournament.teams || [];
+  const teams = [...new Set(
+    matches.flatMap(m => [m.team1, m.team2]).filter(t => t && t !== 'TBD')
+  )].sort();
 
   const logos = tournament.team_logos || {};
 
@@ -1148,12 +1174,16 @@ function renderAdmin() {
     form.addEventListener('submit', async e => {
       e.preventDefault();
       const id = form.dataset.matchId;
-      const team1   = form.querySelector('[name=team1]').value.trim();
-      const team2   = form.querySelector('[name=team2]').value.trim();
-      const winner  = form.querySelector('[name=winner]').value;
-      const score1  = form.querySelector('[name=score1]').value;
-      const score2  = form.querySelector('[name=score2]').value;
-      const status  = form.querySelector('[name=status]').value;
+      const team1      = form.querySelector('[name=team1]').value.trim();
+      const team2      = form.querySelector('[name=team2]').value.trim();
+      const winner     = form.querySelector('[name=winner]').value;
+      const score1     = form.querySelector('[name=score1]').value;
+      const score2     = form.querySelector('[name=score2]').value;
+      const status     = form.querySelector('[name=status]').value;
+      const calSlotId  = form.querySelector('[name=cal_slot]')?.value;
+      const calMatch   = calSlotId ? matches.find(m => m.id === calSlotId) : null;
+      const local      = matches.find(m => m.id === id);
+      const date_utc   = calMatch ? calMatch.date_utc : (local?.date_utc || null);
 
       const btn = form.querySelector('.admin-save-btn');
       btn.disabled = true;
@@ -1166,20 +1196,19 @@ function renderAdmin() {
           winner: winner || null,
           score1: score1 !== '' ? parseInt(score1) : null,
           score2: score2 !== '' ? parseInt(score2) : null,
-          status
+          status,
+          date_utc
         };
         await updateMatch(id, matchData);
-        // Scorer les picks si le match est marqué terminé avec un gagnant
         if (status === 'finished' && winner) {
-          const matchForScoring = { id, ...matchData };
-          await scorePicksForMatch(matchForScoring);
+          await scorePicksForMatch({ id, ...matchData });
         }
-        // Update local data
-        const local = matches.find(m => m.id === id);
         if (local) Object.assign(local, matchData);
         showToast('✓ Match mis à jour' + (status === 'finished' && winner ? ' + picks scorés' : ''));
         btn.textContent = '✓ Sauvé';
         setTimeout(() => { btn.disabled = false; btn.textContent = 'Sauvegarder'; }, 1500);
+        renderCalendrier();
+        renderBracket();
       } catch (err) {
         showToast('Erreur : ' + err.message);
         btn.disabled = false;
@@ -1196,6 +1225,20 @@ function renderAdminMatch(m, teams) {
     <option value="${esc(m.team1)}"${m.winner === m.team1 ? ' selected' : ''}>${esc(m.team1)}</option>
     <option value="${esc(m.team2)}"${m.winner === m.team2 ? ' selected' : ''}>${esc(m.team2)}</option>
   `;
+  const otherMatches = matches
+    .filter(x => x.id !== m.id && x.date_utc)
+    .sort((a, b) => a.date_utc.localeCompare(b.date_utc));
+  const slotOpts = [
+    `<option value="">— Créneau calendrier —</option>`,
+    ...otherMatches.map(x => {
+      const t = formatMatchTime(x.date_utc);
+      const d = new Date(x.date_utc.endsWith('Z') ? x.date_utc : x.date_utc + ' UTC')
+        .toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'Europe/Paris' });
+      const sel = x.date_utc === m.date_utc ? ' selected' : '';
+      return `<option value="${esc(x.id)}"${sel}>${esc(x.team1)} vs ${esc(x.team2)} — ${d} ${t}</option>`;
+    })
+  ].join('');
+
   return `
     <details class="admin-match">
       <summary class="admin-match-header">
@@ -1206,13 +1249,13 @@ function renderAdminMatch(m, teams) {
       <form class="admin-match-form" data-match-id="${m.id}">
         <div class="admin-row">
           <label>Équipe 1</label>
-          <input list="al-teams" name="team1" value="${esc(m.team1 || '')}" />
+          <input list="al-teams-${m.id}" name="team1" value="${esc(m.team1 || '')}" />
+          <datalist id="al-teams-${m.id}">${teamOpts}</datalist>
         </div>
         <div class="admin-row">
           <label>Équipe 2</label>
-          <input list="al-teams" name="team2" value="${esc(m.team2 || '')}" />
+          <input list="al-teams-${m.id}" name="team2" value="${esc(m.team2 || '')}" />
         </div>
-        <datalist id="al-teams">${teamOpts}</datalist>
         <div class="admin-row">
           <label>Statut</label>
           <select name="status">
@@ -1230,6 +1273,10 @@ function renderAdminMatch(m, teams) {
           <input type="number" name="score1" min="0" max="3" value="${m.score1 ?? ''}" style="width:52px" />
           <span style="color:var(--muted)">—</span>
           <input type="number" name="score2" min="0" max="3" value="${m.score2 ?? ''}" style="width:52px" />
+        </div>
+        <div class="admin-row" style="flex-wrap:wrap;gap:.3rem">
+          <label style="width:100%">Créneau calendrier</label>
+          <select name="cal_slot" style="flex:1;font-size:.7rem">${slotOpts}</select>
         </div>
         <button type="submit" class="admin-save-btn">Sauvegarder</button>
       </form>
