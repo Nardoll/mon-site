@@ -25,7 +25,6 @@ async function renderClassement(profile) {
 
   const tournaments = await getTournaments();
   const withData = tournaments.filter(t => t.status !== 'upcoming');
-  setSidebarLive(tournaments.filter(t => t.status === 'live'));
 
   renderFilters(withData, profile, tournaments);
   await showLeaderboard(null, profile, tournaments);
@@ -39,7 +38,7 @@ function renderFilters(tournaments, profile, allTournaments) {
     <div class="tour-filters">
       <button class="btn-filter active" data-id="">Tous</button>
       ${tournaments.map(t =>
-        `<button class="btn-filter" data-id="${t.id}">${esc(t.short_name || t.name)}</button>`
+        `<button class="btn-filter" data-id="${esc(t.id)}">${esc(t.short_name || t.name)}</button>`
       ).join('')}
     </div>
   `;
@@ -59,16 +58,20 @@ async function showLeaderboard(tournamentId, profile, tournaments) {
 
   const entries = await getLeaderboard(tournamentId);
 
-  const rankClass = i => ['gold','silver','bronze'][i] || '';
-  const rankIcon  = i => ['🥇','🥈','🥉'][i] || String(i + 1);
+  const rankIcon = i => {
+    if (i === 0) return `<span class="lb-rank gold">1</span>`;
+    if (i === 1) return `<span class="lb-rank silver">2</span>`;
+    if (i === 2) return `<span class="lb-rank bronze">3</span>`;
+    return `<span class="lb-rank">${i + 1}</span>`;
+  };
 
   wrap.innerHTML = `
     <div class="leaderboard">
       ${entries.map((e, i) => `
         <div class="lb-row clickable${e.id === profile.id ? ' me' : ''}"
              data-player-id="${esc(e.id)}" data-player-name="${esc(e.name)}">
-          <div class="lb-rank ${rankClass(i)}">${rankIcon(i)}</div>
-          <div class="lb-info" style="display:flex;align-items:center;gap:.55rem;flex:1">
+          ${rankIcon(i)}
+          <div style="display:flex;align-items:center;gap:.55rem;flex:1">
             ${avatarHtml({ name: e.name, avatar_url: e.avatar_url }, 'avatar-sm')}
             <div>
               <div class="lb-name-row">
@@ -133,7 +136,7 @@ async function showPlayerBreakdown(playerId, playerName, tournaments) {
     ${rows.join('')}
     <div class="player-bd-total">
       <span>Total</span>
-      <span style="color:var(--gold)">${total} pts</span>
+      <span style="color:var(--accent)">${total} pts</span>
     </div>
   `;
 }

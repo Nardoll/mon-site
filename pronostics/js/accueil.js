@@ -1,6 +1,6 @@
 import { requireProfile }              from './auth.js';
-import { injectTopBar, injectSidebar, setSidebarLive } from './nav.js';
-import { getTournaments, createTournament } from './db.js';
+import { injectTopBar, injectSidebar, setSidebarLive, setNavPts } from './nav.js';
+import { getTournaments, createTournament, getLeaderboard } from './db.js';
 
 const IS_ADMIN = new URLSearchParams(location.search).has('admin');
 
@@ -13,55 +13,88 @@ requireProfile(async (profile) => {
 async function renderAccueil(profile) {
   const main = document.getElementById('main');
   main.innerHTML = `
-    <div class="page-title">Bonjour, ${esc(profile.name)} 👋</div>
-    <div class="page-subtitle">Fais tes pronostics avant chaque match.</div>
     ${IS_ADMIN ? renderAdminPanel() : ''}
     <div id="tours-container"><div class="empty-state">Chargement…</div></div>
   `;
 
   if (IS_ADMIN) setupAdminPanel();
 
-  const tournaments = await getTournaments();
+  const [tournaments, lb] = await Promise.all([
+    getTournaments(),
+    getLeaderboard(null)
+  ]);
+
   const live     = tournaments.filter(t => t.status === 'live');
   const upcoming = tournaments.filter(t => t.status === 'upcoming');
   const finished = tournaments.filter(t => t.status === 'finished');
-  setSidebarLive(live);
+
+  // Points du joueur courant dans le classement
+  const myEntry = lb.find(e => e.id === profile.id);
+  if (myEntry) setNavPts(myEntry.points);
 
   const container = document.getElementById('tours-container');
-  container.innerHTML = `
-    ${renderSection('🔴 En cours', live, 'live')}
-    ${renderSection('📅 À venir', upcoming, 'upcoming')}
-    ${finished.length ? renderSection('📁 Archivés', finished, 'finished') : ''}
-    ${tournaments.length === 0 ? '<div class="empty-state">Aucun tournoi configuré pour le moment.</div>' : ''}
-  `;
-}
 
-function renderSection(label, list, cls) {
-  if (list.length === 0 && cls !== 'live') {
-    return `<div class="section-label">${label}</div><div class="empty-state" style="padding:.8rem 0">Aucun</div>`;
+  // Hero live (premier tournoi en cours)
+  let heroHtml = '';
+  if (live.length > 0) {
+    const t = live[0];
+    const pts  = myEntry?.points ?? 0;
+    const scored = myEntry?.correct ?? 0;
+    const rank = myEntry ? (lb.indexOf(myEntry) + 1) : '—';
+    const dates = formatDateRange(t.start_date, t.end_date);
+    heroHtml = `
+      <a href="/pronostics/tournoi.html?id=${esc(t.id)}" class="hero-live">
+        <div class="hero-live-glow"></div>
+        <div class="hero-live-status">
+          <span class="live-dot"></span>
+          <span class="live-label">En direct</span>
+          ${t.league ? `<span class="hero-region">${esc(t.league)}</span>` : ''}
+        </div>
+        <div class="hero-name">${esc(t.name)}</div>
+        <div class="hero-meta">${dates}${t.phase ? ' · ' + esc(t.phase) : ''}</div>
+        <div class="hero-stats">
+          <div>
+            <div class="hero-stat-val">${pts}</div>
+            <div class="hero-stat-label">Mes points</div>
+          </div>
+          <div>
+            <div class="hero-stat-val neutral">${scored}</div>
+            <div class="hero-stat-label">Scorés</div>
+          </div>
+          <div>
+            <div class="hero-stat-val neutral">${rank}<span class="hero-stat-sup">${typeof rank === 'number' ? 'e' : ''}</span></div>
+            <div class="hero-stat-label">Classement</div>
+          </div>
+        </div>
+      </a>
+    `;
   }
-  return `
-    <div class="section-label">${label}</div>
-    ${list.map(t => renderCard(t, cls)).join('')}
-  `;
+
+  // Grille tous les tournois
+  const allTours = [...tournaments];
+  let gridHtml = '';
+  if (allTours.length > 0) {
+    gridHtml = `
+      <div class="section-label">Tous les tournois</div>
+      <div class="tours-grid">
+        ${allTours.map(t => renderCard(t)).join('')}
+      </div>
+    `;
+  } else {
+    gridHtml = '<div class="empty-state">Aucun tournoi configuré.</div>';
+  }
+
+  container.innerHTML = heroHtml + gridHtml;
 }
 
-function renderCard(t, cls) {
-  const statusLabel = { live: '● Live', upcoming: 'À venir', finished: 'Terminé' }[cls] || cls;
+function renderCard(t) {
+  const statusLabel = { live: 'En cours', upcoming: 'À venir', finished: 'Archivé' }[t.status] || t.status;
   const dates = formatDateRange(t.start_date, t.end_date);
   return `
-    <a href="/pronostics/tournoi.html?id=${t.id}" class="tournament-card ${cls}">
-      <div class="tc-header">
-        <div>
-          <div class="tc-name">${esc(t.name)}</div>
-          ${t.league ? `<div class="tc-league">${esc(t.league)}</div>` : ''}
-        </div>
-        <span class="tc-status ${cls}">${statusLabel}</span>
-      </div>
-      <div class="tc-body">
-        <div class="tc-meta">${dates}</div>
-      </div>
-      <span class="tc-arrow">→</span>
+    <a href="/pronostics/tournoi.html?id=${esc(t.id)}" class="tournament-card ${esc(t.status)}">
+      <div class="tc-status ${esc(t.status)}">${statusLabel}</div>
+      <div class="tc-name">${esc(t.name)}</div>
+      <div class="tc-meta">${dates}</div>
     </a>
   `;
 }
@@ -69,7 +102,7 @@ function renderCard(t, cls) {
 function renderAdminPanel() {
   return `
     <div class="admin-panel">
-      <div class="admin-title">⚙️ Admin — Ajouter un tournoi</div>
+      <div class="admin-title">Admin — Ajouter un tournoi</div>
       <div class="admin-form" id="admin-form">
         <div>
           <div class="admin-label">Nom du tournoi</div>
@@ -109,7 +142,7 @@ function renderAdminPanel() {
         </div>
         <div>
           <div class="admin-label">URL wiki Leaguepedia (optionnel)</div>
-          <input class="admin-input" id="adm-wiki" placeholder="https://lol.fandom.com/wiki/2026_Mid-Season_Invitational" />
+          <input class="admin-input" id="adm-wiki" placeholder="https://lol.fandom.com/wiki/…" />
         </div>
         <button class="btn-admin" id="btn-adm-save">Créer le tournoi</button>
       </div>
@@ -125,27 +158,20 @@ function setupAdminPanel() {
     const status = document.getElementById('adm-status').value;
     const start  = document.getElementById('adm-start').value;
     const end    = document.getElementById('adm-end').value;
-    const teams  = document.getElementById('adm-teams').value
-      .split(',').map(s => s.trim()).filter(Boolean);
-    const wiki = document.getElementById('adm-wiki').value.trim();
+    const teams  = document.getElementById('adm-teams').value.split(',').map(s => s.trim()).filter(Boolean);
+    const wiki   = document.getElementById('adm-wiki').value.trim();
 
-    if (!name || !key) {
-      alert('Nom et clé Leaguepedia sont requis.');
-      return;
-    }
+    if (!name || !key) { alert('Nom et clé Leaguepedia sont requis.'); return; }
 
     const btn = document.getElementById('btn-adm-save');
-    btn.disabled = true;
-    btn.textContent = 'Création…';
-
+    btn.disabled = true; btn.textContent = 'Création…';
     try {
       await createTournament({ name, leaguepedia_key: key, league, status, start_date: start, end_date: end, teams, ...(wiki ? { wiki_url: wiki } : {}) });
       btn.textContent = '✓ Tournoi créé !';
       setTimeout(() => location.reload(), 800);
     } catch (e) {
       alert('Erreur : ' + e.message);
-      btn.disabled = false;
-      btn.textContent = 'Créer le tournoi';
+      btn.disabled = false; btn.textContent = 'Créer le tournoi';
     }
   });
 }
