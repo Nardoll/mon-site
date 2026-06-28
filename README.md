@@ -1314,6 +1314,13 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 
 ## Historique des modifications
 
+### 2026-06-28 (suite 3)
+**Lis tes ratures — Refonte mobile (nav marque-pages + réunions + fix stats)**
+
+- `lis-tes-ratures/css/style.css` : refonte `@media (max-width: 768px)` — sidebar devient barre fixée en bas, chaque onglet = marque-page en papier incliné/décalé (rotations et décalages `translateY` différents par onglet), l'actif se redresse (`translateY(-10px)`) avec liseré terracotta. Logo passe en barre de titre fixée en haut. Padding `.main` : `4rem` haut + `5.2rem` bas. Thème sombre pris en charge (`[data-theme="dark"]`). La spec vient de `SPEC-MOBILE.md` (fichier Tom dans le dossier projet).
+- `lis-tes-ratures/reunions.html` : `@media (max-width: 700px)` remplacé — `.reg-row` passe en `grid-template-areas` (cachet date + sceau note en haut, titre/contenu en bas pleine largeur). Élimine la superposition du sceau sur le titre du livre.
+- `lis-tes-ratures/statistiques.html` : `@media (max-width: 768px)` ajouté — `.sx-table` passe en `display: block; overflow-x: auto` pour que les tableaux à 7 colonnes scrollent sans élargir la page.
+
 ### 2026-06-28
 **Lis tes ratures — Suppression mode test sondage + exposé 1984 + correctifs membres**
 
