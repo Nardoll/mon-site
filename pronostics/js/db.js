@@ -148,15 +148,11 @@ export async function scorePicksForMatch(match) {
   ));
   if (snap.empty) return;
 
-  // Filtrer les non-scorés en JS
-  const unscored = snap.docs.filter(d => !d.data().scored);
-  if (unscored.length === 0) return;
-
   const batch = writeBatch(db);
   const s1 = parseInt(match.score1) || 0;
   const s2 = parseInt(match.score2) || 0;
 
-  unscored.forEach(d => {
+  snap.docs.forEach(d => {
     const pick = d.data();
     let points = 0;
 

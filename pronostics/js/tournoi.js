@@ -1238,6 +1238,7 @@ function renderAdmin() {
         setTimeout(() => { btn.disabled = false; btn.textContent = 'Sauvegarder'; }, 1500);
         renderCalendrier();
         renderBracket();
+        renderClassement();
       } catch (err) {
         showToast('Erreur : ' + err.message);
         btn.disabled = false;
