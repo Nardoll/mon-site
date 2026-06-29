@@ -1200,6 +1200,28 @@ function renderAdmin() {
     });
   });
 
+  // Auto-statut + auto-gagnant quand les scores sont remplis
+  container.querySelectorAll('.admin-match-form').forEach(form => {
+    const s1Input = form.querySelector('[name=score1]');
+    const s2Input = form.querySelector('[name=score2]');
+    const statusSel = form.querySelector('[name=status]');
+    const winnerSel = form.querySelector('[name=winner]');
+    const onScoreChange = () => {
+      const s1 = parseInt(s1Input.value);
+      const s2 = parseInt(s2Input.value);
+      if (!isNaN(s1) && !isNaN(s2) && s1Input.value !== '' && s2Input.value !== '') {
+        statusSel.value = 'finished';
+        const t1 = form.querySelector('[name=team1]').value;
+        const t2 = form.querySelector('[name=team2]').value;
+        if (t1 && t2 && s1 !== s2) {
+          winnerSel.value = s1 > s2 ? t1 : t2;
+        }
+      }
+    };
+    s1Input?.addEventListener('input', onScoreChange);
+    s2Input?.addEventListener('input', onScoreChange);
+  });
+
   container.querySelectorAll('.admin-match-form').forEach(form => {
     form.addEventListener('submit', async e => {
       e.preventDefault();
