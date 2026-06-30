@@ -1,5 +1,5 @@
 import { requireAuth } from "./auth.js";
-import { getMembres, getVoteActif, getLivres, soumettreVote } from "./db.js";
+import { getMembres, getVoteActif, getLivres, soumettreVote, getVotes, lancerVote, cloturerVoteActif, lancerTour2 } from "./db.js";
 import { formatMois } from "./utils.js";
 
 await requireAuth();
@@ -15,10 +15,20 @@ const IC = {
   arrowR: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
 };
 
+// ── Timer clôture ──────────────────────────────────────────────────────────
+let closeTimer = null;
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 function esc(s) { return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function ini(nom) { return (nom || "?").slice(0, 2); }
 function avaColor(i) { return PALETTE[i % PALETTE.length]; }
+
+function median(arr) {
+  if (!arr.length) return null;
+  const s = [...arr].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 === 0 ? (s[m-1] + s[m]) / 2 : s[m];
+}
 
 function showToast(msg, ok = true) {
   const t = document.getElementById("toast");
@@ -32,11 +42,184 @@ function showToast(msg, ok = true) {
 let voteActif = null, membres = [], livres = [];
 const membreById = {}, livreById = {};
 
-let moi = null;       // membre_id sélectionné
+let moi = null;
 let moiNom = "";
-let notes = {};       // {livre_id: 1..5}
-let lus = new Set();  // livre_ids "déjà lu, je passe"
+let notes = {};
+let lus = new Set();
 let dejaSoumis = false;
+
+// ── Auto-lancement le 1er du mois ──────────────────────────────────────────
+// ⚠️ NE PAS MODIFIER — voir README section "Système de vote automatique"
+async function autoLancerSiNecessaire() {
+  const today = new Date();
+  if (today.getDate() !== 1) return;
+  if (voteActif) return;
+
+  // Vérifier qu'aucun vote archivé n'existe déjà pour ce mois
+  const allVotes = await getVotes();
+  const moisActuel = today.getMonth() + 1, anneeActuelle = today.getFullYear();
+  if (allVotes.find(v => v.mois === moisActuel && v.annee === anneeActuelle)) return;
+
+  const propositions = livres.filter(l => l.statut === "en_proposition");
+  if (!propositions.length) return;
+
+  const expires = new Date(today.getFullYear(), today.getMonth(), 1, 23, 59, 59);
+  try {
+    await lancerVote({
+      mois: moisActuel,
+      annee: anneeActuelle,
+      livre_ids: propositions.map(l => l.id),
+      membre_ids: membres.map(m => m.id),
+      echelle: 5,
+      expires_at: expires,
+    });
+    voteActif = await getVoteActif();
+  } catch (e) { console.error("Auto-lancement vote :", e); }
+}
+
+// ── Clôture automatique Tour 1 ─────────────────────────────────────────────
+// ⚠️ NE PAS MODIFIER — voir README section "Système de vote automatique"
+async function closeExpiredVote(va) {
+  // Garde-fou : vérifier que le vote n'a pas déjà été clos depuis un autre onglet
+  const current = await getVoteActif();
+  if (!current || current.id !== va.id) return;
+
+  if (va.tour === 2) {
+    await closeExpiredVoteTour2(va);
+    return;
+  }
+
+  const bulletins = va.bulletins || {};
+  const resultats = (va.livre_ids || []).map(livre_id => {
+    const notesMap = {};
+    Object.entries(bulletins).forEach(([membreId, b]) => {
+      const n = b?.[livre_id];
+      if (n != null && n !== "") notesMap[membreId] = Number(n);
+    });
+    const vals = Object.values(notesMap);
+    const moy = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    const med = median(vals);
+    const score = (moy !== null && med !== null) ? (moy + med) / 2 : moy;
+    return { livre_id, notes: notesMap, moyenne: score };
+  });
+
+  const withScore = resultats.filter(r => r.moyenne !== null);
+  let livre_elu = null;
+
+  if (withScore.length) {
+    const max = Math.max(...withScore.map(r => r.moyenne));
+    const winners = withScore.filter(r => r.moyenne === max);
+    if (winners.length === 1) {
+      livre_elu = winners[0].livre_id;
+    } else {
+      // Égalité → 2ème tour le 2 du mois, toute la journée
+      const today = new Date();
+      const expires2 = new Date(today.getFullYear(), today.getMonth(), 2, 23, 59, 59);
+      try {
+        await lancerTour2(va.id, {
+          livre_ids_tour2: winners.map(w => w.livre_id),
+          livre_ids_tour1: va.livre_ids,
+          resultats_tour1: resultats,
+          expires_at: expires2,
+        });
+      } catch (e) { console.error("Lancement 2ème tour :", e); }
+      return;
+    }
+  }
+
+  try {
+    await cloturerVoteActif(va.id, { mois: va.mois, annee: va.annee, resultats, livre_elu });
+  } catch (e) { console.error("Clôture vote :", e); }
+}
+
+// ── Clôture automatique Tour 2 ─────────────────────────────────────────────
+// ⚠️ NE PAS MODIFIER — voir README section "Système de vote automatique"
+async function closeExpiredVoteTour2(va) {
+  const bulletins2 = va.bulletins || {};
+  const livre_ids = va.livre_ids || [];
+
+  const voteCounts = {};
+  livre_ids.forEach(id => voteCounts[id] = 0);
+  Object.values(bulletins2).forEach(choix => {
+    if (choix && livre_ids.includes(choix)) voteCounts[choix]++;
+  });
+
+  const resultats_tour2 = livre_ids.map(livre_id => ({
+    livre_id,
+    votes: voteCounts[livre_id] || 0,
+  }));
+
+  const maxVotes = Math.max(0, ...resultats_tour2.map(r => r.votes));
+  const winners = resultats_tour2.filter(r => r.votes === maxVotes);
+  let livre_elu, tirage_au_sort = false;
+
+  if (winners.length === 1) {
+    livre_elu = winners[0].livre_id;
+  } else {
+    // Nouvelle égalité → tirage au sort
+    livre_elu = winners[Math.floor(Math.random() * winners.length)].livre_id;
+    tirage_au_sort = true;
+  }
+
+  try {
+    await cloturerVoteActif(va.id, {
+      mois: va.mois,
+      annee: va.annee,
+      resultats: va.resultats_tour1,
+      livre_elu,
+      tour2: { resultats: resultats_tour2, livre_elu, tirage_au_sort },
+    });
+  } catch (e) { console.error("Clôture tour 2 :", e); }
+}
+
+// ── Clôture anticipée (100% participation) ────────────────────────────────
+function checkAllVoted() {
+  if (!voteActif) return false;
+  const memberIds = voteActif.membre_ids || [];
+  if (!memberIds.length) return false;
+  const bulletins = voteActif.bulletins || {};
+  const isTour2 = voteActif.tour === 2;
+  return memberIds.every(id => {
+    const b = bulletins[id];
+    return isTour2 ? (b != null && b !== "") : (b && Object.keys(b).length > 0);
+  });
+}
+
+async function triggerEarlyClose() {
+  if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+  await closeExpiredVote(voteActif);
+  voteActif = await getVoteActif();
+  livres = await getLivres();
+  moi = null; moiNom = ""; notes = {}; lus = new Set(); dejaSoumis = false;
+  render();
+  if (voteActif) startCountdown();
+}
+
+// ── Timer auto-clôture ────────────────────────────────────────────────────
+function startCountdown() {
+  if (closeTimer) clearTimeout(closeTimer);
+  if (!voteActif?.expires_at) return;
+  const ms = voteActif.expires_at.toMillis() - Date.now();
+  if (ms <= 0) {
+    closeExpiredVote(voteActif).then(async () => {
+      voteActif = await getVoteActif();
+      livres = await getLivres();
+      moi = null; moiNom = ""; notes = {}; lus = new Set();
+      render();
+      if (voteActif) startCountdown();
+    });
+    return;
+  }
+  closeTimer = setTimeout(async () => {
+    if (!voteActif) return;
+    await closeExpiredVote(voteActif);
+    voteActif = await getVoteActif();
+    livres = await getLivres();
+    moi = null; moiNom = ""; notes = {}; lus = new Set();
+    render();
+    if (voteActif) startCountdown();
+  }, ms);
+}
 
 // ── Init ───────────────────────────────────────────────────────────────────
 async function init() {
@@ -45,7 +228,19 @@ async function init() {
   ]);
   membres.forEach((m, i) => { m._color = avaColor(i); membreById[m.id] = m; });
   livres.forEach(l => { livreById[l.id] = l; });
+
+  // Si vote actif expiré → clôturer automatiquement
+  if (voteActif && voteActif.expires_at?.toMillis() < Date.now()) {
+    await closeExpiredVote(voteActif);
+    voteActif = await getVoteActif();
+    livres = await getLivres();
+  }
+
+  // Auto-lancer si 1er du mois et aucun vote actif ou archivé pour ce mois
+  await autoLancerSiNecessaire();
+
   render();
+  if (voteActif) startCountdown();
 }
 
 // ── Rendu principal ────────────────────────────────────────────────────────
@@ -92,7 +287,7 @@ function renderUpcoming(root) {
 
     <div class="vsec-title"><span class="vsec-num">2</span>Aperçu du bulletin</div>
     <div class="preview-note">${IC.cal}<span>Le vote s'ouvrira <b>automatiquement le 1ᵉʳ ${nom}</b>. Voici à quoi ressemblera le bulletin — la notation sera alors active et vous pourrez vous identifier.</span></div>
-    <div class="rules">Notez chaque livre de <b>1 à 5</b> selon votre envie de le lire. Le score d'un livre = <span class="key">(moyenne + médiane) ÷ 2</span>, ce qui atténue les notes extrêmes. Le plus haut score est <b>élu</b> ; tout score <span class="key">≤ 2,9</span> élimine le livre.</div>
+    <div class="rules">Notez chaque livre de <b>1 à 5</b> selon votre envie de le lire. Le score d'un livre = <span class="key">(moyenne + médiane) ÷ 2</span>, ce qui atténue les notes extrêmes. Le plus haut score est <b>élu</b> ; tout score <span class="key">&lt; 3</span> élimine le livre.</div>
     <div class="grade-scale"><span><b>1</b> — envie minimale</span><span><b>5</b> — envie maximale</span></div>
     ${buildVoteTable(proposalIds, true)}`;
 
@@ -108,22 +303,25 @@ function renderActive(root) {
   const nbVotes   = Object.keys(bulletins).length;
   const total     = membreIds.length;
   const expiry    = voteActif.expires_at?.toDate ? voteActif.expires_at.toDate() : null;
+  const isTour2   = voteActif.tour === 2;
 
   root.innerHTML = `
     <div class="ballot-letterhead">
       <div class="ballot-club">Club de lecture</div>
       <div class="ballot-h1">Bulletin de <span class="rature">vote</span></div>
-      <div class="ballot-sub">Scrutin de ${formatMois(voteActif.mois, voteActif.annee)} · notez les livres en compétition</div>
+      <div class="ballot-sub">Scrutin de ${formatMois(voteActif.mois, voteActif.annee)} · ${isTour2 ? "deuxième tour — choisissez un seul livre" : "notez les livres en compétition"}</div>
     </div>
 
     <div class="vbanner">
       <div class="vbanner-ico">${IC.ballot}</div>
       <div class="vbanner-body">
-        <div class="vbanner-title">Vote en cours — ${formatMois(voteActif.mois, voteActif.annee)}</div>
-        <div class="vbanner-sub" id="b-sub"><b>${livreIds.length} livre${livreIds.length !== 1 ? "s" : ""}</b> en compétition${expiry ? ` · clôture le ${expiry.toLocaleDateString("fr-FR")}` : ""}</div>
+        <div class="vbanner-title">${isTour2 ? "⚖️ Deuxième tour" : "Vote en cours"} — ${formatMois(voteActif.mois, voteActif.annee)}</div>
+        <div class="vbanner-sub" id="b-sub"><b>${livreIds.length} livre${livreIds.length !== 1 ? "s" : ""}</b> ${isTour2 ? "ex-æquo en tête du 1er tour" : "en compétition"}${expiry ? ` · clôture le ${expiry.toLocaleDateString("fr-FR")}` : ""}</div>
       </div>
       <div class="vbanner-count" id="b-count">${nbVotes}<small>/${total} votes</small></div>
     </div>
+
+    ${isTour2 ? '<div id="tour2-ctx"></div>' : ''}
 
     <div class="vsec-title"><span class="vsec-num">1</span>Les livres en compétition</div>
     <div class="infos-bar">
@@ -143,9 +341,40 @@ function renderActive(root) {
     </div>`;
 
   bindInfosToggle();
+  if (isTour2) renderTour2Context();
   renderBooks();
   renderIdent();
   renderBilan();
+}
+
+// ── Contexte 2ème tour ─────────────────────────────────────────────────────
+function renderTour2Context() {
+  const el = document.getElementById("tour2-ctx");
+  if (!el) return;
+  const resultats = voteActif.resultats_tour1 || [];
+  const tour2Ids = new Set(voteActif.livre_ids || []);
+  const sorted = [...resultats].sort((a, b) => (b.moyenne ?? 0) - (a.moyenne ?? 0));
+  const maxMoy = Math.max(0, ...sorted.map(r => r.moyenne ?? 0));
+
+  const rows = sorted.map(r => {
+    const l = livreById[r.livre_id];
+    const inTour2 = tour2Ids.has(r.livre_id);
+    const pct = maxMoy > 0 ? Math.round((r.moyenne ?? 0) / maxMoy * 100) : 0;
+    return `
+      <div class="t2-pre-row">
+        <div class="t2-pre-name">${esc(l?.titre ?? r.livre_id)}</div>
+        <div class="t2-pre-bar"><div class="t2-pre-fill" style="width:${pct}%;background:${inTour2 ? "var(--accent)" : "var(--border)"}"></div></div>
+        <div class="t2-pre-score" style="color:${inTour2 ? "var(--accent)" : "var(--muted)"}">${r.moyenne !== null ? Number(r.moyenne).toFixed(2) : "—"}</div>
+        <span class="t2-pre-badge ${inTour2 ? "t2-badge-tie" : "t2-badge-out"}">${inTour2 ? "⚖️ 2e tour" : "Écarté"}</span>
+      </div>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="t2-context">
+      <div class="t2-ctx-title">⚖️ Égalité au 1er tour — Deuxième tour en cours</div>
+      <div class="t2-ctx-sub">${tour2Ids.size} livres ex-æquo en tête. Chaque membre choisit <strong>un seul livre</strong> — celui avec le plus de voix est élu. En cas de nouvelle égalité : tirage au sort.</div>
+      <div class="t2-ctx-results">${rows}</div>
+    </div>`;
 }
 
 // ── Infos toggle ───────────────────────────────────────────────────────────
@@ -157,7 +386,6 @@ function bindInfosToggle() {
 
 // ── Grille de livres ───────────────────────────────────────────────────────
 function renderBooks() {
-  // Mode actif → livres du vote ; Mode à venir → propositions en cours
   const livreIds = voteActif
     ? (voteActif.livre_ids || [])
     : livres.filter(l => l.statut === "en_proposition").map(l => l.id);
@@ -182,6 +410,7 @@ function renderIdent() {
   if (!mount) return;
   const bulletins  = voteActif?.bulletins  || {};
   const membreIds  = voteActif?.membre_ids || [];
+  const isTour2    = voteActif?.tour === 2;
 
   if (!moi) {
     mount.innerHTML = `
@@ -191,7 +420,8 @@ function renderIdent() {
           <option value="">— Choisir —</option>
           ${membreIds.map(id => {
             const m = membreById[id] || { nom: id };
-            const voted = !!bulletins[id];
+            const b = bulletins[id];
+            const voted = isTour2 ? (b != null && b !== "") : (b && Object.keys(b).length > 0);
             return `<option value="${id}">${esc(m.nom)}${voted ? " (a déjà voté)" : ""}</option>`;
           }).join("")}
         </select>
@@ -203,11 +433,14 @@ function renderIdent() {
       moi = v;
       moiNom = membreById[v]?.nom ?? v;
       notes = {}; lus = new Set(); dejaSoumis = false;
-      // Pré-remplir si déjà voté
       const prev = bulletins[moi];
-      if (prev) {
-        dejaSoumis = true;
-        Object.entries(prev).forEach(([lid, n]) => { if (n != null) notes[lid] = Number(n); });
+      if (isTour2) {
+        dejaSoumis = (prev != null && prev !== "");
+      } else {
+        if (prev && Object.keys(prev).length > 0) {
+          dejaSoumis = true;
+          Object.entries(prev).forEach(([lid, n]) => { if (n != null) notes[lid] = Number(n); });
+        }
       }
       renderIdent();
       renderVote();
@@ -228,18 +461,43 @@ function renderIdent() {
   }
 }
 
-// ── Table de notation ──────────────────────────────────────────────────────
+// ── Interface de vote ──────────────────────────────────────────────────────
 function renderVote() {
   const mount = document.getElementById("vote-mount");
   if (!mount || !moi) { if (mount) mount.innerHTML = ""; return; }
 
-  const livreIds = voteActif.livre_ids || [];
-  const bulletins = voteActif.bulletins || {};
+  const isTour2 = voteActif.tour === 2;
 
+  if (isTour2) {
+    const livreIds = voteActif.livre_ids || [];
+    const books = livreIds.map(id => livreById[id]).filter(Boolean);
+    const prevChoix = voteActif.bulletins?.[moi];
+    mount.innerHTML = `
+      <div class="vsec-title"><span class="vsec-num">3</span>Votre choix</div>
+      <div class="rules">Choisissez le livre que vous souhaitez lire ce mois-ci. <b>Un seul vote</b> — le livre avec le plus de voix est élu. En cas de nouvelle égalité, le gagnant sera tiré au sort.</div>
+      <div class="t2-choices">
+        ${books.map(b => `
+          <label class="t2-choice">
+            <input type="radio" name="t2-choix" value="${esc(b.id)}" ${prevChoix === b.id ? "checked" : ""}>
+            <div class="t2-choice-body">
+              <div class="vt-titre">${esc(b.titre)}</div>
+              ${b.auteur ? `<div class="vt-auteur">${esc(b.auteur)}</div>` : ""}
+            </div>
+          </label>`).join("")}
+      </div>
+      <div class="submit-row">
+        <span class="submit-hint">${dejaSoumis ? "Vous avez déjà voté — soumettre écrasera votre choix précédent." : "Sélectionnez un livre."}</span>
+        <button class="btn btn-primary btn-lg" id="submit">${IC.check} Glisser dans l'urne</button>
+      </div>`;
+    document.getElementById("submit").addEventListener("click", submitVote);
+    return;
+  }
+
+  const livreIds = voteActif.livre_ids || [];
   mount.innerHTML = `
     <div class="vsec-title"><span class="vsec-num">3</span>Votre notation</div>
     <div class="rules">
-      Notez chaque livre de <b>1 à 5</b> selon votre envie de le lire. Le score d'un livre = <span class="key">(moyenne + médiane) ÷ 2</span>, ce qui atténue les notes extrêmes. Le plus haut score est <b>élu</b> ; tout score <span class="key">≤ 2,9</span> élimine le livre. Déjà lu un titre ? Cochez « je passe » pour l'exclure de votre vote.
+      Notez chaque livre de <b>1 à 5</b> selon votre envie de le lire. Le score d'un livre = <span class="key">(moyenne + médiane) ÷ 2</span>, ce qui atténue les notes extrêmes. Le plus haut score est <b>élu</b> ; tout score <span class="key">&lt; 3</span> élimine le livre. Déjà lu un titre ? Cochez « je passe » pour l'exclure de votre vote.
     </div>
     <div class="grade-scale"><span><b>1</b> — envie minimale</span><span><b>5</b> — envie maximale</span></div>
     ${buildVoteTable(livreIds, false)}
@@ -248,11 +506,8 @@ function renderVote() {
       <button class="btn btn-primary btn-lg" id="submit">${IC.check} Glisser dans l'urne</button>
     </div>`;
 
-  // Restaurer les notes existantes
   livreIds.forEach(lid => {
-    if (notes[lid] != null) {
-      highlightDots(lid, notes[lid]);
-    }
+    if (notes[lid] != null) highlightDots(lid, notes[lid]);
     if (lus.has(lid)) {
       const cb = document.querySelector(`.read-cb[data-bk="${lid}"]`);
       if (cb) cb.checked = true;
@@ -268,8 +523,6 @@ function renderVote() {
 
 function buildVoteTable(livreIds, preview) {
   const books = livreIds.map(id => livreById[id]).filter(Boolean);
-  // En mode preview : afficher les vrais livres (dots grisés par CSS .vtable2.preview)
-  // Si aucun livre disponible, afficher un placeholder
   const rows = (preview && books.length === 0)
     ? `<tr class="vrow"><td class="bkc" colspan="7" style="color:var(--muted);font-size:.82rem;padding:.8rem .4rem">Aucune proposition pour l'instant.</td></tr>`
     : books.map(b => {
@@ -335,17 +588,22 @@ function wireReadCheckboxes() {
 function renderBilan() {
   const membreIds = voteActif?.membre_ids || [];
   const bulletins = voteActif?.bulletins  || {};
-  const nbVotes   = Object.keys(bulletins).length;
-  const total     = membreIds.length;
+  const isTour2   = voteActif?.tour === 2;
 
   const count = document.getElementById("bilan-count");
   const grid  = document.getElementById("bilan-grid");
   if (!count || !grid) return;
 
-  count.textContent = `${nbVotes} / ${total} bulletins reçus`;
+  const nbVotes = membreIds.filter(id => {
+    const b = bulletins[id];
+    return isTour2 ? (b != null && b !== "") : !!b;
+  }).length;
+  count.textContent = `${nbVotes} / ${membreIds.length} bulletins reçus`;
+
   grid.innerHTML = membreIds.map(id => {
     const m = membreById[id] || { nom: id, _color: "#888" };
-    const v = !!bulletins[id];
+    const b = bulletins[id];
+    const v = isTour2 ? (b != null && b !== "") : !!b;
     return `<span class="bilan-tag ${v ? "ok" : "no"}">
       <span class="ava" style="background:${m._color}">${ini(m.nom)}</span>${esc(m.nom)}
       <span class="ck">${IC.check}</span>
@@ -356,23 +614,35 @@ function renderBilan() {
 // ── Soumission ─────────────────────────────────────────────────────────────
 async function submitVote() {
   if (!moi) { showToast("Choisissez votre nom.", false); return; }
-  const livreIds = voteActif.livre_ids || [];
-  const manquants = livreIds.filter(id => !lus.has(id) && notes[id] == null);
-  if (manquants.length) {
-    showToast(`Notez chaque livre (${manquants.length} manquant${manquants.length > 1 ? "s" : ""}).`, false);
-    return;
-  }
 
+  const isTour2 = voteActif.tour === 2;
   const btn = document.getElementById("submit");
   if (btn) { btn.disabled = true; btn.textContent = "Envoi…"; }
 
   try {
-    await soumettreVote(voteActif.id, moi, notes);
-    // Mettre à jour les bulletins localement
-    if (!voteActif.bulletins) voteActif.bulletins = {};
-    voteActif.bulletins[moi] = { ...notes };
+    if (isTour2) {
+      const checked = document.querySelector('input[name="t2-choix"]:checked');
+      if (!checked) {
+        showToast("Choisissez un livre.", false);
+        if (btn) { btn.disabled = false; btn.innerHTML = `${IC.check} Glisser dans l'urne`; }
+        return;
+      }
+      await soumettreVote(voteActif.id, moi, checked.value);
+      if (!voteActif.bulletins) voteActif.bulletins = {};
+      voteActif.bulletins[moi] = checked.value;
+    } else {
+      const livreIds = voteActif.livre_ids || [];
+      const manquants = livreIds.filter(id => !lus.has(id) && notes[id] == null);
+      if (manquants.length) {
+        showToast(`Notez chaque livre (${manquants.length} manquant${manquants.length > 1 ? "s" : ""}).`, false);
+        if (btn) { btn.disabled = false; btn.innerHTML = `${IC.check} Glisser dans l'urne`; }
+        return;
+      }
+      await soumettreVote(voteActif.id, moi, notes);
+      if (!voteActif.bulletins) voteActif.bulletins = {};
+      voteActif.bulletins[moi] = { ...notes };
+    }
 
-    // Mettre à jour le compteur dans la bannière
     const bCount = document.getElementById("b-count");
     if (bCount) {
       const nb = Object.keys(voteActif.bulletins).length;
@@ -387,8 +657,12 @@ async function submitVote() {
     }
     dejaSoumis = true;
     const hint = document.querySelector(".submit-hint");
-    if (hint) hint.textContent = "Vous aviez déjà voté — soumettre écrasera votre bulletin précédent.";
+    if (hint) hint.textContent = isTour2
+      ? "Vous avez déjà voté — soumettre écrasera votre choix précédent."
+      : "Vous aviez déjà voté — soumettre écrasera votre bulletin précédent.";
     showToast("Bulletin glissé dans l'urne — merci !");
+
+    if (checkAllVoted()) await triggerEarlyClose();
   } catch (err) {
     if (btn) { btn.disabled = false; btn.innerHTML = `${IC.check} Glisser dans l'urne`; }
     showToast("Erreur : " + err.message, false);

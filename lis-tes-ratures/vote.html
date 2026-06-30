@@ -145,6 +145,28 @@
     .vtoast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .vtoast svg { width: 17px; height: 17px; }
 
+    /* ── 2ème tour — contexte résultats tour 1 ── */
+    .t2-context { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:10px; padding:1rem 1.2rem; margin-bottom:1.6rem; }
+    .t2-ctx-title { font-weight:700; font-size:.95rem; color:var(--accent); margin-bottom:.35rem; }
+    .t2-ctx-sub { font-size:.82rem; color:var(--muted); line-height:1.5; margin-bottom:.85rem; }
+    .t2-ctx-results { display:flex; flex-direction:column; gap:.4rem; }
+    .t2-pre-row { display:grid; grid-template-columns:1fr 100px 44px 72px; align-items:center; gap:.5rem; }
+    .t2-pre-name { font-size:.83rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .t2-pre-bar { height:6px; background:var(--border); border-radius:4px; overflow:hidden; }
+    .t2-pre-fill { height:100%; border-radius:4px; }
+    .t2-pre-score { font-family:var(--serif); font-size:.88rem; font-weight:700; text-align:right; }
+    .t2-pre-badge { font-size:.68rem; padding:.12rem .4rem; border-radius:5px; white-space:nowrap; text-align:center; }
+    .t2-badge-tie { background:rgba(181,87,45,.12); color:var(--accent); }
+    .t2-badge-out { background:var(--surface2); color:var(--muted); }
+
+    /* ── 2ème tour — interface choix unique ── */
+    .t2-choices { display:flex; flex-direction:column; gap:.6rem; margin:1rem 0 1.5rem; }
+    .t2-choice { display:flex; align-items:center; gap:1rem; background:var(--surface); border:1.5px solid var(--border); border-radius:11px; padding:.85rem 1.1rem; cursor:pointer; transition:border-color .14s, background .14s; }
+    .t2-choice:hover { border-color:var(--accent); background:rgba(181,87,45,.04); }
+    .t2-choice:has(input:checked) { border-color:var(--accent); background:rgba(181,87,45,.07); }
+    .t2-choice input[type="radio"] { width:20px; height:20px; accent-color:var(--accent); cursor:pointer; flex-shrink:0; }
+    .t2-choice-body { flex:1; min-width:0; }
+
     @media (max-width: 620px) {
       .ballot { padding: 1.8rem 1.3rem 2rem 1.6rem; }
       .ballot::before { left: 1.1rem; }
