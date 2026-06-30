@@ -831,6 +831,16 @@ body {
 .lb-pts-wrap { text-align: right; margin-left: auto; }
 .lb-pts { font: 800 .95rem 'JetBrains Mono', monospace; color: var(--accent); font-variant-numeric: tabular-nums; }
 .lb-pts-label { font: 600 .62rem 'Rajdhani', sans-serif; color: var(--muted2); }
+.lb-delta {
+  font: 700 .72rem 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  min-width: 2.8rem;
+  text-align: right;
+  margin-left: .6rem;
+}
+.lb-delta.pos { color: var(--win); }
+.lb-delta.neg { color: var(--loss); }
+.lb-delta.zero { color: var(--muted2); }
 
 /* ── POINTS LEGEND ───────────────────────── */
 .pts-legend {
