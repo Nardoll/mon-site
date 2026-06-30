@@ -2,7 +2,7 @@ import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
 import {
   getLivres, getMembres, addLivre, getVotes,
-  getStatutsForLivre, updateLivreInfos, getReunions,
+  getStatutsForLivre, updateLivreInfos, updateLivre, getReunions,
   getProgressionForLivre,
 } from "./db.js";
 import { formatDate, formatMois, showToast } from "./utils.js";
@@ -815,6 +815,27 @@ document.getElementById("btn-copy").addEventListener("click", () => {
   navigator.clipboard.writeText(`Propositions de livres :\n${lines.join('\n')}`)
     .then(() => showToast("Liste copiée !", "success"))
     .catch(() => showToast("Impossible de copier.", "error"));
+});
+
+// ── Remplir Babelio automatiquement ──────────────────────────────
+document.getElementById("btn-babelio-fill").addEventListener("click", async () => {
+  const sans = livres.filter(l => !l.lien_babelio && (l.titre));
+  if (!sans.length) { showToast("Tous les livres ont déjà un lien Babelio.", "success"); return; }
+  const btn = document.getElementById("btn-babelio-fill");
+  btn.disabled = true;
+  try {
+    await Promise.all(sans.map(l => {
+      const q = encodeURIComponent((l.titre + (l.auteur ? " " + l.auteur : "")).trim());
+      return updateLivre(l.id, { lien_babelio: "https://www.babelio.com/recherche.php?Recherche=" + q });
+    }));
+    showToast(`${sans.length} livre${sans.length > 1 ? "s" : ""} mis à jour !`, "success");
+    livres = await getLivres();
+    renderVisual();
+  } catch (e) {
+    showToast("Erreur : " + e.message, "error");
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 // ── Init ──────────────────────────────────────────────────────────
