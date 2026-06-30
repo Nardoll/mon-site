@@ -328,12 +328,45 @@ Toutes les pages principales gèrent un paramètre URL `?open=ID` pour auto-ouvr
 - Scrutins archivés : dépouillement barres verticales, tableau émargement, détail par livre/votant
 - Vote actif en cours : émargement live, compte à rebours, lien vers bulletin
 - `?open=VOTE_ID` : auto-ouverture du détail
-- **Note** : fonctions admin (lancer/clôturer/annuler vote) existent dans `db.js` mais se gèrent via la console Firebase — pas d'UI dédiée (opérations rares et sensibles)
 
 #### Bulletin de vote (`vote.html` + `vote.js`)
-- Vote actif : identification membre → notation 1-5 par livre → soumettre
-- Preview (pas de vote en cours) : aperçu des propositions, cases "déjà lu, je passe" visibles mais **disabled**
-- Clôture automatique à expiration ou à 100% de participation
+> ⚠️ **SYSTÈME DE VOTE AUTOMATIQUE — NE JAMAIS MODIFIER LA LOGIQUE DÉCRITE CI-DESSOUS SANS ACCORD EXPLICITE DE TOM. TOUTE MODIFICATION SILENCIEUSE EST INACCEPTABLE.**
+
+Le système de vote est entièrement automatique, piloté par `vote.js` côté client. Voici le fonctionnement précis, à respecter scrupuleusement :
+
+**Lancement automatique (Tour 1)**
+- Au chargement de `vote.html`, si on est le **1er du mois** ET qu'il n'y a pas de vote actif ET qu'aucun vote archivé n'existe pour ce mois → `lancerVote()` est appelé automatiquement.
+- Livres inclus : tous les livres avec `statut === "en_proposition"`.
+- Membres inclus : tous les membres de la collection `membres`.
+- Fenêtre de vote : de l'heure de premier chargement jusqu'à **23h59:59 du 1er du mois**.
+
+**Clôture automatique (Tour 1)**
+- À l'expiration (`expires_at` passé) ou quand **100% des membres ont voté** → `closeExpiredVote()` calcule les résultats.
+- Score de chaque livre = **(moyenne des notes + médiane des notes) ÷ 2**.
+- Livre avec le score le plus élevé (unique) → élu.
+- **Égalité en tête** (≥ 2 livres avec le même score max) → lancement automatique du **2ème tour**.
+
+**2ème tour (égalité)**
+- Le document `votes_actifs` est modifié en place (champ `tour: 2`) — pas de nouveau document.
+- Seuls les livres ex-æquo participent.
+- Fenêtre : **2 du mois, de minuit à 23h59:59**.
+- Interface : **choix unique** par radio button — plus de notes 1–5.
+- Clôture : même logique (expiration ou 100% participation).
+- Résultat : livre avec le plus de voix est élu. **Nouvelle égalité → tirage au sort** (`tirage_au_sort: true` enregistré).
+- Un seul document sauvegardé dans `votes`, avec `tour2: { resultats, livre_elu, tirage_au_sort }`.
+
+**Garde-fous**
+- `closeExpiredVote` re-vérifie en Firestore que le document existe encore avant d'agir (protection contre double-clôture depuis deux onglets).
+- `autoLancerSiNecessaire` vérifie qu'aucun vote archivé n'existe pour le mois en cours avant de lancer (protection contre re-lancement après clôture le 1er).
+
+**Seuil d'élimination**
+- Tour 1 : tout score **strictement inférieur à 3** (`< 3`) marque le livre comme `refuse` et l'affiche comme "Éliminé". Les votes archivés avec `seuil: 2.5` (avant juin 2026) utilisent leur seuil historique via `seuilVote(v)`.
+- Tour 2 : pas de seuil d'élimination — seul le choix majoritaire compte.
+
+**UI en mode "à venir"** (pas de vote actif) : aperçu des propositions, cases "déjà lu, je passe" visibles mais **disabled**.
+**UI au 2ème tour** : bandeau d'explication avec barres des résultats du tour 1 (⚖️ ex-æquo / Écarté) ; formulaire radio à choix unique.
+
+> Les fonctions clés à ne jamais altérer : `autoLancerSiNecessaire`, `closeExpiredVote`, `closeExpiredVoteTour2`, `checkAllVoted`, `triggerEarlyClose` dans `lis-tes-ratures/js/vote.js`.
 
 #### Membres (`membres.html` + `membres.js`)
 - Fiches membres (grille de "cartes de lecteur")
@@ -1224,7 +1257,7 @@ Collection de vote en cours. Il ne peut y avoir qu'un seul document à la fois (
 - **"Refusé" ne s'affiche jamais** — le terme affiché partout est "Éliminé". La valeur stockée en base reste `"refuse"` (ne pas changer la valeur Firestore).
 - **Notes sur 5 — fixe** — l'échelle de vote est toujours /5, sans possibilité de la modifier lors du lancement. La saisie se fait via boutons radio (1/5 à 5/5), pas de champ numérique libre. La détection de l'échelle (5 ou 10) reste automatique dans les graphes de résultats (pour les anciens votes).
 - **Score (moy+méd)÷2** — depuis juin 2026, le score de chaque livre est calculé comme `(moyenne des notes + médiane des notes) / 2`. Réduit l'impact des notes extrêmes (vote stratégique) par rapport à la moyenne seule, sans le problème d'égalités massives de la médiane pure. Stocké dans le champ `moyenne` du document Firestore pour rétrocompatibilité avec l'affichage existant.
-- **Seuil d'élimination temporaire : 2,9** — relevé de 2,5 à 2,9 à partir de juin 2026 pour être plus sélectif. S'applique uniquement aux votes futurs (résultats passés déjà enregistrés). À réévaluer après quelques votes.
+- **Seuil d'élimination : 3** — relevé de 2,5 à 2,9 (juin 2026) puis à 3 (juillet 2026). Sémantique : score **strictement inférieur à 3** (`< 3`) → `refuse`. S'applique uniquement aux votes futurs — votes passés conservent leur seuil historique via `seuilVote(v)`.
 - **"Déjà lu — je passe"** — case à cocher optionnelle par livre dans le tableau de vote. Exclut ce livre de la soumission du votant. Le score du livre est calculé uniquement sur les membres ne l'ayant pas encore lu, évitant l'influence des lectures passées (désir de relire ou de ne pas relire).
 - **Votes permanents** — il n'existe pas de bouton de suppression pour un vote terminé. Seul un vote *actif* peut être annulé (sans enregistrer de résultats). Cela garantit l'intégrité de l'historique.
 - **Soumission de vote anonymisée** — le formulaire de vote est toujours vide à l'ouverture (jamais pré-rempli), que ce soit un premier vote ou un écrasement. Un membre ne voit jamais les notes des autres.
@@ -1313,6 +1346,22 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 ---
 
 ## Historique des modifications
+
+### 2026-07-01
+**Lis tes ratures — Restauration système de vote automatique + seuil à 3 + Babelio**
+
+- `lis-tes-ratures/js/vote.js` : **portage complet de la logique d'auto-vote** depuis l'ancienne version `club-lecture` (qui fonctionnait) — entièrement manquante dans la version lis-tes-ratures. Ajout de :
+  - `autoLancerSiNecessaire()` : lance le vote le 1er du mois (livres en_proposition + tous les membres, expires 23h59:59), après vérification qu'aucun vote archivé n'existe déjà pour ce mois.
+  - `closeExpiredVote()` : calcule scores (moy+méd)÷2 à l'expiration, élit le gagnant ou lance le 2ème tour en cas d'égalité.
+  - `closeExpiredVoteTour2()` : compte les voix (choix unique), élit le plus voté ou tire au sort en cas de nouvelle égalité (`tirage_au_sort: true`).
+  - `checkAllVoted()` + `triggerEarlyClose()` : clôture anticipée si 100% de participation.
+  - `startCountdown()` : `setTimeout` qui déclenche la clôture automatique à l'expiration si la page reste ouverte.
+  - Gestion du 2ème tour dans l'UI : `renderTour2Context()` (barres résultats tour 1), `renderVote()` en mode choix unique (radio), `submitVote()` adapté.
+- `lis-tes-ratures/vote.html` : CSS pour `.t2-context`, `.t2-choices`, `.t2-choice`, `.t2-pre-row`, `.t2-pre-badge` (éléments UI du 2ème tour).
+- `lis-tes-ratures/js/db.js` : correction `addVote` — seuil `refuse` corrigé de `<= 2.9` à `< 3` (cohérent avec le seuil stocké et la logique d'affichage).
+- `lis-tes-ratures/js/db.js` : `addVote` stocke `seuil: 3` (relevé de 2.9, voir session précédente).
+- `lis-tes-ratures/babelio.png` + intégrations Babelio (voir session précédente).
+- README : documentation complète du système de vote automatique avec avertissement NEVER MODIFY ; seuil mis à jour à 3 ; section votes lis-tes-ratures corrigée (suppression de la fausse note "via console Firebase").
 
 ### 2026-06-28 (suite 3)
 **Lis tes ratures — Refonte mobile (nav marque-pages + réunions + fix stats)**

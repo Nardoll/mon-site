@@ -125,7 +125,7 @@ export async function addVote({ mois, annee, resultats, livre_elu, date, tour2 }
     let statut;
     if (r.livre_id === livre_elu) {
       statut = "elu";
-    } else if (r.moyenne !== null && r.moyenne !== undefined && r.moyenne <= 2.9) {
+    } else if (r.moyenne !== null && r.moyenne !== undefined && r.moyenne < 3) {
       statut = "refuse";
     }
     if (statut) await updateLivre(r.livre_id, { statut });
