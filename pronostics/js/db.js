@@ -162,7 +162,7 @@ export async function scorePicksForMatch(match) {
       points = (ps1 === s1 && ps2 === s2) ? 5 : 3;
     }
 
-    batch.update(doc(db, 'prono_picks', d.id), { points, scored: true });
+    batch.update(doc(db, 'prono_picks', d.id), { points, scored: true, scored_at: serverTimestamp() });
   });
 
   await batch.commit();
@@ -314,7 +314,8 @@ export async function getLeaderboard(tournamentId) {
 
   const snap = await getDocs(query(collection(db, 'prono_picks'), ...constraints));
 
-  const pts = {}, correct = {}, perfect = {};
+  const pts = {}, correct = {}, perfect = {}, delta24 = {};
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
   snap.docs.forEach(d => {
     const p = d.data();
     if (!p.scored) return;
@@ -322,6 +323,8 @@ export async function getLeaderboard(tournamentId) {
     pts[pid]     = (pts[pid] || 0) + (p.points || 0);
     if ((p.points || 0) >= 3) correct[pid] = (correct[pid] || 0) + 1;
     if ((p.points || 0) >= 5) perfect[pid] = (perfect[pid] || 0) + 1;
+    const scoredAt = p.scored_at?.toMillis?.() || 0;
+    if (scoredAt > cutoff) delta24[pid] = (delta24[pid] || 0) + (p.points || 0);
   });
 
   return profiles
@@ -331,7 +334,8 @@ export async function getLeaderboard(tournamentId) {
       avatar_url: p.avatar_url || null,
       points: pts[p.id] || 0,
       correct: correct[p.id] || 0,
-      perfect: perfect[p.id] || 0
+      perfect: perfect[p.id] || 0,
+      delta24: delta24[p.id] || 0
     }))
     .sort((a, b) => b.points - a.points || b.correct - a.correct || b.perfect - a.perfect);
 }

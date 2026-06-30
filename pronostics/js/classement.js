@@ -85,6 +85,9 @@ async function showLeaderboard(tournamentId, profile, tournaments) {
             <div class="lb-pts">${e.points}</div>
             <div class="lb-pts-label">pts</div>
           </div>
+          <div class="lb-delta ${e.delta24 > 0 ? 'pos' : e.delta24 < 0 ? 'neg' : 'zero'}">
+            ${e.delta24 > 0 ? '+' : ''}${e.delta24 > 0 || e.delta24 < 0 ? e.delta24 : '—'}
+          </div>
         </div>
       `).join('')}
     </div>
