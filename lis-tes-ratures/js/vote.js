@@ -167,7 +167,8 @@ async function closeExpiredVoteTour2(va) {
       annee: va.annee,
       resultats: va.resultats_tour1,
       livre_elu,
-      tour2: { resultats: resultats_tour2, livre_elu, tirage_au_sort },
+      // enLice et choix utilisés par buildTour2 dans votes.js pour l'affichage archivé
+      tour2: { enLice: livre_ids, choix: bulletins2, resultats: resultats_tour2, livre_elu, tirage_au_sort },
     });
   } catch (e) { console.error("Clôture tour 2 :", e); }
 }
