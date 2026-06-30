@@ -171,6 +171,7 @@ function renderBooks() {
         ${b.genre ? `<span class="vbook-genre">${esc(b.genre)}</span>` : ""}
         ${b.nb_pages ? `<span class="vbook-pages">${esc(b.nb_pages)} p.</span>` : ""}
         ${b.description_3_mots ? `<span class="vbook-desc">${esc(b.description_3_mots)}</span>` : ""}
+        ${b.lien_babelio ? `<a href="${esc(b.lien_babelio)}" target="_blank" rel="noopener" class="vbook-babelio"><img src="/lis-tes-ratures/babelio.png" alt="Babelio" class="babelio-icon"> Babelio</a>` : ""}
       </div>
     </div>`).join("");
 }

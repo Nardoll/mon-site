@@ -447,6 +447,7 @@ async function openFiche(id) {
     ${reunionHtml}
     <div class="fiche-actions">
       <a href="commentaires.html?livre=${id}" class="fiche-btn">${ICON_COMMENT} Commentaires de lecture</a>
+      ${livre.lien_babelio ? `<a href="${esc(livre.lien_babelio)}" target="_blank" rel="noopener" class="fiche-btn fiche-btn-babelio"><img src="/lis-tes-ratures/babelio.png" alt="Babelio" class="babelio-icon"> Voir sur Babelio</a>` : ''}
     </div>`;
 
   document.getElementById("fiche-close-btn").addEventListener("click", closeFiche);
@@ -533,10 +534,11 @@ function showFicheEditForm(livre) {
       <div><label style="${labelStyle}">Pages</label><input type="number" id="el-pages" value="${livre.nb_pages || ''}" placeholder="ex : 320" style="${inputStyle}"></div>
     </div>
     <div style="margin-bottom:.85rem"><label style="${labelStyle}">Description en 3 mots</label><input type="text" id="el-desc" value="${esc(livre.description_3_mots || '')}" placeholder="ex : amour, guerre, trahison" style="${inputStyle}"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:1.2rem">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-bottom:.85rem">
       <div><label style="${labelStyle}">ISBN-13</label><input type="text" id="el-isbn" value="${esc(livre.isbn13 || '')}" placeholder="ex : 9782070413119" style="${inputStyle}"></div>
       <div><label style="${labelStyle}">URL de couverture (manuel)</label><input type="text" id="el-cover" value="${esc(livre.couv_manuelle ? (livre.couverture_url || '') : '')}" placeholder="vide = auto (ISBN puis recherche)" style="${inputStyle}"></div>
     </div>
+    <div style="margin-bottom:1.2rem"><label style="${labelStyle}">Lien Babelio</label><input type="url" id="el-babelio" value="${esc(livre.lien_babelio || '')}" placeholder="https://www.babelio.com/livres/..." style="${inputStyle}"></div>
     <div style="border-top:1px solid rgba(120,90,50,.2);padding-top:1rem;display:flex;justify-content:flex-end;gap:.7rem">
       <button id="el-cancel" style="background:transparent;border:1px solid rgba(120,90,50,.32);border-radius:8px;padding:.45rem 1rem;font-size:.82rem;color:#6a513a;cursor:pointer;font-family:inherit">Annuler</button>
       <button id="el-save" style="background:#b5572d;border:none;border-radius:8px;padding:.45rem 1.1rem;font-size:.82rem;color:#fff;cursor:pointer;font-family:inherit;font-weight:600">Enregistrer</button>
@@ -559,6 +561,7 @@ function showFicheEditForm(livre) {
         description_3_mots: document.getElementById("el-desc").value.trim(),
         couverture_url: document.getElementById("el-cover").value.trim(),
         isbn13: document.getElementById("el-isbn").value.trim(),
+        lien_babelio: document.getElementById("el-babelio").value.trim() || null,
       });
       invalidateCoverCache(currentFicheId); // oublie l'ancienne couverture en mémoire
       showToast("Livre modifié !", "success");
@@ -685,9 +688,21 @@ function openProposeModal() {
 
 function closeProposeModal() {
   document.getElementById("propose-overlay").classList.add("hidden");
-  ["pf-titre","pf-auteur","pf-annee"].forEach(id => {
+  ["pf-titre","pf-auteur","pf-annee","pf-babelio"].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
+}
+
+function pfAutoFillBabelio() {
+  const el = document.getElementById("pf-babelio");
+  if (!el) return;
+  const titre = document.getElementById("pf-titre").value.trim();
+  const auteur = document.getElementById("pf-auteur").value.trim();
+  if (titre) {
+    el.value = "https://www.babelio.com/recherche.php?Recherche=" + encodeURIComponent((titre + (auteur ? " " + auteur : "")).trim());
+  } else {
+    el.value = "";
+  }
 }
 
 // Délégation permanente sur les conteneurs (une seule fois, résiste aux re-renders)
@@ -709,6 +724,8 @@ document.getElementById("open-propose-2").addEventListener("click", openProposeM
 document.getElementById("pf-close").addEventListener("click", closeProposeModal);
 document.getElementById("pf-cancel").addEventListener("click", closeProposeModal);
 document.getElementById("propose-overlay").addEventListener("click", e => { if (e.target === e.currentTarget) closeProposeModal(); });
+document.getElementById("pf-titre").addEventListener("input", pfAutoFillBabelio);
+document.getElementById("pf-auteur").addEventListener("input", pfAutoFillBabelio);
 
 // Enrichissement IA via la Cloudflare Function (/api/enrich). Renvoie un objet
 // { trouve, titre_exact, auteur_exact, genre, nb_pages, description_3_mots, annee, isbn13 } ou null.
@@ -769,6 +786,7 @@ document.getElementById("pf-submit").addEventListener("click", async () => {
       titre, auteur, annee, propose_par,
       date_proposition: new Date().toISOString().split("T")[0],
       genre, nb_pages, description_3_mots, isbn13,
+      lien_babelio: document.getElementById("pf-babelio").value.trim() || null,
     });
     showToast("Livre proposé !", "success");
     closeProposeModal();

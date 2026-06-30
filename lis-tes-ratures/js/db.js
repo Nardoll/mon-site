@@ -43,7 +43,7 @@ export async function getLivreById(id) {
   return d.exists() ? { id: d.id, ...d.data() } : null;
 }
 
-export async function addLivre({ titre, auteur, annee, propose_par, date_proposition, statut = "en_proposition", nb_pages, genre, description_3_mots, isbn13 }) {
+export async function addLivre({ titre, auteur, annee, propose_par, date_proposition, statut = "en_proposition", nb_pages, genre, description_3_mots, isbn13, lien_babelio }) {
   return addDoc(collection(db, "livres"), {
     titre,
     auteur: auteur || "",
@@ -57,6 +57,7 @@ export async function addLivre({ titre, auteur, annee, propose_par, date_proposi
     genre: genre || null,
     description_3_mots: description_3_mots || null,
     isbn13: isbn13 || null,
+    lien_babelio: lien_babelio || null,
     cree_le: serverTimestamp()
   });
 }
@@ -65,7 +66,7 @@ export async function updateLivre(id, data) {
   return updateDoc(doc(db, "livres", id), data);
 }
 
-export async function updateLivreInfos(id, { titre, auteur, annee, propose_par, date_proposition, nb_pages, genre, description_3_mots, couverture_url, isbn13 }) {
+export async function updateLivreInfos(id, { titre, auteur, annee, propose_par, date_proposition, nb_pages, genre, description_3_mots, couverture_url, isbn13, lien_babelio }) {
   return updateDoc(doc(db, "livres", id), {
     titre,
     auteur: auteur || "",
@@ -79,6 +80,7 @@ export async function updateLivreInfos(id, { titre, auteur, annee, propose_par, 
     couverture_url: couverture_url ? couverture_url : null,
     couv_manuelle: !!couverture_url,
     isbn13: isbn13 ? String(isbn13).replace(/[^0-9]/g, "") || null : null,
+    lien_babelio: lien_babelio || null,
     // Invalide le cache de couverture auto → recalcul (utile si l'ISBN change)
     couv_cache: null,
     couv_v: null,
