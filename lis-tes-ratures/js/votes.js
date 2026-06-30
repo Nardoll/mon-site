@@ -77,13 +77,18 @@ function renderLive() {
   const livreIds  = voteActif.livre_ids  || [];
   const membreIds = voteActif.membre_ids || [];
   const bulletins = voteActif.bulletins  || {};
-  const nbVotes   = Object.keys(bulletins).length;
+  const isTour2   = voteActif.tour === 2;
+  const nbVotes   = membreIds.filter(id => {
+    const b = bulletins[id];
+    return isTour2 ? (b != null && b !== "") : !!b;
+  }).length;
   const total     = membreIds.length;
   const pct       = total ? Math.round(nbVotes / total * 100) : 0;
 
   const emarge = membreIds.map(id => {
     const m = membreById[id] || { nom: id, _color: "#888" };
-    const v = !!bulletins[id];
+    const b = bulletins[id];
+    const v = isTour2 ? (b != null && b !== "") : !!b;
     return `<span class="emarge-tag ${v ? "voted" : "pending"}">
       <span class="ava" style="background:${m._color}">${ini(m.nom)}</span>${esc(m.nom)}
       <span class="ck">${IC.check}</span>
@@ -99,9 +104,9 @@ function renderLive() {
     <div class="live">
       <div class="live-grid">
         <div class="live-main">
-          <span class="live-eyebrow"><span class="pulse"></span>Vote ouvert</span>
+          <span class="live-eyebrow"><span class="pulse"></span>${isTour2 ? "⚖️ Deuxième tour" : "Vote ouvert"}</span>
           <div class="live-title">Scrutin de ${formatMois(voteActif.mois, voteActif.annee)}</div>
-          <div class="live-meta"><b>${livreIds.length} livre${livreIds.length !== 1 ? "s" : ""}</b> en compétition · notation de 1 à ${voteActif.echelle || 5}</div>
+          <div class="live-meta"><b>${livreIds.length} livre${livreIds.length !== 1 ? "s" : ""}</b> ${isTour2 ? "ex-æquo · choix unique" : `en compétition · notation de 1 à ${voteActif.echelle || 5}`}</div>
           <div class="live-count" id="live-countdown">${IC.users}${nbVotes} / ${total} bulletins reçus</div>
           <div class="live-books">${chips}</div>
         </div>
