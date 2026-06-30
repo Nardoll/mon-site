@@ -69,7 +69,8 @@
     .fiche-btn { display:inline-flex; align-items:center; gap:.4rem; background:transparent; border:1px solid rgba(120,90,50,.32); border-radius:8px; padding:.45rem 1rem; font-size:.82rem; color:#6a513a; cursor:pointer; font-family:inherit; text-decoration:none; }
     .fiche-btn:hover { border-color:#b5572d; color:#b5572d; }
     .fiche-btn svg { width:14px; height:14px; }
-    .fiche-actions { display:flex; justify-content:center; margin-top:1.3rem; }
+    .fiche-actions { display:flex; justify-content:center; gap:.7rem; flex-wrap:wrap; margin-top:1.3rem; }
+    .babelio-icon { height:1em; width:auto; vertical-align:middle; display:inline-block; }
     #fiche-overlay { z-index:300; }
 
     /* ════ Graphe d'évolution dans la fiche (élus) ════ */
@@ -360,6 +361,9 @@
       <div class="form-row">
         <div class="form-group"><label>Année de parution</label><input type="number" id="pf-annee" placeholder="1844" /></div>
         <div class="form-group"><label>Proposé par</label><select id="pf-par"></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:1"><label>Lien Babelio <span style="font-weight:400;opacity:.7">(auto-rempli, modifiable)</span></label><input type="url" id="pf-babelio" placeholder="https://www.babelio.com/recherche.php?..." /></div>
       </div>
       <p class="prop-form-hint">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/></svg>
