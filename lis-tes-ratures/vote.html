@@ -171,11 +171,13 @@
       .ballot { padding: 1.8rem 1.3rem 2rem 1.6rem; }
       .ballot::before { left: 1.1rem; }
       .vtable2 thead { display: none; }
-      .vrow { display: grid; grid-template-columns: 1fr; padding: .8rem 0; border-bottom: 1px solid var(--border); }
+      .vrow { display: flex; flex-wrap: wrap; align-items: center; padding: .8rem 0; border-bottom: 1px solid var(--border); }
       .vrow td { border: none; padding: 0; }
-      .vrow .dots-mobile { display: flex; gap: .4rem; }
+      .vrow td.bkc { flex: 0 0 100%; margin-bottom: .6rem; }
+      .vrow td.numcol { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .25rem; }
+      .vrow td.numcol::before { content: attr(data-n); font-size: .68rem; font-weight: 700; color: var(--muted); }
+      .vrow td.readcol { flex: 0 0 100%; margin-top: .5rem; text-align: left; }
       .numcol { width: auto; }
-      td.readcol { text-align: left; }
     }
   </style>
 </head>
