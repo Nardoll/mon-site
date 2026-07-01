@@ -366,6 +366,12 @@ Le système de vote est entièrement automatique, piloté par `vote.js` côté c
 **UI en mode "à venir"** (pas de vote actif) : aperçu des propositions, cases "déjà lu, je passe" visibles mais **disabled**.
 **UI au 2ème tour** : bandeau d'explication avec barres des résultats du tour 1 (⚖️ ex-æquo / Écarté) ; formulaire radio à choix unique.
 
+**Rappel personnel — colonne "Préc." (Tour 1 uniquement)**
+- Une fois identifié, le membre voit apparaître une colonne supplémentaire à droite du tableau de notation, alimentée par `previousVote` (le vote archivé immédiatement précédent, calculé via `refreshPreviousVote()`).
+- Elle rappelle la note **que ce membre précis** avait donnée à ce livre lors du vote du mois précédent, si le livre était déjà en compétition (recherche dans `resultats[].notes[moi]` du vote archivé).
+- Masquée par défaut (floutée) — un interrupteur au-dessus du tableau ("Afficher mes notes du mois dernier") la révèle. Préférence mémorisée en `localStorage` (`ltr_prevNotes`), propre à l'appareil, pas partagée entre membres.
+- N'apparaît pas en tour 2 (interface à choix unique, pas de notation) ni tant que le membre n'est pas identifié (donnée personnelle).
+
 > Les fonctions clés à ne jamais altérer : `autoLancerSiNecessaire`, `closeExpiredVote`, `closeExpiredVoteTour2`, `checkAllVoted`, `triggerEarlyClose` dans `lis-tes-ratures/js/vote.js`.
 
 #### Membres (`membres.html` + `membres.js`)

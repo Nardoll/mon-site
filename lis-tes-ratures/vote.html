@@ -159,6 +159,14 @@
     .t2-badge-tie { background:rgba(181,87,45,.12); color:var(--accent); }
     .t2-badge-out { background:var(--surface2); color:var(--muted); }
 
+    /* ── colonne "vote précédent" (rappel personnel) ── */
+    .prevcol { width: 60px; text-align: center; }
+    .vtable2 thead th.prevcol { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; color: var(--muted); }
+    .prevval { font-family: var(--serif); font-weight: 700; font-size: .92rem; color: var(--text); transition: filter .15s, opacity .15s; }
+    .prevval-empty { color: var(--muted); font-weight: 400; }
+    .vtable2.prev-hidden .prevval { filter: blur(4px); opacity: .55; }
+    .prev-bar .key { font-family: var(--serif); }
+
     /* ── 2ème tour — interface choix unique ── */
     .t2-choices { display:flex; flex-direction:column; gap:.6rem; margin:1rem 0 1.5rem; }
     .t2-choice { display:flex; align-items:center; gap:1rem; background:var(--surface); border:1.5px solid var(--border); border-radius:11px; padding:.85rem 1.1rem; cursor:pointer; transition:border-color .14s, background .14s; }
@@ -177,6 +185,8 @@
       .vrow td.numcol { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .25rem; }
       .vrow td.numcol::before { content: attr(data-n); font-size: .68rem; font-weight: 700; color: var(--muted); }
       .vrow td.readcol { flex: 0 0 100%; margin-top: .5rem; text-align: left; }
+      .vrow td.prevcol { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .25rem; }
+      .vrow td.prevcol::before { content: "Préc."; font-size: .6rem; font-weight: 700; color: var(--muted); text-transform: uppercase; }
       .numcol { width: auto; }
     }
   </style>
