@@ -411,14 +411,13 @@ async function openPicksDrawer(match) {
   const scoreDisplay = (match.score1 != null && match.score2 != null)
     ? `${match.score1} — ${match.score2}` : '';
 
-  // Équipes uniques des matchs existants (hors TBD)
-  const allTeams = [...new Set(
-    matches.flatMap(m => [m.team1, m.team2]).filter(t => t && t !== 'TBD')
-  )].sort();
-  const teamSelectOpts = (current) => [
-    `<option value="">— Équipe —</option>`,
-    ...allTeams.map(t => `<option value="${esc(t)}"${t === current ? ' selected' : ''}>${esc(t)}</option>`)
-  ].join('');
+  // Équipes uniques : matchs existants + logos du tournoi
+  const allTeams = [...new Set([
+    ...matches.flatMap(m => [m.team1, m.team2]).filter(t => t && t !== 'TBD'),
+    ...Object.keys(tournament.team_logos || {})
+  ])].sort();
+  const teamDatalistId = `dl-bkap-${match.id}`;
+  const teamDatalistHtml = `<datalist id="${teamDatalistId}">${allTeams.map(t => `<option value="${esc(t)}">`).join('')}</datalist>`;
 
   // Matchs du calendrier pour le sélecteur d'horaire
   const otherMatches = matches
@@ -441,14 +440,15 @@ async function openPicksDrawer(match) {
 
   const adminSection = IS_ADMIN ? `
     <div class="pd-section-label" style="margin-top:.5rem;border-top:1px solid var(--border);padding-top:.5rem">⚙️ Admin</div>
+    ${teamDatalistHtml}
     <form class="bkap-form" id="bkap-form">
       <div class="bkap-row">
         <label>Équipe 1</label>
-        <select name="team1">${teamSelectOpts(match.team1)}</select>
+        <input class="bkap-team-input" name="team1" list="${teamDatalistId}" value="${esc(match.team1 || '')}" placeholder="Nom d'équipe" style="flex:1" />
       </div>
       <div class="bkap-row">
         <label>Équipe 2</label>
-        <select name="team2">${teamSelectOpts(match.team2)}</select>
+        <input class="bkap-team-input" name="team2" list="${teamDatalistId}" value="${esc(match.team2 || '')}" placeholder="Nom d'équipe" style="flex:1" />
       </div>
       <div class="bkap-row">
         <label>Statut</label>
@@ -500,6 +500,40 @@ async function openPicksDrawer(match) {
   });
 
   if (IS_ADMIN) {
+    const bkapForm = document.getElementById('bkap-form');
+
+    // Mise à jour du select gagnant quand les équipes changent
+    const bkapT1 = bkapForm?.querySelector('[name=team1]');
+    const bkapT2 = bkapForm?.querySelector('[name=team2]');
+    const bkapWinner = bkapForm?.querySelector('[name=winner]');
+    const bkapS1 = bkapForm?.querySelector('[name=score1]');
+    const bkapS2 = bkapForm?.querySelector('[name=score2]');
+    const bkapStatus = bkapForm?.querySelector('[name=status]');
+    const refreshBkapWinner = () => {
+      const t1 = bkapT1?.value.trim();
+      const t2 = bkapT2?.value.trim();
+      const cur = bkapWinner?.value;
+      if (bkapWinner) bkapWinner.innerHTML = `
+        <option value="">—</option>
+        ${t1 ? `<option value="${esc(t1)}"${cur === t1 ? ' selected' : ''}>${esc(t1)}</option>` : ''}
+        ${t2 ? `<option value="${esc(t2)}"${cur === t2 ? ' selected' : ''}>${esc(t2)}</option>` : ''}
+      `;
+    };
+    const autoStatus = () => {
+      const s1 = parseInt(bkapS1?.value);
+      const s2 = parseInt(bkapS2?.value);
+      if (!isNaN(s1) && !isNaN(s2) && bkapS1.value !== '' && bkapS2.value !== '') {
+        if (bkapStatus) bkapStatus.value = 'finished';
+        const t1 = bkapT1?.value.trim();
+        const t2 = bkapT2?.value.trim();
+        if (t1 && t2 && s1 !== s2 && bkapWinner) bkapWinner.value = s1 > s2 ? t1 : t2;
+      }
+    };
+    bkapT1?.addEventListener('change', refreshBkapWinner);
+    bkapT2?.addEventListener('change', refreshBkapWinner);
+    bkapS1?.addEventListener('input', autoStatus);
+    bkapS2?.addEventListener('input', autoStatus);
+
     // Quand on sélectionne un créneau → préremplit le datetime-local en heure Paris
     document.getElementById('bkap-cal-slot')?.addEventListener('change', e => {
       const calMatch = matches.find(m => m.id === e.target.value);
