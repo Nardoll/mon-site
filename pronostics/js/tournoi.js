@@ -1181,6 +1181,11 @@ function renderAdmin() {
         `).join('')}
       </div>
       <button class="admin-save-btn" id="btn-save-logos" style="margin-top:.75rem">Sauvegarder les logos</button>
+      <div class="admin-logo-add-row" style="margin-top:.6rem;display:flex;gap:.4rem;align-items:center">
+        <input class="admin-input" id="add-team-name" placeholder="Nom de l'équipe" style="flex:1" />
+        <input class="admin-input" id="add-team-url" type="url" placeholder="URL du logo" style="flex:2" />
+        <button class="admin-save-btn" id="btn-add-team" style="white-space:nowrap">+ Ajouter</button>
+      </div>
     </div>
 
     <div class="admin-section" style="margin-top:1.5rem">
@@ -1226,6 +1231,25 @@ function renderAdmin() {
     } catch (e) {
       showToast('Erreur : ' + e.message);
       btn.disabled = false; btn.textContent = 'Sauvegarder les logos';
+    }
+  });
+
+  // Ajouter une équipe + logo manuellement
+  document.getElementById('btn-add-team')?.addEventListener('click', async () => {
+    const name = document.getElementById('add-team-name').value.trim();
+    const url  = document.getElementById('add-team-url').value.trim();
+    if (!name) { showToast('Entre un nom d\'équipe'); return; }
+    const btn = document.getElementById('btn-add-team');
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      const newLogos = { ...(tournament.team_logos || {}), [name]: url || null };
+      await updateTournament(TOURNAMENT_ID, { team_logos: newLogos });
+      tournament.team_logos = newLogos;
+      showToast(`✓ ${name} ajouté`);
+      renderAdmin();
+    } catch (e) {
+      showToast('Erreur : ' + e.message);
+      btn.disabled = false; btn.textContent = '+ Ajouter';
     }
   });
 
