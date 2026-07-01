@@ -800,6 +800,9 @@ async function renderClassement() {
             <div class="lb-pts">${e.points}</div>
             <div class="lb-pts-label">pts</div>
           </div>
+          <div class="lb-delta ${e.delta24 > 0 ? 'pos' : e.delta24 < 0 ? 'neg' : 'zero'}">
+            ${e.delta24 > 0 ? '+' : ''}${e.delta24 > 0 || e.delta24 < 0 ? e.delta24 : '—'}
+          </div>
         </div>
       `).join('')}
     </div>
@@ -1108,9 +1111,10 @@ function renderAdmin() {
   const container = document.getElementById('tab-admin');
   if (!container) return;
 
-  const teams = [...new Set(
-    matches.flatMap(m => [m.team1, m.team2]).filter(t => t && t !== 'TBD')
-  )].sort();
+  const teams = [...new Set([
+    ...matches.flatMap(m => [m.team1, m.team2]).filter(t => t && t !== 'TBD'),
+    ...Object.keys(tournament.team_logos || {})
+  ])].sort();
 
   const logos = tournament.team_logos || {};
 
