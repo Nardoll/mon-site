@@ -1224,6 +1224,22 @@ function renderAdmin() {
     };
     s1Input?.addEventListener('input', onScoreChange);
     s2Input?.addEventListener('input', onScoreChange);
+
+    // Mise à jour du select gagnant quand les équipes changent
+    const t1Input = form.querySelector('[name=team1]');
+    const t2Input = form.querySelector('[name=team2]');
+    const refreshWinner = () => {
+      const t1 = t1Input.value.trim();
+      const t2 = t2Input.value.trim();
+      const cur = winnerSel.value;
+      winnerSel.innerHTML = `
+        <option value="">— Pas de gagnant —</option>
+        ${t1 ? `<option value="${esc(t1)}"${cur === t1 ? ' selected' : ''}>${esc(t1)}</option>` : ''}
+        ${t2 ? `<option value="${esc(t2)}"${cur === t2 ? ' selected' : ''}>${esc(t2)}</option>` : ''}
+      `;
+    };
+    t1Input?.addEventListener('change', refreshWinner);
+    t2Input?.addEventListener('change', refreshWinner);
   });
 
   container.querySelectorAll('.admin-match-form').forEach(form => {
@@ -1275,10 +1291,8 @@ function renderAdmin() {
 }
 
 function renderAdminMatch(m, teams) {
-  const teamSelectOpts = (current) => [
-    `<option value="">— Équipe —</option>`,
-    ...teams.map(t => `<option value="${esc(t)}"${t === current ? ' selected' : ''}>${esc(t)}</option>`)
-  ].join('');
+  const dlId = `dl-teams-${m.id}`;
+  const teamDatalist = `<datalist id="${dlId}">${teams.map(t => `<option value="${esc(t)}">`).join('')}</datalist>`;
 
   const winnerOpts = `
     <option value="">— Pas de gagnant —</option>
@@ -1308,14 +1322,15 @@ function renderAdminMatch(m, teams) {
         <span class="admin-match-teams">${esc(m.team1)} vs ${esc(m.team2)}</span>
         <span class="admin-match-status ${m.status}">${m.status}</span>
       </summary>
+      ${teamDatalist}
       <form class="admin-match-form" data-match-id="${m.id}">
         <div class="admin-row-form">
           <label>Équipe 1</label>
-          <select name="team1">${teamSelectOpts(m.team1)}</select>
+          <input class="admin-input" name="team1" list="${dlId}" value="${esc(m.team1 || '')}" placeholder="Nom d'équipe" style="flex:1" />
         </div>
         <div class="admin-row-form">
           <label>Équipe 2</label>
-          <select name="team2">${teamSelectOpts(m.team2)}</select>
+          <input class="admin-input" name="team2" list="${dlId}" value="${esc(m.team2 || '')}" placeholder="Nom d'équipe" style="flex:1" />
         </div>
         <div class="admin-row-form">
           <label>Statut</label>
