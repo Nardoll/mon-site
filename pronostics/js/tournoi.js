@@ -416,8 +416,10 @@ async function openPicksDrawer(match) {
     ...matches.flatMap(m => [m.team1, m.team2]).filter(t => t && t !== 'TBD'),
     ...Object.keys(tournament.team_logos || {})
   ])].sort();
-  const teamDatalistId = `dl-bkap-${match.id}`;
-  const teamDatalistHtml = `<datalist id="${teamDatalistId}">${allTeams.map(t => `<option value="${esc(t)}">`).join('')}</datalist>`;
+  const teamSelectOpts = (current) => [
+    `<option value="">— Équipe —</option>`,
+    ...allTeams.map(t => `<option value="${esc(t)}"${t === current ? ' selected' : ''}>${esc(t)}</option>`)
+  ].join('');
 
   // Matchs du calendrier pour le sélecteur d'horaire
   const otherMatches = matches
@@ -440,15 +442,14 @@ async function openPicksDrawer(match) {
 
   const adminSection = IS_ADMIN ? `
     <div class="pd-section-label" style="margin-top:.5rem;border-top:1px solid var(--border);padding-top:.5rem">⚙️ Admin</div>
-    ${teamDatalistHtml}
     <form class="bkap-form" id="bkap-form">
       <div class="bkap-row">
         <label>Équipe 1</label>
-        <input class="bkap-team-input" name="team1" list="${teamDatalistId}" value="${esc(match.team1 || '')}" placeholder="Nom d'équipe" style="flex:1" />
+        <select name="team1">${teamSelectOpts(match.team1)}</select>
       </div>
       <div class="bkap-row">
         <label>Équipe 2</label>
-        <input class="bkap-team-input" name="team2" list="${teamDatalistId}" value="${esc(match.team2 || '')}" placeholder="Nom d'équipe" style="flex:1" />
+        <select name="team2">${teamSelectOpts(match.team2)}</select>
       </div>
       <div class="bkap-row">
         <label>Statut</label>
@@ -1325,8 +1326,10 @@ function renderAdmin() {
 }
 
 function renderAdminMatch(m, teams) {
-  const dlId = `dl-teams-${m.id}`;
-  const teamDatalist = `<datalist id="${dlId}">${teams.map(t => `<option value="${esc(t)}">`).join('')}</datalist>`;
+  const teamSelectOpts = (current) => [
+    `<option value="">— Équipe —</option>`,
+    ...teams.map(t => `<option value="${esc(t)}"${t === current ? ' selected' : ''}>${esc(t)}</option>`)
+  ].join('');
 
   const winnerOpts = `
     <option value="">— Pas de gagnant —</option>
@@ -1356,15 +1359,14 @@ function renderAdminMatch(m, teams) {
         <span class="admin-match-teams">${esc(m.team1)} vs ${esc(m.team2)}</span>
         <span class="admin-match-status ${m.status}">${m.status}</span>
       </summary>
-      ${teamDatalist}
       <form class="admin-match-form" data-match-id="${m.id}">
         <div class="admin-row-form">
           <label>Équipe 1</label>
-          <input class="admin-input" name="team1" list="${dlId}" value="${esc(m.team1 || '')}" placeholder="Nom d'équipe" style="flex:1" />
+          <select name="team1">${teamSelectOpts(m.team1)}</select>
         </div>
         <div class="admin-row-form">
           <label>Équipe 2</label>
-          <input class="admin-input" name="team2" list="${dlId}" value="${esc(m.team2 || '')}" placeholder="Nom d'équipe" style="flex:1" />
+          <select name="team2">${teamSelectOpts(m.team2)}</select>
         </div>
         <div class="admin-row-form">
           <label>Statut</label>
