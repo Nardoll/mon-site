@@ -48,6 +48,21 @@ let notes = {};
 let lus = new Set();
 let dejaSoumis = false;
 
+// Vote archivé immédiatement précédent (pour rappel des notes du mois dernier)
+let previousVote = null;
+let showPrevNotes = localStorage.getItem("ltr_prevNotes") === "1";
+
+async function refreshPreviousVote() {
+  previousVote = null;
+  if (!voteActif || voteActif.tour === 2) return;
+  try {
+    const allVotes = await getVotes();
+    previousVote = allVotes.find(v =>
+      v.annee < voteActif.annee || (v.annee === voteActif.annee && v.mois < voteActif.mois)
+    ) || null;
+  } catch (e) { console.error("Chargement vote précédent :", e); }
+}
+
 // ── Auto-lancement le 1er du mois ──────────────────────────────────────────
 // ⚠️ NE PAS MODIFIER — voir README section "Système de vote automatique"
 async function autoLancerSiNecessaire() {
@@ -192,6 +207,7 @@ async function triggerEarlyClose() {
   voteActif = await getVoteActif();
   livres = await getLivres();
   moi = null; moiNom = ""; notes = {}; lus = new Set(); dejaSoumis = false;
+  await refreshPreviousVote();
   render();
   if (voteActif) startCountdown();
 }
@@ -206,6 +222,7 @@ function startCountdown() {
       voteActif = await getVoteActif();
       livres = await getLivres();
       moi = null; moiNom = ""; notes = {}; lus = new Set();
+      await refreshPreviousVote();
       render();
       if (voteActif) startCountdown();
     });
@@ -217,6 +234,7 @@ function startCountdown() {
     voteActif = await getVoteActif();
     livres = await getLivres();
     moi = null; moiNom = ""; notes = {}; lus = new Set();
+    await refreshPreviousVote();
     render();
     if (voteActif) startCountdown();
   }, ms);
@@ -240,6 +258,7 @@ async function init() {
   // Auto-lancer si 1er du mois et aucun vote actif ou archivé pour ce mois
   await autoLancerSiNecessaire();
 
+  await refreshPreviousVote();
   render();
   if (voteActif) startCountdown();
 }
@@ -495,13 +514,19 @@ function renderVote() {
   }
 
   const livreIds = voteActif.livre_ids || [];
+  const withPrev = !!previousVote;
   mount.innerHTML = `
     <div class="vsec-title"><span class="vsec-num">3</span>Votre notation</div>
     <div class="rules">
       Notez chaque livre de <b>1 à 5</b> selon votre envie de le lire. Le score d'un livre = <span class="key">(moyenne + médiane) ÷ 2</span>, ce qui atténue les notes extrêmes. Le plus haut score est <b>élu</b> ; tout score <span class="key">&lt; 3</span> élimine le livre. Déjà lu un titre ? Cochez « je passe » pour l'exclure de votre vote.
     </div>
+    ${withPrev ? `
+    <div class="infos-bar prev-bar">
+      <label class="toggle-switch" style="margin:0"><input type="checkbox" id="prev-toggle"${showPrevNotes ? " checked" : ""}><span class="toggle-slider"></span></label>
+      <span><b>Afficher mes notes du mois dernier</b> — rappel personnel de vos notes précédentes, colonne <span class="key">Préc.</span> ci-dessous (visible de vous seul)</span>
+    </div>` : ""}
     <div class="grade-scale"><span><b>1</b> — envie minimale</span><span><b>5</b> — envie maximale</span></div>
-    ${buildVoteTable(livreIds, false)}
+    ${buildVoteTable(livreIds, false, withPrev)}
     <div class="submit-row">
       <span class="submit-hint">${dejaSoumis ? "Vous aviez déjà voté — soumettre écrasera votre bulletin précédent." : "Une note par livre (ou « je passe ») est requise."}</span>
       <button class="btn btn-primary btn-lg" id="submit">${IC.check} Glisser dans l'urne</button>
@@ -520,32 +545,50 @@ function renderVote() {
   wireDots();
   wireReadCheckboxes();
   document.getElementById("submit").addEventListener("click", submitVote);
+
+  if (withPrev) {
+    document.getElementById("prev-toggle")?.addEventListener("change", e => {
+      showPrevNotes = e.target.checked;
+      localStorage.setItem("ltr_prevNotes", showPrevNotes ? "1" : "0");
+      document.querySelectorAll(".vtable2").forEach(t => t.classList.toggle("prev-hidden", !showPrevNotes));
+    });
+  }
 }
 
-function buildVoteTable(livreIds, preview) {
+function buildVoteTable(livreIds, preview, withPrev = false) {
   const books = livreIds.map(id => livreById[id]).filter(Boolean);
+  const cols = withPrev ? 8 : 7;
   const rows = (preview && books.length === 0)
-    ? `<tr class="vrow"><td class="bkc" colspan="7" style="color:var(--muted);font-size:.82rem;padding:.8rem .4rem">Aucune proposition pour l'instant.</td></tr>`
+    ? `<tr class="vrow"><td class="bkc" colspan="${cols}" style="color:var(--muted);font-size:.82rem;padding:.8rem .4rem">Aucune proposition pour l'instant.</td></tr>`
     : books.map(b => {
         const dots = [1,2,3,4,5].map(n =>
           `<td class="numcol" data-n="${n}"><span class="dot" data-bk="${b.id}" data-n="${n}" role="button" aria-label="${n} sur 5" tabindex="0"></span></td>`
         ).join("");
+        const prevCell = withPrev ? `<td class="prevcol">${prevNoteCellHtml(b.id)}</td>` : "";
         return `<tr class="vrow" data-bk="${b.id}">
           <td class="bkc"><span class="vt-titre">${esc(b.titre)}</span> <span class="vt-auteur">— ${esc(b.auteur ?? "")}</span></td>
           ${dots}
           <td class="readcol"><label class="read-toggle"><input type="checkbox" class="read-cb" data-bk="${b.id}"${preview ? ' disabled' : ''}> déjà lu, je passe</label></td>
+          ${prevCell}
         </tr>`;
       }).join("");
 
   return `
-    <table class="vtable2${preview ? " preview" : ""}">
+    <table class="vtable2${preview ? " preview" : ""}${withPrev && !showPrevNotes ? " prev-hidden" : ""}">
       <thead><tr>
         <th class="bkc"></th>
         ${[1,2,3,4,5].map(n => `<th class="numcol" data-n="${n}"><span class="n">${n}</span>${n <= 2 ? '<span class="elim">élim.</span>' : ""}</th>`).join("")}
         <th class="readcol"></th>
+        ${withPrev ? `<th class="prevcol" title="Note que vous aviez donnée à ce livre le mois dernier">Préc.</th>` : ""}
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
+}
+
+function prevNoteCellHtml(livreId) {
+  const r = previousVote?.resultats?.find(x => x.livre_id === livreId);
+  const n = r?.notes?.[moi];
+  return n != null ? `<span class="prevval">${esc(n)}</span>` : `<span class="prevval prevval-empty">—</span>`;
 }
 
 function highlightDots(lid, val) {
