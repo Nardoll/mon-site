@@ -364,7 +364,7 @@ Le système de vote est entièrement automatique, piloté par `vote.js` côté c
 - Tour 2 : pas de seuil d'élimination — seul le choix majoritaire compte.
 
 **UI en mode "à venir"** (pas de vote actif) : aperçu des propositions, cases "déjà lu, je passe" visibles mais **disabled**.
-**UI au 2ème tour** : bandeau d'explication avec barres des résultats du tour 1 (⚖️ ex-æquo / Écarté) ; formulaire radio à choix unique.
+**UI au 2ème tour** : bandeau d'explication avec barres des résultats du tour 1 — chaque livre est étiqueté ⚖️ ex-æquo (qualifié pour le tour 2), ❌ Éliminé (score `< SEUIL_ELIMINATION`, constante définie dans `vote.js`, actuellement 3, cohérente avec `addVote()` dans `db.js`) ou Écarté (conservé mais pas qualifié) ; formulaire radio à choix unique.
 
 **Rappel personnel — colonne "Préc." (Tour 1 uniquement)**
 - Une fois identifié, le membre voit apparaître une colonne supplémentaire à droite du tableau de notation, alimentée par `previousVote` (le vote archivé immédiatement précédent, calculé via `refreshPreviousVote()`).

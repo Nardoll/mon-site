@@ -21,6 +21,17 @@ const livreById = {};
 let allOptions = [];
 let selectedId = null;
 
+// ── Seuil d'élimination configurable ───────────────────────────────
+// "score"   : livre éliminé si score < valeur
+// "percent" : les X % de livres les moins bien notés sont éliminés
+// "keep"    : seuls les N livres les mieux notés sont conservés
+let seuilMode = localStorage.getItem("ltr_chantier_seuil_mode") || "score";
+const seuilValues = {
+  score:   parseFloat(localStorage.getItem("ltr_chantier_seuil_score"))   || 3,
+  percent: parseFloat(localStorage.getItem("ltr_chantier_seuil_percent")) || 30,
+  keep:    parseInt(localStorage.getItem("ltr_chantier_seuil_keep"), 10)  || 10,
+};
+
 // ── Utilitaires math ──────────────────────────────────────────────
 
 function esc(s) { return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
@@ -45,6 +56,43 @@ function prenom(nom) {
   return (nom || "").split(" ")[0];
 }
 
+// Moyenne d'un résultat calculée à partir des notes brutes (fiable quel que
+// soit le format d'archivage — r.moyenne peut être une moyenne simple sur
+// les anciens votes ou déjà un score combiné sur les votes récents).
+function moyFromResultat(r) {
+  const notes = Object.values(r.notes || {}).map(Number).filter(n => !isNaN(n));
+  if (notes.length) return mean(notes);
+  return typeof r.moyenne === "number" ? r.moyenne : null;
+}
+
+// Détermine l'ensemble des livres éliminés selon le seuil configuré, pour
+// un tableau de scores donné (ex: moyennes, médianes, scores combinés…).
+function computeEliminationSet(items) {
+  const withScore = items.filter(it => typeof it.score === "number" && !isNaN(it.score));
+  const out = new Set();
+  const total = withScore.length;
+  if (!total) return out;
+
+  if (seuilMode === "score") {
+    withScore.forEach(it => { if (it.score < seuilValues.score) out.add(it.key); });
+    return out;
+  }
+
+  const sortedAsc = [...withScore].sort((a, b) => a.score - b.score);
+  let nElim;
+  if (seuilMode === "percent") nElim = Math.round(total * (seuilValues.percent / 100));
+  else /* keep */ nElim = Math.max(0, total - seuilValues.keep);
+  nElim = Math.min(Math.max(nElim, 0), total);
+  sortedAsc.slice(0, nElim).forEach(it => out.add(it.key));
+  return out;
+}
+
+function seuilFootnoteText() {
+  if (seuilMode === "score")   return `score < ${seuilValues.score}`;
+  if (seuilMode === "percent") return `${seuilValues.percent} % des livres les moins bien notés`;
+  return `au-delà des ${seuilValues.keep} livres les mieux notés`;
+}
+
 // Couleur de fond selon le score (1=rouge … 5=vert)
 function scoreBg(score) {
   if (score === null) return "";
@@ -55,12 +103,12 @@ function scoreBg(score) {
   return "rgba(35,145,55,0.18)";
 }
 
-// Badge résultat selon score et meilleur score
-function getResultat(score, maxScore, hasTies) {
+// Badge résultat selon score, meilleur score et statut d'élimination
+function getResultat(score, maxScore, hasTies, eliminated) {
   if (score === null) return { text: "—", cls: "" };
   if (hasTies && score === maxScore) return { text: "⚖️ Égalité", cls: "cht-tie" };
   if (score === maxScore) return { text: "✅ Élu", cls: "cht-elu" };
-  if (score <= 2.5) return { text: "❌ Éliminé", cls: "cht-elim" };
+  if (eliminated) return { text: "❌ Éliminé", cls: "cht-elim" };
   return { text: "🟣 Conservé", cls: "cht-conserve" };
 }
 
@@ -187,6 +235,49 @@ function renderSelectedVote() {
       ${opt.live ? `<span style="color:var(--muted)">${liveNote}</span>` : ""}
     </div>`;
 
+  renderSeuilSelector();
+  refreshTabs();
+}
+
+// ── Sélecteur de seuil d'élimination ────────────────────────────────
+
+const SEUIL_MODES = {
+  score:   { label: "Score minimum (livre éliminé si score < X)", min: 0, max: 5, step: 0.1, suffix: "" },
+  percent: { label: "% de livres éliminés (les moins bien notés)", min: 0, max: 100, step: 5, suffix: " %" },
+  keep:    { label: "Nombre de livres à conserver (les mieux notés)", min: 1, max: 60, step: 1, suffix: "" },
+};
+
+function renderSeuilSelector() {
+  const el = document.getElementById("chantier-seuil-selector");
+  if (!el) return;
+  const cfg = SEUIL_MODES[seuilMode];
+
+  el.innerHTML = `
+    <div class="cht-seuil-wrap">
+      <b>Seuil d'élimination :</b>
+      <select id="seuil-mode" class="cht-vote-select">
+        ${Object.entries(SEUIL_MODES).map(([k, c]) => `<option value="${k}"${k === seuilMode ? " selected" : ""}>${esc(c.label)}</option>`).join("")}
+      </select>
+      <input type="number" id="seuil-value" class="cht-seuil-input" min="${cfg.min}" max="${cfg.max}" step="${cfg.step}" value="${seuilValues[seuilMode]}">
+      <span class="cht-seuil-suffix">${cfg.suffix}</span>
+    </div>`;
+
+  document.getElementById("seuil-mode").addEventListener("change", e => {
+    seuilMode = e.target.value;
+    localStorage.setItem("ltr_chantier_seuil_mode", seuilMode);
+    renderSeuilSelector();
+    refreshTabs();
+  });
+  document.getElementById("seuil-value").addEventListener("change", e => {
+    const v = parseFloat(e.target.value);
+    if (isNaN(v)) return;
+    seuilValues[seuilMode] = v;
+    localStorage.setItem(`ltr_chantier_seuil_${seuilMode}`, String(v));
+    refreshTabs();
+  });
+}
+
+function refreshTabs() {
   renderTabCombine();
   renderTabDispersion();
   renderTabInfluence();
@@ -216,7 +307,7 @@ function renderTabCombine() {
 
   const data = resultats.map(r => {
     const notes = Object.values(r.notes || {}).map(Number).filter(n => !isNaN(n));
-    const moy = r.moyenne ?? mean(notes);
+    const moy = moyFromResultat(r);
     const med = median(notes);
     const combined = (moy !== null && med !== null) ? (moy + med) / 2 : null;
     return { ...r, moy, med, combined, nbNotes: notes.length };
@@ -228,8 +319,12 @@ function renderTabCombine() {
     return;
   }
 
+  const withMoy = data.filter(r => r.moy !== null);
   const maxCombined = Math.max(...withCombined.map(r => r.combined));
-  const maxMoy      = Math.max(...data.filter(r => r.moy !== null).map(r => r.moy));
+  const maxMoy      = Math.max(...withMoy.map(r => r.moy));
+
+  const elimMoy      = computeEliminationSet(withMoy.map(r => ({ key: r.livre_id, score: r.moy })));
+  const elimCombined = computeEliminationSet(withCombined.map(r => ({ key: r.livre_id, score: r.combined })));
 
   // Égalité par score combiné ?
   const topCombined = withCombined.filter(r => r.combined === maxCombined);
@@ -252,8 +347,8 @@ function renderTabCombine() {
   const sorted = [...data].sort((a, b) => (b.combined ?? -1) - (a.combined ?? -1));
 
   const rows = sorted.map((r, i) => {
-    const resActuel  = getResultat(r.moy, maxMoy, false);
-    const resCombine = getResultat(r.combined, maxCombined, tieCombined);
+    const resActuel  = getResultat(r.moy, maxMoy, false, elimMoy.has(r.livre_id));
+    const resCombine = getResultat(r.combined, maxCombined, tieCombined, elimCombined.has(r.livre_id));
     const changed    = resActuel.cls !== resCombine.cls;
 
     // Barre de score combiné
@@ -296,7 +391,7 @@ function renderTabCombine() {
         <tbody>${rows}</tbody>
       </table>
     </div>
-    <div class="cht-footnote">Score combiné = (moyenne + médiane) ÷ 2 · Seuil d'élimination : ≤ 2,5 · Trié par score combiné décroissant</div>`;
+    <div class="cht-footnote">Score combiné = (moyenne + médiane) ÷ 2 · Seuil d'élimination : ${seuilFootnoteText()} · Trié par score combiné décroissant</div>`;
 }
 
 // ── Onglet Dispersion ─────────────────────────────────────────────
@@ -356,7 +451,7 @@ async function renderTabDispersion() {
       });
     });
 
-    const moy  = r.moyenne ?? mean(notes);
+    const moy  = moyFromResultat(r);
     const med  = median(notes);
     const comb = moy !== null && med !== null ? (moy + med) / 2 : null;
     if (moy  !== null) meanPoints.push({ x: idx, y: moy });
@@ -368,7 +463,7 @@ async function renderTabDispersion() {
   const deviations = resultats.map((r, idx) => {
     const notes = Object.values(r.notes || {}).map(Number).filter(n => !isNaN(n));
     const med  = median(notes);
-    const moy  = r.moyenne ?? mean(notes);
+    const moy  = moyFromResultat(r);
     const comb = moy !== null && med !== null ? (moy + med) / 2 : null;
     return {
       titre: r.titre,
@@ -651,15 +746,19 @@ function renderTabMediane() {
     const notes = Object.values(r.notes || {}).map(Number).filter(n => !isNaN(n));
     return {
       ...r,
-      moy:  r.moyenne ?? mean(notes),
+      moy:  moyFromResultat(r),
       med:  median(notes),
       nbNotes: notes.length,
     };
   });
 
-  const maxMoy = Math.max(...data.map(r => r.moy ?? -Infinity));
+  const withMoy = data.filter(r => r.moy !== null);
+  const maxMoy = withMoy.length ? Math.max(...withMoy.map(r => r.moy)) : -Infinity;
   const withMed = data.filter(r => r.med !== null);
   const maxMed = withMed.length ? Math.max(...withMed.map(r => r.med)) : -Infinity;
+
+  const elimMoy = computeEliminationSet(withMoy.map(r => ({ key: r.livre_id, score: r.moy })));
+  const elimMed = computeEliminationSet(withMed.map(r => ({ key: r.livre_id, score: r.med })));
 
   // Égalité par médiane ?
   const topMed = withMed.filter(r => r.med === maxMed);
@@ -683,8 +782,8 @@ function renderTabMediane() {
   const sorted = [...data].sort((a, b) => (b.med ?? -1) - (a.med ?? -1));
 
   const rows = sorted.map(r => {
-    const resActuel = getResultat(r.moy, maxMoy, false);
-    const resMed    = getResultat(r.med, maxMed, tieMed);
+    const resActuel = getResultat(r.moy, maxMoy, false, elimMoy.has(r.livre_id));
+    const resMed    = getResultat(r.med, maxMed, tieMed, elimMed.has(r.livre_id));
     const changed   = resActuel.cls !== resMed.cls;
     return `<tr class="${changed ? "cht-row-changed" : ""}">
       <td class="cht-td-titre">${r.titre}<div class="cht-td-sous">${r.auteur || ""} · ${r.nbNotes} note${r.nbNotes > 1 ? "s" : ""}</div></td>
@@ -711,7 +810,7 @@ function renderTabMediane() {
         <tbody>${rows}</tbody>
       </table>
     </div>
-    <div class="cht-footnote">Seuil d'élimination : moyenne ou médiane ≤ 2,5. Trié par médiane décroissante.</div>`;
+    <div class="cht-footnote">Seuil d'élimination : ${seuilFootnoteText()}. Trié par médiane décroissante.</div>`;
 }
 
 // ── Onglet 2 : Simulation ─────────────────────────────────────────
@@ -757,7 +856,7 @@ function renderSimResult(resultats, includedIds, totalVotants) {
       .map(([, n]) => Number(n)).filter(n => !isNaN(n));
     return {
       ...r,
-      moy_orig: r.moyenne ?? mean(notesOrig),
+      moy_orig: moyFromResultat(r),
       moy_sim:  mean(notesSim),
     };
   });
@@ -767,7 +866,10 @@ function renderSimResult(resultats, includedIds, totalVotants) {
   if (!withSim.length) { el.innerHTML = `<div style="color:var(--muted)">Aucune donnée pour ces votants.</div>`; return; }
 
   const maxSim  = Math.max(...withSim.map(r => r.moy_sim));
-  const maxOrig = Math.max(...withOrig.map(r => r.moy_orig));
+  const maxOrig = withOrig.length ? Math.max(...withOrig.map(r => r.moy_orig)) : -Infinity;
+
+  const elimOrig = computeEliminationSet(withOrig.map(r => ({ key: r.livre_id, score: r.moy_orig })));
+  const elimSim  = computeEliminationSet(withSim.map(r => ({ key: r.livre_id, score: r.moy_sim })));
 
   const topSim = withSim.filter(r => r.moy_sim === maxSim);
   const tieSim = topSim.length > 1;
@@ -788,8 +890,8 @@ function renderSimResult(resultats, includedIds, totalVotants) {
   const sorted = [...data].sort((a, b) => (b.moy_sim ?? -1) - (a.moy_sim ?? -1));
 
   const rows = sorted.map(r => {
-    const resOrig = getResultat(r.moy_orig, maxOrig, false);
-    const resSim  = getResultat(r.moy_sim, maxSim, tieSim);
+    const resOrig = getResultat(r.moy_orig, maxOrig, false, elimOrig.has(r.livre_id));
+    const resSim  = getResultat(r.moy_sim, maxSim, tieSim, elimSim.has(r.livre_id));
     const changed = resOrig.cls !== resSim.cls;
     const delta   = r.moy_sim !== null && r.moy_orig !== null ? r.moy_sim - r.moy_orig : null;
     const deltaHtml = delta !== null
@@ -818,7 +920,7 @@ function renderSimResult(resultats, includedIds, totalVotants) {
         <tbody>${rows}</tbody>
       </table>
     </div>
-    <div class="cht-footnote">${includedIds.length} / ${totalVotants} votants · delta = différence entre moy. simulée et originale · Seuil : ≤ 2,5</div>`;
+    <div class="cht-footnote">${includedIds.length} / ${totalVotants} votants · delta = différence entre moy. simulée et originale · Seuil d'élimination : ${seuilFootnoteText()}</div>`;
 }
 
 // ── Onglet 3 : Impact votants ─────────────────────────────────────
