@@ -145,6 +145,7 @@ function renderRack() {
     const nbElus   = props.filter(l => l.statut === "elu").length;
     const nbVotes  = Object.keys(votesByMembre[m.id] || {}).length + (nbExceptByMembre[m.id] || 0);
     const isNew    = nbProp === 0 && nbVotes === 0;
+    const inactif  = !!inactiviteById[m.id]?.inactif;
 
     // Tampons de dates (max 4 propositions, les plus récentes en premier)
     const stamps = props.slice(0, 4).map((l, k) => {
@@ -167,7 +168,7 @@ function renderRack() {
         ].join("");
 
     return `
-      <article class="fp" data-id="${esc(m.id)}" style="--mc:${m._color}">
+      <article class="fp${inactif ? " inactif" : ""}" data-id="${esc(m.id)}" style="--mc:${m._color}">
         <div class="fp-notch"></div>
         <div class="fp-head">
           <span class="fp-libname">Carte de lecteur</span>
@@ -178,6 +179,7 @@ function renderRack() {
           <div class="fp-id">
             <div class="fp-name">${esc(m.nom)}</div>
             <div class="fp-since">inscrit·e le ${formatDate(m.date_arrivee)}</div>
+            ${inactif ? `<div class="fp-inactif-tag">Inactif</div>` : ""}
           </div>
         </div>
         ${stampsBlock}
