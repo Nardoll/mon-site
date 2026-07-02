@@ -99,10 +99,11 @@ export default {
 // Tout le reste : fichiers statiques (index.html, /lis-tes-ratures/…, etc.)
     const res = await env.ASSETS.fetch(request);
 
-    // Les pages HTML ne doivent jamais être servies depuis un cache navigateur
-    // périmé (sinon une nouvelle fonctionnalité « n'apparaît pas »).
-    const isHtml = url.pathname.endsWith("/") || url.pathname.endsWith(".html");
-    if (isHtml) {
+    // Les pages HTML, le JS et le CSS ne doivent jamais être servis depuis un
+    // cache navigateur périmé (sinon une nouvelle fonctionnalité « n'apparaît
+    // pas » — un fichier JS modifié restait caché malgré le déploiement).
+    const isNoCache = url.pathname.endsWith("/") || /\.(html|js|css)$/.test(url.pathname);
+    if (isNoCache) {
       const fresh = new Response(res.body, res);
       fresh.headers.set("Cache-Control", "no-cache");
       return fresh;
