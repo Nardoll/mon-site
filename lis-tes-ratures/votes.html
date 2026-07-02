@@ -139,9 +139,10 @@
 
     /* table émargement */
     .tally-wrap { overflow-x: auto; }
-    .tally { border-collapse: collapse; min-width: 100%; font-size: .78rem; color: #3a2b1c; }
+    .tally { border-collapse: collapse; table-layout: fixed; min-width: 100%; font-size: .78rem; color: #3a2b1c; }
     .tally th, .tally td { padding: .42rem .55rem; border: 1px solid rgba(120,90,50,.22); text-align: center; white-space: nowrap; }
-    .tally thead th { font-family: var(--serif); font-weight: 600; font-size: .77rem; background: rgba(176,72,52,.06); color: #2c2015; vertical-align: bottom; width: 96px; max-width: 96px; white-space: normal; overflow-wrap: break-word; word-break: break-word; hyphens: auto; line-height: 1.2; }
+    .tally th.who, .tally td.who { width: 140px; }
+    .tally thead th { font-family: var(--serif); font-weight: 600; font-size: .77rem; background: rgba(176,72,52,.06); color: #2c2015; vertical-align: bottom; width: 150px; white-space: normal; overflow-wrap: break-word; word-break: break-word; hyphens: auto; line-height: 1.25; }
     .tally thead th.win { background: rgba(26,138,85,.14); color: #177a4a; }
     .tally thead th.elim { background: rgba(120,90,50,.12); color: #8a7560; }
     .tally td.who { text-align: left; font-weight: 600; color: #2c2015; }
@@ -149,7 +150,7 @@
     .tally td.elim { background: rgba(120,90,50,.06); color: #a08768; }
     .tally td .stars { display: block; font-size: .6rem; letter-spacing: -.04em; color: #b5572d; margin-top: 1px; }
     .tally td.skip { color: #b3a187; font-style: italic; }
-    .tally .moy-col { border-left: 2px solid rgba(120,90,50,.3); font-weight: 700; color: #b5572d; }
+    .tally .moy-col { width: 68px; border-left: 2px solid rgba(120,90,50,.3); font-weight: 700; color: #b5572d; }
     .tally tfoot td { font-family: var(--serif); font-weight: 700; background: rgba(176,72,52,.06); }
     .tally tfoot td.win { color: #177a4a; background: rgba(26,138,85,.1); }
     .tally tfoot td.elim { color: #8a7560; }
