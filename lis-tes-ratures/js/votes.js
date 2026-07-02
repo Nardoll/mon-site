@@ -200,16 +200,16 @@ function renderScrutins() {
       <span class="scrutin-month">${formatMois(v.mois, v.annee)}</span>
       <span class="scrutin-cover"></span>
       <span class="scrutin-info">
-        <span class="scrutin-elu-label">${IC.laurel} Élu</span>
+        <span class="scrutin-elu-row">
+          <span class="scrutin-elu-label">${IC.laurel} Élu</span>
+          ${v.tour2 ? `<span class="scrutin-2tours">${IC.repeat} 2 tours</span>` : ""}
+        </span>
         <span class="scrutin-title">${esc(eluL?.titre ?? "—")}</span>
         <span class="scrutin-author">${esc(eluL?.auteur ?? "")}</span>
       </span>
       <span class="scrutin-right">
         <span class="scrutin-tags">
-          <span class="scrutin-score-row">
-            ${score != null ? `<span class="scrutin-score">${Number(score).toFixed(2)}<small>/5</small></span>` : ""}
-            ${v.tour2 ? `<span class="scrutin-2tours">${IC.repeat} 2 tours</span>` : ""}
-          </span>
+          ${score != null ? `<span class="scrutin-score">${Number(score).toFixed(2)}<small>/5</small></span>` : ""}
           <span class="scrutin-sub">${nb} livre${nb !== 1 ? "s" : ""}${elim ? ` · ${elim} éliminé${elim > 1 ? "s" : ""}` : ""}</span>
         </span>
         <span class="scrutin-chev">›</span>
@@ -570,9 +570,9 @@ function buildTour2(vote, votants) {
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   const maxV  = Math.max(...Object.values(counts), 1);
 
-  const rows = [...t2.enLice]
-    .sort((a, b) => (counts[b] || 0) - (counts[a] || 0))
-    .map(id => {
+  const sortedIds = [...t2.enLice].sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
+
+  const rows = sortedIds.map(id => {
       const l = livreById[id];
       const v = counts[id] || 0;
       const isWin = id === vote.livre_elu;
@@ -585,23 +585,42 @@ function buildTour2(vote, votants) {
     }).join("");
 
   const voterIds = [...new Set([...(votants || []), ...Object.keys(t2.choix || {})])];
-  const voterRows = voterIds.length && t2.choix ? voterIds.map(mId => {
-    const m = membreById[mId] || { nom: mId, _color: "#888" };
-    const choixId = t2.choix[mId];
-    const l = choixId ? livreById[choixId] : null;
-    const choiceLabel = l ? esc(l.titre) : `<span style="color:var(--muted);font-style:italic">n'a pas voté</span>`;
-    return `<div class="t2-voter-row">
-      <span class="t2-voter-who"><span style="width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;font-size:.56rem;font-weight:700;color:#fff;background:${m._color}">${ini(m.nom)}</span>${esc(m.nom)}</span>
-      <span class="t2-voter-choice">${choiceLabel}</span>
-    </div>`;
-  }).join("") : "";
+  let voterCols = "";
+  if (voterIds.length && t2.choix) {
+    const byBook = {};
+    sortedIds.forEach(id => { byBook[id] = []; });
+    const noChoice = [];
+    voterIds.forEach(mId => {
+      const choixId = t2.choix[mId];
+      if (choixId && choixId in byBook) byBook[choixId].push(mId);
+      else noChoice.push(mId);
+    });
+    const nameChip = mId => {
+      const m = membreById[mId] || { nom: mId, _color: "#888" };
+      return `<div class="t2-voter-chip"><span style="width:16px;height:16px;border-radius:50%;display:inline-grid;place-items:center;font-size:.52rem;font-weight:700;color:#fff;background:${m._color}">${ini(m.nom)}</span>${esc(m.nom)}</div>`;
+    };
+    const bookCols = sortedIds.map(id => {
+      const l = livreById[id];
+      return `<div class="t2-voter-col">
+        <div class="t2-voter-col-title">${esc(l?.titre ?? id)}</div>
+        ${byBook[id].map(nameChip).join("") || `<div class="t2-voter-empty">—</div>`}
+      </div>`;
+    });
+    if (noChoice.length) {
+      bookCols.push(`<div class="t2-voter-col t2-voter-col-none">
+        <div class="t2-voter-col-title">N'a pas voté</div>
+        ${noChoice.map(nameChip).join("")}
+      </div>`);
+    }
+    voterCols = `<div class="t2-voters-cols">${bookCols.join("")}</div>`;
+  }
 
   return `
     <div class="paper-divider"></div>
     <div class="paper-sec-title">${IC.repeat} Second tour — départage</div>
     <div class="t2-note">Égalité parfaite en tête du 1ᵉʳ tour entre <b>${t2.enLice.length} livres</b>. Chaque membre choisit <b>un seul</b> titre — celui qui réunit le plus de voix l'emporte. <b>${total} bulletin${total !== 1 ? "s" : ""}</b> exprimé${total !== 1 ? "s" : ""}.</div>
     ${rows}
-    ${voterRows ? `<div class="t2-voters-title">Qui a voté pour quoi</div><div class="t2-voters">${voterRows}</div>` : ""}`;
+    ${voterCols ? `<div class="t2-voters-title">Qui a voté pour quoi</div>${voterCols}` : ""}`;
 }
 
 function buildTallyTable(resultats, vote, votants) {

@@ -81,17 +81,17 @@
     .scrutin-cover { width: 30px; height: 42px; border-radius: 2px 4px 4px 2px; background: linear-gradient(158deg, var(--g1,#3f5340), var(--g2,#273829)); position: relative; box-shadow: 0 5px 11px -6px rgba(0,0,0,.5); flex-shrink: 0; }
     .scrutin-cover::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: rgba(0,0,0,.25); }
     .scrutin-info { min-width: 0; }
-    .scrutin-elu-label { font-size: .67rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--green); display: inline-flex; align-items: center; gap: .3rem; margin-bottom: .1rem; }
+    .scrutin-elu-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .1rem; }
+    .scrutin-elu-label { font-size: .67rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--green); display: inline-flex; align-items: center; gap: .3rem; }
     .scrutin-elu-label svg { width: 12px; height: 12px; }
     .scrutin-title { font-family: var(--serif); font-weight: 600; font-size: 1.02rem; color: var(--text); line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
     .scrutin-author { font-size: .78rem; color: var(--muted); font-style: italic; display: block; }
     .scrutin-right { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
     .scrutin-tags { display: flex; flex-direction: column; align-items: flex-end; gap: .25rem; }
-    .scrutin-score-row { display: flex; align-items: center; gap: .45rem; }
     .scrutin-score { font-family: var(--serif); font-size: 1.15rem; font-weight: 700; color: var(--accent); line-height: 1; }
     .scrutin-score small { font-size: .62rem; font-weight: 400; color: var(--muted); }
     .scrutin-sub { font-size: .71rem; color: var(--muted); }
-    .scrutin-2tours { display: inline-flex; align-items: center; gap: .3rem; font-size: .65rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--purple); background: rgba(104,64,216,.1); border-radius: 4px; padding: .12rem .4rem; }
+    .scrutin-2tours { display: inline-flex; align-items: center; gap: .3rem; font-size: .65rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--purple); background: rgba(104,64,216,.1); border-radius: 4px; padding: .12rem .4rem; white-space: nowrap; flex-shrink: 0; }
     .scrutin-chev { color: var(--muted); font-size: 1.2rem; }
 
     /* ════════════ Fiche résultats — papier ════════════ */
@@ -184,11 +184,10 @@
     .t2-count { font-size: .82rem; font-weight: 700; white-space: nowrap; display: inline-flex; align-items: center; gap: .35rem; }
     .t2-count svg { width: 14px; height: 14px; }
     .t2-voters-title { font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #8a7560; margin: 1.1rem 0 .5rem; }
-    .t2-voters { display: flex; flex-direction: column; gap: .1rem; }
-    .t2-voter-row { display: flex; align-items: center; justify-content: space-between; gap: .8rem; padding: .4rem 0; border-bottom: 1px dashed rgba(120,90,50,.15); font-size: .85rem; }
-    .t2-voter-row:last-child { border-bottom: none; }
-    .t2-voter-who { display: inline-flex; align-items: center; gap: .45rem; color: #2c2015; font-weight: 600; }
-    .t2-voter-choice { color: #5b3bb0; font-family: var(--serif); text-align: right; }
+    .t2-voters-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1.2rem; align-items: start; }
+    .t2-voter-col-title { font-family: var(--serif); font-weight: 600; font-size: .88rem; color: #2c2015; padding-bottom: .4rem; margin-bottom: .4rem; border-bottom: 1px solid rgba(120,90,50,.2); }
+    .t2-voter-chip { display: flex; align-items: center; gap: .45rem; padding: .3rem 0; font-size: .84rem; color: #2c2015; }
+    .t2-voter-empty { color: #8a7560; font-style: italic; font-size: .82rem; }
 
     @media (max-width: 760px) {
       .live-grid { grid-template-columns: 1fr; }
