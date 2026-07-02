@@ -464,10 +464,13 @@ function openResult(vote) {
   );
   const seuil = seuilVote(vote);
   const elim = resultats.filter(r => (r.score ?? r.moyenne ?? 0) < seuil).length;
+  const blancs = vote.blancs || [];
   const hasNotes = resultats.some(r => r.notes && Object.keys(r.notes).length > 0);
-  const votants  = hasNotes
-    ? [...new Set(resultats.flatMap(r => Object.keys(r.notes || {})))]
-    : [];
+  const votants  = [...new Set([
+    ...resultats.flatMap(r => Object.keys(r.notes || {})),
+    ...blancs,
+  ])];
+  const hasVotants = votants.length > 0;
 
   const depTitle = hasTour2 ? "Premier tour — égalité" : "Dépouillement";
   const depSub   = hasTour2
@@ -494,11 +497,12 @@ function openResult(vote) {
     ${buildDepChart(resultats, vote)}
     ${hasTour2 ? buildTour2(vote, votants) : ""}
 
-    ${hasNotes ? `
+    ${hasVotants ? `
       <div class="paper-divider"></div>
       <div class="paper-sec-title">${IC.grid} Émargement — bulletins individuels${hasTour2 ? " (1ᵉʳ tour)" : ""}</div>
-      <div class="paper-sec-sub">${votants.length} votants · une note de 1 à 5 par livre${elim ? ` · <b>${elim}</b> livre${elim > 1 ? "s" : ""} sous le seuil` : ""}.</div>
+      <div class="paper-sec-sub">${votants.length} votant${votants.length > 1 ? "s" : ""} · une note de 1 à 5 par livre${blancs.length ? ` · ${blancs.length} vote${blancs.length > 1 ? "s" : ""} blanc${blancs.length > 1 ? "s" : ""}` : ""}${elim ? ` · <b>${elim}</b> livre${elim > 1 ? "s" : ""} sous le seuil` : ""}.</div>
       ${buildTallyTable(resultats, vote, votants)}
+      ${hasNotes ? `
       <div class="paper-divider"></div>
       <div class="detail-head">
         <div class="paper-sec-title" style="margin:0">${IC.bars} Détail</div>
@@ -509,6 +513,7 @@ function openResult(vote) {
       </div>
       <select class="detail-select" id="detail-select"></select>
       <div id="detail-chart"></div>
+      ` : ""}
     ` : ""}`;
 
   document.getElementById("result-overlay").classList.remove("hidden");
@@ -567,7 +572,9 @@ function buildTour2(vote, votants) {
   const counts = {};
   t2.enLice.forEach(id => { counts[id] = 0; });
   if (t2.choix) Object.values(t2.choix).forEach(id => { if (id in counts) counts[id]++; });
-  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  // total = tous les bulletins exprimés, y compris les votes blancs (qui ne
+  // comptent pour aucun livre)
+  const total = Object.keys(t2.choix || {}).length;
   const maxV  = Math.max(...Object.values(counts), 1);
 
   const sortedIds = [...t2.enLice].sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
@@ -632,8 +639,17 @@ function buildTallyTable(resultats, vote, votants) {
     return `<th class="${isWin ? "win" : isElim ? "elim" : ""}">${esc(l?.titre ?? r.livre_id)}</th>`;
   }).join("");
 
+  const blancs = new Set(vote.blancs || []);
   const rows = votants.map(mId => {
     const m = membreById[mId] || { nom: mId, _color: "#888" };
+    const avaHtml = `<span style="width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;font-size:.56rem;font-weight:700;color:#fff;background:${m._color}">${ini(m.nom)}</span>${esc(m.nom)}`;
+
+    if (blancs.has(mId)) {
+      return `<tr><td class="who"><span style="display:inline-flex;align-items:center;gap:.4rem">${avaHtml}</span></td>` +
+        `<td class="skip blanc" colspan="${resultats.length}">vote blanc — laisse les autres choisir</td>` +
+        `<td class="moy-col">—</td></tr>`;
+    }
+
     const cells = resultats.map(r => {
       const isWin  = r.livre_id === vote.livre_elu && !vote.tour2;
       const isElim = (r.score ?? r.moyenne ?? 0) < seuil;
@@ -643,9 +659,7 @@ function buildTallyTable(resultats, vote, votants) {
     }).join("");
     const mNotes = resultats.map(r => r.notes?.[mId]).filter(n => n != null);
     const mAvg = mNotes.length ? (mNotes.reduce((a, b) => a + Number(b), 0) / mNotes.length).toFixed(1) : "—";
-    return `<tr><td class="who"><span style="display:inline-flex;align-items:center;gap:.4rem">
-      <span style="width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;font-size:.56rem;font-weight:700;color:#fff;background:${m._color}">${ini(m.nom)}</span>${esc(m.nom)}
-    </span></td>${cells}<td class="moy-col">${mAvg}</td></tr>`;
+    return `<tr><td class="who"><span style="display:inline-flex;align-items:center;gap:.4rem">${avaHtml}</span></td>${cells}<td class="moy-col">${mAvg}</td></tr>`;
   }).join("");
 
   const foot = resultats.map(r => {
@@ -697,6 +711,10 @@ function wireDetail(resultats, vote, votants) {
 
   const renderByVotant = mId => {
     const m = membreById[mId] || { nom: mId };
+    if ((vote.blancs || []).includes(mId)) {
+      chart.innerHTML = `<div class="detail-avg">Vote blanc — a laissé les autres choisir.</div>`;
+      return;
+    }
     const items = resultats
       .filter(r => r.notes?.[mId] != null)
       .map(r => ({ id: r.livre_id, n: Number(r.notes[mId]), elu: r.livre_id === vote.livre_elu && !vote.tour2 }))

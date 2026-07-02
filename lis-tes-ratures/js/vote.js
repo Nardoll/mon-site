@@ -1,6 +1,6 @@
 import { requireAuth } from "./auth.js";
 import { getMembres, getVoteActif, getLivres, soumettreVote, getVotes, getReunions, lancerVote, cloturerVoteActif, lancerTour2 } from "./db.js";
-import { formatMois, computeInactivite } from "./utils.js";
+import { formatMois, computeInactivite, VOTE_BLANC } from "./utils.js";
 
 await requireAuth();
 
@@ -23,6 +23,9 @@ let closeTimer = null;
 function esc(s) { return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function ini(nom) { return (nom || "?").slice(0, 2); }
 function avaColor(i) { return PALETTE[i % PALETTE.length]; }
+
+// "de juillet" mais "d'août", "d'avril", "d'octobre" (élision devant voyelle)
+function deMois(nom) { return /^[aeiouàâéèêîôû]/i.test(nom) ? `d'${nom}` : `de ${nom}`; }
 
 function median(arr) {
   if (!arr.length) return null;
@@ -48,6 +51,7 @@ let moiNom = "";
 let notes = {};
 let lus = new Set();
 let dejaSoumis = false;
+let voteBlanc = false;
 
 // Vote archivé immédiatement précédent (pour rappel des notes du mois dernier)
 let previousVote = null;
@@ -84,26 +88,31 @@ async function refreshPreviousVote() {
   } catch (e) { console.error("Chargement vote précédent :", e); }
 }
 
-// ── Auto-lancement le 1er du mois ──────────────────────────────────────────
+// ── Auto-lancement le 25 du mois, pour le livre du mois suivant ────────────
 // ⚠️ NE PAS MODIFIER — voir README section "Système de vote automatique"
+// Le vote a lieu le 25 (ex : 25 juillet pour le livre d'août), afin de
+// laisser 5 jours de marge pour se procurer le livre élu.
 async function autoLancerSiNecessaire() {
   const today = new Date();
-  if (today.getDate() !== 1) return;
+  if (today.getDate() !== 25) return;
   if (voteActif) return;
 
-  // Vérifier qu'aucun vote archivé n'existe déjà pour ce mois
+  // Le vote du 25 élit le livre du mois SUIVANT
+  const cible = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  const moisCible = cible.getMonth() + 1, anneeCible = cible.getFullYear();
+
+  // Vérifier qu'aucun vote archivé n'existe déjà pour ce mois cible
   const allVotes = await getVotes();
-  const moisActuel = today.getMonth() + 1, anneeActuelle = today.getFullYear();
-  if (allVotes.find(v => v.mois === moisActuel && v.annee === anneeActuelle)) return;
+  if (allVotes.find(v => v.mois === moisCible && v.annee === anneeCible)) return;
 
   const propositions = livres.filter(l => l.statut === "en_proposition");
   if (!propositions.length) return;
 
-  const expires = new Date(today.getFullYear(), today.getMonth(), 1, 23, 59, 59);
+  const expires = new Date(today.getFullYear(), today.getMonth(), 25, 23, 59, 59);
   try {
     await lancerVote({
-      mois: moisActuel,
-      annee: anneeActuelle,
+      mois: moisCible,
+      annee: anneeCible,
       livre_ids: propositions.map(l => l.id),
       membre_ids: membres.map(m => m.id),
       echelle: 5,
@@ -126,6 +135,9 @@ async function closeExpiredVote(va) {
   }
 
   const bulletins = va.bulletins || {};
+  const blancs = Object.entries(bulletins)
+    .filter(([, b]) => b === VOTE_BLANC)
+    .map(([membreId]) => membreId);
   const resultats = (va.livre_ids || []).map(livre_id => {
     const notesMap = {};
     Object.entries(bulletins).forEach(([membreId, b]) => {
@@ -148,14 +160,15 @@ async function closeExpiredVote(va) {
     if (winners.length === 1) {
       livre_elu = winners[0].livre_id;
     } else {
-      // Égalité → 2ème tour le 2 du mois, toute la journée
+      // Égalité → 2ème tour le 26 du mois, toute la journée
       const today = new Date();
-      const expires2 = new Date(today.getFullYear(), today.getMonth(), 2, 23, 59, 59);
+      const expires2 = new Date(today.getFullYear(), today.getMonth(), 26, 23, 59, 59);
       try {
         await lancerTour2(va.id, {
           livre_ids_tour2: winners.map(w => w.livre_id),
           livre_ids_tour1: va.livre_ids,
           resultats_tour1: resultats,
+          blancs_tour1: blancs,
           expires_at: expires2,
         });
       } catch (e) { console.error("Lancement 2ème tour :", e); }
@@ -164,7 +177,7 @@ async function closeExpiredVote(va) {
   }
 
   try {
-    await cloturerVoteActif(va.id, { mois: va.mois, annee: va.annee, resultats, livre_elu });
+    await cloturerVoteActif(va.id, { mois: va.mois, annee: va.annee, resultats, livre_elu, blancs });
   } catch (e) { console.error("Clôture vote :", e); }
 }
 
@@ -203,7 +216,9 @@ async function closeExpiredVoteTour2(va) {
       annee: va.annee,
       resultats: va.resultats_tour1,
       livre_elu,
+      blancs: va.blancs_tour1 || [],
       // enLice et choix utilisés par buildTour2 dans votes.js pour l'affichage archivé
+      // (choix garde aussi les votes blancs du 2ème tour, valeur VOTE_BLANC)
       tour2: { enLice: livre_ids, choix: bulletins2, resultats: resultats_tour2, livre_elu, tirage_au_sort },
     });
   } catch (e) { console.error("Clôture tour 2 :", e); }
@@ -220,7 +235,7 @@ function checkAllVoted() {
   const isTour2 = voteActif.tour === 2;
   return memberIds.every(id => {
     const b = bulletins[id];
-    return isTour2 ? (b != null && b !== "") : (b && Object.keys(b).length > 0);
+    return isTour2 ? (b != null && b !== "") : (b === VOTE_BLANC || (b && Object.keys(b).length > 0));
   });
 }
 
@@ -310,7 +325,7 @@ async function triggerEarlyClose() {
   await closeExpiredVote(voteActif);
   voteActif = await getVoteActif();
   livres = await getLivres();
-  moi = null; moiNom = ""; notes = {}; lus = new Set(); dejaSoumis = false;
+  moi = null; moiNom = ""; notes = {}; lus = new Set(); dejaSoumis = false; voteBlanc = false;
   await refreshActivite();
   await refreshPreviousVote();
   render();
@@ -326,7 +341,7 @@ function startCountdown() {
     closeExpiredVote(voteActif).then(async () => {
       voteActif = await getVoteActif();
       livres = await getLivres();
-      moi = null; moiNom = ""; notes = {}; lus = new Set();
+      moi = null; moiNom = ""; notes = {}; lus = new Set(); voteBlanc = false;
       await refreshActivite();
       await refreshPreviousVote();
       render();
@@ -339,7 +354,7 @@ function startCountdown() {
     await closeExpiredVote(voteActif);
     voteActif = await getVoteActif();
     livres = await getLivres();
-    moi = null; moiNom = ""; notes = {}; lus = new Set();
+    moi = null; moiNom = ""; notes = {}; lus = new Set(); voteBlanc = false;
     await refreshActivite();
     await refreshPreviousVote();
     render();
@@ -382,26 +397,32 @@ function render() {
 }
 
 // ── État à venir ───────────────────────────────────────────────────────────
+// Le prochain scrutin a lieu le 25 du mois (ce mois-ci si on n'y est pas encore
+// arrivé, sinon le mois suivant) et élit le livre du mois d'APRÈS ce scrutin.
 function renderUpcoming(root) {
   const today = new Date();
-  const next  = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-  const nom   = MOIS_FR[next.getMonth()];
-  const nomCap = nom.charAt(0).toUpperCase() + nom.slice(1);
-  const jours = Math.max(1, Math.ceil((next - today) / 86400000));
+  const scrutin = today.getDate() < 25
+    ? new Date(today.getFullYear(), today.getMonth(), 25)
+    : new Date(today.getFullYear(), today.getMonth() + 1, 25);
+  const cible = new Date(scrutin.getFullYear(), scrutin.getMonth() + 1, 1);
+  const nomScrutin = MOIS_FR[scrutin.getMonth()];
+  const nomCible   = MOIS_FR[cible.getMonth()];
+  const deCible    = deMois(nomCible);
+  const jours = Math.max(1, Math.ceil((scrutin - today) / 86400000));
   const proposalIds = livres.filter(l => l.statut === "en_proposition").map(l => l.id);
 
   root.innerHTML = `
     <div class="ballot-letterhead">
       <div class="ballot-club">Club de lecture</div>
       <div class="ballot-h1">Bulletin de <span class="rature">vote</span></div>
-      <div class="ballot-sub" id="ballot-sub">Prochain scrutin · ouverture le 1ᵉʳ ${nom}</div>
+      <div class="ballot-sub" id="ballot-sub">Prochain scrutin · vote le 25 ${nomScrutin} pour le livre ${deCible}</div>
     </div>
 
     <div class="vbanner up">
       <div class="vbanner-ico">${IC.cal}</div>
       <div class="vbanner-body">
-        <div class="vbanner-title">Prochain vote — ${nomCap} ${next.getFullYear()}</div>
-        <div class="vbanner-sub">Ouverture automatique le 1ᵉʳ ${nom}</div>
+        <div class="vbanner-title">Prochain vote — livre ${deCible} ${cible.getFullYear()}</div>
+        <div class="vbanner-sub">Ouverture automatique le 25 ${nomScrutin}</div>
       </div>
       <div class="vbanner-count">${jours}<small> j. avant l'ouverture</small></div>
     </div>
@@ -414,8 +435,8 @@ function renderUpcoming(root) {
     <div class="vbooks" id="vbooks"></div>
 
     <div class="vsec-title"><span class="vsec-num">2</span>Aperçu du bulletin</div>
-    <div class="preview-note">${IC.cal}<span>Le vote s'ouvrira <b>automatiquement le 1ᵉʳ ${nom}</b>. Voici à quoi ressemblera le bulletin — la notation sera alors active et vous pourrez vous identifier.</span></div>
-    <div class="rules">Notez chaque livre de <b>1 à 5</b> selon votre envie de le lire. Le score d'un livre = <span class="key">(moyenne + médiane) ÷ 2</span>, ce qui atténue les notes extrêmes. Le plus haut score est <b>élu</b> ; tout score <span class="key">&lt; 3</span> élimine le livre.</div>
+    <div class="preview-note">${IC.cal}<span>Le vote s'ouvrira <b>automatiquement le 25 ${nomScrutin}</b> pour élire le livre ${deCible} — 5 jours de marge pour se le procurer. Voici à quoi ressemblera le bulletin — la notation sera alors active et vous pourrez vous identifier.</span></div>
+    <div class="rules">Notez chaque livre de <b>1 à 5</b> selon votre envie de le lire, ou votez blanc pour laisser les autres décider. Le score d'un livre = <span class="key">(moyenne + médiane) ÷ 2</span>, ce qui atténue les notes extrêmes. Le plus haut score est <b>élu</b> ; tout score <span class="key">&lt; 3</span> élimine le livre.</div>
     <div class="grade-scale"><span><b>1</b> — envie minimale</span><span><b>5</b> — envie maximale</span></div>
     ${buildVoteTable(proposalIds, true)}`;
 
@@ -595,7 +616,7 @@ function renderIdent() {
           ${membreIds.map(id => {
             const m = membreById[id] || { nom: id };
             const b = bulletins[id];
-            const voted = isTour2 ? (b != null && b !== "") : (b && Object.keys(b).length > 0);
+            const voted = isTour2 ? (b != null && b !== "") : (b === VOTE_BLANC || (b && Object.keys(b).length > 0));
             return `<option value="${id}">${esc(m.nom)}${voted ? " (a déjà voté)" : ""}</option>`;
           }).join("")}
         </select>
@@ -606,15 +627,16 @@ function renderIdent() {
       if (!v) { showToast("Choisissez votre nom dans la liste.", false); return; }
       moi = v;
       moiNom = membreById[v]?.nom ?? v;
-      notes = {}; lus = new Set(); dejaSoumis = false;
+      notes = {}; lus = new Set(); dejaSoumis = false; voteBlanc = false;
       const prev = bulletins[moi];
       if (isTour2) {
         dejaSoumis = (prev != null && prev !== "");
-      } else {
-        if (prev && Object.keys(prev).length > 0) {
-          dejaSoumis = true;
-          Object.entries(prev).forEach(([lid, n]) => { if (n != null) notes[lid] = Number(n); });
-        }
+      } else if (prev === VOTE_BLANC) {
+        dejaSoumis = true;
+        voteBlanc = true;
+      } else if (prev && Object.keys(prev).length > 0) {
+        dejaSoumis = true;
+        Object.entries(prev).forEach(([lid, n]) => { if (n != null) notes[lid] = Number(n); });
       }
       renderIdent();
       renderVote();
@@ -629,7 +651,7 @@ function renderIdent() {
         <button class="chg" id="who-change">changer</button>
       </div>`;
     document.getElementById("who-change").addEventListener("click", () => {
-      moi = null; moiNom = ""; notes = {}; lus = new Set();
+      moi = null; moiNom = ""; notes = {}; lus = new Set(); voteBlanc = false;
       renderIdent();
     });
   }
@@ -658,9 +680,16 @@ function renderVote() {
               ${b.auteur ? `<div class="vt-auteur">${esc(b.auteur)}</div>` : ""}
             </div>
           </label>`).join("")}
+        <label class="t2-choice t2-choice-blanc">
+          <input type="radio" name="t2-choix" value="${VOTE_BLANC}" ${prevChoix === VOTE_BLANC ? "checked" : ""}>
+          <div class="t2-choice-body">
+            <div class="vt-titre">Vote blanc</div>
+            <div class="vt-auteur">Je laisse les autres décider</div>
+          </div>
+        </label>
       </div>
       <div class="submit-row">
-        <span class="submit-hint">${dejaSoumis ? "Vous avez déjà voté — soumettre écrasera votre choix précédent." : "Sélectionnez un livre."}</span>
+        <span class="submit-hint">${dejaSoumis ? "Vous avez déjà voté — soumettre écrasera votre choix précédent." : "Sélectionnez un livre, ou votez blanc."}</span>
         <button class="btn btn-primary btn-lg" id="submit">${IC.check} Glisser dans l'urne</button>
       </div>`;
     document.getElementById("submit").addEventListener("click", submitVote);
@@ -669,10 +698,17 @@ function renderVote() {
 
   const livreIds = voteActif.livre_ids || [];
   const withPrev = !!previousVote;
+  const hint = voteBlanc
+    ? (dejaSoumis ? "Vote blanc sélectionné — soumettre écrasera votre bulletin précédent." : "Vote blanc sélectionné — aucune note requise.")
+    : (dejaSoumis ? "Vous aviez déjà voté — soumettre écrasera votre bulletin précédent." : "Une note par livre (ou « je passe ») est requise.");
   mount.innerHTML = `
     <div class="vsec-title"><span class="vsec-num">3</span>Votre notation</div>
     <div class="rules">
       Notez chaque livre de <b>1 à 5</b> selon votre envie de le lire. Le score d'un livre = <span class="key">(moyenne + médiane) ÷ 2</span>, ce qui atténue les notes extrêmes. Le plus haut score est <b>élu</b> ; tout score <span class="key">&lt; 3</span> élimine le livre. Déjà lu un titre ? Cochez « je passe » pour l'exclure de votre vote.
+    </div>
+    <div class="infos-bar blanc-bar">
+      <label class="toggle-switch" style="margin:0"><input type="checkbox" id="blanc-toggle"${voteBlanc ? " checked" : ""}><span class="toggle-slider"></span></label>
+      <span><b>Vote blanc</b> — je laisse les autres décider ce mois-ci. Compte comme une participation, sans note à donner.</span>
     </div>
     ${withPrev ? `
     <div class="infos-bar prev-bar">
@@ -680,9 +716,9 @@ function renderVote() {
       <span><b>Afficher mes notes du mois dernier</b> — rappel personnel de vos notes précédentes, colonne <span class="key">Préc.</span> ci-dessous (visible de vous seul)</span>
     </div>` : ""}
     <div class="grade-scale"><span><b>1</b> — envie minimale</span><span><b>5</b> — envie maximale</span></div>
-    ${buildVoteTable(livreIds, false, withPrev)}
+    <div id="vote-table-zone" class="${voteBlanc ? "vt-disabled" : ""}">${buildVoteTable(livreIds, false, withPrev)}</div>
     <div class="submit-row">
-      <span class="submit-hint">${dejaSoumis ? "Vous aviez déjà voté — soumettre écrasera votre bulletin précédent." : "Une note par livre (ou « je passe ») est requise."}</span>
+      <span class="submit-hint">${hint}</span>
       <button class="btn btn-primary btn-lg" id="submit">${IC.check} Glisser dans l'urne</button>
     </div>`;
 
@@ -699,6 +735,10 @@ function renderVote() {
   wireDots();
   wireReadCheckboxes();
   document.getElementById("submit").addEventListener("click", submitVote);
+  document.getElementById("blanc-toggle").addEventListener("change", e => {
+    voteBlanc = e.target.checked;
+    renderVote();
+  });
 
   if (withPrev) {
     document.getElementById("prev-toggle")?.addEventListener("change", e => {
@@ -796,17 +836,22 @@ function renderBilan() {
     const b = bulletins[id];
     return isTour2 ? (b != null && b !== "") : !!b;
   }).length;
+  const nbBlancs = membreIds.filter(id => bulletins[id] === VOTE_BLANC).length;
   const nbInactifs = membreIds.filter(id => isInactif(id)).length;
   count.textContent = `${nbVotes} / ${membreIds.length} bulletins reçus`
+    + (nbBlancs ? ` · ${nbBlancs} blanc${nbBlancs > 1 ? "s" : ""}` : "")
     + (nbInactifs ? ` · ${nbInactifs} inactif${nbInactifs > 1 ? "s" : ""} (non attendu${nbInactifs > 1 ? "s" : ""})` : "");
 
   grid.innerHTML = membreIds.map(id => {
     const m = membreById[id] || { nom: id, _color: "#888" };
     const b = bulletins[id];
+    const estBlanc = b === VOTE_BLANC;
     const v = isTour2 ? (b != null && b !== "") : !!b;
     const inactif = !v && isInactif(id);
-    return `<span class="bilan-tag ${v ? "ok" : inactif ? "inactif" : "no"}">
-      <span class="ava" style="background:${m._color}">${ini(m.nom)}</span>${esc(m.nom)}${inactif ? '<small class="bilan-inactif-lbl">inactif</small>' : ''}
+    const cls = estBlanc ? "blanc" : v ? "ok" : inactif ? "inactif" : "no";
+    const suffixe = estBlanc ? '<small class="bilan-inactif-lbl">vote blanc</small>' : inactif ? '<small class="bilan-inactif-lbl">inactif</small>' : '';
+    return `<span class="bilan-tag ${cls}">
+      <span class="ava" style="background:${m._color}">${ini(m.nom)}</span>${esc(m.nom)}${suffixe}
       <span class="ck">${IC.check}</span>
     </span>`;
   }).join("");
@@ -831,6 +876,10 @@ async function submitVote() {
       await soumettreVote(voteActif.id, moi, checked.value);
       if (!voteActif.bulletins) voteActif.bulletins = {};
       voteActif.bulletins[moi] = checked.value;
+    } else if (voteBlanc) {
+      await soumettreVote(voteActif.id, moi, VOTE_BLANC);
+      if (!voteActif.bulletins) voteActif.bulletins = {};
+      voteActif.bulletins[moi] = VOTE_BLANC;
     } else {
       const livreIds = voteActif.livre_ids || [];
       const manquants = livreIds.filter(id => !lus.has(id) && notes[id] == null);
@@ -861,7 +910,9 @@ async function submitVote() {
     const hint = document.querySelector(".submit-hint");
     if (hint) hint.textContent = isTour2
       ? "Vous avez déjà voté — soumettre écrasera votre choix précédent."
-      : "Vous aviez déjà voté — soumettre écrasera votre bulletin précédent.";
+      : voteBlanc
+        ? "Vote blanc sélectionné — soumettre écrasera votre bulletin précédent."
+        : "Vous aviez déjà voté — soumettre écrasera votre bulletin précédent.";
     showToast("Bulletin glissé dans l'urne — merci !");
 
     if (checkAllVoted()) await triggerEarlyClose();

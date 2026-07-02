@@ -76,6 +76,10 @@
     /* toggle infos */
     .infos-bar { display: flex; align-items: center; gap: .6rem; margin: 1rem 0 1.1rem; font-size: .82rem; color: var(--muted); }
     .infos-bar b { color: var(--text); font-weight: 600; }
+    .blanc-bar { border-left: 3px solid #46708a; padding-left: .6rem; }
+    .vt-disabled { opacity: .38; filter: grayscale(.35); pointer-events: none; transition: opacity .15s; }
+    .t2-choice-blanc { border-style: dashed; }
+    .t2-choice-blanc .vt-titre { color: #46708a; }
 
     /* livres en compétition */
     .vbooks { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: .7rem; }
@@ -149,6 +153,8 @@
     .bilan-tag.no .ava { filter: grayscale(.5) opacity(.6); }
     .bilan-tag.inactif { border-style: dashed; opacity: .7; }
     .bilan-tag.inactif .ava { filter: grayscale(.7) opacity(.55); }
+    .bilan-tag.blanc { color: #46708a; border-color: rgba(70,112,138,.45); background: rgba(70,112,138,.08); }
+    .bilan-tag.blanc .ava { filter: grayscale(.3) opacity(.8); }
     .bilan-inactif-lbl { font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
     .bilan-tag .ck { display: none; }
     .bilan-tag .ck svg { width: 13px; height: 13px; }
