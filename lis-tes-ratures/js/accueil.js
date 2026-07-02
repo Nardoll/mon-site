@@ -446,12 +446,22 @@ function openMembreEdit(membreId) {
   }
   if (!hier) {
     document.getElementById('me-page').value = s?.page_actuelle ?? '';
-    document.getElementById('me-total').value = s?.pages_totales ?? (currentLivre?.progression_total || '');
+    // Le total est déjà connu au niveau du livre (configuré une fois pour tout
+    // le monde) : on ne redemande pas à chaque membre, on force sa valeur.
+    document.getElementById('me-total').value = hasBookTotal()
+      ? currentLivre.progression_total
+      : (s?.pages_totales ?? '');
   }
   meUpdateLabels();
 
   meToggle();
   document.getElementById('me-overlay').classList.remove('hidden');
+}
+
+// Le livre a-t-il un total déjà configuré (mode simple) ? Si oui, un seul
+// endroit pour le saisir (la fiche livre) — pas de re-saisie par membre.
+function hasBookTotal() {
+  return !isHierarchique() && Number(currentLivre?.progression_total) > 0;
 }
 
 // Libellés du mode simple ("Page actuelle" / "Total") adaptés à l'unité
@@ -476,6 +486,7 @@ function meToggle() {
   const show = v === 'en_cours';
   document.getElementById('me-pos-hier').classList.toggle('hidden', !show || !isHierarchique());
   document.getElementById('me-pos-simple').classList.toggle('hidden', !show || isHierarchique());
+  document.getElementById('me-total-group').classList.toggle('hidden', hasBookTotal());
   meHint();
 }
 
@@ -528,7 +539,9 @@ document.getElementById('me-save').addEventListener('click', async () => {
   } else {
     // En dehors de « En cours », pas de page d'avancement (achete / pas_commence / termine).
     page_actuelle = statut === 'en_cours' ? document.getElementById('me-page').value : '';
-    pages_totales = document.getElementById('me-total').value;
+    // Total déjà connu au niveau du livre → on l'utilise directement plutôt que
+    // de faire confiance au champ (masqué dans ce cas, voir hasBookTotal()).
+    pages_totales = hasBookTotal() ? currentLivre.progression_total : document.getElementById('me-total').value;
   }
 
   // Auto-passage en « terminé » quand l'avancement atteint (ou dépasse) le maximum du livre.
