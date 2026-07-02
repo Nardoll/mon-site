@@ -1353,6 +1353,26 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 
 ## Historique des modifications
 
+### 2026-07-02
+**Lis tes ratures — Vote mobile, rappel de notes, et outil de stabilisation du nombre de livres**
+
+- `lis-tes-ratures/vote.html` : affichage mobile du tableau de notation corrigé — les numéros 1-5 étaient masqués (`thead` caché en `@media (max-width: 620px)`). Chaque cellule de note affiche maintenant son numéro via `::before` + `attr(data-n)`.
+- `lis-tes-ratures/js/vote.js` + `vote.html` : **rappel personnel des notes du mois précédent**, colonne "Préc." dans le tableau de notation (tour 1 uniquement, après identification). Alimentée par `previousVote` / `refreshPreviousVote()` (vote archivé immédiatement précédent). Masquée/floutée par défaut, interrupteur "Afficher mes notes du mois dernier", préférence en `localStorage` (`ltr_prevNotes`).
+- `lis-tes-ratures/js/vote.js`, `renderTour2Context()` : le tableau de comparaison du tour 1 affiché pendant le tour 2 distingue maintenant **"❌ Éliminé"** (score `< SEUIL_ELIMINATION` = 3, constante locale cohérente avec `db.js`) d'**"Écarté"** (conservé mais pas qualifié pour le tour 2).
+- `lis-tes-ratures/chantier.js` :
+  - Sélecteur du **vote analysé** — n'importe quel vote clôturé, ou le vote en cours (tour 1 complet, ou tour 1 figé via `resultats_tour1` si on est passé en tour 2). `normalizeVote()` retombe sur `livreById` pour titre/auteur absents des votes récents (le nouveau système de clôture ne les stocke plus, contrairement à l'ancien).
+  - Seuil d'élimination **paramétrable** en 3 modes (score minimum / % de livres éliminés / nombre de livres à conserver), appliqué à tous les onglets via `computeEliminationSet()` / `getResultat(..., eliminated)`.
+  - Correction d'un bug de double-calcul : `r.moyenne` contient déjà le score combiné pour les votes clôturés par le système auto récent (pas une moyenne simple comme pour les anciens votes) — `moyFromResultat()` recalcule désormais toujours depuis les notes brutes plutôt que de faire confiance à ce champ ambigu.
+  - `refreshTabs()` protège chaque onglet avec un `try/catch` individuel.
+- **`lis-tes-ratures/stabilisation.html` + `js/stabilisation.js`** (nouvelle page) — outil dédié à la croissance du nombre de livres en compétition, extrait de l'ancien onglet "Stabilisation" de `chantier.js`. Accessible **uniquement par lien direct** (pas dans le menu du site), pensée pour être partagée avec les membres du club :
+  - **Vue d'ensemble** : historique réel (nouveaux livres/mois, éliminations, élu, reconstruit par recoupement des `livre_id` entre votes successifs — pas besoin de `date_proposition`), ligne de projection du mois suivant (nombre réel déjà éliminé si le tour 1 est clos + fourchette d'incertitude), réglage requis par scénario de croissance (moyenne / médiane / dernier mois).
+  - **Comparer les seuils** : graphique à 5 politiques concrètes modifiables + 3 graphiques dédiés (conserver N / éliminer X% / score minimum), plage de valeurs comparées éditable (plafonnée à 13 courbes pour la lisibilité), courbe "★ Optimal" toujours présente.
+  - **Incertitude** : écart-type (n-1) sur les transitions observées, bandes ± écart-type optionnelles sur les graphiques (case à cocher).
+  - **Limiter les propositions** (nouveau levier) : plafond de propositions par membre et par mois, basé sur `livre.propose_par` recoupé avec les nouvelles entrées de chaque transition (pas `date_proposition`, peu fiable car un livre peut être proposé un mois et n'apparaître dans un vote qu'un mois plus tard). Impact contrefactuel affiché sur l'historique réel ; une fois activé, remplace la croissance brute dans **tous** les calculs de la page.
+  - **Simulation Monte-Carlo** (nouveau) : tirages aléatoires (loi normale, Box-Muller, tronquée à 0) d'un nombre de nouveaux livres différent à chaque mois simulé, répétés 50 à 5000 fois (réglable), horizon 1-24 mois (défaut 10). Calcul entièrement côté client (aucune requête serveur ; 1000 tirages × 10 mois ≈ 4 ms). Affiche moyenne + intervalle 10e-90e percentile, qui s'élargit naturellement avec l'horizon pour les seuils non plafonnants (ex. `%`), mais reste stable pour "conserver N" (le plafond dur "réinitialise" la variance chaque mois — propriété mathématique réelle, pas un bug).
+  - `lis-tes-ratures/chantier.html`/`.js` perdent la section Stabilisation (déplacée) ; lien vers la nouvelle page ajouté en bas de l'onglet Impact.
+- `lis-tes-ratures/chantier.html` + `stabilisation.html` : ajout de `data-theme="light"` sur `<html>` (absent, donc mode sombre par défaut de la feuille de style — toutes les autres pages du site le forcent en clair).
+
 ### 2026-07-01
 **Lis tes ratures — Restauration système de vote automatique + seuil à 3 + Babelio**
 
