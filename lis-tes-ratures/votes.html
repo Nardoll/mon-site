@@ -87,6 +87,7 @@
     .scrutin-author { font-size: .78rem; color: var(--muted); font-style: italic; display: block; }
     .scrutin-right { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
     .scrutin-tags { display: flex; flex-direction: column; align-items: flex-end; gap: .25rem; }
+    .scrutin-score-row { display: flex; align-items: center; gap: .45rem; }
     .scrutin-score { font-family: var(--serif); font-size: 1.15rem; font-weight: 700; color: var(--accent); line-height: 1; }
     .scrutin-score small { font-size: .62rem; font-weight: 400; color: var(--muted); }
     .scrutin-sub { font-size: .71rem; color: var(--muted); }
@@ -182,6 +183,12 @@
     .t2-fill.win { background: #1a8a55; }
     .t2-count { font-size: .82rem; font-weight: 700; white-space: nowrap; display: inline-flex; align-items: center; gap: .35rem; }
     .t2-count svg { width: 14px; height: 14px; }
+    .t2-voters-title { font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #8a7560; margin: 1.1rem 0 .5rem; }
+    .t2-voters { display: flex; flex-direction: column; gap: .1rem; }
+    .t2-voter-row { display: flex; align-items: center; justify-content: space-between; gap: .8rem; padding: .4rem 0; border-bottom: 1px dashed rgba(120,90,50,.15); font-size: .85rem; }
+    .t2-voter-row:last-child { border-bottom: none; }
+    .t2-voter-who { display: inline-flex; align-items: center; gap: .45rem; color: #2c2015; font-weight: 600; }
+    .t2-voter-choice { color: #5b3bb0; font-family: var(--serif); text-align: right; }
 
     @media (max-width: 760px) {
       .live-grid { grid-template-columns: 1fr; }
