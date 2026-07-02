@@ -1,6 +1,6 @@
 import { requireAuth } from "./auth.js";
 import { initNav } from "./nav.js";
-import { getMembres, getVotes } from "./db.js";
+import { getMembres, getVotes, getVoteActif, getLivres } from "./db.js";
 import { formatMois } from "./utils.js";
 
 async function loadChartJs() {
@@ -16,9 +16,14 @@ async function loadChartJs() {
 await requireAuth();
 initNav("chantier");
 
-let votes = [], membres = [], lastVote = null;
+let votes = [], membres = [], livres = [], voteActif = null, lastVote = null;
+const livreById = {};
+let allOptions = [];
+let selectedId = null;
 
 // ── Utilitaires math ──────────────────────────────────────────────
+
+function esc(s) { return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
 function mean(arr) {
   if (!arr.length) return null;
@@ -68,26 +73,101 @@ function getVotants(resultats) {
     .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
 }
 
+// ── Construction des résultats à partir d'un vote actif (en cours) ──
+
+function buildResultatsFromActive(va) {
+  const livreIds = va.livre_ids || [];
+  const bulletins = va.bulletins || {};
+  const resultats = livreIds.map(livre_id => {
+    const notesMap = {};
+    Object.entries(bulletins).forEach(([membreId, b]) => {
+      const n = b?.[livre_id];
+      if (n != null && n !== "") notesMap[membreId] = Number(n);
+    });
+    const vals = Object.values(notesMap);
+    const moy = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    return { livre_id, notes: notesMap, moyenne: moy };
+  });
+  return { mois: va.mois, annee: va.annee, resultats, livre_elu: null };
+}
+
+// Complète titre/auteur manquants (votes récents ne les stockent plus directement)
+function normalizeVote(v) {
+  return {
+    ...v,
+    resultats: (v.resultats || []).map(r => ({
+      ...r,
+      titre: r.titre ?? livreById[r.livre_id]?.titre ?? r.livre_id,
+      auteur: r.auteur ?? livreById[r.livre_id]?.auteur ?? "",
+    })),
+  };
+}
+
 // ── Init ──────────────────────────────────────────────────────────
 
 async function init() {
-  [votes, membres] = await Promise.all([getVotes(), getMembres()]);
+  [votes, membres, livres, voteActif] = await Promise.all([
+    getVotes(), getMembres(), getLivres(), getVoteActif(),
+  ]);
+  livres.forEach(l => { livreById[l.id] = l; });
 
-  // Dernier vote terminé (votes triés date desc)
-  lastVote = votes[0] ?? null;
+  allOptions = [];
+  if (voteActif && voteActif.tour !== 2) {
+    allOptions.push({
+      id: "active",
+      label: `🔴 En cours — ${formatMois(voteActif.mois, voteActif.annee)}`,
+      vote: buildResultatsFromActive(voteActif),
+      live: true,
+    });
+  }
+  votes.filter(v => (v.resultats || []).length).forEach(v => {
+    const eluTitre = v.livre_elu ? (livreById[v.livre_elu]?.titre ?? "") : "";
+    allOptions.push({
+      id: v.id,
+      label: `${formatMois(v.mois, v.annee)}${eluTitre ? " — " + eluTitre : ""}`,
+      vote: v,
+      live: false,
+    });
+  });
 
   const infoEl = document.getElementById("chantier-vote-info");
+  const selectorEl = document.getElementById("chantier-vote-selector");
 
-  if (!lastVote || !(lastVote.resultats || []).length) {
-    infoEl.innerHTML = `<div style="color:var(--muted);font-size:.88rem">Aucun vote terminé disponible.</div>`;
+  if (!allOptions.length) {
+    selectorEl.innerHTML = "";
+    infoEl.innerHTML = `<div style="color:var(--muted);font-size:.88rem">Aucun vote disponible.</div>`;
     return;
   }
 
+  selectedId = allOptions[0].id;
+  renderSelectedVote();
+  initTabs();
+}
+
+function renderSelectedVote() {
+  const opt = allOptions.find(o => o.id === selectedId) || allOptions[0];
+  lastVote = normalizeVote(opt.vote);
+
+  const selectorEl = document.getElementById("chantier-vote-selector");
+  selectorEl.innerHTML = `
+    <div class="cht-vote-select-wrap">
+      <b>Vote analysé :</b>
+      <select id="chantier-vote-select" class="cht-vote-select">
+        ${allOptions.map(o => `<option value="${esc(o.id)}"${o.id === selectedId ? " selected" : ""}>${esc(o.label)}</option>`).join("")}
+      </select>
+    </div>`;
+  document.getElementById("chantier-vote-select").addEventListener("change", e => {
+    selectedId = e.target.value;
+    renderSelectedVote();
+  });
+
   const votants = getVotants(lastVote.resultats);
+  const infoEl = document.getElementById("chantier-vote-info");
   infoEl.innerHTML = `
-    <div class="cht-vote-badge">
-      🗳️ Analyse du vote de <strong>${formatMois(lastVote.mois, lastVote.annee)}</strong>
+    <div class="cht-vote-badge${opt.live ? " cht-vote-badge-live" : ""}">
+      ${opt.live ? "🔴 Vote en cours" : "🗳️ Vote clôturé"} — analyse de <strong>${formatMois(lastVote.mois, lastVote.annee)}</strong>
       — ${(lastVote.resultats || []).length} livres · ${votants.length} votant${votants.length > 1 ? "s" : ""}
+      ${opt.live ? "<span style=\"color:var(--muted)\">· données provisoires, le vote n'est pas terminé</span>" : ""}
     </div>`;
 
   renderTabCombine();
@@ -96,7 +176,6 @@ async function init() {
   renderTabMediane();
   renderTabSimulation();
   renderTabImpact();
-  initTabs();
 }
 
 // ── Navigation onglets ────────────────────────────────────────────
