@@ -1133,6 +1133,73 @@ const comparePolicyParams = {
   score:   parseFloat(localStorage.getItem("ltr_chantier_cmp_score"))     || 3.5,
 };
 
+// Lecture localStorage sûre vis-à-vis des valeurs 0 (0 || défaut === défaut serait faux)
+function lsNum(key, def) {
+  const v = localStorage.getItem(key);
+  if (v === null || v === "") return def;
+  const n = parseFloat(v);
+  return isNaN(n) ? def : n;
+}
+
+// Afficher ou non les bandes d'incertitude sur les graphiques de projection
+let showUncertainty = localStorage.getItem("ltr_chantier_uncertainty") !== "0";
+
+// Bornes éditables (de/à/pas) des 3 graphiques par mode de seuil
+const graphRanges = {
+  keep:    { from: lsNum("ltr_chantier_gk_from", 0),  to: lsNum("ltr_chantier_gk_to", 20),  step: lsNum("ltr_chantier_gk_step", 5)   },
+  percent: { from: lsNum("ltr_chantier_gp_from", 0),  to: lsNum("ltr_chantier_gp_to", 50),  step: lsNum("ltr_chantier_gp_step", 5)   },
+  score:   { from: lsNum("ltr_chantier_gs_from", 1),  to: lsNum("ltr_chantier_gs_to", 5),   step: lsNum("ltr_chantier_gs_step", 0.2) },
+};
+
+// Seuil de score réel utilisé par le système de vote — voir SEUIL_ELIMINATION dans vote.js
+const SEUIL_ELIMINATION_REAL = 3;
+
+// Écart-type (n-1) et moyenne d'une série — utilisés comme mesure d'incertitude
+function computeGrowthStats(arr) {
+  const n = arr.length;
+  const m = mean(arr);
+  if (n < 2) return { mean: m, stdev: 0, n };
+  const variance = arr.reduce((s, x) => s + (x - m) ** 2, 0) / (n - 1);
+  return { mean: m, stdev: Math.sqrt(variance), n };
+}
+
+// Génère une liste de valeurs [from..to] par pas de `step`, en élargissant le
+// pas si besoin pour ne pas dépasser maxLines (lisibilité du graphique).
+function buildStepValues(from, to, step, maxLines = 13) {
+  if (!(step > 0) || to < from) return { values: [], effStep: step, capped: false };
+  let n = Math.floor((to - from) / step + 1e-9) + 1;
+  let effStep = step;
+  let capped = false;
+  if (n > maxLines) {
+    effStep = (to - from) / (maxLines - 1);
+    n = maxLines;
+    capped = true;
+  }
+  const values = [];
+  for (let i = 0; i < n; i++) values.push(+(from + i * effStep).toFixed(3));
+  return { values, effStep, capped };
+}
+
+// Mois suivant (pour étiqueter la ligne de projection dans le tableau)
+function nextMonth(mois, annee) {
+  return mois === 12 ? { mois: 1, annee: annee + 1 } : { mois: mois + 1, annee };
+}
+
+// Combien de livres du vote en cours ont réellement été éliminés — connu
+// uniquement une fois le tour 1 clos (tour === 2, resultats_tour1 figé).
+function computeCurrentMonthRealElimination() {
+  if (!voteActif || voteActif.tour !== 2) return null;
+  const tour2Ids = new Set(voteActif.livre_ids || []);
+  return (voteActif.resultats_tour1 || []).filter(r => {
+    if (tour2Ids.has(r.livre_id)) return false;
+    const notes = Object.values(r.notes || {}).map(Number).filter(n => !isNaN(n));
+    if (!notes.length) return false;
+    const moy = mean(notes), med = median(notes);
+    const combined = (moy !== null && med !== null) ? (moy + med) / 2 : null;
+    return combined !== null && combined < SEUIL_ELIMINATION_REAL;
+  }).length;
+}
+
 function renderTabStabilisation() {
   const el = document.getElementById("tab-stabilisation");
   if (!el) return;
@@ -1151,6 +1218,9 @@ function renderTabStabilisation() {
   const lastNew = newEntriesArr[newEntriesArr.length - 1];
   const currentPool = timeline[timeline.length - 1].poolSize;
   const allScores = collectAllBookScores();
+  const growthStats = computeGrowthStats(newEntriesArr);
+  const growthLow  = Math.max(0, growthStats.mean - growthStats.stdev);
+  const growthHigh = growthStats.mean + growthStats.stdev;
 
   const histRows = timeline.map((t, i) => {
     const trans = i > 0 ? transitions[i - 1] : null;
@@ -1163,6 +1233,24 @@ function renderTabStabilisation() {
       <td class="cht-td-score">${eluPrec}</td>
     </tr>`;
   }).join("");
+
+  // Ligne de projection pour le mois suivant (nécessite le tour 1 clos pour
+  // connaître le nombre réel de livres déjà éliminés ce mois-ci).
+  const realElim = computeCurrentMonthRealElimination();
+  const lastEntry = timeline[timeline.length - 1];
+  const nm = nextMonth(lastEntry.mois, lastEntry.annee);
+  let projRowHtml = "";
+  if (realElim !== null) {
+    const carry = Math.max(0, lastEntry.poolSize - realElim - 1);
+    const poolLow = carry + growthLow, poolMid = carry + growthStats.mean, poolHigh = carry + growthHigh;
+    projRowHtml = `<tr style="opacity:.8">
+      <td class="cht-td-titre">${formatMois(nm.mois, nm.annee)} <span style="color:var(--accent);font-size:.72rem">(projection)</span></td>
+      <td class="cht-td-score">≈ ${Math.round(poolMid)}<div class="cht-td-sous">[${Math.round(poolLow)} – ${Math.round(poolHigh)}]</div></td>
+      <td class="cht-td-score">≈ ${growthStats.mean.toFixed(1)}<div class="cht-td-sous">± ${growthStats.stdev.toFixed(1)}</div></td>
+      <td class="cht-td-score">${realElim}<div class="cht-td-sous">réel (tour 1 clos)</div></td>
+      <td class="cht-td-score">1<div class="cht-td-sous">à venir</div></td>
+    </tr>`;
+  }
 
   const scenarios = [
     { key: "moy",  label: `Moyenne historique (${newEntriesArr.length} transition${newEntriesArr.length > 1 ? "s" : ""})`, value: moyNew },
@@ -1211,10 +1299,10 @@ function renderTabStabilisation() {
           <th class="cht-td-score">Éliminés depuis le mois précédent</th>
           <th class="cht-td-score">Élu le mois précédent</th>
         </tr></thead>
-        <tbody>${histRows}</tbody>
+        <tbody>${histRows}${projRowHtml}</tbody>
       </table>
     </div>
-    <div class="cht-footnote">"Nouveaux" = livres présents dans ce vote mais absents du précédent (donc réellement proposés entre-temps) · "Éliminés" = livres du vote précédent qui ne sont ni revenus ni élus · Basé sur ${timeline.length} vote${timeline.length > 1 ? "s" : ""} (${formatMois(timeline[0].mois, timeline[0].annee)} → ${formatMois(timeline[timeline.length - 1].mois, timeline[timeline.length - 1].annee)})</div>
+    <div class="cht-footnote">"Nouveaux" = livres présents dans ce vote mais absents du précédent (donc réellement proposés entre-temps) · "Éliminés" = livres du vote précédent qui ne sont ni revenus ni élus · Basé sur ${timeline.length} vote${timeline.length > 1 ? "s" : ""} (${formatMois(timeline[0].mois, timeline[0].annee)} → ${formatMois(timeline[timeline.length - 1].mois, timeline[timeline.length - 1].annee)})${realElim === null ? " · Projection du mois suivant indisponible tant que le tour 1 du vote en cours n'est pas clos" : ""}</div>
 
     <div class="cht-section-label" style="margin-top:1.8rem">Réglage nécessaire selon le scénario de croissance des propositions</div>
     <div class="cht-expl">
@@ -1233,9 +1321,18 @@ function renderTabStabilisation() {
     </div>
     <div class="cht-footnote">Ligne surlignée = objectif difficile à atteindre avec ce mode seul (le nombre de nouveaux livres dépasse déjà l'objectif à lui seul) · 1 livre est retiré chaque mois par l'élection, indépendamment du seuil choisi</div>
 
-    <div class="cht-section-label" style="margin-top:1.8rem">Comparaison graphique de seuils concrets</div>
+    <div class="cht-section-label" style="margin-top:1.8rem">Incertitude sur la croissance</div>
     <div class="cht-expl">
-      Toutes les projections ci-dessous utilisent la <strong>même hypothèse de croissance</strong> : ${moyNew.toFixed(1)} nouveaux livres par mois, soit la moyenne historique calculée sur les ${newEntriesArr.length} transitions observées (${newEntriesArr.join(" + ")}) ÷ ${newEntriesArr.length} = ${moyNew.toFixed(2)}. Comme 1 livre est élu (retiré) chaque mois, la croissance nette <strong>sans seuil</strong> est d'environ <strong>${(moyNew - 1).toFixed(1)} livres/mois</strong>. Modifiez les 4 seuils ci-dessous pour comparer leur effet sur 6 mois de projection.
+      La moyenne de ${moyNew.toFixed(1)} nouveaux livres/mois est calculée sur seulement ${newEntriesArr.length} mois observés (${newEntriesArr.join(", ")}) — une valeur aussi précise laisse penser à une confiance qu'on n'a pas vraiment avec si peu de données. L'écart-type mesuré sur ces ${newEntriesArr.length} valeurs est de <strong>± ${growthStats.stdev.toFixed(1)}</strong>, ce qui donne une fourchette réaliste de <strong>${growthLow.toFixed(1)} à ${growthHigh.toFixed(1)}</strong> nouveaux livres/mois. C'est cette fourchette qui est utilisée pour tracer les bandes d'incertitude ci-dessous (zone colorée autour de chaque ligne).
+    </div>
+    <label style="display:inline-flex;align-items:center;gap:.5rem;font-size:.85rem;color:var(--muted);margin-bottom:1rem;cursor:pointer">
+      <input type="checkbox" id="show-uncertainty" ${showUncertainty ? "checked" : ""}>
+      Afficher les bandes d'incertitude sur les graphiques
+    </label>
+
+    <div class="cht-section-label" style="margin-top:1.2rem">Comparaison graphique de seuils concrets</div>
+    <div class="cht-expl">
+      Toutes les projections ci-dessous utilisent la <strong>même hypothèse de croissance</strong> (${moyNew.toFixed(1)} nouveaux livres/mois en moyenne). Comme 1 livre est élu (retiré) chaque mois, la croissance nette <strong>sans seuil</strong> est d'environ <strong>${(moyNew - 1).toFixed(1)} livres/mois</strong>. Modifiez les 4 seuils ci-dessous pour comparer leur effet sur 6 mois de projection.
     </div>
     <div class="cht-seuil-wrap" style="row-gap:.6rem">
       <span>Conserver <input type="number" id="cmp-keepA" class="cht-seuil-input" style="width:56px" min="1" max="100" step="1" value="${comparePolicyParams.keepA}"> livres</span>
@@ -1248,7 +1345,11 @@ function renderTabStabilisation() {
         <canvas id="chart-stabilisation" height="180"></canvas>
       </div>
     </div>
-    <div class="cht-footnote">Le seuil "score minimum" applique le taux d'élimination réellement observé historiquement pour ce seuil (parmi ${allScores.length} note${allScores.length > 1 ? "s" : ""} archivées), pas une estimation théorique · Les traits en pointillés sont des projections, le trait plein est l'historique réel</div>`;
+    <div class="cht-footnote">Le seuil "score minimum" applique le taux d'élimination réellement observé historiquement pour ce seuil (parmi ${allScores.length} note${allScores.length > 1 ? "s" : ""} archivées), pas une estimation théorique · Les traits en pointillés sont des projections, le trait plein est l'historique réel</div>
+
+    ${renderModeGraphSection("keep", "Conserver N livres — comparaison de plusieurs valeurs", "chart-mode-keep", targetPoolSize, "livres à conserver")}
+    ${renderModeGraphSection("percent", "Éliminer un % des moins bons scores — comparaison de plusieurs valeurs", "chart-mode-percent", targetPoolSize, "% éliminés")}
+    ${renderModeGraphSection("score", "Score minimum d'élimination — comparaison de plusieurs seuils", "chart-mode-score", targetPoolSize, "score minimum")}`;
 
   document.getElementById("target-pool").addEventListener("change", e => {
     const v = parseInt(e.target.value, 10);
@@ -1256,6 +1357,12 @@ function renderTabStabilisation() {
     targetPoolSize = v;
     localStorage.setItem("ltr_chantier_target", String(v));
     renderTabStabilisation();
+  });
+
+  document.getElementById("show-uncertainty").addEventListener("change", e => {
+    showUncertainty = e.target.checked;
+    localStorage.setItem("ltr_chantier_uncertainty", showUncertainty ? "1" : "0");
+    redrawAllStabilisationCharts(timeline, growthStats, allScores);
   });
 
   [
@@ -1269,11 +1376,55 @@ function renderTabStabilisation() {
       if (isNaN(v)) return;
       comparePolicyParams[key] = v;
       localStorage.setItem(storageKey, String(v));
-      drawStabilisationChart(timeline, moyNew, allScores);
+      drawStabilisationChart(timeline, growthStats, allScores);
     });
   });
 
-  drawStabilisationChart(timeline, moyNew, allScores);
+  wireModeGraphControls("keep",    timeline, growthStats, allScores);
+  wireModeGraphControls("percent", timeline, growthStats, allScores);
+  wireModeGraphControls("score",   timeline, growthStats, allScores);
+
+  redrawAllStabilisationCharts(timeline, growthStats, allScores);
+}
+
+function redrawAllStabilisationCharts(timeline, growthStats, allScores) {
+  drawStabilisationChart(timeline, growthStats, allScores);
+  drawModeGraph("keep",    timeline, growthStats, allScores);
+  drawModeGraph("percent", timeline, growthStats, allScores);
+  drawModeGraph("score",   timeline, growthStats, allScores);
+}
+
+// ── Section HTML + câblage des 3 graphiques "un mode à la fois" ────
+
+function renderModeGraphSection(mode, title, canvasId, target, unitLabel) {
+  const r = graphRanges[mode];
+  const stepAttr = mode === "score" ? "0.1" : "1";
+  return `
+    <div class="cht-section-label" style="margin-top:1.8rem">${title}</div>
+    <div class="cht-expl">
+      Comparez plusieurs valeurs de ce seuil : de <input type="number" id="range-${mode}-from" class="cht-seuil-input" style="width:56px" step="${stepAttr}" value="${r.from}">
+      à <input type="number" id="range-${mode}-to" class="cht-seuil-input" style="width:56px" step="${stepAttr}" value="${r.to}">
+      par pas de <input type="number" id="range-${mode}-step" class="cht-seuil-input" style="width:56px" step="${stepAttr}" min="${stepAttr}" value="${r.step}">
+      (${unitLabel}). La ligne <strong style="color:#ffcf4d">★ en surbrillance</strong> reste toujours affichée : c'est le réglage qui stabilise le vote le plus près de l'objectif défini plus haut (${target} livres), quelle que soit la liste comparée.
+    </div>
+    <div style="overflow-x:auto">
+      <div style="min-width:420px">
+        <canvas id="${canvasId}" height="180"></canvas>
+      </div>
+    </div>
+    <div class="cht-footnote" id="footnote-${mode}"></div>`;
+}
+
+function wireModeGraphControls(mode, timeline, growthStats, allScores) {
+  ["from", "to", "step"].forEach(part => {
+    document.getElementById(`range-${mode}-${part}`).addEventListener("change", e => {
+      const v = parseFloat(e.target.value);
+      if (isNaN(v)) return;
+      graphRanges[mode][part] = v;
+      localStorage.setItem(`ltr_chantier_g${mode[0]}_${part}`, String(v));
+      drawModeGraph(mode, timeline, growthStats, allScores);
+    });
+  });
 }
 
 // Simule 6 mois de projection pour une politique d'élimination donnée
@@ -1289,7 +1440,54 @@ function projectPolicy(startPool, growthPerMonth, carriedOverFn, months) {
   return arr;
 }
 
-async function drawStabilisationChart(timeline, growthPerMonth, allScores) {
+function hexToRgba(hex, alpha) {
+  const h = hex.replace("#", "");
+  const full = h.length === 3 ? h.split("").map(c => c + c).join("") : h;
+  const n = parseInt(full, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+}
+
+// Génère, pour une politique donnée, les datasets Chart.js correspondants :
+// la ligne centrale (croissance moyenne) + éventuellement une bande basse/
+// haute (croissance moyenne ± écart-type) si showUncertainty est actif.
+function buildProjectionDatasetGroup(label, color, carriedOverFn, startPool, growthStats, N_MONTHS, pad, opts = {}) {
+  const group = [];
+  if (showUncertainty && growthStats.stdev > 0) {
+    const growthLow  = Math.max(0, growthStats.mean - growthStats.stdev);
+    const growthHigh = growthStats.mean + growthStats.stdev;
+    const low  = projectPolicy(startPool, growthLow,  carriedOverFn, N_MONTHS);
+    const high = projectPolicy(startPool, growthHigh, carriedOverFn, N_MONTHS);
+    group.push({
+      label: `${label} (bas)`, data: pad(low),
+      borderColor: "transparent", backgroundColor: "transparent",
+      pointRadius: 0, tension: .25, _isBand: true,
+    });
+    group.push({
+      label: `${label} (haut)`, data: pad(high),
+      borderColor: "transparent", backgroundColor: hexToRgba(color, 0.15),
+      fill: "-1", pointRadius: 0, tension: .25, _isBand: true,
+    });
+  }
+  const central = projectPolicy(startPool, growthStats.mean, carriedOverFn, N_MONTHS);
+  group.push({
+    label, data: pad(central),
+    borderColor: color, backgroundColor: color,
+    borderDash: opts.solid ? undefined : [5, 4],
+    borderWidth: opts.bold ? 3 : 1.5,
+    tension: .25, pointRadius: opts.bold ? 4 : 3,
+  });
+  return group;
+}
+
+const LEGEND_HIDE_BANDS = {
+  position: "top",
+  labels: {
+    usePointStyle: true, pointStyleWidth: 10, padding: 14, font: { size: 11 },
+    filter: (item, data) => !data.datasets[item.datasetIndex]._isBand,
+  },
+};
+
+async function drawStabilisationChart(timeline, growthStats, allScores) {
   await loadChartJs();
   const canvas = document.getElementById("chart-stabilisation");
   if (!canvas) return;
@@ -1308,34 +1506,19 @@ async function drawStabilisationChart(timeline, growthPerMonth, allScores) {
   const scoreRate = eliminationRateForScore(allScores, score);
 
   const policies = [
-    { label: "Sans seuil (statu quo)", color: "#e05555",
-      carriedOverFn: prev => prev - 1 },
-    { label: `Conserver ${keepA} livres`, color: "#4ab870",
-      carriedOverFn: prev => Math.min(prev - 1, keepA - 1) },
-    { label: `Conserver ${keepB} livres`, color: "#3f8ecb",
-      carriedOverFn: prev => Math.min(prev - 1, keepB - 1) },
-    { label: `Éliminer ${percent} % des moins bons`, color: "#9b59b6",
-      carriedOverFn: prev => prev - 1 - Math.round(prev * (percent / 100)) },
-    { label: `Score minimum ${score}`, color: "#bf8a2f",
-      carriedOverFn: prev => prev - 1 - Math.round(prev * scoreRate) },
+    { label: "Sans seuil (statu quo)", color: "#e05555", carriedOverFn: prev => prev - 1 },
+    { label: `Conserver ${keepA} livres`, color: "#4ab870", carriedOverFn: prev => Math.min(prev - 1, keepA - 1) },
+    { label: `Conserver ${keepB} livres`, color: "#3f8ecb", carriedOverFn: prev => Math.min(prev - 1, keepB - 1) },
+    { label: `Éliminer ${percent} % des moins bons`, color: "#9b59b6", carriedOverFn: prev => prev - 1 - Math.round(prev * (percent / 100)) },
+    { label: `Score minimum ${score}`, color: "#bf8a2f", carriedOverFn: prev => prev - 1 - Math.round(prev * scoreRate) },
   ];
 
   const projLabels = [...histLabels, ...Array.from({ length: N_MONTHS }, (_, i) => `+${i + 1} mois`)];
   const pad = arr => [...Array(histLabels.length - 1).fill(null), ...arr];
 
   const datasets = [
-    {
-      label: "Historique réel",
-      data: [...histData, ...Array(N_MONTHS).fill(null)],
-      borderColor: accentClr, backgroundColor: accentClr,
-      tension: .25, pointRadius: 4,
-    },
-    ...policies.map(p => ({
-      label: p.label,
-      data: pad(projectPolicy(startPool, growthPerMonth, p.carriedOverFn, N_MONTHS)),
-      borderColor: p.color, backgroundColor: p.color,
-      borderDash: [5, 4], tension: .25, pointRadius: 3,
-    })),
+    { label: "Historique réel", data: [...histData, ...Array(N_MONTHS).fill(null)], borderColor: accentClr, backgroundColor: accentClr, tension: .25, pointRadius: 4 },
+    ...policies.flatMap(p => buildProjectionDatasetGroup(p.label, p.color, p.carriedOverFn, startPool, growthStats, N_MONTHS, pad)),
   ];
 
   if (canvas._chart) canvas._chart.destroy();
@@ -1345,9 +1528,85 @@ async function drawStabilisationChart(timeline, growthPerMonth, allScores) {
     options: {
       responsive: true,
       animation: { duration: 600 },
-      plugins: {
-        legend: { position: "top", labels: { color: mutedClr, font: { size: 11 }, usePointStyle: true, pointStyleWidth: 10, padding: 14 } },
+      plugins: { legend: { ...LEGEND_HIDE_BANDS, labels: { ...LEGEND_HIDE_BANDS.labels, color: mutedClr } } },
+      scales: {
+        x: { ticks: { color: mutedClr, maxRotation: 0, autoSkip: true }, grid: { color: borderClr } },
+        y: { beginAtZero: true, ticks: { color: mutedClr }, grid: { color: borderClr }, title: { display: true, text: "Livres en compétition", color: mutedClr, font: { size: 11 } } },
       },
+    },
+  });
+}
+
+// Palette cyclique pour un nombre arbitraire de courbes de comparaison
+const MODE_PALETTE = ["#4ab870", "#3f8ecb", "#9b59b6", "#e05555", "#bf8a2f", "#46a0a0", "#c9648a", "#7a8ccf", "#8fae3f", "#d47f3f"];
+
+function carriedOverFnFor(mode, value, allScores) {
+  if (mode === "keep")    return prev => Math.min(prev - 1, value - 1);
+  if (mode === "percent") return prev => prev - 1 - Math.round(prev * (value / 100));
+  const rate = eliminationRateForScore(allScores, value);
+  return prev => prev - 1 - Math.round(prev * rate);
+}
+
+function formatModeValue(mode, v) {
+  if (mode === "keep")    return `Conserver ${v}`;
+  if (mode === "percent") return `Éliminer ${v} %`;
+  return `Score ${v}`;
+}
+
+async function drawModeGraph(mode, timeline, growthStats, allScores) {
+  await loadChartJs();
+  const canvas = document.getElementById(`chart-mode-${mode}`);
+  if (!canvas) return;
+
+  const cs        = getComputedStyle(document.documentElement);
+  const borderClr = cs.getPropertyValue("--border").trim() || "#333";
+  const mutedClr  = cs.getPropertyValue("--muted").trim()  || "#888";
+  const accentClr = cs.getPropertyValue("--accent").trim() || "#e8a44a";
+
+  const histLabels = timeline.map(t => formatMois(t.mois, t.annee));
+  const histData   = timeline.map(t => t.poolSize);
+  const startPool  = histData[histData.length - 1];
+  const N_MONTHS = 6;
+  const projLabels = [...histLabels, ...Array.from({ length: N_MONTHS }, (_, i) => `+${i + 1} mois`)];
+  const pad = arr => [...Array(histLabels.length - 1).fill(null), ...arr];
+
+  const r = graphRanges[mode];
+  const { values, effStep, capped } = buildStepValues(r.from, r.to, r.step);
+
+  const req = requiredSettingsFor(growthStats.mean, allScores);
+  const optimalValue = mode === "keep" ? req.keepN : mode === "percent" ? req.percentP : req.scoreT;
+
+  const footnoteEl = document.getElementById(`footnote-${mode}`);
+  if (footnoteEl) {
+    footnoteEl.textContent = (capped ? `Pas ajusté à ${effStep.toFixed(2)} pour rester lisible (demandé : ${r.step}) · ` : "") +
+      `★ optimal actuel : ${mode === "score" ? optimalValue?.toFixed(2) : optimalValue} (pour rester sous ${targetPoolSize} livres, croissance moyenne de ${growthStats.mean.toFixed(1)}/mois)` +
+      (showUncertainty ? " · bande colorée = croissance moyenne ± écart-type" : "");
+  }
+
+  const datasets = [
+    { label: "Historique réel", data: [...histData, ...Array(N_MONTHS).fill(null)], borderColor: accentClr, backgroundColor: accentClr, tension: .25, pointRadius: 4 },
+    ...values.flatMap((v, i) => buildProjectionDatasetGroup(
+      formatModeValue(mode, v), MODE_PALETTE[i % MODE_PALETTE.length],
+      carriedOverFnFor(mode, v, allScores), startPool, growthStats, N_MONTHS, pad,
+    )),
+  ];
+
+  if (optimalValue !== null && optimalValue !== undefined) {
+    datasets.push(...buildProjectionDatasetGroup(
+      `★ Optimal (${mode === "score" ? optimalValue.toFixed(2) : optimalValue})`, "#ffcf4d",
+      carriedOverFnFor(mode, optimalValue, allScores), startPool, growthStats, N_MONTHS, pad,
+      { bold: true, solid: true },
+    ));
+  }
+
+  if (canvas._chart) canvas._chart.destroy();
+  canvas._chart = new Chart(canvas, {
+    type: "line",
+    data: { labels: projLabels, datasets },
+    options: {
+      responsive: true,
+      animation: { duration: 600 },
+      plugins: { legend: { ...LEGEND_HIDE_BANDS, labels: { ...LEGEND_HIDE_BANDS.labels, color: mutedClr } } },
       scales: {
         x: { ticks: { color: mutedClr, maxRotation: 0, autoSkip: true }, grid: { color: borderClr } },
         y: { beginAtZero: true, ticks: { color: mutedClr }, grid: { color: borderClr }, title: { display: true, text: "Livres en compétition", color: mutedClr, font: { size: 11 } } },
