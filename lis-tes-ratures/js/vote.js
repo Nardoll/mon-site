@@ -368,6 +368,9 @@ function renderActive(root) {
 }
 
 // ── Contexte 2ème tour ─────────────────────────────────────────────────────
+// Seuil cohérent avec addVote() dans db.js — voir README "Seuil d'élimination"
+const SEUIL_ELIMINATION = 3;
+
 function renderTour2Context() {
   const el = document.getElementById("tour2-ctx");
   if (!el) return;
@@ -379,13 +382,16 @@ function renderTour2Context() {
   const rows = sorted.map(r => {
     const l = livreById[r.livre_id];
     const inTour2 = tour2Ids.has(r.livre_id);
+    const elimine = !inTour2 && r.moyenne !== null && r.moyenne < SEUIL_ELIMINATION;
     const pct = maxMoy > 0 ? Math.round((r.moyenne ?? 0) / maxMoy * 100) : 0;
+    const badgeCls  = inTour2 ? "t2-badge-tie" : elimine ? "t2-badge-elim" : "t2-badge-out";
+    const badgeText = inTour2 ? "⚖️ 2e tour" : elimine ? "❌ Éliminé" : "Écarté";
     return `
       <div class="t2-pre-row">
         <div class="t2-pre-name">${esc(l?.titre ?? r.livre_id)}</div>
         <div class="t2-pre-bar"><div class="t2-pre-fill" style="width:${pct}%;background:${inTour2 ? "var(--accent)" : "var(--border)"}"></div></div>
         <div class="t2-pre-score" style="color:${inTour2 ? "var(--accent)" : "var(--muted)"}">${r.moyenne !== null ? Number(r.moyenne).toFixed(2) : "—"}</div>
-        <span class="t2-pre-badge ${inTour2 ? "t2-badge-tie" : "t2-badge-out"}">${inTour2 ? "⚖️ 2e tour" : "Écarté"}</span>
+        <span class="t2-pre-badge ${badgeCls}">${badgeText}</span>
       </div>`;
   }).join("");
 
