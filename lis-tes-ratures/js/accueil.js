@@ -448,9 +448,27 @@ function openMembreEdit(membreId) {
     document.getElementById('me-page').value = s?.page_actuelle ?? '';
     document.getElementById('me-total').value = s?.pages_totales ?? (currentLivre?.progression_total || '');
   }
+  meUpdateLabels();
 
   meToggle();
   document.getElementById('me-overlay').classList.remove('hidden');
+}
+
+// Libellés du mode simple ("Page actuelle" / "Total") adaptés à l'unité
+// configurée sur le livre (progression_unite, texte libre : "chapitres", etc.)
+function meUpdateLabels() {
+  const unite = (currentLivre?.progression_unite || '').trim();
+  const pageLabel  = document.getElementById('me-page-label');
+  const totalLabel = document.getElementById('me-total-label');
+  if (!unite) {
+    pageLabel.textContent = 'Page actuelle';
+    totalLabel.textContent = 'Total';
+    return;
+  }
+  const singulier = unite.replace(/s$/i, '');
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  pageLabel.textContent = `${cap(singulier)} en cours`;
+  totalLabel.textContent = `Total (${unite})`;
 }
 
 function meToggle() {
