@@ -98,7 +98,7 @@ function fromAbsolute(pos, parties) {
 function pctFromStatut(s) {
   if (!s) return 0;
   if (s.statut === 'termine') return 100;
-  if (!s.page_actuelle || !s.pages_totales) return 0;
+  if (s.page_actuelle == null || !s.pages_totales) return 0;
   return Math.min(100, Math.round(s.page_actuelle / s.pages_totales * 100));
 }
 
@@ -107,12 +107,12 @@ function barState(s) {
   if (s.statut === 'achete') return { cls: 'owned', html: `${ICON_OWNED} Livre possédé` };
   if (s.statut === 'termine') return { cls: 'done', html: `${ICON_CHECK} Terminé` };
   const pct = pctFromStatut(s);
-  if (isHierarchique() && s.page_actuelle) {
+  if (isHierarchique() && s.page_actuelle != null) {
     const { partie, chapitre } = fromAbsolute(Number(s.page_actuelle), currentLivre.progression_parties);
     return { cls: 'prog', html: `P${partie} · Ch.${chapitre} · <b>${pct}%</b>` };
   }
   const unite = currentLivre?.progression_unite || '';
-  if (s.page_actuelle && s.pages_totales) {
+  if (s.page_actuelle != null && s.pages_totales) {
     return { cls: 'prog', html: `${s.page_actuelle}/${s.pages_totales}${unite ? ' ' + unite : ''} · <b>${pct}%</b>` };
   }
   return { cls: 'prog', html: `En cours · <b>${pct}%</b>` };
@@ -436,7 +436,7 @@ function openMembreEdit(membreId) {
   document.getElementById('me-pos-hier').classList.toggle('hidden', !hier);
   document.getElementById('me-pos-simple').classList.toggle('hidden', hier);
 
-  if (hier && s?.page_actuelle) {
+  if (hier && s?.page_actuelle != null) {
     const { partie, chapitre } = fromAbsolute(Number(s.page_actuelle), currentLivre.progression_parties);
     document.getElementById('me-partie').value = partie;
     document.getElementById('me-chap').value = chapitre;
@@ -509,10 +509,14 @@ document.getElementById('me-save').addEventListener('click', async () => {
 
   if (isHierarchique()) {
     const parties = currentLivre.progression_parties;
-    const partie = Number(document.getElementById('me-partie').value);
-    const chapitre = Number(document.getElementById('me-chap').value);
-    if (statut === 'en_cours' && partie && chapitre) {
-      if (partie < 1 || partie > parties.length || chapitre < 1 || chapitre > parties[partie - 1]) {
+    const partieVal = document.getElementById('me-partie').value;
+    const chapVal = document.getElementById('me-chap').value;
+    const partie = Number(partieVal);
+    const chapitre = Number(chapVal);
+    // Chapitre 0 = point de départ du livre (avant le chapitre 1) — doit rester
+    // valide, donc pas de simple test de vérité (0 est faux en JS).
+    if (statut === 'en_cours' && partieVal !== '' && chapVal !== '' && partie >= 1 && chapitre >= 0) {
+      if (partie > parties.length || chapitre > parties[partie - 1]) {
         showToast('Partie / Chapitre invalide.', 'error'); return;
       }
       page_actuelle = toAbsolute(partie, chapitre, parties);
@@ -540,8 +544,9 @@ document.getElementById('me-save').addEventListener('click', async () => {
     const pa = page_actuelle !== '' ? Number(page_actuelle) : null;
     const pt = pages_totales !== '' ? Number(pages_totales) : (currentLivre?.progression_total ?? null);
     // « Terminé » → le point de progression marque la fin du livre (100 %) pour le graphe.
-    const effectivePa = (finalStatut === 'termine' && (!pa || pa === 0) && pt) ? pt : pa;
-    if (effectivePa !== null && effectivePa > 0) {
+    const effectivePa = (finalStatut === 'termine' && !pa && pt) ? pt : pa;
+    // >= 0 (pas > 0) : un point à 0 marque explicitement le départ de la lecture.
+    if (effectivePa !== null && effectivePa >= 0) {
       await addProgressionPoint({ livre_id: currentLivreId, membre_id: editMembreId, page_actuelle: effectivePa, pages_totales: pt });
     }
     // Terminé (manuel ou auto) → inscrire le membre comme lecteur sur la réunion du livre.

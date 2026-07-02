@@ -335,7 +335,7 @@ async function openFiche(id) {
         const label = (hasReunionNote || s?.statut === 'termine')
           ? `<span class="fiche-av-done">${ICON_CHECK} Terminé</span>`
           : !s ? `<span class="fiche-av-none">—</span>`
-          : s.statut === 'en_cours' ? `<span style="color:#a8501f;font-weight:600">En cours${s.page_actuelle ? ` · ${s.page_actuelle} ${unitAbbr(livre.progression_unite)}` : ''}</span>`
+          : s.statut === 'en_cours' ? `<span style="color:#a8501f;font-weight:600">En cours${s.page_actuelle != null ? ` · ${s.page_actuelle} ${unitAbbr(livre.progression_unite)}` : ''}</span>`
           : `<span class="fiche-av-none">—</span>`;
         return `<div class="fiche-av-row"><span>${esc(m.nom)}</span>${label}</div>`;
       }).join('')}</div>`;
