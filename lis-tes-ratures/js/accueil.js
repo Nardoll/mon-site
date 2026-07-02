@@ -6,7 +6,7 @@ import {
   updateLivre, addProgressionPoint, getProgressionForLivre,
   updateReunion, getSondageDispo,
 } from "./db.js";
-import { formatMois, MOIS_NOMS, showToast } from "./utils.js";
+import { formatMois, MOIS_NOMS, showToast, deMois, prochainScrutin } from "./utils.js";
 import { hydrateCover } from "./covers.js";
 import { buildSeries, buildChartSVG, buildSparkSVG, buildLegendHTML, wireHighlight, wireTooltip } from "./progression-chart.js";
 
@@ -168,13 +168,17 @@ function renderHero() {
     document.getElementById('home-sub').textContent = 'Bienvenue dans le club de lecture.';
   }
 
+  // "Jours restants" = fin du mois calendaire (délai de lecture, inchangé).
+  // Le livre à proposer, lui, est celui du prochain scrutin (le 25) — donc
+  // pas forcément "le mois prochain" au sens calendaire.
   const endMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   const left = Math.max(0, Math.ceil((endMonth - now) / 86400000));
-  const nextMonth = MFR_FULL[(now.getMonth() + 1) % 12];
+  const { cible } = prochainScrutin(now);
+  const nextMonth = MFR_FULL[cible.getMonth()].toLowerCase();
   const nomLivre = currentLivre?.titre ? esc(currentLivre.titre) : 'le livre';
   document.getElementById('home-deadline').innerHTML =
     `<div class="dl-num"><b>${left}</b><small>jour${left > 1 ? 's' : ''}</small></div>
-     <div class="dl-txt">pour terminer <em>${nomLivre}</em> et proposer le livre de <b>${nextMonth}</b> avant la fin du mois.</div>`;
+     <div class="dl-txt">pour terminer <em>${nomLivre}</em> et proposer le livre ${esc(deMois(nextMonth))} avant le vote du 25.</div>`;
 }
 
 // ── Livre du mois ─────────────────────────────────────────────────
@@ -975,12 +979,13 @@ function buildVoteCard() {
   }
 
   if (!voteActif) {
-    const now = new Date();
-    const nomMois = MFR_FULL[(now.getMonth() + 1) % 12];
+    const { scrutin, cible } = prochainScrutin();
+    const nomScrutin = MFR_FULL[scrutin.getMonth()].toLowerCase();
+    const nomCible = MFR_FULL[cible.getMonth()].toLowerCase();
     return `<div class="hs-card is-empty">
       <div class="hs-eyebrow">${ICON_VOTE} Vote</div>
       <div class="hs-title">Aucun scrutin ouvert</div>
-      <div class="hs-meta">Prochain : <b>livre de ${esc(nomMois)}</b> · ouverture le 1ᵉʳ ${esc(nomMois.toLowerCase())}</div>
+      <div class="hs-meta">Prochain : <b>livre ${esc(deMois(nomCible))}</b> · vote le 25 ${esc(nomScrutin)}</div>
       <a class="hs-cta ghost-pur" href="votes.html">Votes →</a>
     </div>`;
   }

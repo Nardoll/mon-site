@@ -1,7 +1,7 @@
 import { requireAuth } from "./auth.js";
 import { getVotes, getMembres, getLivres, getVoteActif, updateVote } from "./db.js";
 import { initNav } from "./nav.js";
-import { formatMois } from "./utils.js";
+import { formatMois, deMois, prochainScrutin } from "./utils.js";
 import { hydrateCover, coversOn, removeAllCovers } from "./covers.js";
 
 await requireAuth();
@@ -147,26 +147,27 @@ function startCountdown(expiry, nbVotes, total) {
   _timer = setInterval(tick, 1000);
 }
 
+// Le prochain scrutin a lieu le 25 du mois et élit le livre du mois D'APRÈS.
 function renderUpcoming() {
   const today = new Date();
-  const next  = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-  const nom   = MOIS_FR[next.getMonth()];
-  const nomCap = nom.charAt(0).toUpperCase() + nom.slice(1);
-  const jours = Math.max(1, Math.ceil((next - today) / 86400000));
+  const { scrutin, cible } = prochainScrutin(today);
+  const nomScrutin = MOIS_FR[scrutin.getMonth()];
+  const nomCible   = MOIS_FR[cible.getMonth()];
+  const jours = Math.max(1, Math.ceil((scrutin - today) / 86400000));
 
   document.getElementById("live-mount").innerHTML = `
     <div class="live up">
       <div class="live-grid">
         <div class="live-main">
           <span class="live-eyebrow up">${IC.cal}À venir</span>
-          <div class="live-title">Prochain scrutin — ${nomCap} ${next.getFullYear()}</div>
-          <div class="live-meta">Ouverture automatique le 1ᵉʳ ${nom}</div>
+          <div class="live-title">Prochain scrutin — livre ${deMois(nomCible)} ${cible.getFullYear()}</div>
+          <div class="live-meta">Vote le 25 ${nomScrutin} — 5 jours de marge avant le mois de lecture</div>
           <div class="live-count up">${IC.cal}Dans ${jours} jour${jours > 1 ? "s" : ""}</div>
         </div>
         <div class="live-side">
           <div class="up-cal">
             <div class="up-cal-top"></div>
-            <div class="up-cal-body"><span class="up-cal-d">1ᵉʳ</span><span class="up-cal-m">${nom}</span></div>
+            <div class="up-cal-body"><span class="up-cal-d">25</span><span class="up-cal-m">${nomScrutin}</span></div>
           </div>
           <div class="live-side-label">Ouverture du scrutin</div>
           <a class="live-cta" href="vote.html">Voir le bulletin ${IC.arrowR}</a>
