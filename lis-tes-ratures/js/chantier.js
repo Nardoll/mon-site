@@ -112,13 +112,27 @@ async function init() {
   livres.forEach(l => { livreById[l.id] = l; });
 
   allOptions = [];
-  if (voteActif && voteActif.tour !== 2) {
-    allOptions.push({
-      id: "active",
-      label: `🔴 En cours — ${formatMois(voteActif.mois, voteActif.annee)}`,
-      vote: buildResultatsFromActive(voteActif),
-      live: true,
-    });
+  if (voteActif) {
+    if (voteActif.tour === 2) {
+      // Tour 2 en cours (choix unique, pas de notation) : on analyse quand même
+      // les notes du tour 1, déjà figées dans resultats_tour1.
+      if ((voteActif.resultats_tour1 || []).length) {
+        allOptions.push({
+          id: "active",
+          label: `🔴 En cours (tour 1) — ${formatMois(voteActif.mois, voteActif.annee)}`,
+          vote: { mois: voteActif.mois, annee: voteActif.annee, resultats: voteActif.resultats_tour1, livre_elu: null },
+          live: true,
+          tour1Only: true,
+        });
+      }
+    } else {
+      allOptions.push({
+        id: "active",
+        label: `🔴 En cours — ${formatMois(voteActif.mois, voteActif.annee)}`,
+        vote: buildResultatsFromActive(voteActif),
+        live: true,
+      });
+    }
   }
   votes.filter(v => (v.resultats || []).length).forEach(v => {
     const eluTitre = v.livre_elu ? (livreById[v.livre_elu]?.titre ?? "") : "";
@@ -163,11 +177,14 @@ function renderSelectedVote() {
 
   const votants = getVotants(lastVote.resultats);
   const infoEl = document.getElementById("chantier-vote-info");
+  const liveNote = opt.tour1Only
+    ? "· données du 1er tour (figées) — le 2ème tour (choix unique entre ex-æquo) est en cours et n'est pas analysable ici"
+    : "· données provisoires, le vote n'est pas terminé";
   infoEl.innerHTML = `
     <div class="cht-vote-badge${opt.live ? " cht-vote-badge-live" : ""}">
       ${opt.live ? "🔴 Vote en cours" : "🗳️ Vote clôturé"} — analyse de <strong>${formatMois(lastVote.mois, lastVote.annee)}</strong>
       — ${(lastVote.resultats || []).length} livres · ${votants.length} votant${votants.length > 1 ? "s" : ""}
-      ${opt.live ? "<span style=\"color:var(--muted)\">· données provisoires, le vote n'est pas terminé</span>" : ""}
+      ${opt.live ? `<span style="color:var(--muted)">${liveNote}</span>` : ""}
     </div>`;
 
   renderTabCombine();
