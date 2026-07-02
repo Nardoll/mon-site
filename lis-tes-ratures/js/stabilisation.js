@@ -290,9 +290,53 @@ function initTabs() {
   });
 }
 
+// Taux d'élimination réel du dernier vote clôturé, au seuil réel de production
+function computeLastClosedEliminationRate() {
+  const closed = [...votes].filter(v => (v.resultats || []).length)
+    .sort((a, b) => a.annee !== b.annee ? a.annee - b.annee : a.mois - b.mois);
+  const last = closed[closed.length - 1];
+  if (!last) return null;
+  const scores = last.resultats.map(r => {
+    const notes = Object.values(r.notes || {}).map(Number).filter(n => !isNaN(n));
+    if (!notes.length) return null;
+    const moy = mean(notes), med = median(notes);
+    return (moy !== null && med !== null) ? (moy + med) / 2 : null;
+  }).filter(s => s !== null);
+  if (!scores.length) return null;
+  const elim = scores.filter(s => s < SEUIL_ELIMINATION_REAL).length;
+  return { mois: last.mois, annee: last.annee, total: scores.length, elim, rate: elim / scores.length };
+}
+
+function renderExplainer(timeline) {
+  const el = document.getElementById("stb-explainer");
+  if (!el) return;
+  const poolTrend = timeline.map(t => t.poolSize).join(" → ");
+  const currentPool = timeline[timeline.length - 1].poolSize;
+  const lastRate = computeLastClosedEliminationRate();
+  const realElim = computeCurrentMonthRealElimination();
+
+  let comparisonHtml = "";
+  if (lastRate && realElim !== null) {
+    const expected = Math.round(lastRate.rate * currentPool);
+    comparisonHtml = `<li>Le mois dernier (${formatMois(lastRate.mois, lastRate.annee)}), le seuil actuel (score &lt; 3) a éliminé <strong>${lastRate.elim} livres sur ${lastRate.total}</strong> (${Math.round(lastRate.rate * 100)} %). En appliquant la même proportion ce mois-ci (${currentPool} livres), on s'attendrait à ~${expected} éliminations — <strong>en réalité, seulement ${realElim}</strong>. Le seuil ne réagit pas de façon fiable d'un mois à l'autre.</li>`;
+  }
+
+  el.innerHTML = `
+    <div class="cht-alert cht-alert-warn" style="line-height:1.7;margin-bottom:1.5rem">
+      <strong>En résumé :</strong> le nombre de livres en compétition explose (${poolTrend}), et le seuil actuel ne suffit pas à le stabiliser.
+      <ul style="margin:.5rem 0 .3rem 1.1rem;padding:0">
+        ${comparisonHtml}
+        <li>Un seuil de score fixe a un défaut structurel : un livre resté au-dessus du seuil (ex. 3,2) y reste indéfiniment, même s'il devient l'un des moins bien notés du lot face à de nouveaux livres — il ne sera jamais éliminé tant que sa note ne baisse pas.</li>
+        <li><strong>Les alternatives testées ici</strong> ("conserver N livres" ou "éliminer X % des moins bons") ne dépendent pas d'une note absolue, seulement du classement — elles s'adaptent automatiquement, peu importe comment on note.</li>
+      </ul>
+      Détails et outils pour tester ça vous-même juste en dessous 👇
+    </div>`;
+}
+
 function renderAll() {
   const timeline = buildPoolTimeline();
   const transitions = computeTransitions(timeline);
+  renderExplainer(timeline);
 
   if (!transitions.length) {
     document.getElementById("tab-overview").innerHTML = `<div style="color:var(--muted);font-size:.85rem">Pas assez de votes archivés pour analyser une tendance (il en faut au moins 2).</div>`;
