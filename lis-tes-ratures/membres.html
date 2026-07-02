@@ -66,6 +66,11 @@
     .fp-id { min-width: 0; }
     .fp-name { font-family: var(--serif); font-size: 1.32rem; font-weight: 600; color: #2c2015; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .fp-since { font-size: .74rem; color: #8a6b46; font-style: italic; margin-top: .15rem; }
+    .fp-inactif-tag { font-size: .62rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #8a7560; margin-top: .25rem; }
+
+    /* fiche d'un membre inactif : légèrement grisée */
+    .fp.inactif { filter: grayscale(.55); opacity: .72; }
+    .fp.inactif:hover { opacity: .88; }
 
     .fp-dates-label { font-size: .56rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #a98a5c; margin: 1.05rem 0 .5rem; display: flex; align-items: center; gap: .4rem; position: relative; z-index: 1; }
     .fp-dates-label::after { content: ""; flex: 1; height: 1px; background: rgba(120,90,50,.22); }
