@@ -64,12 +64,12 @@ export function buildSeries(points, membres, monthStart) {
     .filter(([, pts]) => pts.length > 0)
     .map(([id, pts]) => {
       pts.sort((a, b) => a.ts - b.ts);
-      // Points réels (real:true) = vraies entrées Firestore, survolables. Seul
-      // le point de départ (jour 1 à 0 %) est synthétique (real:false, sans tooltip).
-      const series = [
-        { frac: 0, pct: 0, real: false },
-        ...pts.map(p => ({ frac: Math.min(1, (p.ts - monthStart) / totalMs), pct: p.pct, real: true, page: p.page, total: p.total, dateMs: p.ts.getTime() })),
-      ];
+      // Points réels (real:true) = vraies entrées Firestore, survolables. Si le
+      // membre a explicitement marqué son point de départ (page/chapitre 0), la
+      // courbe part de cette date réelle plutôt que du 1er jour du mois — sinon
+      // un point de départ synthétique (jour 1 à 0 %, non survolable) comble le vide.
+      const mapped = pts.map(p => ({ frac: Math.min(1, (p.ts - monthStart) / totalMs), pct: p.pct, real: true, page: p.page, total: p.total, dateMs: p.ts.getTime() }));
+      const series = pts[0].page === 0 ? mapped : [{ frac: 0, pct: 0, real: false }, ...mapped];
       return { id, nom: nom(id), color: memberColor(membres, id), points: series };
     });
 }
