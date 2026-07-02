@@ -5,6 +5,7 @@ import { formatMois } from "./utils.js";
 await requireAuth();
 
 // ── Constantes ─────────────────────────────────────────────────────────────
+const isAdmin = location.pathname.includes("voteadmin");
 const MOIS_FR = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
 const PALETTE = ["#b5572d","#3f7a52","#6840d8","#bf8a2f","#5a7d8c","#a8503f","#3f5340","#8a5a6b","#46708a","#9a6a2f"];
 
@@ -341,6 +342,12 @@ function renderActive(root) {
       <div class="vbanner-count" id="b-count">${nbVotes}<small>/${total} votes</small></div>
     </div>
 
+    ${isAdmin ? `
+    <div class="admin-panel">
+      <div class="admin-panel-text"><b>Mode admin</b> — vous pouvez clôturer ${isTour2 ? "ce 2ᵉ tour" : "ce vote"} avant son échéance normale. ${isTour2 ? "Le livre avec le plus de voix reçues sera élu (tirage au sort en cas de nouvelle égalité)." : "En cas d'égalité entre plusieurs livres, un 2ᵉ tour sera lancé automatiquement, comme pour une clôture normale."}</div>
+      <button class="btn btn-danger" id="admin-close-btn">Clôturer maintenant</button>
+    </div>` : ''}
+
     ${isTour2 ? '<div id="tour2-ctx"></div>' : ''}
 
     <div class="vsec-title"><span class="vsec-num">1</span>Les livres en compétition</div>
@@ -361,10 +368,37 @@ function renderActive(root) {
     </div>`;
 
   bindInfosToggle();
+  if (isAdmin) document.getElementById("admin-close-btn")?.addEventListener("click", adminCloseNow);
   if (isTour2) renderTour2Context();
   renderBooks();
   renderIdent();
   renderBilan();
+}
+
+// ── Clôture manuelle (admin) ──────────────────────────────────────────────
+async function adminCloseNow() {
+  if (!voteActif) return;
+  const isTour2 = voteActif.tour === 2;
+  const msg = isTour2
+    ? "Clôturer ce 2ᵉ tour maintenant ? Le livre avec le plus de voix reçues sera élu (tirage au sort en cas de nouvelle égalité). Action irréversible."
+    : "Clôturer ce vote maintenant ? En cas d'égalité entre plusieurs livres, un 2ᵉ tour sera lancé automatiquement. Action irréversible.";
+  if (!confirm(msg)) return;
+
+  const btn = document.getElementById("admin-close-btn");
+  if (btn) { btn.disabled = true; btn.textContent = "Clôture en cours…"; }
+
+  try {
+    const wasTour1 = !isTour2;
+    await triggerEarlyClose();
+    if (wasTour1 && voteActif) {
+      showToast("Égalité au 1ᵉʳ tour — 2ᵉ tour lancé.");
+    } else {
+      showToast("Vote clôturé.");
+    }
+  } catch (e) {
+    showToast("Erreur lors de la clôture : " + e.message, false);
+    if (btn) { btn.disabled = false; btn.textContent = "Clôturer maintenant"; }
+  }
 }
 
 // ── Contexte 2ème tour ─────────────────────────────────────────────────────

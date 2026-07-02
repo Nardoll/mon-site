@@ -163,6 +163,7 @@ Mon Site/
 │   ├── bibliotheque.html        Page Bibliothèque
 │   ├── votes.html               Page Votes (scrutins archivés + vote en cours)
 │   ├── vote.html                Bulletin de vote (déposer son vote)
+│   ├── voteadmin.html           Bulletin de vote — vue admin (bouton "Clôturer maintenant"), même js/vote.js
 │   ├── membres.html             Page Membres
 │   ├── reunions.html            Page Réunions (+ panneau sondage de disponibilité)
 │   ├── sondage-dispo.html       Page vote Framadate-style (disponibilités de date)
@@ -515,6 +516,7 @@ Deux vues alternées :
 - **UI `votes.html` au 2ème tour** : une seule ligne dans la liste ; le détail affiche le graphe + tableau du tour 1 (libellé "Tour 1 — Résultats (égalité)"), puis la section tour 2 avec barres horizontales de voix et mention du tirage au sort si applicable.
 - **Garde-fou anti-doublon** : `closeExpiredVote` re-vérifie en Firestore que le document `votes_actifs` existe encore avant d'agir — évite un double-enregistrement si la clôture a déjà eu lieu depuis un autre onglet.
 - **Auto-ouverture** : si l'URL contient `?open=VOTE_ID`, le détail du vote s'ouvre automatiquement au chargement
+- **Clôture manuelle (admin)** : `voteadmin.html` charge le même `js/vote.js` que `vote.html` (détection via `location.pathname.includes("voteadmin")`). Si un vote est actif, un bandeau "Mode admin" avec bouton **"Clôturer maintenant"** apparaît sous la bannière de statut. Le clic (après confirmation) appelle exactement la même fonction que la clôture automatique (`triggerEarlyClose` → `closeExpiredVote`/`closeExpiredVoteTour2`) : même calcul de score, même gestion d'égalité (lance le tour 2 au lieu de clôturer si besoin), même garde-fou anti-doublon. Aucun mot de passe requis (cohérent avec le reste de la section, accès libre depuis juin 2026) — l'URL n'est simplement pas mise en avant dans la navigation.
 
 #### Membres (`membres.html` + `membres.js`)
 - Grille de cartes membres avec initiales, nom, date d'arrivée

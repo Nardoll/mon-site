@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bulletin de vote — Admin — Lis tes ratures</title>
+  <link rel="icon" type="image/png" href="/lis-tes-ratures-ltr.png" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    body {
+      min-height: 100vh;
+      margin-left: 0;
+    }
+
+    /* ── En-tête ── */
+    .vh { max-width: 880px; margin: 0 auto; display: flex; align-items: center; gap: 1rem; padding: 1.4rem 1.5rem .4rem; }
+    .vh-back { display: inline-flex; align-items: center; gap: .35rem; color: var(--muted); text-decoration: none; font-size: .85rem; font-weight: 600; border: 1px solid var(--border); border-radius: 8px; padding: .4rem .7rem .4rem .55rem; transition: all .15s; background: var(--surface); }
+    .vh-back svg { width: 15px; height: 15px; }
+    .vh-back:hover { color: var(--accent); border-color: var(--accent); }
+    .vh-spacer { flex: 1; }
+    .vh-mark { font-size: .78rem; color: var(--red); font-weight: 700; }
+
+    /* ── Bulletin papier ── */
+    .ballot {
+      max-width: 880px; margin: .8rem auto 4rem; position: relative;
+      background: linear-gradient(180deg,#fffaf1,#f8efdd);
+      border-radius: 6px; padding: 2.4rem 2.8rem 2.6rem 3.2rem;
+      box-shadow: 0 44px 90px -42px rgba(60,40,20,.6), inset 0 0 0 1px rgba(120,90,50,.1);
+      color: #2c2015;
+    }
+    .ballot::before { content: ""; position: absolute; left: 2.05rem; top: 1.4rem; bottom: 1.4rem; width: 1.5px; background: rgba(176,72,52,.3); }
+
+    /* en-tête */
+    .ballot-letterhead { text-align: center; padding-bottom: 1.4rem; border-bottom: 2px solid; border-image: linear-gradient(90deg, transparent, rgba(176,72,52,.5), transparent) 1; margin-bottom: 1.6rem; }
+    .ballot-club { font-size: .72rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--accent); }
+    .ballot-h1 { font-family: var(--serif); font-size: 2rem; font-weight: 600; line-height: 1.05; margin-top: .35rem; }
+    .ballot-h1 .rature { position: relative; white-space: nowrap; }
+    .ballot-h1 .rature::after { content: ""; position: absolute; left: -2%; right: -2%; top: 60%; height: 3px; background: var(--accent); border-radius: 2px; transform: rotate(-1.5deg); opacity: .85; }
+    .ballot-sub { font-size: .9rem; color: var(--muted); font-style: italic; margin-top: .5rem; }
+
+    /* bannière statut */
+    .vbanner { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; background: rgba(181,87,45,.07); border: 1px dashed rgba(181,87,45,.45); border-radius: 11px; padding: .85rem 1.1rem; margin-bottom: 1.8rem; }
+    .vbanner.up { background: var(--surface2); border-style: solid; border-color: var(--border); }
+    .vbanner-ico { width: 38px; height: 38px; border-radius: 9px; background: var(--accent); color: #fff7ee; display: grid; place-items: center; flex-shrink: 0; }
+    .vbanner.up .vbanner-ico { background: var(--surface); color: var(--accent); border: 1px solid var(--border); }
+    .vbanner-ico svg { width: 20px; height: 20px; }
+    .vbanner-body { flex: 1; min-width: 0; }
+    .vbanner-title { font-weight: 700; font-size: .98rem; }
+    .vbanner-sub { font-size: .82rem; color: var(--muted); margin-top: .1rem; }
+    .vbanner-sub b { color: var(--text); }
+    .vbanner-count { font-family: var(--serif); font-size: 1.6rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
+    .vbanner-count small { font-size: .76rem; font-weight: 400; color: var(--muted); }
+
+    /* ── panneau admin ── */
+    .admin-panel { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; background: rgba(207,102,121,.08); border: 1px solid rgba(207,102,121,.35); border-radius: 11px; padding: .85rem 1.1rem; margin-bottom: 1.8rem; }
+    .admin-panel-text { flex: 1; min-width: 220px; font-size: .84rem; color: var(--muted); line-height: 1.5; }
+    .admin-panel-text b { color: var(--red); }
+
+    /* sections */
+    .vsec-title { font-family: var(--serif); font-size: 1.18rem; font-weight: 600; margin: 1.8rem 0 .3rem; display: flex; align-items: center; gap: .5rem; }
+    .vsec-title svg { width: 17px; height: 17px; color: var(--accent); }
+    .vsec-num { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff7ee; display: inline-grid; place-items: center; font-size: .8rem; font-weight: 700; flex-shrink: 0; }
+
+    /* toggle infos */
+    .infos-bar { display: flex; align-items: center; gap: .6rem; margin: 1rem 0 1.1rem; font-size: .82rem; color: var(--muted); }
+    .infos-bar b { color: var(--text); font-weight: 600; }
+
+    /* livres en compétition */
+    .vbooks { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: .7rem; }
+    .vbook { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: .85rem .95rem; display: flex; flex-direction: column; }
+    .vbook-t { font-family: var(--serif); font-weight: 600; font-size: .94rem; line-height: 1.15; }
+    .vbook-a { font-size: .76rem; color: var(--muted); font-style: italic; margin-top: .1rem; }
+    .vbook-info { margin-top: .55rem; padding-top: .55rem; border-top: 1px dashed var(--border); display: none; flex-direction: column; gap: .25rem; }
+    .infos-on .vbook-info { display: flex; }
+    .vbook-genre { font-size: .73rem; color: var(--muted); font-style: italic; }
+    .vbook-pages { font-size: .72rem; color: var(--muted); }
+    .vbook-desc { font-size: .73rem; color: var(--accent); }
+    .vbook-babelio { display:inline-flex; align-items:center; gap:.3rem; font-size:.73rem; color:var(--muted); text-decoration:none; margin-top:.15rem; }
+    .vbook-babelio:hover { color:var(--accent); }
+    .babelio-icon { height:1em; width:auto; vertical-align:middle; display:inline-block; }
+
+    /* identification */
+    .ident { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: 11px; padding: 1rem 1.2rem; margin-top: 1rem; }
+    .ident label { font-size: .9rem; font-weight: 600; }
+    .ident select { width: auto; min-width: 190px; }
+    .voter-tag { display: inline-flex; align-items: center; gap: .5rem; font-size: .9rem; background: rgba(26,158,106,.1); border: 1px solid rgba(26,158,106,.35); color: var(--text); border-radius: 999px; padding: .35rem .5rem .35rem .85rem; margin: 1rem 0 .2rem; }
+    .voter-tag b { font-weight: 700; }
+    .voter-tag .chg { background: none; border: none; color: var(--accent); cursor: pointer; font-size: .76rem; font-family: inherit; text-decoration: underline; padding: 0 .3rem; }
+
+    /* règles */
+    .rules { font-size: .82rem; color: var(--muted); line-height: 1.6; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: .8rem 1rem; margin: 1rem 0 1.2rem; }
+    .rules b { color: var(--text); }
+    .rules .key { color: var(--accent); font-weight: 700; }
+
+    /* table de notation */
+    .grade-scale { display: flex; justify-content: space-between; font-size: .74rem; color: var(--muted); margin: 0 0 .5rem; padding: 0 .2rem; }
+    .grade-scale b { color: var(--text); }
+    .vtable2 { width: 100%; border-collapse: collapse; }
+    .vtable2 th, .vtable2 td { padding: .5rem .4rem; border-bottom: 1px solid var(--border); }
+    .vtable2 thead th { font-size: .72rem; font-weight: 700; color: var(--muted); text-align: center; }
+    .vtable2 thead th.numcol .n { font-family: var(--serif); font-size: .95rem; color: var(--text); display: block; }
+    .vtable2 thead th.numcol .elim { font-size: .58rem; color: var(--red); text-transform: uppercase; letter-spacing: .03em; }
+    .vtable2 thead th.bkc { text-align: left; }
+    .vrow td.bkc { text-align: left; }
+    .vrow .vt-titre { font-family: var(--serif); font-weight: 600; font-size: .95rem; }
+    .vrow .vt-auteur { font-size: .76rem; color: var(--muted); font-style: italic; }
+    .vrow.read { opacity: .5; }
+    .vrow.read .vt-titre { text-decoration: line-through; }
+    .numcol { width: 56px; text-align: center; }
+    /* teinte pâle par colonne de note : 1 rouge → 5 vert */
+    .vtable2 .numcol[data-n="1"] { background: rgba(191, 54, 42, .065); }
+    .vtable2 .numcol[data-n="2"] { background: rgba(213, 118, 35, .07); }
+    .vtable2 .numcol[data-n="3"] { background: rgba(199, 158, 24, .09); }
+    .vtable2 .numcol[data-n="4"] { background: rgba(118, 164, 62, .10); }
+    .vtable2 .numcol[data-n="5"] { background: rgba(47, 122, 74, .12); }
+    .dot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; display: inline-grid; place-items: center; transition: all .14s; background: var(--surface); margin: 0 auto; }
+    .dot:hover { border-color: var(--accent); transform: scale(1.1); }
+    .dot.on { background: var(--accent); border-color: var(--accent); box-shadow: 0 3px 8px -2px rgba(181,87,45,.5); }
+    .dot.on::after { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #fff7ee; }
+    .vrow.read .dot { pointer-events: none; opacity: .35; }
+    td.readcol { width: 120px; text-align: right; }
+    .read-toggle { display: inline-flex; align-items: center; gap: .35rem; font-size: .73rem; color: var(--muted); cursor: pointer; white-space: nowrap; user-select: none; }
+    .read-toggle input { cursor: pointer; accent-color: var(--accent); }
+    .submit-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 1.6rem; }
+    .submit-hint { font-size: .76rem; color: var(--muted); }
+    .btn-lg { padding: .7rem 1.5rem; font-size: .95rem; }
+    .btn-lg svg { width: 17px; height: 17px; }
+
+    /* bilan */
+    .bilan { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px dashed var(--border); }
+    .bilan-title { font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: .8rem; }
+    .bilan-grid { display: flex; flex-wrap: wrap; gap: .45rem; }
+    .bilan-tag { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; padding: .28rem .75rem .28rem .5rem; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); }
+    .bilan-tag .ava { width: 19px; height: 19px; border-radius: 50%; display: grid; place-items: center; font-size: .6rem; font-weight: 700; color: #fff; }
+    .bilan-tag.ok { color: var(--text); border-color: rgba(26,158,106,.4); background: rgba(26,158,106,.08); }
+    .bilan-tag.ok .ck { color: var(--green); display: inline-flex; }
+    .bilan-tag.no .ava { filter: grayscale(.5) opacity(.6); }
+    .bilan-tag .ck { display: none; }
+    .bilan-tag .ck svg { width: 13px; height: 13px; }
+
+    /* note aperçu (état à venir) */
+    .preview-note { display: flex; align-items: flex-start; gap: .55rem; font-size: .84rem; color: var(--muted); background: var(--surface); border: 1px dashed var(--border); border-radius: 9px; padding: .7rem .9rem; margin: 1rem 0 1.1rem; line-height: 1.5; }
+    .preview-note b { color: var(--text); }
+    .preview-note svg { width: 16px; height: 16px; color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+    .vtable2.preview .dot { pointer-events: none; opacity: .4; }
+    .vtable2.preview .read-toggle { opacity: .5; }
+
+    /* toast */
+    .vtoast { position: fixed; bottom: 1.6rem; left: 50%; transform: translateX(-50%) translateY(1rem); background: var(--text); color: var(--bg); border-radius: 10px; padding: .8rem 1.4rem; font-size: .9rem; font-weight: 600; box-shadow: 0 16px 40px -16px rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: all .3s; z-index: 50; display: inline-flex; align-items: center; gap: .5rem; }
+    .vtoast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .vtoast svg { width: 17px; height: 17px; }
+
+    /* ── 2ème tour — contexte résultats tour 1 ── */
+    .t2-context { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:10px; padding:1rem 1.2rem; margin-bottom:1.6rem; }
+    .t2-ctx-title { font-weight:700; font-size:.95rem; color:var(--accent); margin-bottom:.35rem; }
+    .t2-ctx-sub { font-size:.82rem; color:var(--muted); line-height:1.5; margin-bottom:.85rem; }
+    .t2-ctx-results { display:flex; flex-direction:column; gap:.4rem; }
+    .t2-pre-row { display:grid; grid-template-columns:1fr 100px 44px 88px; align-items:center; gap:.5rem; }
+    .t2-pre-name { font-size:.83rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .t2-pre-bar { height:6px; background:var(--border); border-radius:4px; overflow:hidden; }
+    .t2-pre-fill { height:100%; border-radius:4px; }
+    .t2-pre-score { font-family:var(--serif); font-size:.88rem; font-weight:700; text-align:right; }
+    .t2-pre-badge { font-size:.68rem; padding:.12rem .4rem; border-radius:5px; white-space:nowrap; text-align:center; }
+    .t2-badge-tie { background:rgba(181,87,45,.12); color:var(--accent); }
+    .t2-badge-out { background:var(--surface2); color:var(--muted); }
+    .t2-badge-elim { background:rgba(200,55,55,.15); color:#e05555; }
+
+    /* ── colonne "vote précédent" (rappel personnel) ── */
+    .prevcol { width: 60px; text-align: center; }
+    .vtable2 thead th.prevcol { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; color: var(--muted); }
+    .prevval { font-family: var(--serif); font-weight: 700; font-size: .92rem; color: var(--text); transition: filter .15s, opacity .15s; }
+    .prevval-empty { color: var(--muted); font-weight: 400; }
+    .vtable2.prev-hidden .prevval { filter: blur(4px); opacity: .55; }
+    .prev-bar .key { font-family: var(--serif); }
+
+    /* ── 2ème tour — interface choix unique ── */
+    .t2-choices { display:flex; flex-direction:column; gap:.6rem; margin:1rem 0 1.5rem; }
+    .t2-choice { display:flex; align-items:center; gap:1rem; background:var(--surface); border:1.5px solid var(--border); border-radius:11px; padding:.85rem 1.1rem; cursor:pointer; transition:border-color .14s, background .14s; }
+    .t2-choice:hover { border-color:var(--accent); background:rgba(181,87,45,.04); }
+    .t2-choice:has(input:checked) { border-color:var(--accent); background:rgba(181,87,45,.07); }
+    .t2-choice input[type="radio"] { width:20px; height:20px; accent-color:var(--accent); cursor:pointer; flex-shrink:0; }
+    .t2-choice-body { flex:1; min-width:0; }
+
+    @media (max-width: 620px) {
+      .ballot { padding: 1.8rem 1.3rem 2rem 1.6rem; }
+      .ballot::before { left: 1.1rem; }
+      .vtable2 thead { display: none; }
+      .vrow { display: flex; flex-wrap: wrap; align-items: center; padding: .8rem 0; border-bottom: 1px solid var(--border); }
+      .vrow td { border: none; padding: 0; }
+      .vrow td.bkc { flex: 0 0 100%; margin-bottom: .6rem; }
+      .vrow td.numcol { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .25rem; }
+      .vrow td.numcol::before { content: attr(data-n); font-size: .68rem; font-weight: 700; color: var(--muted); }
+      .vrow td.readcol { flex: 0 0 100%; margin-top: .5rem; text-align: left; }
+      .vrow td.prevcol { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .25rem; }
+      .vrow td.prevcol::before { content: "Préc."; font-size: .6rem; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+      .numcol { width: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header class="vh">
+    <a class="vh-back" href="votes.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      Retour aux votes
+    </a>
+    <span class="vh-spacer"></span>
+    <span class="vh-mark">Club de lecture · zone admin</span>
+  </header>
+
+  <main class="ballot" id="ballot-root">
+    <div style="pointer-events:none">
+      <div style="text-align:center;padding-bottom:1.4rem;border-bottom:2px solid var(--border);margin-bottom:1.6rem">
+        <div class="sk" style="height:.65rem;width:180px;margin:0 auto .55rem"></div>
+        <div class="sk" style="height:2rem;width:54%;margin:0 auto"></div>
+        <div class="sk" style="height:.8rem;width:38%;margin:.6rem auto 0"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:1rem;background:var(--surface);border:1px dashed var(--border);border-radius:11px;padding:.85rem 1.1rem;margin-bottom:1.8rem">
+        <div class="sk" style="width:38px;height:38px;border-radius:9px;flex-shrink:0"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:.4rem">
+          <div class="sk" style="height:.8rem;width:46%"></div>
+          <div class="sk" style="height:.6rem;width:62%"></div>
+        </div>
+        <div class="sk" style="height:1.6rem;width:64px;border-radius:4px;flex-shrink:0"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.5rem">
+        <div style="display:grid;grid-template-columns:1fr repeat(5,56px) 120px;gap:.4rem;align-items:center;padding:.5rem .4rem;border-bottom:1px solid var(--border)">
+          <div class="sk" style="height:.65rem;width:50%"></div>
+          <div class="sk" style="height:26px;width:26px;border-radius:50%;margin:0 auto"></div>
+          <div class="sk" style="height:26px;width:26px;border-radius:50%;margin:0 auto;opacity:.75"></div>
+          <div class="sk" style="height:26px;width:26px;border-radius:50%;margin:0 auto;opacity:.6"></div>
+          <div class="sk" style="height:26px;width:26px;border-radius:50%;margin:0 auto;opacity:.45"></div>
+          <div class="sk" style="height:26px;width:26px;border-radius:50%;margin:0 auto;opacity:.3"></div>
+          <div class="sk" style="height:.6rem;width:80%;margin-left:auto"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr repeat(5,56px) 120px;gap:.4rem;align-items:center;padding:.5rem .4rem;border-bottom:1px solid var(--border);opacity:.8">
+          <div class="sk" style="height:.65rem;width:68%"></div>
+          <div class="sk" style="height:26px;width:26px;border-radius:50%;margin:0 auto"></div>
+          <div class="sk" style="height:26px;width:26px;border-radius:50%;margin:0 auto;opacity:.75"></div>
+          <div class="sk" style="height:26px;width:26px;border-radius:50%;margin:0 auto;opacity:.6"></div>
+          <div class="sk" style="height:26px;width:26px;border-radius:50%;margin:0 auto;opacity:.45"></div>
+          <div class="sk" style="height:26px;width:26px;border-radius:50%;margin:0 auto;opacity:.3"></div>
+          <div class="sk" style="height:.6rem;width:80%;margin-left:auto"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr repeat(5,56px) 120px;gap:.4rem;align-items:center;padding:.5rem .4rem;border-bottom:1px solid var(--border);opacity:.55">
+          <div class="sk" style="height:.65rem;width:42%"></div>
+          <div class="sk" style="height:26px;width:26px;border-radius:50%;margin:0 auto"></div>
+          <div class="sk" style="height:26px;width:26px;border-radius:50%;margin:0 auto;opacity:.75"></div>
+          <div class="sk" style="height:26px;width:26px;border-radius:50%;margin:0 auto;opacity:.6"></div>
+          <div class="sk" style="height:26px;width:26px;border-radius:50%;margin:0 auto;opacity:.45"></div>
+          <div class="sk" style="height:26px;width:26px;border-radius:50%;margin:0 auto;opacity:.3"></div>
+          <div class="sk" style="height:.6rem;width:80%;margin-left:auto"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="vtoast" id="toast"></div>
+
+  <script type="module" src="js/vote.js"></script>
+</body>
+</html>
