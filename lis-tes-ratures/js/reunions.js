@@ -568,8 +568,8 @@ function renderLedger() {
     const sealHtml = prevue
       ? `<span class="reg-seal" style="--seal:#9a7a4e"><span class="reg-seal-inner"><span class="reg-seal-note" style="font-size:1rem">à venir</span></span></span>`
       : avg === null
-        ? `<span class="reg-seal" style="--seal:#9a7a4e"><span class="reg-seal-inner"><span class="reg-seal-note">—<span>/10</span></span><span class="reg-seal-label">non noté</span></span></span>`
-        : `<span class="reg-seal" style="--seal:${seal}"><span class="reg-seal-inner"><span class="reg-seal-note">${avg.toFixed(1)}<span>/10</span></span><span class="reg-seal-label">note du club</span></span></span>`;
+        ? `<span class="reg-seal" style="--seal:#9a7a4e"><span class="reg-seal-inner"><span class="reg-seal-note">—<span>/10</span></span></span></span>`
+        : `<span class="reg-seal" style="--seal:${seal}"><span class="reg-seal-inner"><span class="reg-seal-note">${avg.toFixed(1)}<span>/10</span></span></span></span>`;
 
     return `
     <button class="reg-row${prevue ? " prevue" : ""}" data-id="${esc(r.id)}">

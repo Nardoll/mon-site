@@ -44,6 +44,63 @@ export function moyenne(notes) {
   return vals.reduce((a, b) => a + Number(b), 0) / vals.length;
 }
 
+function toJsDate(ts) {
+  if (!ts) return null;
+  if (ts.toDate) return ts.toDate();
+  const d = new Date(ts);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+// Statut d'activité des membres : un membre devient "inactif" s'il n'a participé
+// à aucun des 3 derniers votes de choix du livre du mois, et n'a pendant cette
+// même période ni proposé de livre ni participé à une réunion. Il redevient actif
+// automatiquement dès qu'il refait l'une de ces trois actions (recalcul à chaque
+// lecture des données — aucun statut n'est stocké en base).
+export function computeInactivite(membres, votesArchives, livres, reunions) {
+  const result = {};
+  membres.forEach(m => { result[m.id] = { inactif: false, depuis: null }; });
+
+  const votesTries = [...votesArchives].sort((a, b) =>
+    b.annee !== a.annee ? b.annee - a.annee : b.mois - a.mois
+  );
+  if (votesTries.length < 3) return result;
+  const derniers3 = votesTries.slice(0, 3);
+
+  const aParticipe = (v, mid) => {
+    if (v.exceptionnel) {
+      const choix = v.sondage?.[mid];
+      return Array.isArray(choix) ? choix.length > 0 : !!choix;
+    }
+    if (v.tour2?.choix && v.tour2.choix[mid] != null && v.tour2.choix[mid] !== "") return true;
+    return (v.resultats || []).some(r => r.notes && Object.prototype.hasOwnProperty.call(r.notes, mid));
+  };
+
+  const plusAncien = derniers3[derniers3.length - 1];
+  const windowStart = toJsDate(plusAncien.date) || new Date(plusAncien.annee, plusAncien.mois - 1, 1);
+
+  membres.forEach(m => {
+    if (derniers3.some(v => aParticipe(v, m.id))) return;
+
+    const aPropose = livres.some(l => {
+      if (l.propose_par !== m.id) return false;
+      const d = toJsDate(l.date_proposition);
+      return d && d >= windowStart;
+    });
+    if (aPropose) return;
+
+    const aReunion = reunions.some(r => {
+      if (!(r.participant_ids || []).includes(m.id)) return false;
+      const d = toJsDate(r.date);
+      return d && d >= windowStart;
+    });
+    if (aReunion) return;
+
+    result[m.id] = { inactif: true, depuis: windowStart };
+  });
+
+  return result;
+}
+
 export function showToast(msg, type = "info") {
   const t = document.createElement("div");
   t.className = `toast toast-${type}`;
