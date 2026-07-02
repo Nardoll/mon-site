@@ -278,12 +278,8 @@ function renderSeuilSelector() {
 }
 
 function refreshTabs() {
-  renderTabCombine();
-  renderTabDispersion();
-  renderTabInfluence();
-  renderTabMediane();
-  renderTabSimulation();
-  renderTabImpact();
+  [renderTabCombine, renderTabDispersion, renderTabInfluence, renderTabMediane, renderTabSimulation, renderTabImpact, renderTabStabilisation]
+    .forEach(fn => { try { fn(); } catch (e) { console.error(fn.name, e); } });
 }
 
 // ── Navigation onglets ────────────────────────────────────────────
@@ -1022,6 +1018,288 @@ function renderTabImpact() {
       </table>
     </div>
     <div class="cht-footnote">⚡ = parmi les impacts les plus élevés · Trié par impact absolu décroissant · Cellule absente si la personne n'a pas noté ce livre</div>`;
+}
+
+// ── Onglet Stabilisation — combien de livres proposés chaque mois ──
+//
+// Objectif : à partir de l'historique réel des votes, calculer combien de
+// nouveaux livres arrivent chaque mois dans le vote, puis déterminer quel
+// réglage de seuil (peu importe le mode) permet de garder le nombre de
+// livres en compétition sous un objectif donné, même si les propositions
+// continuent d'affluer indéfiniment (aucune limite n'est mise sur qui peut
+// proposer quoi).
+
+let targetPoolSize = parseInt(localStorage.getItem("ltr_chantier_target"), 10) || 20;
+
+// Reconstruit, dans l'ordre chronologique, la liste des "photos" du vote :
+// un point par vote clôturé + un point pour le vote en cours (tour 1 ou les
+// données figées du tour 1 si on est passé en tour 2).
+function buildPoolTimeline() {
+  const closed = [...votes]
+    .filter(v => (v.resultats || []).length)
+    .sort((a, b) => a.annee !== b.annee ? a.annee - b.annee : a.mois - b.mois);
+
+  const timeline = closed.map(v => ({
+    mois: v.mois, annee: v.annee,
+    ids: new Set((v.resultats || []).map(r => r.livre_id)),
+    poolSize: (v.resultats || []).length,
+    elu: v.livre_elu || null,
+    closed: true,
+  }));
+
+  if (voteActif) {
+    const idsSrc = voteActif.tour === 2
+      ? (voteActif.resultats_tour1 || []).map(r => r.livre_id)
+      : (voteActif.livre_ids || []);
+    const last = timeline[timeline.length - 1];
+    if (idsSrc.length && (!last || last.mois !== voteActif.mois || last.annee !== voteActif.annee)) {
+      timeline.push({
+        mois: voteActif.mois, annee: voteActif.annee,
+        ids: new Set(idsSrc),
+        poolSize: idsSrc.length,
+        elu: null,
+        closed: false,
+      });
+    }
+  }
+  return timeline;
+}
+
+// Pour chaque transition d'un vote au suivant : combien de livres sont
+// nouveaux (jamais vus avant), combien ont été éliminés/élus entre-temps.
+function computeTransitions(timeline) {
+  const rows = [];
+  for (let i = 1; i < timeline.length; i++) {
+    const prev = timeline[i - 1], cur = timeline[i];
+    const newEntries = [...cur.ids].filter(id => !prev.ids.has(id)).length;
+    const carried = cur.poolSize - newEntries;
+    const eliminatedFromPrev = Math.max(0, prev.poolSize - (prev.elu ? 1 : 0) - carried);
+    rows.push({ mois: cur.mois, annee: cur.annee, poolSize: cur.poolSize, newEntries, eliminatedFromPrev });
+  }
+  return rows;
+}
+
+// Rassemble tous les scores combinés (moyenne+médiane)/2 de tous les livres
+// de tous les votes archivés (+ tour 1 en cours), pour estimer quel seuil de
+// score correspond, dans les faits, à tel ou tel taux d'élimination.
+function collectAllBookScores() {
+  const scores = [];
+  const pushFromResultats = resultats => {
+    (resultats || []).forEach(r => {
+      const notes = Object.values(r.notes || {}).map(Number).filter(n => !isNaN(n));
+      if (!notes.length) return;
+      const moy = mean(notes), med = median(notes);
+      const combined = (moy !== null && med !== null) ? (moy + med) / 2 : null;
+      if (combined !== null) scores.push(combined);
+    });
+  };
+  votes.forEach(v => pushFromResultats(v.resultats));
+  if (voteActif && voteActif.tour === 2) pushFromResultats(voteActif.resultats_tour1);
+  return scores;
+}
+
+// Seuil de score estimé nécessaire pour éliminer au moins `rate` (0..1) des
+// livres, basé sur la distribution réelle des scores archivés.
+function scoreThresholdForRate(scores, rate) {
+  if (!scores.length || rate <= 0) return null;
+  if (rate >= 1) return Math.min(5, Math.max(...scores) + 0.01);
+  const sorted = [...scores].sort((a, b) => a - b);
+  const idx = Math.min(sorted.length - 1, Math.ceil(rate * sorted.length) - 1);
+  return Math.min(5, sorted[idx] + 0.005);
+}
+
+// Pour un nombre de nouveaux livres/mois donné, calcule le réglage requis
+// dans chacun des 3 modes pour stabiliser le vote sous targetPoolSize.
+function requiredSettingsFor(newProposals, allScores) {
+  const keepN = Math.max(1, Math.round(targetPoolSize - newProposals + 1));
+  const percentP = newProposals <= 1 ? 0 : Math.min(100, Math.round(100 * (newProposals - 1) / targetPoolSize));
+  const rateNeeded = newProposals <= 1 ? 0 : Math.min(1, (newProposals - 1) / targetPoolSize);
+  const scoreT = scoreThresholdForRate(allScores, rateNeeded);
+  return { keepN, percentP, scoreT, impossible: targetPoolSize - newProposals + 1 < 1 };
+}
+
+function renderTabStabilisation() {
+  const el = document.getElementById("tab-stabilisation");
+  if (!el) return;
+
+  const timeline = buildPoolTimeline();
+  const transitions = computeTransitions(timeline);
+
+  if (!transitions.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:.85rem">Pas assez de votes archivés pour analyser une tendance (il en faut au moins 2).</div>`;
+    return;
+  }
+
+  const newEntriesArr = transitions.map(t => t.newEntries);
+  const moyNew  = mean(newEntriesArr);
+  const medNew  = median(newEntriesArr);
+  const lastNew = newEntriesArr[newEntriesArr.length - 1];
+  const currentPool = timeline[timeline.length - 1].poolSize;
+  const allScores = collectAllBookScores();
+
+  const histRows = timeline.map((t, i) => {
+    const trans = i > 0 ? transitions[i - 1] : null;
+    const eluPrec = i === 0 ? "—" : (timeline[i - 1].elu ? "1" : "0");
+    return `<tr>
+      <td class="cht-td-titre">${formatMois(t.mois, t.annee)}${!t.closed ? ' <span style="color:var(--accent);font-size:.72rem">(en cours)</span>' : ""}</td>
+      <td class="cht-td-score">${t.poolSize}</td>
+      <td class="cht-td-score">${trans ? trans.newEntries : "—"}</td>
+      <td class="cht-td-score">${trans ? trans.eliminatedFromPrev : "—"}</td>
+      <td class="cht-td-score">${eluPrec}</td>
+    </tr>`;
+  }).join("");
+
+  const scenarios = [
+    { key: "moy",  label: `Moyenne historique (${newEntriesArr.length} transition${newEntriesArr.length > 1 ? "s" : ""})`, value: moyNew },
+    { key: "med",  label: "Médiane historique", value: medNew },
+    { key: "last", label: `Dernier mois (${formatMois(timeline[timeline.length - 1].mois, timeline[timeline.length - 1].annee)})`, value: lastNew },
+  ];
+
+  const scenarioRows = scenarios.map(sc => {
+    const req = requiredSettingsFor(sc.value, allScores);
+    const scoreTxt = req.scoreT !== null ? req.scoreT.toFixed(2) : "—";
+    return `<tr${req.impossible ? ' class="cht-row-changed"' : ""}>
+      <td class="cht-td-titre">${sc.label}<div class="cht-td-sous">≈ ${sc.value.toFixed(1)} nouveaux livres / mois</div></td>
+      <td class="cht-td-score">${scoreTxt}</td>
+      <td class="cht-td-score">${req.percentP} %</td>
+      <td class="cht-td-score">${req.keepN}</td>
+    </tr>`;
+  }).join("");
+
+  let trendMsg;
+  if (currentPool > targetPoolSize) {
+    trendMsg = { type: "warn", msg: `⚠️ Le vote actuel compte <strong>${currentPool} livres</strong>, déjà au-dessus de l'objectif de ${targetPoolSize}. Sans seuil suffisant, ce nombre continuera de croître d'environ <strong>${(moyNew - 1).toFixed(1)} livre${Math.abs(moyNew - 1) >= 2 ? "s" : ""} par mois</strong> (moyenne historique de nouvelles propositions moins le livre élu chaque mois).` };
+  } else {
+    trendMsg = { type: "ok", msg: `✅ Le vote actuel compte ${currentPool} livres, sous l'objectif de ${targetPoolSize}.` };
+  }
+
+  el.innerHTML = `
+    <div class="cht-section-label">Objectif de stabilisation</div>
+    <div class="cht-expl">
+      Chaque mois, des livres sont <strong>proposés</strong> (aucune limite, n'importe qui peut en proposer autant qu'il veut) et un seul livre est <strong>élu</strong> — retiré du vote. Sans seuil d'élimination, tous les autres livres <strong>s'accumulent</strong> d'un mois sur l'autre : c'est ce qui fait grossir le nombre de livres en compétition. Cet onglet calcule, à partir de l'historique réel des votes, quel réglage de seuil — quel que soit le mode choisi dans le premier onglet — permet de garder le vote sous un nombre de livres cible, indéfiniment.
+    </div>
+    <div class="cht-seuil-wrap" style="margin-bottom:1.1rem">
+      <b>Objectif — garder le vote sous :</b>
+      <input type="number" id="target-pool" class="cht-seuil-input" min="5" max="100" step="1" value="${targetPoolSize}">
+      <span class="cht-seuil-suffix">livres</span>
+    </div>
+
+    <div class="cht-alert cht-alert-${trendMsg.type}">${trendMsg.msg}</div>
+
+    <div class="cht-section-label">Historique du nombre de livres en compétition</div>
+    <div style="overflow-x:auto">
+      <table class="cht-table">
+        <thead><tr>
+          <th class="cht-td-titre">Vote</th>
+          <th class="cht-td-score">Livres en compétition</th>
+          <th class="cht-td-score">Nouveaux ce mois</th>
+          <th class="cht-td-score">Éliminés depuis le mois précédent</th>
+          <th class="cht-td-score">Élu le mois précédent</th>
+        </tr></thead>
+        <tbody>${histRows}</tbody>
+      </table>
+    </div>
+    <div class="cht-footnote">"Nouveaux" = livres présents dans ce vote mais absents du précédent (donc réellement proposés entre-temps) · "Éliminés" = livres du vote précédent qui ne sont ni revenus ni élus · Basé sur ${timeline.length} vote${timeline.length > 1 ? "s" : ""} (${formatMois(timeline[0].mois, timeline[0].annee)} → ${formatMois(timeline[timeline.length - 1].mois, timeline[timeline.length - 1].annee)})</div>
+
+    <div style="overflow-x:auto;margin-top:.9rem">
+      <div style="min-width:420px">
+        <canvas id="chart-stabilisation" height="160"></canvas>
+      </div>
+    </div>
+
+    <div class="cht-section-label" style="margin-top:1.8rem">Réglage nécessaire selon le scénario de croissance des propositions</div>
+    <div class="cht-expl">
+      Pour chaque hypothèse sur le nombre de <strong>nouveaux</strong> livres proposés chaque mois, voici le réglage à appliquer dans le premier onglet pour que le vote reste sous <strong>${targetPoolSize} livres</strong> une fois le régime stabilisé (2-3 mois de transition possibles). Le <strong>score minimum</strong> est estimé à partir de la distribution réelle des notes de tous les votes archivés (${allScores.length} note${allScores.length > 1 ? "s" : ""} de livre analysées) — les deux autres modes sont des calculs directs et donc plus fiables.
+    </div>
+    <div style="overflow-x:auto">
+      <table class="cht-table">
+        <thead><tr>
+          <th class="cht-td-titre">Scénario de croissance</th>
+          <th class="cht-td-score">Score minimum requis</th>
+          <th class="cht-td-score">% à éliminer requis</th>
+          <th class="cht-td-score">Livres à conserver</th>
+        </tr></thead>
+        <tbody>${scenarioRows}</tbody>
+      </table>
+    </div>
+    <div class="cht-footnote">Ligne surlignée = objectif difficile à atteindre avec ce mode seul (le nombre de nouveaux livres dépasse déjà l'objectif à lui seul) · 1 livre est retiré chaque mois par l'élection, indépendamment du seuil choisi</div>`;
+
+  document.getElementById("target-pool").addEventListener("change", e => {
+    const v = parseInt(e.target.value, 10);
+    if (isNaN(v) || v < 1) return;
+    targetPoolSize = v;
+    localStorage.setItem("ltr_chantier_target", String(v));
+    renderTabStabilisation();
+  });
+
+  drawStabilisationChart(timeline, scenarios, allScores);
+}
+
+async function drawStabilisationChart(timeline, scenarios, allScores) {
+  await loadChartJs();
+  const canvas = document.getElementById("chart-stabilisation");
+  if (!canvas) return;
+
+  const cs        = getComputedStyle(document.documentElement);
+  const borderClr = cs.getPropertyValue("--border").trim() || "#333";
+  const mutedClr  = cs.getPropertyValue("--muted").trim()  || "#888";
+  const accentClr = cs.getPropertyValue("--accent").trim() || "#e8a44a";
+
+  const histLabels = timeline.map(t => formatMois(t.mois, t.annee));
+  const histData   = timeline.map(t => t.poolSize);
+
+  const moyScenario = scenarios.find(s => s.key === "moy");
+  const req = requiredSettingsFor(moyScenario.value, allScores);
+  const N_MONTHS = 6;
+  const noSeuil   = [histData[histData.length - 1]];
+  const avecSeuil = [histData[histData.length - 1]];
+  for (let i = 0; i < N_MONTHS; i++) {
+    noSeuil.push(noSeuil[noSeuil.length - 1] - 1 + moyScenario.value);
+    const prevPool = avecSeuil[avecSeuil.length - 1];
+    const carried  = Math.max(0, Math.min(prevPool - 1, req.keepN - 1));
+    avecSeuil.push(carried + moyScenario.value);
+  }
+  const projLabels = [...histLabels, ...Array.from({ length: N_MONTHS }, (_, i) => `+${i + 1} mois`)];
+  const pad = arr => [...Array(histLabels.length - 1).fill(null), ...arr];
+
+  if (canvas._chart) canvas._chart.destroy();
+  canvas._chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: projLabels,
+      datasets: [
+        {
+          label: "Historique réel",
+          data: [...histData, ...Array(N_MONTHS).fill(null)],
+          borderColor: accentClr, backgroundColor: accentClr,
+          tension: .25, pointRadius: 4,
+        },
+        {
+          label: "Projection sans seuil (statu quo)",
+          data: pad(noSeuil),
+          borderColor: "#e05555", backgroundColor: "#e05555",
+          borderDash: [5, 4], tension: .25, pointRadius: 3,
+        },
+        {
+          label: `Projection avec seuil recommandé (conserver ${req.keepN})`,
+          data: pad(avecSeuil),
+          borderColor: "#4ab870", backgroundColor: "#4ab870",
+          borderDash: [5, 4], tension: .25, pointRadius: 3,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      animation: { duration: 600 },
+      plugins: {
+        legend: { position: "top", labels: { color: mutedClr, font: { size: 11 }, usePointStyle: true, pointStyleWidth: 10, padding: 14 } },
+      },
+      scales: {
+        x: { ticks: { color: mutedClr, maxRotation: 0, autoSkip: true }, grid: { color: borderClr } },
+        y: { beginAtZero: true, ticks: { color: mutedClr }, grid: { color: borderClr }, title: { display: true, text: "Livres en compétition", color: mutedClr, font: { size: 11 } } },
+      },
+    },
+  });
 }
 
 init().catch(console.error);
