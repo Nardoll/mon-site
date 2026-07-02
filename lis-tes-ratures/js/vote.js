@@ -1,6 +1,6 @@
 import { requireAuth } from "./auth.js";
-import { getMembres, getVoteActif, getLivres, soumettreVote, getVotes, lancerVote, cloturerVoteActif, lancerTour2 } from "./db.js";
-import { formatMois } from "./utils.js";
+import { getMembres, getVoteActif, getLivres, soumettreVote, getVotes, getReunions, lancerVote, cloturerVoteActif, lancerTour2 } from "./db.js";
+import { formatMois, computeInactivite } from "./utils.js";
 
 await requireAuth();
 
@@ -52,6 +52,26 @@ let dejaSoumis = false;
 // Vote archivé immédiatement précédent (pour rappel des notes du mois dernier)
 let previousVote = null;
 let showPrevNotes = localStorage.getItem("ltr_prevNotes") === "1";
+
+// Statut d'activité des membres (calculé sur les votes archivés + livres + réunions)
+let inactiviteById = {};
+
+async function refreshActivite() {
+  try {
+    const [archivedVotes, reunions] = await Promise.all([getVotes(), getReunions()]);
+    inactiviteById = computeInactivite(membres, archivedVotes, livres, reunions);
+  } catch (e) { console.error("Calcul activité membres :", e); }
+}
+
+// Un membre marqué inactif redevient actif dès qu'il a déposé son bulletin
+// dans le scrutin en cours, sans attendre l'archivage de ce vote.
+function isInactif(id) {
+  if (!inactiviteById[id]?.inactif) return false;
+  const b = voteActif?.bulletins?.[id];
+  const isTour2 = voteActif?.tour === 2;
+  const aVoteMaintenant = isTour2 ? (b != null && b !== "") : (b && Object.keys(b).length > 0);
+  return !aVoteMaintenant;
+}
 
 async function refreshPreviousVote() {
   previousVote = null;
@@ -189,10 +209,12 @@ async function closeExpiredVoteTour2(va) {
   } catch (e) { console.error("Clôture tour 2 :", e); }
 }
 
-// ── Clôture anticipée (100% participation) ────────────────────────────────
+// ── Clôture anticipée (100% participation) ─────────────────────────────────
+// Les membres inactifs (voir computeInactivite dans utils.js) ne sont pas
+// comptés : si tout le monde a voté sauf eux, le vote se clôture normalement.
 function checkAllVoted() {
   if (!voteActif) return false;
-  const memberIds = voteActif.membre_ids || [];
+  const memberIds = (voteActif.membre_ids || []).filter(id => !isInactif(id));
   if (!memberIds.length) return false;
   const bulletins = voteActif.bulletins || {};
   const isTour2 = voteActif.tour === 2;
@@ -289,6 +311,7 @@ async function triggerEarlyClose() {
   voteActif = await getVoteActif();
   livres = await getLivres();
   moi = null; moiNom = ""; notes = {}; lus = new Set(); dejaSoumis = false;
+  await refreshActivite();
   await refreshPreviousVote();
   render();
   if (voteActif) startCountdown();
@@ -304,6 +327,7 @@ function startCountdown() {
       voteActif = await getVoteActif();
       livres = await getLivres();
       moi = null; moiNom = ""; notes = {}; lus = new Set();
+      await refreshActivite();
       await refreshPreviousVote();
       render();
       if (voteActif) startCountdown();
@@ -316,6 +340,7 @@ function startCountdown() {
     voteActif = await getVoteActif();
     livres = await getLivres();
     moi = null; moiNom = ""; notes = {}; lus = new Set();
+    await refreshActivite();
     await refreshPreviousVote();
     render();
     if (voteActif) startCountdown();
@@ -340,6 +365,7 @@ async function init() {
   // Auto-lancer si 1er du mois et aucun vote actif ou archivé pour ce mois
   await autoLancerSiNecessaire();
 
+  await refreshActivite();
   await refreshPreviousVote();
   render();
   if (voteActif) startCountdown();
@@ -770,14 +796,17 @@ function renderBilan() {
     const b = bulletins[id];
     return isTour2 ? (b != null && b !== "") : !!b;
   }).length;
-  count.textContent = `${nbVotes} / ${membreIds.length} bulletins reçus`;
+  const nbInactifs = membreIds.filter(id => isInactif(id)).length;
+  count.textContent = `${nbVotes} / ${membreIds.length} bulletins reçus`
+    + (nbInactifs ? ` · ${nbInactifs} inactif${nbInactifs > 1 ? "s" : ""} (non attendu${nbInactifs > 1 ? "s" : ""})` : "");
 
   grid.innerHTML = membreIds.map(id => {
     const m = membreById[id] || { nom: id, _color: "#888" };
     const b = bulletins[id];
     const v = isTour2 ? (b != null && b !== "") : !!b;
-    return `<span class="bilan-tag ${v ? "ok" : "no"}">
-      <span class="ava" style="background:${m._color}">${ini(m.nom)}</span>${esc(m.nom)}
+    const inactif = !v && isInactif(id);
+    return `<span class="bilan-tag ${v ? "ok" : inactif ? "inactif" : "no"}">
+      <span class="ava" style="background:${m._color}">${ini(m.nom)}</span>${esc(m.nom)}${inactif ? '<small class="bilan-inactif-lbl">inactif</small>' : ''}
       <span class="ck">${IC.check}</span>
     </span>`;
   }).join("");

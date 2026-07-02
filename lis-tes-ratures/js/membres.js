@@ -4,7 +4,7 @@ import {
   getCommentairesForMembre, addMembre, updateMembreInfos,
 } from "./db.js";
 import { initNav } from "./nav.js";
-import { formatMois, formatDate, initiales } from "./utils.js";
+import { formatMois, formatDate, initiales, computeInactivite } from "./utils.js";
 import { hydrateCover, coversOn, removeAllCovers } from "./covers.js";
 
 await requireAuth();
@@ -37,6 +37,7 @@ const livresByMembre   = {}; // membre_id → livre[]
 const reunionsByMembre = {}; // membre_id → reunion[]
 const votesByMembre    = {}; // membre_id → { vote_id: { v, ballot: {livre_id: note} } }
 const nbExceptByMembre = {}; // membre_id → nb votes exceptionnels
+let inactiviteById     = {}; // membre_id → { inactif, depuis }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 function esc(s) {
@@ -105,6 +106,7 @@ async function init() {
   });
 
   membres.forEach((m, i) => { m._color = PALETTE[i % PALETTE.length]; });
+  inactiviteById = computeInactivite(membres, votes, livres, reunions);
 
   renderRack();
 
@@ -297,6 +299,12 @@ async function openMember(membreId) {
     ? buildVoteSection(votesArr)
     : `<div class="rf-empty">Aucune participation enregistrée.</div>`;
 
+  // ── Statut d'activité ────────────────────────────────────────────────────
+  const activite = inactiviteById[m.id];
+  const inactifBadge = activite?.inactif
+    ? `<div class="rf-inactif-badge" title="N'a participé à aucun des 3 derniers votes, proposition ou réunion depuis le ${formatDate(activite.depuis)}. Redevient actif automatiquement dès qu'il vote, propose un livre ou participe à une réunion.">💤 Inactif depuis le ${formatDate(activite.depuis)}</div>`
+    : "";
+
   // ── Assemblage ────────────────────────────────────────────────────────────
   paper.innerHTML = `
     <button class="paper-close" id="member-close" aria-label="Fermer">✕</button>
@@ -305,6 +313,7 @@ async function openMember(membreId) {
       <div class="rf-head-info">
         <div class="rf-name">${esc(m.nom)}</div>
         <div class="rf-since">Lecteur·rice depuis le ${formatDate(m.date_arrivee)}</div>
+        ${inactifBadge}
         <div class="rf-meta">${nbProp} proposition${nbProp > 1 ? "s" : ""}<span class="sep">·</span>${nbVotes} vote${nbVotes > 1 ? "s" : ""}</div>
       </div>
       <button class="rf-edit" id="member-edit">${IC.edit} Modifier</button>
