@@ -96,6 +96,11 @@ async function init() {
         votesByMembre[mid][v.id].ballot[r.livre_id] = note;
       });
     });
+    // Votes blancs : aucune note, mais compte comme une participation
+    (v.blancs || []).forEach(mid => {
+      if (!votesByMembre[mid]) votesByMembre[mid] = {};
+      if (!votesByMembre[mid][v.id]) votesByMembre[mid][v.id] = { v, ballot: {}, blanc: true };
+    });
   });
 
   // Compte des votes exceptionnels par membre (pour le total affiché — pas la liste)
@@ -395,7 +400,16 @@ function buildVoteSection(votesArr) {
 
 function voteRows(votesArr) {
   return votesArr.map((entry, vi) => {
-    const { v, ballot } = entry;
+    const { v, ballot, blanc } = entry;
+    if (blanc) {
+      return `
+      <div class="rf-row" data-vote="${vi}">
+        <div class="rf-row-head" style="cursor:default">
+          <span class="rf-row-title">${formatMois(v.mois, v.annee)}</span>
+          <span class="rf-row-sub rf-vote-blanc">Vote blanc — a laissé les autres choisir</span>
+        </div>
+      </div>`;
+    }
     const sorted = Object.entries(ballot)
       .map(([lid, n]) => ({ titre: livreById[lid]?.titre || lid, note: Number(n) }))
       .sort((a, b) => b.note - a.note);

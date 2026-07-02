@@ -106,13 +106,14 @@ export async function getVoteById(id) {
   return d.exists() ? { id: d.id, ...d.data() } : null;
 }
 
-export async function addVote({ mois, annee, resultats, livre_elu, date, tour2 }) {
+export async function addVote({ mois, annee, resultats, livre_elu, date, tour2, blancs }) {
   const voteData = {
     mois: Number(mois),
     annee: Number(annee),
     resultats,
     livre_elu: livre_elu || null,
     seuil: 3,
+    blancs: blancs || [],
     date: date ? Timestamp.fromDate(new Date(date)) : serverTimestamp(),
     cree_le: serverTimestamp()
   };
@@ -235,12 +236,13 @@ export async function ajouterMembreAuVoteActif(docId, membre_id) {
   });
 }
 
-export async function lancerTour2(docId, { livre_ids_tour2, livre_ids_tour1, resultats_tour1, expires_at }) {
+export async function lancerTour2(docId, { livre_ids_tour2, livre_ids_tour1, resultats_tour1, blancs_tour1, expires_at }) {
   return updateDoc(doc(db, "votes_actifs", docId), {
     tour: 2,
     livre_ids_tour1,
     livre_ids: livre_ids_tour2,
     resultats_tour1,
+    blancs_tour1: blancs_tour1 || [],
     bulletins: {},
     expires_at: Timestamp.fromDate(expires_at instanceof Date ? expires_at : new Date(expires_at)),
   });

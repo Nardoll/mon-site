@@ -4,6 +4,7 @@ import {
   getMembres, getLivres, getVotes, getReunions,
   getAllStatutsLecture, getAllCommentaires,
 } from "./db.js";
+import { aParticipeAuVote } from "./utils.js";
 
 // ── Auth (top-level await) ────────────────────────────────────────────
 await requireAuth();
@@ -389,9 +390,7 @@ function renderParticipation({ votes, membres }) {
 
   const totalVotes = votes.length;
   const data = membres.map(m => {
-    const cnt = votes.filter(v =>
-      (v.resultats || []).some(r => r.notes && r.notes[m.id] !== undefined)
-    ).length;
+    const cnt = votes.filter(v => aParticipeAuVote(v, m.id)).length;
     return { nom: m.nom, cnt, pct: totalVotes ? cnt / totalVotes : 0 };
   }).filter(d => d.cnt > 0).sort((a, b) => b.pct - a.pct);
 
@@ -625,9 +624,7 @@ function renderTblActifs({ membres, livres, votes, reunions, statuts, commentair
     }).length;
 
     const nbProps = livres.filter(l => l.propose_par === m.id).length;
-    const nbVotes = votes.filter(v =>
-      (v.resultats || []).some(r => r.notes && r.notes[m.id] !== undefined)
-    ).length;
+    const nbVotes = votes.filter(v => aParticipeAuVote(v, m.id)).length;
     const nbComms = commentaires.filter(c => c.membre_id === m.id).length;
     const score   = livresFinis * 4 + nbReunions * 3 + nbProps * 2 + nbVotes + nbComms;
 

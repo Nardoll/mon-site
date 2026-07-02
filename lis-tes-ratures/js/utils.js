@@ -51,6 +51,24 @@ function toJsDate(ts) {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+// Sentinelle utilisée comme valeur de bulletin pour un "vote blanc" (membre
+// identifié qui choisit explicitement de ne noter aucun livre / de ne pas
+// choisir entre les finalistes du 2ᵉ tour). Compte comme une participation.
+export const VOTE_BLANC = "blanc";
+
+// A-t-on la trace que `mid` a participé au vote `v` (notes /5, vote blanc,
+// choix du 2ᵉ tour, ou vote exceptionnel hors système) ? Partagé entre le
+// calcul d'activité des membres et les statistiques de participation.
+export function aParticipeAuVote(v, mid) {
+  if (v.exceptionnel) {
+    const choix = v.sondage?.[mid];
+    return Array.isArray(choix) ? choix.length > 0 : !!choix;
+  }
+  if ((v.blancs || []).includes(mid)) return true;
+  if (v.tour2?.choix && v.tour2.choix[mid] != null && v.tour2.choix[mid] !== "") return true;
+  return (v.resultats || []).some(r => r.notes && Object.prototype.hasOwnProperty.call(r.notes, mid));
+}
+
 // Statut d'activité des membres : un membre devient "inactif" s'il n'a participé
 // à aucun des 3 derniers votes de choix du livre du mois, et n'a pendant cette
 // même période ni proposé de livre ni participé à une réunion. Il redevient actif
@@ -66,20 +84,11 @@ export function computeInactivite(membres, votesArchives, livres, reunions) {
   if (votesTries.length < 3) return result;
   const derniers3 = votesTries.slice(0, 3);
 
-  const aParticipe = (v, mid) => {
-    if (v.exceptionnel) {
-      const choix = v.sondage?.[mid];
-      return Array.isArray(choix) ? choix.length > 0 : !!choix;
-    }
-    if (v.tour2?.choix && v.tour2.choix[mid] != null && v.tour2.choix[mid] !== "") return true;
-    return (v.resultats || []).some(r => r.notes && Object.prototype.hasOwnProperty.call(r.notes, mid));
-  };
-
   const plusAncien = derniers3[derniers3.length - 1];
   const windowStart = toJsDate(plusAncien.date) || new Date(plusAncien.annee, plusAncien.mois - 1, 1);
 
   membres.forEach(m => {
-    if (derniers3.some(v => aParticipe(v, m.id))) return;
+    if (derniers3.some(v => aParticipeAuVote(v, m.id))) return;
 
     const aPropose = livres.some(l => {
       if (l.propose_par !== m.id) return false;
