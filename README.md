@@ -7,7 +7,8 @@
 ## ⚠️ Notes importantes pour Claude Code
 
 > **Push sans confirmation.** Tom a demandé de pusher directement après chaque modification, sans demander son feu vert.
-> Le site est hébergé sur **Cloudflare Worker**. Le déploiement est **automatique après chaque push** sur `main` — pas besoin de `npx wrangler deploy` manuellement.
+>
+> ⚠️ **DÉPLOIEMENT — NE JAMAIS ÉCRIRE LE CONTRAIRE DE CETTE LIGNE, MÊME AILLEURS DANS CE FICHIER.** Le site est hébergé sur **Cloudflare Worker**. Le déploiement est **automatique après chaque push** sur `main` — **pas besoin de `npx wrangler deploy` manuellement**, ça a toujours été le cas. Si un autre passage de ce README semble dire "manuel" ou "pas automatique", **c'est faux et obsolète** : corrige-le immédiatement au lieu de le croire. Cette confusion a déjà induit Claude en erreur plusieurs fois (a fait croire à Tom que rien n'était en ligne) — ne pas répéter cette erreur.
 
 > **Mettre à jour ce README à chaque modification significative.** À la fin de chaque session de développement, Claude doit documenter les changements effectués dans la section "Historique des modifications" ci-dessous. C'est une consigne permanente à appliquer sans que Tom ait besoin de le rappeler.
 
@@ -41,15 +42,15 @@ Site **personnel et privé** de Tom. Multi-sections indépendantes. La page d'ac
 | Langages | HTML / CSS / JS vanilla uniquement |
 | Framework | Aucun — pas de React, Vue, bundler, ni npm |
 | Base de données | Firebase Firestore v10.12.2 via CDN (ES modules natifs) |
-| Hébergement | Cloudflare **Worker** (Worker + fichiers statiques) — `npx wrangler deploy` (**manuel**, pas automatique). Domaine `nardoll.monsiteinternet.workers.dev`. Voir [Enrichissement IA](#enrichissement-ia) |
+| Hébergement | Cloudflare **Worker** (Worker + fichiers statiques) — déploiement **automatique à chaque push sur `main`**. Domaine `nardoll.monsiteinternet.workers.dev`. Voir [Enrichissement IA](#enrichissement-ia) |
 | Repo GitHub | `https://github.com/Nardoll/mon-site` (branche `main`) |
 
 **Contrainte importante :** ES modules natifs dans le navigateur. Ça fonctionne en HTTPS (Cloudflare Pages) ou via l'extension Live Server de VS Code. Pas de `file://`.
 
 **Workflow :**
 1. Modifier les fichiers dans VS Code
-2. `git add` + `git commit` + `git push`
-3. `npx wrangler deploy` pour déployer sur Cloudflare
+2. `git add` + `git commit` + `git push` sur `main`
+3. Déploiement Cloudflare automatique — rien d'autre à faire
 
 ---
 
@@ -1331,7 +1332,7 @@ Au moment d'ajouter un livre (et via le bouton **« Enrichir la bibliothèque »
 
 ### Architecture — Cloudflare Worker
 
-> ⚠️ **Le site est déployé comme un Cloudflare *Worker* (Worker + fichiers statiques), pas comme un projet *Pages*.** Domaine `nardoll.monsiteinternet.workers.dev`, déploiement via `npx wrangler deploy` (connecté au repo GitHub). La convention Pages `functions/` n'est donc **pas** détectée — il faut un vrai point d'entrée Worker.
+> ⚠️ **Le site est déployé comme un Cloudflare *Worker* (Worker + fichiers statiques), pas comme un projet *Pages*.** Domaine `nardoll.monsiteinternet.workers.dev`, déploiement **automatique à chaque push sur `main`** (connecté au repo GitHub — pas besoin de lancer `wrangler deploy` à la main). La convention Pages `functions/` n'est donc **pas** détectée — il faut un vrai point d'entrée Worker.
 
 Le site est statique : **impossible de mettre la clé API Claude dans le JS du navigateur** (elle serait publique). La clé vit côté serveur dans le Worker.
 
