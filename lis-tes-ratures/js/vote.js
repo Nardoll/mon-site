@@ -202,6 +202,87 @@ function checkAllVoted() {
   });
 }
 
+// ── Classement anonyme (admin) ────────────────────────────────────────────
+// Calcule le score courant de chaque livre à partir des bulletins déjà
+// soumis, SANS révéler quel livre correspond à quel score (pas d'id/titre
+// dans le retour). Calcule aussi un pire-cas / meilleur-cas par livre en
+// supposant que chaque votant restant donnerait la pire note (1) ou la
+// meilleure (5) possible — ce qui borne mathématiquement si le classement
+// peut encore bouger. But : permettre de juger si le vote est « joué
+// d'avance » sans se servir de l'identité du livre en tête pour décider.
+function computeLiveRanking() {
+  if (!voteActif) return null;
+  const bulletins = voteActif.bulletins || {};
+  const livreIds = voteActif.livre_ids || [];
+  const memberIds = voteActif.membre_ids || [];
+  const remaining = memberIds.filter(id => !(id in bulletins)).length;
+  const isTour2 = voteActif.tour === 2;
+
+  let rows;
+  if (isTour2) {
+    const counts = {};
+    livreIds.forEach(id => { counts[id] = 0; });
+    Object.values(bulletins).forEach(choix => {
+      if (choix && livreIds.includes(choix)) counts[choix]++;
+    });
+    rows = livreIds.map(id => ({ score: counts[id], best: counts[id] + remaining }));
+    rows.sort((a, b) => b.score - a.score);
+  } else {
+    rows = livreIds.map(id => {
+      const vals = [];
+      Object.values(bulletins).forEach(b => {
+        const n = b?.[id];
+        if (n != null && n !== "") vals.push(Number(n));
+      });
+      const scoreOf = arr => {
+        if (!arr.length) return null;
+        const moy = arr.reduce((a, b) => a + b, 0) / arr.length;
+        const med = median(arr);
+        return (moy + med) / 2;
+      };
+      return {
+        score: scoreOf(vals),
+        worst: scoreOf([...vals, ...Array(remaining).fill(1)]),
+        best: scoreOf([...vals, ...Array(remaining).fill(5)]),
+      };
+    });
+    rows.sort((a, b) => (b.score ?? -Infinity) - (a.score ?? -Infinity));
+  }
+
+  const leader = rows[0];
+  let locked = false;
+  if (leader && (isTour2 ? true : leader.worst != null)) {
+    const leaderFloor = isTour2 ? leader.score : leader.worst;
+    locked = rows.slice(1).every(r => {
+      const rCeiling = isTour2 ? r.best : r.best;
+      return rCeiling == null || leaderFloor > rCeiling;
+    });
+  }
+
+  return { isTour2, remaining, rows, locked };
+}
+
+function renderAdminRanking() {
+  const el = document.getElementById("admin-ranking-body");
+  if (!el) return;
+  const rk = computeLiveRanking();
+  if (!rk) { el.innerHTML = ""; return; }
+
+  const list = rk.rows.map((r, i) => `
+    <div class="admin-rank-row">
+      <span class="admin-rank-pos">${i + 1}${i === 0 ? "ᵉʳ" : "ᵉ"}</span>
+      <span class="admin-rank-score">${rk.isTour2 ? `${r.score} voix` : (r.score != null ? r.score.toFixed(2) : "—")}</span>
+    </div>`).join("");
+
+  el.innerHTML = `
+    <div class="admin-ranking-lock ${rk.locked ? "locked" : "unlocked"}">
+      ${rk.locked
+        ? "🔒 Le livre en tête ne peut plus être rattrapé, quel que soit le vote des votants restants — clôturer maintenant ne changera pas le résultat."
+        : `⏳ Le résultat peut encore changer (${rk.remaining} votant${rk.remaining > 1 ? "s" : ""} restant${rk.remaining > 1 ? "s" : ""}).`}
+    </div>
+    <div class="admin-ranking-list">${list || '<span class="admin-rank-empty">Aucun score pour l\'instant.</span>'}</div>`;
+}
+
 async function triggerEarlyClose() {
   if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
   await closeExpiredVote(voteActif);
@@ -346,6 +427,10 @@ function renderActive(root) {
     <div class="admin-panel">
       <div class="admin-panel-text"><b>Mode admin</b> — vous pouvez clôturer ${isTour2 ? "ce 2ᵉ tour" : "ce vote"} avant son échéance normale. ${isTour2 ? "Le livre avec le plus de voix reçues sera élu (tirage au sort en cas de nouvelle égalité)." : "En cas d'égalité entre plusieurs livres, un 2ᵉ tour sera lancé automatiquement, comme pour une clôture normale."}</div>
       <button class="btn btn-danger" id="admin-close-btn">Clôturer maintenant</button>
+    </div>
+    <div class="admin-ranking">
+      <div class="admin-ranking-title">Classement anonyme — ${isTour2 ? "voix reçues" : "score actuel"} (titres masqués exprès)</div>
+      <div id="admin-ranking-body"></div>
     </div>` : ''}
 
     ${isTour2 ? '<div id="tour2-ctx"></div>' : ''}
@@ -368,7 +453,10 @@ function renderActive(root) {
     </div>`;
 
   bindInfosToggle();
-  if (isAdmin) document.getElementById("admin-close-btn")?.addEventListener("click", adminCloseNow);
+  if (isAdmin) {
+    document.getElementById("admin-close-btn")?.addEventListener("click", adminCloseNow);
+    renderAdminRanking();
+  }
   if (isTour2) renderTour2Context();
   renderBooks();
   renderIdent();
@@ -735,6 +823,7 @@ async function submitVote() {
     }
 
     renderBilan();
+    if (isAdmin) renderAdminRanking();
     if (btn) {
       btn.innerHTML = `${IC.check} Bulletin enregistré`;
       btn.style.opacity = ".65";

@@ -56,6 +56,18 @@
     .admin-panel-text { flex: 1; min-width: 220px; font-size: .84rem; color: var(--muted); line-height: 1.5; }
     .admin-panel-text b { color: var(--red); }
 
+    /* ── classement anonyme (admin) ── */
+    .admin-ranking { background: var(--surface); border: 1px solid var(--border); border-radius: 11px; padding: .9rem 1.1rem; margin: -.8rem 0 1.8rem; }
+    .admin-ranking-title { font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: .7rem; }
+    .admin-ranking-lock { font-size: .84rem; line-height: 1.5; border-radius: 8px; padding: .6rem .8rem; margin-bottom: .8rem; }
+    .admin-ranking-lock.locked { background: rgba(26,158,106,.1); color: var(--text); border: 1px solid rgba(26,158,106,.35); }
+    .admin-ranking-lock.unlocked { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+    .admin-ranking-list { display: flex; flex-direction: column; gap: .35rem; }
+    .admin-rank-row { display: flex; align-items: center; justify-content: space-between; padding: .4rem .6rem; border-radius: 6px; background: var(--surface2); font-size: .86rem; }
+    .admin-rank-pos { font-family: var(--serif); font-weight: 700; color: var(--muted); }
+    .admin-rank-score { font-weight: 700; color: var(--text); }
+    .admin-rank-empty { font-size: .82rem; color: var(--muted); font-style: italic; }
+
     /* sections */
     .vsec-title { font-family: var(--serif); font-size: 1.18rem; font-weight: 600; margin: 1.8rem 0 .3rem; display: flex; align-items: center; gap: .5rem; }
     .vsec-title svg { width: 17px; height: 17px; color: var(--accent); }
