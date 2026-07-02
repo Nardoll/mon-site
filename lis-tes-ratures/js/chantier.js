@@ -1118,6 +1118,21 @@ function requiredSettingsFor(newProposals, allScores) {
   return { keepN, percentP, scoreT, impossible: targetPoolSize - newProposals + 1 < 1 };
 }
 
+// Taux d'élimination réel observé pour un seuil de score donné, mesuré sur
+// la distribution de toutes les notes archivées.
+function eliminationRateForScore(scores, T) {
+  if (!scores.length) return 0;
+  return scores.filter(s => s < T).length / scores.length;
+}
+
+// Réglages des 4 seuils concrets comparés graphiquement (modifiables).
+const comparePolicyParams = {
+  keepA:   parseInt(localStorage.getItem("ltr_chantier_cmp_keepA"), 10)   || 7,
+  keepB:   parseInt(localStorage.getItem("ltr_chantier_cmp_keepB"), 10)   || 15,
+  percent: parseFloat(localStorage.getItem("ltr_chantier_cmp_percent"))   || 50,
+  score:   parseFloat(localStorage.getItem("ltr_chantier_cmp_score"))     || 3.5,
+};
+
 function renderTabStabilisation() {
   const el = document.getElementById("tab-stabilisation");
   if (!el) return;
@@ -1201,12 +1216,6 @@ function renderTabStabilisation() {
     </div>
     <div class="cht-footnote">"Nouveaux" = livres présents dans ce vote mais absents du précédent (donc réellement proposés entre-temps) · "Éliminés" = livres du vote précédent qui ne sont ni revenus ni élus · Basé sur ${timeline.length} vote${timeline.length > 1 ? "s" : ""} (${formatMois(timeline[0].mois, timeline[0].annee)} → ${formatMois(timeline[timeline.length - 1].mois, timeline[timeline.length - 1].annee)})</div>
 
-    <div style="overflow-x:auto;margin-top:.9rem">
-      <div style="min-width:420px">
-        <canvas id="chart-stabilisation" height="160"></canvas>
-      </div>
-    </div>
-
     <div class="cht-section-label" style="margin-top:1.8rem">Réglage nécessaire selon le scénario de croissance des propositions</div>
     <div class="cht-expl">
       Pour chaque hypothèse sur le nombre de <strong>nouveaux</strong> livres proposés chaque mois, voici le réglage à appliquer dans le premier onglet pour que le vote reste sous <strong>${targetPoolSize} livres</strong> une fois le régime stabilisé (2-3 mois de transition possibles). Le <strong>score minimum</strong> est estimé à partir de la distribution réelle des notes de tous les votes archivés (${allScores.length} note${allScores.length > 1 ? "s" : ""} de livre analysées) — les deux autres modes sont des calculs directs et donc plus fiables.
@@ -1222,7 +1231,24 @@ function renderTabStabilisation() {
         <tbody>${scenarioRows}</tbody>
       </table>
     </div>
-    <div class="cht-footnote">Ligne surlignée = objectif difficile à atteindre avec ce mode seul (le nombre de nouveaux livres dépasse déjà l'objectif à lui seul) · 1 livre est retiré chaque mois par l'élection, indépendamment du seuil choisi</div>`;
+    <div class="cht-footnote">Ligne surlignée = objectif difficile à atteindre avec ce mode seul (le nombre de nouveaux livres dépasse déjà l'objectif à lui seul) · 1 livre est retiré chaque mois par l'élection, indépendamment du seuil choisi</div>
+
+    <div class="cht-section-label" style="margin-top:1.8rem">Comparaison graphique de seuils concrets</div>
+    <div class="cht-expl">
+      Toutes les projections ci-dessous utilisent la <strong>même hypothèse de croissance</strong> : ${moyNew.toFixed(1)} nouveaux livres par mois, soit la moyenne historique calculée sur les ${newEntriesArr.length} transitions observées (${newEntriesArr.join(" + ")}) ÷ ${newEntriesArr.length} = ${moyNew.toFixed(2)}. Comme 1 livre est élu (retiré) chaque mois, la croissance nette <strong>sans seuil</strong> est d'environ <strong>${(moyNew - 1).toFixed(1)} livres/mois</strong>. Modifiez les 4 seuils ci-dessous pour comparer leur effet sur 6 mois de projection.
+    </div>
+    <div class="cht-seuil-wrap" style="row-gap:.6rem">
+      <span>Conserver <input type="number" id="cmp-keepA" class="cht-seuil-input" style="width:56px" min="1" max="100" step="1" value="${comparePolicyParams.keepA}"> livres</span>
+      <span>Conserver <input type="number" id="cmp-keepB" class="cht-seuil-input" style="width:56px" min="1" max="100" step="1" value="${comparePolicyParams.keepB}"> livres</span>
+      <span>Éliminer <input type="number" id="cmp-percent" class="cht-seuil-input" style="width:56px" min="0" max="100" step="5" value="${comparePolicyParams.percent}"> % des moins bons scores</span>
+      <span>Score minimum <input type="number" id="cmp-score" class="cht-seuil-input" style="width:56px" min="0" max="5" step="0.1" value="${comparePolicyParams.score}"></span>
+    </div>
+    <div style="overflow-x:auto;margin-top:.9rem">
+      <div style="min-width:420px">
+        <canvas id="chart-stabilisation" height="180"></canvas>
+      </div>
+    </div>
+    <div class="cht-footnote">Le seuil "score minimum" applique le taux d'élimination réellement observé historiquement pour ce seuil (parmi ${allScores.length} note${allScores.length > 1 ? "s" : ""} archivées), pas une estimation théorique · Les traits en pointillés sont des projections, le trait plein est l'historique réel</div>`;
 
   document.getElementById("target-pool").addEventListener("change", e => {
     const v = parseInt(e.target.value, 10);
@@ -1232,10 +1258,38 @@ function renderTabStabilisation() {
     renderTabStabilisation();
   });
 
-  drawStabilisationChart(timeline, scenarios, allScores);
+  [
+    ["cmp-keepA",   "keepA",   "ltr_chantier_cmp_keepA",   parseInt],
+    ["cmp-keepB",   "keepB",   "ltr_chantier_cmp_keepB",   parseInt],
+    ["cmp-percent", "percent", "ltr_chantier_cmp_percent", parseFloat],
+    ["cmp-score",   "score",   "ltr_chantier_cmp_score",   parseFloat],
+  ].forEach(([id, key, storageKey, parseFn]) => {
+    document.getElementById(id).addEventListener("change", e => {
+      const v = parseFn(e.target.value, 10);
+      if (isNaN(v)) return;
+      comparePolicyParams[key] = v;
+      localStorage.setItem(storageKey, String(v));
+      drawStabilisationChart(timeline, moyNew, allScores);
+    });
+  });
+
+  drawStabilisationChart(timeline, moyNew, allScores);
 }
 
-async function drawStabilisationChart(timeline, scenarios, allScores) {
+// Simule 6 mois de projection pour une politique d'élimination donnée
+// (fonction qui, à partir du pool du mois précédent, retourne le nombre de
+// livres carried-over, avant ajout des nouveaux livres du mois).
+function projectPolicy(startPool, growthPerMonth, carriedOverFn, months) {
+  const arr = [startPool];
+  for (let i = 0; i < months; i++) {
+    const prevPool = arr[arr.length - 1];
+    const carried  = Math.max(0, carriedOverFn(prevPool));
+    arr.push(carried + growthPerMonth);
+  }
+  return arr;
+}
+
+async function drawStabilisationChart(timeline, growthPerMonth, allScores) {
   await loadChartJs();
   const canvas = document.getElementById("chart-stabilisation");
   if (!canvas) return;
@@ -1247,47 +1301,47 @@ async function drawStabilisationChart(timeline, scenarios, allScores) {
 
   const histLabels = timeline.map(t => formatMois(t.mois, t.annee));
   const histData   = timeline.map(t => t.poolSize);
+  const startPool  = histData[histData.length - 1];
 
-  const moyScenario = scenarios.find(s => s.key === "moy");
-  const req = requiredSettingsFor(moyScenario.value, allScores);
   const N_MONTHS = 6;
-  const noSeuil   = [histData[histData.length - 1]];
-  const avecSeuil = [histData[histData.length - 1]];
-  for (let i = 0; i < N_MONTHS; i++) {
-    noSeuil.push(noSeuil[noSeuil.length - 1] - 1 + moyScenario.value);
-    const prevPool = avecSeuil[avecSeuil.length - 1];
-    const carried  = Math.max(0, Math.min(prevPool - 1, req.keepN - 1));
-    avecSeuil.push(carried + moyScenario.value);
-  }
+  const { keepA, keepB, percent, score } = comparePolicyParams;
+  const scoreRate = eliminationRateForScore(allScores, score);
+
+  const policies = [
+    { label: "Sans seuil (statu quo)", color: "#e05555",
+      carriedOverFn: prev => prev - 1 },
+    { label: `Conserver ${keepA} livres`, color: "#4ab870",
+      carriedOverFn: prev => Math.min(prev - 1, keepA - 1) },
+    { label: `Conserver ${keepB} livres`, color: "#3f8ecb",
+      carriedOverFn: prev => Math.min(prev - 1, keepB - 1) },
+    { label: `Éliminer ${percent} % des moins bons`, color: "#9b59b6",
+      carriedOverFn: prev => prev - 1 - Math.round(prev * (percent / 100)) },
+    { label: `Score minimum ${score}`, color: "#bf8a2f",
+      carriedOverFn: prev => prev - 1 - Math.round(prev * scoreRate) },
+  ];
+
   const projLabels = [...histLabels, ...Array.from({ length: N_MONTHS }, (_, i) => `+${i + 1} mois`)];
   const pad = arr => [...Array(histLabels.length - 1).fill(null), ...arr];
+
+  const datasets = [
+    {
+      label: "Historique réel",
+      data: [...histData, ...Array(N_MONTHS).fill(null)],
+      borderColor: accentClr, backgroundColor: accentClr,
+      tension: .25, pointRadius: 4,
+    },
+    ...policies.map(p => ({
+      label: p.label,
+      data: pad(projectPolicy(startPool, growthPerMonth, p.carriedOverFn, N_MONTHS)),
+      borderColor: p.color, backgroundColor: p.color,
+      borderDash: [5, 4], tension: .25, pointRadius: 3,
+    })),
+  ];
 
   if (canvas._chart) canvas._chart.destroy();
   canvas._chart = new Chart(canvas, {
     type: "line",
-    data: {
-      labels: projLabels,
-      datasets: [
-        {
-          label: "Historique réel",
-          data: [...histData, ...Array(N_MONTHS).fill(null)],
-          borderColor: accentClr, backgroundColor: accentClr,
-          tension: .25, pointRadius: 4,
-        },
-        {
-          label: "Projection sans seuil (statu quo)",
-          data: pad(noSeuil),
-          borderColor: "#e05555", backgroundColor: "#e05555",
-          borderDash: [5, 4], tension: .25, pointRadius: 3,
-        },
-        {
-          label: `Projection avec seuil recommandé (conserver ${req.keepN})`,
-          data: pad(avecSeuil),
-          borderColor: "#4ab870", backgroundColor: "#4ab870",
-          borderDash: [5, 4], tension: .25, pointRadius: 3,
-        },
-      ],
-    },
+    data: { labels: projLabels, datasets },
     options: {
       responsive: true,
       animation: { duration: 600 },
