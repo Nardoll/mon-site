@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trop de livres ? — Club de lecture</title>
+  <link rel="icon" type="image/png" href="/lis-tes-ratures-ltr.png" />
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { margin-left: 0; }
+    .stb-header { max-width: 980px; margin: 0 auto; padding: 1.6rem 1.5rem .6rem; }
+    .stb-back { display: inline-flex; align-items: center; gap: .35rem; color: var(--muted); text-decoration: none; font-size: .85rem; font-weight: 600; }
+    .stb-back:hover { color: var(--accent); }
+    .stb-main { max-width: 980px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+  </style>
+</head>
+<body>
+  <header class="stb-header">
+    <a class="stb-back" href="votes.html">← Retour aux votes</a>
+  </header>
+
+  <main class="stb-main">
+    <div class="page-header">
+      <h1>📉 Trop de livres en compétition ?</h1>
+    </div>
+
+    <div class="cht-disclaimer">
+      <div class="cht-disclaimer-title">🔗 Page partagée — pas de décision prise ici</div>
+      <div class="cht-disclaimer-body">
+        Cette page est un outil de travail pour explorer <strong>pourquoi</strong> le nombre de livres en compétition grossit chaque mois, et <strong>quelles options</strong> existent pour le stabiliser. Elle n'est accessible que par ce lien (pas dans le menu du site) — n'hésitez pas à modifier les seuils et les paramètres pour voir ce que ça donne. Rien de ce que vous faites ici ne change le vote réel. La décision se prendra ensemble, pas sur cette page.
+      </div>
+    </div>
+
+    <div id="stb-vote-info" style="margin-bottom:1rem"></div>
+
+    <div class="cht-tabs">
+      <button class="cht-tab active" data-tab="overview">📊 Vue d'ensemble</button>
+      <button class="cht-tab" data-tab="compare">⚖️ Comparer les seuils</button>
+      <button class="cht-tab" data-tab="limit">🙋 Limiter les propositions</button>
+      <button class="cht-tab" data-tab="montecarlo">🎲 Simulation Monte-Carlo</button>
+    </div>
+
+    <div id="tab-overview" class="cht-tab-content">
+      <div class="loading">Chargement…</div>
+    </div>
+    <div id="tab-compare" class="cht-tab-content hidden">
+      <div class="loading">Chargement…</div>
+    </div>
+    <div id="tab-limit" class="cht-tab-content hidden">
+      <div class="loading">Chargement…</div>
+    </div>
+    <div id="tab-montecarlo" class="cht-tab-content hidden">
+      <div class="loading">Chargement…</div>
+    </div>
+  </main>
+
+  <script type="module" src="js/stabilisation.js"></script>
+</body>
+</html>
