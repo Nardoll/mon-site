@@ -158,17 +158,35 @@ function requiredSettingsFor(newProposals, allScores) {
   return { keepN, percentP, scoreT, impossible: targetPoolSize - newProposals + 1 < 1 };
 }
 
-function computeCurrentMonthRealElimination() {
-  if (!voteActif || voteActif.tour !== 2) return null;
-  const tour2Ids = new Set(voteActif.livre_ids || []);
-  return (voteActif.resultats_tour1 || []).filter(r => {
-    if (tour2Ids.has(r.livre_id)) return false;
+// Statistiques d'élimination réelles pour un mois donné, qu'il soit déjà
+// totalement clôturé (archivé dans `votes`) ou encore en tour 2 (tour 1
+// figé dans resultats_tour1, élu pas encore connu). Retourne null si ni
+// l'un ni l'autre (vote encore en tour 1, ou mois inexistant).
+function computeVoteEliminationStats(mois, annee) {
+  const scoreOf = r => {
     const notes = Object.values(r.notes || {}).map(Number).filter(n => !isNaN(n));
-    if (!notes.length) return false;
+    if (!notes.length) return null;
     const moy = mean(notes), med = median(notes);
-    const combined = (moy !== null && med !== null) ? (moy + med) / 2 : null;
-    return combined !== null && combined < SEUIL_ELIMINATION_REAL;
-  }).length;
+    return (moy !== null && med !== null) ? (moy + med) / 2 : null;
+  };
+
+  const v = votes.find(vv => vv.mois === mois && vv.annee === annee && (vv.resultats || []).length);
+  if (v) {
+    const scores = v.resultats.filter(r => r.livre_id !== v.livre_elu).map(scoreOf).filter(s => s !== null);
+    if (!scores.length) return null;
+    const elim = scores.filter(s => s < SEUIL_ELIMINATION_REAL).length;
+    return { total: scores.length, elim, rate: elim / scores.length, final: true };
+  }
+
+  if (voteActif && voteActif.tour === 2 && voteActif.mois === mois && voteActif.annee === annee) {
+    const tour2Ids = new Set(voteActif.livre_ids || []);
+    const scores = (voteActif.resultats_tour1 || []).filter(r => !tour2Ids.has(r.livre_id)).map(scoreOf).filter(s => s !== null);
+    if (!scores.length) return null;
+    const elim = scores.filter(s => s < SEUIL_ELIMINATION_REAL).length;
+    return { total: scores.length, elim, rate: elim / scores.length, final: false };
+  }
+
+  return null;
 }
 
 // ── Qui propose quoi (pour l'onglet "Limiter les propositions") ──
@@ -290,35 +308,21 @@ function initTabs() {
   });
 }
 
-// Taux d'élimination réel du dernier vote clôturé, au seuil réel de production
-function computeLastClosedEliminationRate() {
-  const closed = [...votes].filter(v => (v.resultats || []).length)
-    .sort((a, b) => a.annee !== b.annee ? a.annee - b.annee : a.mois - b.mois);
-  const last = closed[closed.length - 1];
-  if (!last) return null;
-  const scores = last.resultats.map(r => {
-    const notes = Object.values(r.notes || {}).map(Number).filter(n => !isNaN(n));
-    if (!notes.length) return null;
-    const moy = mean(notes), med = median(notes);
-    return (moy !== null && med !== null) ? (moy + med) / 2 : null;
-  }).filter(s => s !== null);
-  if (!scores.length) return null;
-  const elim = scores.filter(s => s < SEUIL_ELIMINATION_REAL).length;
-  return { mois: last.mois, annee: last.annee, total: scores.length, elim, rate: elim / scores.length };
-}
-
 function renderExplainer(timeline) {
   const el = document.getElementById("stb-explainer");
   if (!el) return;
   const poolTrend = timeline.map(t => t.poolSize).join(" → ");
   const currentPool = timeline[timeline.length - 1].poolSize;
-  const lastRate = computeLastClosedEliminationRate();
-  const realElim = computeCurrentMonthRealElimination();
 
   let comparisonHtml = "";
-  if (lastRate && realElim !== null) {
-    const expected = Math.round(lastRate.rate * currentPool);
-    comparisonHtml = `<li>Le mois dernier (${formatMois(lastRate.mois, lastRate.annee)}), le seuil actuel (score &lt; 3) a éliminé <strong>${lastRate.elim} livres sur ${lastRate.total}</strong> (${Math.round(lastRate.rate * 100)} %). En appliquant la même proportion ce mois-ci (${currentPool} livres), on s'attendrait à ~${expected} éliminations — <strong>en réalité, seulement ${realElim}</strong>. Le seuil ne réagit pas de façon fiable d'un mois à l'autre.</li>`;
+  if (timeline.length >= 2) {
+    const prevEntry = timeline[timeline.length - 2];
+    const curStats  = computeVoteEliminationStats(timeline[timeline.length - 1].mois, timeline[timeline.length - 1].annee);
+    const prevStats = computeVoteEliminationStats(prevEntry.mois, prevEntry.annee);
+    if (prevStats && curStats) {
+      const expected = Math.round(prevStats.rate * curStats.total);
+      comparisonHtml = `<li>Le mois précédent (${formatMois(prevEntry.mois, prevEntry.annee)}), le seuil actuel (score &lt; 3) a éliminé <strong>${prevStats.elim} livres sur ${prevStats.total}</strong> (${Math.round(prevStats.rate * 100)} %). En appliquant la même proportion au mois suivant (${curStats.total} livres), on s'attendrait à ~${expected} éliminations — <strong>en réalité, seulement ${curStats.elim}</strong>. Le seuil ne réagit pas de façon fiable d'un mois à l'autre.</li>`;
+    }
   }
 
   el.innerHTML = `
@@ -375,19 +379,20 @@ function renderOverviewTab(timeline, transitions, rawArr, growthArr, growthStats
     </tr>`;
   }).join("");
 
-  const realElim = computeCurrentMonthRealElimination();
   const lastEntry = timeline[timeline.length - 1];
+  const lastStats = computeVoteEliminationStats(lastEntry.mois, lastEntry.annee);
   const nm = nextMonth(lastEntry.mois, lastEntry.annee);
   let projRowHtml = "";
-  if (realElim !== null) {
-    const carry = Math.max(0, lastEntry.poolSize - realElim - 1);
+  if (lastStats !== null) {
+    const carry = Math.max(0, lastEntry.poolSize - lastStats.elim - 1);
     const poolLow = carry + growthLow, poolMid = carry + growthStats.mean, poolHigh = carry + growthHigh;
+    const eluSous = lastStats.final ? "élu" : "à venir";
     projRowHtml = `<tr style="opacity:.8">
       <td class="cht-td-titre">${formatMois(nm.mois, nm.annee)} <span style="color:var(--accent);font-size:.72rem">(projection)</span></td>
       <td class="cht-td-score">≈ ${Math.round(poolMid)}<div class="cht-td-sous">[${Math.round(poolLow)} – ${Math.round(poolHigh)}]</div></td>
       <td class="cht-td-score">≈ ${growthStats.mean.toFixed(1)}<div class="cht-td-sous">± ${growthStats.stdev.toFixed(1)}</div></td>
-      <td class="cht-td-score">${realElim}<div class="cht-td-sous">réel (tour 1 clos)</div></td>
-      <td class="cht-td-score">1<div class="cht-td-sous">à venir</div></td>
+      <td class="cht-td-score">${lastStats.elim}<div class="cht-td-sous">réel${lastStats.final ? "" : " (tour 1 clos)"}</div></td>
+      <td class="cht-td-score">1<div class="cht-td-sous">${eluSous}</div></td>
     </tr>`;
   }
 
@@ -443,7 +448,7 @@ function renderOverviewTab(timeline, transitions, rawArr, growthArr, growthStats
         <tbody>${histRows}${projRowHtml}</tbody>
       </table>
     </div>
-    <div class="cht-footnote">"Nouveaux" = livres présents dans ce vote mais absents du précédent · "Éliminés" = livres du vote précédent qui ne sont ni revenus ni élus · Basé sur ${timeline.length} vote${timeline.length > 1 ? "s" : ""} (${formatMois(timeline[0].mois, timeline[0].annee)} → ${formatMois(lastEntry.mois, lastEntry.annee)})${realElim === null ? " · Projection indisponible tant que le tour 1 en cours n'est pas clos" : ""}</div>
+    <div class="cht-footnote">"Nouveaux" = livres présents dans ce vote mais absents du précédent · "Éliminés" = livres du vote précédent qui ne sont ni revenus ni élus · Basé sur ${timeline.length} vote${timeline.length > 1 ? "s" : ""} (${formatMois(timeline[0].mois, timeline[0].annee)} → ${formatMois(lastEntry.mois, lastEntry.annee)})${lastStats === null ? " · Projection indisponible tant que le tour 1 en cours n'est pas clos" : ""}</div>
 
     <div class="cht-section-label" style="margin-top:1.8rem">Réglage nécessaire selon le scénario de croissance</div>
     <div class="cht-expl">
