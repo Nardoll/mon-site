@@ -22,6 +22,22 @@ export function formatMois(mois, annee) {
   return `${MOIS_NOMS[mois - 1]} ${annee}`;
 }
 
+// "de juillet" mais "d'août", "d'avril", "d'octobre" (élision devant voyelle)
+export function deMois(nom) { return /^[aeiouàâéèêîôû]/i.test(nom) ? `d'${nom}` : `de ${nom}`; }
+
+// Prochain scrutin de choix du livre du mois : a lieu le 25 (ce mois-ci si on
+// n'y est pas encore arrivé, sinon le mois suivant) et élit le livre du mois
+// D'APRÈS ce scrutin. Utilisé partout où l'app affiche "prochain vote" quand
+// aucun scrutin n'est actif (vote.js, votes.js, accueil.js) — source unique
+// pour ce calcul de date.
+export function prochainScrutin(today = new Date()) {
+  const scrutin = today.getDate() < 25
+    ? new Date(today.getFullYear(), today.getMonth(), 25)
+    : new Date(today.getFullYear(), today.getMonth() + 1, 25);
+  const cible = new Date(scrutin.getFullYear(), scrutin.getMonth() + 1, 1);
+  return { scrutin, cible };
+}
+
 export function formatDate(ts) {
   if (!ts) return "—";
   const d = ts.toDate ? ts.toDate() : new Date(ts);

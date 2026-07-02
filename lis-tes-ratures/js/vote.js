@@ -1,6 +1,6 @@
 import { requireAuth } from "./auth.js";
 import { getMembres, getVoteActif, getLivres, soumettreVote, getVotes, getReunions, lancerVote, cloturerVoteActif, lancerTour2 } from "./db.js";
-import { formatMois, computeInactivite, VOTE_BLANC } from "./utils.js";
+import { formatMois, computeInactivite, VOTE_BLANC, deMois, prochainScrutin } from "./utils.js";
 
 await requireAuth();
 
@@ -23,9 +23,6 @@ let closeTimer = null;
 function esc(s) { return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function ini(nom) { return (nom || "?").slice(0, 2); }
 function avaColor(i) { return PALETTE[i % PALETTE.length]; }
-
-// "de juillet" mais "d'août", "d'avril", "d'octobre" (élision devant voyelle)
-function deMois(nom) { return /^[aeiouàâéèêîôû]/i.test(nom) ? `d'${nom}` : `de ${nom}`; }
 
 function median(arr) {
   if (!arr.length) return null;
@@ -401,10 +398,7 @@ function render() {
 // arrivé, sinon le mois suivant) et élit le livre du mois d'APRÈS ce scrutin.
 function renderUpcoming(root) {
   const today = new Date();
-  const scrutin = today.getDate() < 25
-    ? new Date(today.getFullYear(), today.getMonth(), 25)
-    : new Date(today.getFullYear(), today.getMonth() + 1, 25);
-  const cible = new Date(scrutin.getFullYear(), scrutin.getMonth() + 1, 1);
+  const { scrutin, cible } = prochainScrutin(today);
   const nomScrutin = MOIS_FR[scrutin.getMonth()];
   const nomCible   = MOIS_FR[cible.getMonth()];
   const deCible    = deMois(nomCible);
@@ -436,7 +430,11 @@ function renderUpcoming(root) {
 
     <div class="vsec-title"><span class="vsec-num">2</span>Aperçu du bulletin</div>
     <div class="preview-note">${IC.cal}<span>Le vote s'ouvrira <b>automatiquement le 25 ${nomScrutin}</b> pour élire le livre ${deCible} — 5 jours de marge pour se le procurer. Voici à quoi ressemblera le bulletin — la notation sera alors active et vous pourrez vous identifier.</span></div>
-    <div class="rules">Notez chaque livre de <b>1 à 5</b> selon votre envie de le lire, ou votez blanc pour laisser les autres décider. Le score d'un livre = <span class="key">(moyenne + médiane) ÷ 2</span>, ce qui atténue les notes extrêmes. Le plus haut score est <b>élu</b> ; tout score <span class="key">&lt; 3</span> élimine le livre.</div>
+    <div class="rules">Notez chaque livre de <b>1 à 5</b> selon votre envie de le lire. Le score d'un livre = <span class="key">(moyenne + médiane) ÷ 2</span>, ce qui atténue les notes extrêmes. Le plus haut score est <b>élu</b> ; tout score <span class="key">&lt; 3</span> élimine le livre.</div>
+    <div class="infos-bar blanc-bar">
+      <label class="toggle-switch" style="margin:0"><input type="checkbox" disabled></label>
+      <span><b>Vote blanc</b> — chacun pourra aussi choisir de ne noter aucun livre et laisser les autres décider. Ça compte comme une participation.</span>
+    </div>
     <div class="grade-scale"><span><b>1</b> — envie minimale</span><span><b>5</b> — envie maximale</span></div>
     ${buildVoteTable(proposalIds, true)}`;
 
