@@ -311,9 +311,13 @@ function renderMatchCard(match) {
   }
 
   const isLive = match.status === 'live';
+  const needsPick = !isFinished && !isLocked && !pick
+    && match.team1 && match.team1 !== 'TBD'
+    && match.team2 && match.team2 !== 'TBD';
   return `
     <div class="match-card${pick ? ' has-pick' : ''}${isLocked ? ' is-locked' : ''}${isFinished ? ' is-finished' : ''}${isLive ? ' is-live' : ''}"
          id="mc-${match.id}" data-match-id="${match.id}" data-locked="${isLocked ? '1' : ''}">
+      ${needsPick ? '<span class="pick-needed-dot" title="Tu n\'as pas encore pronostiqué ce match"></span>' : ''}
       <div class="match-main">
         <div class="match-team">
           ${teamLogo(match.team1, 40)}
