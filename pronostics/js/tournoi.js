@@ -311,9 +311,13 @@ function renderMatchCard(match) {
   }
 
   const isLive = match.status === 'live';
+  const needsPick = !isFinished && !isLocked && !pick
+    && match.team1 && match.team1 !== 'TBD'
+    && match.team2 && match.team2 !== 'TBD';
   return `
     <div class="match-card${pick ? ' has-pick' : ''}${isLocked ? ' is-locked' : ''}${isFinished ? ' is-finished' : ''}${isLive ? ' is-live' : ''}"
          id="mc-${match.id}" data-match-id="${match.id}" data-locked="${isLocked ? '1' : ''}">
+      ${needsPick ? '<span class="pick-needed-dot" title="Tu n\'as pas encore pronostiqué ce match"></span>' : ''}
       <div class="match-main">
         <div class="match-team">
           ${teamLogo(match.team1, 40)}
@@ -548,9 +552,11 @@ async function openPicksDrawer(match) {
       const team1    = f.team1.value || 'TBD';
       const team2    = f.team2.value || 'TBD';
       const status   = f.status.value;
-      const winner   = f.winner.value || null;
       const score1   = f.score1.value !== '' ? parseInt(f.score1.value) : null;
       const score2   = f.score2.value !== '' ? parseInt(f.score2.value) : null;
+      let winner     = f.winner.value || null;
+      if (!winner && score1 !== null && score2 !== null && score1 !== score2)
+        winner = score1 > score2 ? team1 : team2;
       // Heure saisie en heure Paris → convertir en UTC pour stockage
       const dtRaw    = document.getElementById('bkap-dt')?.value;
       const date_utc = dtRaw ? parisToUtc(dtRaw) : (match.date_utc || null);
@@ -1307,13 +1313,17 @@ function renderAdmin() {
       const id = form.dataset.matchId;
       const team1      = form.querySelector('[name=team1]').value;
       const team2      = form.querySelector('[name=team2]').value;
-      const winner     = form.querySelector('[name=winner]').value;
-      const score1     = form.querySelector('[name=score1]').value;
-      const score2     = form.querySelector('[name=score2]').value;
+      const score1raw  = form.querySelector('[name=score1]').value;
+      const score2raw  = form.querySelector('[name=score2]').value;
       const status     = form.querySelector('[name=status]').value;
       const dtRaw      = form.querySelector('.adm-dt')?.value;
       const local      = matches.find(m => m.id === id);
       const date_utc   = dtRaw ? parisToUtc(dtRaw) : (local?.date_utc || null);
+      const score1     = score1raw !== '' ? parseInt(score1raw) : null;
+      const score2     = score2raw !== '' ? parseInt(score2raw) : null;
+      let winner       = form.querySelector('[name=winner]').value || null;
+      if (!winner && score1 !== null && score2 !== null && score1 !== score2)
+        winner = score1 > score2 ? team1 : team2;
 
       const btn = form.querySelector('.admin-save-btn');
       btn.disabled = true;
@@ -1323,9 +1333,9 @@ function renderAdmin() {
         const matchData = {
           team1: team1 || 'TBD',
           team2: team2 || 'TBD',
-          winner: winner || null,
-          score1: score1 !== '' ? parseInt(score1) : null,
-          score2: score2 !== '' ? parseInt(score2) : null,
+          winner,
+          score1,
+          score2,
           status,
           date_utc
         };

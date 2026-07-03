@@ -579,8 +579,27 @@ body {
 .day-header.past { opacity: .6; }
 .day-header.past .day-dot { background: var(--muted2); }
 
+/* ── Voyant "pick manquant" ──────────────── */
+.pick-needed-dot {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--loss);
+  animation: blink-pick 1.2s ease-in-out infinite;
+  z-index: 2;
+}
+@keyframes blink-pick {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--loss); }
+  50%       { opacity: .25; box-shadow: none; }
+}
+
 /* ── MATCH CARD (calendrier) ─────────────── */
 .match-card {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   clip-path: var(--clip-card);

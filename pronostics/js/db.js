@@ -315,7 +315,8 @@ export async function getLeaderboard(tournamentId) {
   const snap = await getDocs(query(collection(db, 'prono_picks'), ...constraints));
 
   const pts = {}, correct = {}, perfect = {}, delta24 = {};
-  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  const todayParis = new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' });
+  const cutoff = new Date(todayParis + 'T00:00:00+02:00').getTime();
   snap.docs.forEach(d => {
     const p = d.data();
     if (!p.scored) return;
