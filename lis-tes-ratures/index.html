@@ -315,6 +315,21 @@
     .me-head .me-name { font-family:var(--serif); font-size:1.15rem; font-weight:600; color:var(--text); }
     .me-head .me-sub { font-size:.78rem; color:var(--muted); }
 
+    /* Stepper +1/-1 sur un champ numérique (spinner natif désactivé site-wide) */
+    .num-stepper { position:relative; }
+    .num-stepper input { padding-right:1.9rem; }
+    .num-step-btns { position:absolute; top:1px; right:1px; bottom:1px; width:1.6rem; display:flex; flex-direction:column; }
+    .num-step-btns button {
+      flex:1; min-height:0; border:none; background:none; color:var(--muted); cursor:pointer;
+      display:flex; align-items:center; justify-content:center; padding:0; transition:color .15s, background-color .15s;
+    }
+    .num-step-btns button:hover { color:var(--accent); background:rgba(181,87,45,.1); }
+    .num-step-btns button:first-child { border-radius:0 5px 0 0; }
+    .num-step-btns button:last-child { border-radius:0 0 5px 0; border-top:1px solid var(--border); }
+    .num-step-btns .tri { width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; }
+    .num-step-btns button.up .tri { border-bottom:5px solid currentColor; }
+    .num-step-btns button.down .tri { border-top:5px solid currentColor; }
+
     @media (max-width: 820px) {
       .lm { grid-template-columns: 1fr; }
       .lm-hero-cover { padding: 1.6rem; }
@@ -458,11 +473,27 @@
       <!-- Mode hiérarchique -->
       <div class="form-row hidden" id="me-pos-hier">
         <div class="form-group"><label>Partie</label><input type="number" id="me-partie" min="1" placeholder="ex : 2" /></div>
-        <div class="form-group"><label>Chapitre</label><input type="number" id="me-chap" min="1" placeholder="ex : 7" /></div>
+        <div class="form-group"><label>Chapitre</label>
+          <div class="num-stepper">
+            <input type="number" id="me-chap" min="0" placeholder="ex : 7" />
+            <div class="num-step-btns">
+              <button type="button" class="up" data-target="me-chap" aria-label="Chapitre +1"><span class="tri"></span></button>
+              <button type="button" class="down" data-target="me-chap" aria-label="Chapitre -1"><span class="tri"></span></button>
+            </div>
+          </div>
+        </div>
       </div>
       <!-- Mode simple -->
       <div class="form-row hidden" id="me-pos-simple">
-        <div class="form-group"><label id="me-page-label">Page actuelle</label><input type="number" id="me-page" min="0" placeholder="ex : 120" /></div>
+        <div class="form-group"><label id="me-page-label">Page actuelle</label>
+          <div class="num-stepper">
+            <input type="number" id="me-page" min="0" placeholder="ex : 120" />
+            <div class="num-step-btns">
+              <button type="button" class="up" data-target="me-page" aria-label="+1"><span class="tri"></span></button>
+              <button type="button" class="down" data-target="me-page" aria-label="-1"><span class="tri"></span></button>
+            </div>
+          </div>
+        </div>
         <div class="form-group" id="me-total-group"><label id="me-total-label">Total</label><input type="number" id="me-total" min="1" placeholder="ex : 300" /></div>
       </div>
       <div id="me-hint" style="font-size:.76rem;color:var(--accent);margin:-.3rem 0 .3rem;min-height:1rem"></div>
