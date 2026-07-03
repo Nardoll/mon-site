@@ -509,6 +509,20 @@ function meHint() {
 document.getElementById('me-statut').addEventListener('change', meToggle);
 document.getElementById('me-partie').addEventListener('input', meHint);
 document.getElementById('me-chap').addEventListener('input', meHint);
+
+// Boutons +1/-1 sur les champs numériques du suivi (le spinner natif est
+// désactivé site-wide pour un rendu cohérent, voir input[type="number"] dans style.css).
+document.querySelectorAll('.num-step-btns button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const input = document.getElementById(btn.dataset.target);
+    if (!input) return;
+    const step = btn.classList.contains('up') ? 1 : -1;
+    const min = input.min !== '' ? Number(input.min) : -Infinity;
+    const next = (Number(input.value) || 0) + step;
+    input.value = Math.max(min, next);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+});
 document.getElementById('me-close').addEventListener('click', () => document.getElementById('me-overlay').classList.add('hidden'));
 document.getElementById('me-cancel').addEventListener('click', () => document.getElementById('me-overlay').classList.add('hidden'));
 document.getElementById('me-overlay').addEventListener('click', e => { if (e.target.id === 'me-overlay') document.getElementById('me-overlay').classList.add('hidden'); });

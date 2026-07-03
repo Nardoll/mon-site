@@ -1357,6 +1357,28 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 
 ## Historique des modifications
 
+### 2026-07-02 (suite 2)
+**Lis tes ratures — Calendrier de vote au 25, vote blanc, statut Inactif, et suivi de lecture**
+
+Session de petits chantiers (patchnote demandé par Tom en fin de session).
+
+- **Bilan de vote illisible** : `lis-tes-ratures/votes.html` — le tableau d'émargement (`buildTallyTable` dans `votes.js`) débordait/écrasait le texte avec beaucoup de livres en compétition. Cause racine : `table-layout: auto` laisse le navigateur ignorer la largeur de colonne demandée dès que le contenu total dépasse le conteneur visible. Passage en `table-layout: fixed` avec largeurs explicites sur toutes les colonnes (votant 140px, livre 150px, moyenne 68px) — les colonnes gardent leur largeur, c'est `.tally-wrap { overflow-x: auto }` qui prend le relais au-delà.
+- **Statut "Inactif" des membres** (nouveau) : un membre devient inactif s'il n'a participé à aucun des 3 derniers votes et n'a, pendant cette période, ni proposé de livre ni participé à une réunion. Calculé à la lecture (`computeInactivite()` + `aParticipeAuVote()` dans `utils.js`, aucun champ stocké) — redevient actif automatiquement dès qu'il revote, propose un livre ou va en réunion.
+  - `lis-tes-ratures/js/vote.js` : `checkAllVoted()` ignore les membres inactifs pour la clôture anticipée du vote (100% de participation atteint même si l'inactif n'a pas voté) ; le bilan d'émargement les distingue visuellement (badge grisé "inactif").
+  - `lis-tes-ratures/js/membres.js` : badge "Inactif depuis le …" sur la fiche du membre **et** sur sa carte de lecteur dans la grille (texte "Inactif" sous la date d'inscription + carte légèrement grisée `grayscale`/`opacity`, sans emoji).
+- **Cachet de note des réunions** : `lis-tes-ratures/js/reunions.js` + `reunions.html` — le sceau rond (`.reg-seal`) affichait la note et le libellé "note du club" empilés, décentrant visuellement le chiffre. Libellé retiré, seule la note "X.X/10" reste, centrée (vérifié desktop + mobile).
+- **Calendrier de vote déplacé au 25 du mois** : le scrutin de choix du livre du mois a désormais lieu le **25 du mois pour élire le livre du mois SUIVANT** (ex : vote le 25 juillet → livre d'août), laissant 5 jours de marge pour se procurer le livre élu. Le 2ᵉ tour (égalité) a lieu le 26 au lieu du 2.
+  - `lis-tes-ratures/js/vote.js` : `autoLancerSiNecessaire()` et `closeExpiredVote()` mis à jour (⚠️ fonctions historiquement marquées NE PAS MODIFIER — changement délibéré, validé avec Tom).
+  - `lis-tes-ratures/js/utils.js` : nouveau helper partagé `prochainScrutin()` (+ `deMois()` pour l'élision "de juillet"/"d'août") — source unique du calcul de date, réutilisé dans `vote.js`, `votes.js` (carte "prochain scrutin") et `accueil.js` (carte vote + délai de lecture de la page d'accueil), qui avaient chacun leur propre calcul jamais mis à jour et continuaient d'annoncer une ouverture "le 1er".
+- **Vote blanc** (nouveau) : possibilité de voter blanc au 1er et au 2ᵉ tour ("je laisse les autres décider"). Compte comme une participation (ne bloque pas la clôture anticipée, entre dans le calcul du statut Inactif) et apparaît distinctement dans le bilan d'émargement (en direct et archivé), les statistiques de participation et l'historique de vote sur la fiche membre.
+  - Persisté sur le vote archivé via un nouveau champ `blancs` (+ `blancs_tour1` porté à travers le 2ᵉ tour dans `votes_actifs`) — `lis-tes-ratures/js/db.js` (`addVote`, `lancerTour2`).
+  - `lis-tes-ratures/js/votes.js` : tableau d'émargement archivé (`buildTallyTable`) et graphique du 2ᵉ tour (`buildTour2`) adaptés pour afficher les votes blancs.
+- **Suivi de lecture (page d'accueil)** :
+  - `lis-tes-ratures/js/accueil.js` : la modale d'édition du suivi d'un membre affichait toujours "Page actuelle" même quand le livre est configuré en mode "chapitres" — labels `#me-page-label`/`#me-total-label` désormais adaptés à l'unité configurée sur le livre (`progression_unite`).
+  - Impossible de marquer "chapitre/page 0" (début de lecture) — plusieurs vérifications traitaient `0` comme une valeur vide (faux en JS) : `partie && chapitre` en mode hiérarchique, `effectivePa > 0` avant l'enregistrement du point de progression, et l'affichage (`barState`, `pctFromStatut`) dans `accueil.js` + `bibliotheque.js`. Toutes ces vérifications passent désormais en `!= null` / `>= 0`.
+  - Le total (chapitres/pages) était redemandé à chaque membre alors qu'il est déjà configuré une fois pour tout le monde au niveau du livre — `hasBookTotal()` masque maintenant ce second champ et force sa valeur automatiquement quand le livre en a un configuré (corrige au passage un bug où une ancienne valeur à `0` stockée pour le membre empêchait le repli sur le total du livre, `??` ne retombant pas sur une valeur par défaut quand `0` est déjà présent).
+  - `lis-tes-ratures/js/progression-chart.js` : le graphe "Évolution des lectures" bouclait sur lui-même après une rupture de pente (palier plat suivi d'un saut) — l'interpolation Catmull-Rom bridée en boîte a été remplacée par un **Hermite cubique monotone** (Fritsch-Carlson), qui garantit mathématiquement qu'aucun segment ne dépasse la plage y de ses deux points (donc plus de boucle), tout en restant courbe. Le point de départ synthétique (quand le membre n'a pas explicitement marqué "0") n'est plus figé au 1er jour du mois : il est estimé par régression linéaire sur les 6 premiers points réels, extrapolée jusqu'à 0% (repli sur le 1er jour seulement s'il n'y a qu'un seul point réel).
+
 ### 2026-07-02
 **Lis tes ratures — Vote mobile, rappel de notes, et outil de stabilisation du nombre de livres**
 
