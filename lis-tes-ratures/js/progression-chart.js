@@ -21,22 +21,75 @@ function toDate(ts) {
   return ts.toDate ? ts.toDate() : new Date(ts);
 }
 
+// Tangentes d'un Hermite cubique "monotone" (Fritsch–Carlson). Contrairement à
+// une Catmull-Rom classique, la courbe ne peut JAMAIS dépasser (en y) la plage
+// des deux points qu'elle relie sur un segment donné — donc pas de boucle ni
+// de demi-tour après une rupture de pente, tout en restant courbe. Fonctionne
+// même quand les points sont très inégalement espacés (paliers + sauts).
+function monotoneTangents(pts) {
+  const n = pts.length;
+  const d = [];
+  for (let i = 0; i < n - 1; i++) {
+    const dx = pts[i + 1].x - pts[i].x;
+    d.push(dx !== 0 ? (pts[i + 1].y - pts[i].y) / dx : 0);
+  }
+  const m = new Array(n);
+  m[0] = d[0] ?? 0;
+  m[n - 1] = d[n - 2] ?? 0;
+  for (let i = 1; i < n - 1; i++) {
+    m[i] = (d[i - 1] === 0 || d[i] === 0 || (d[i - 1] < 0) !== (d[i] < 0)) ? 0 : (d[i - 1] + d[i]) / 2;
+  }
+  for (let i = 0; i < n - 1; i++) {
+    if (d[i] === 0) { m[i] = 0; m[i + 1] = 0; continue; }
+    const a = m[i] / d[i], b = m[i + 1] / d[i];
+    if (a < 0) m[i] = 0;
+    if (b < 0) m[i + 1] = 0;
+    const s = a * a + b * b;
+    if (s > 9) {
+      const tau = 3 / Math.sqrt(s);
+      m[i] = tau * a * d[i];
+      m[i + 1] = tau * b * d[i];
+    }
+  }
+  return m;
+}
+
 function smoothPath(pts) {
   if (pts.length < 2) return '';
-  const clamp = (v, a, b) => { const lo = Math.min(a, b), hi = Math.max(a, b); return v < lo ? lo : v > hi ? hi : v; };
+  if (pts.length === 2) return `M ${pts[0].x} ${pts[0].y} L ${pts[1].x} ${pts[1].y}`;
+  const m = monotoneTangents(pts);
   let d = `M ${pts[0].x} ${pts[0].y}`;
   for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
-    let c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
-    let c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
-    // Anti-overshoot : on garde les points de contrôle à l'intérieur de la
-    // boîte du segment [p1, p2]. Sans ça, un point isolé après une longue ligne
-    // droite (espacement très inégal) crée une tangente énorme → grande boucle.
-    c1x = clamp(c1x, p1.x, p2.x); c1y = clamp(c1y, p1.y, p2.y);
-    c2x = clamp(c2x, p1.x, p2.x); c2y = clamp(c2y, p1.y, p2.y);
-    d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+    const p0 = pts[i], p1 = pts[i + 1], dx = p1.x - p0.x;
+    const c1x = p0.x + dx / 3, c1y = p0.y + m[i] * dx / 3;
+    const c2x = p1.x - dx / 3, c2y = p1.y - m[i + 1] * dx / 3;
+    d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
   }
   return d;
+}
+
+// Estime la date (frac, 0-1 sur le mois) du "point 0 %" quand le membre n'a
+// pas explicitement marqué son départ : régression linéaire sur les 6 premiers
+// points réels, extrapolée jusqu'à l'ordonnée 0 — la courbe part alors d'une
+// date cohérente avec sa tendance de lecture plutôt que d'être figée au 1er
+// jour du mois. Repli sur le 1er jour (frac 0) s'il n'y a qu'un seul point réel
+// (rien à extrapoler), ou si la tendance ne le permet pas (pente nulle/négative).
+function estimateStartFrac(mapped) {
+  const sample = mapped.slice(0, 6);
+  if (sample.length < 2) return 0;
+  const n = sample.length;
+  const sumX = sample.reduce((s, p) => s + p.frac, 0);
+  const sumY = sample.reduce((s, p) => s + p.pct, 0);
+  const sumXY = sample.reduce((s, p) => s + p.frac * p.pct, 0);
+  const sumXX = sample.reduce((s, p) => s + p.frac * p.frac, 0);
+  const denom = n * sumXX - sumX * sumX;
+  if (denom === 0) return 0;
+  const slope = (n * sumXY - sumX * sumY) / denom;
+  if (slope <= 0) return 0;
+  const intercept = (sumY - slope * sumX) / n;
+  const fracZero = -intercept / slope;
+  // Doit rester dans le mois et avant le premier point réel.
+  return Math.min(Math.max(fracZero, 0), sample[0].frac);
 }
 
 // Construit les séries (une par membre) à partir des points de progression_lecture,
@@ -66,10 +119,14 @@ export function buildSeries(points, membres, monthStart) {
       pts.sort((a, b) => a.ts - b.ts);
       // Points réels (real:true) = vraies entrées Firestore, survolables. Si le
       // membre a explicitement marqué son point de départ (page/chapitre 0), la
-      // courbe part de cette date réelle plutôt que du 1er jour du mois — sinon
-      // un point de départ synthétique (jour 1 à 0 %, non survolable) comble le vide.
+      // courbe part de cette date réelle. Sinon, un point de départ synthétique
+      // (non survolable) comble le vide — sa date est estimée à partir de la
+      // tendance des tout premiers points réels plutôt que d'être figée au 1er
+      // jour du mois (cf estimateStartFrac).
       const mapped = pts.map(p => ({ frac: Math.min(1, (p.ts - monthStart) / totalMs), pct: p.pct, real: true, page: p.page, total: p.total, dateMs: p.ts.getTime() }));
-      const series = pts[0].page === 0 ? mapped : [{ frac: 0, pct: 0, real: false }, ...mapped];
+      const series = pts[0].page === 0
+        ? mapped
+        : [{ frac: estimateStartFrac(mapped), pct: 0, real: false }, ...mapped];
       return { id, nom: nom(id), color: memberColor(membres, id), points: series };
     });
 }
