@@ -291,15 +291,17 @@ export async function getPlayerBreakdown(profileId) {
     collection(db, 'prono_picks'),
     where('profile_id', '==', profileId)
   ));
+  // Mêmes catégories disjointes que getLeaderboard (exact / bon / mauvais)
   const byTournament = {};
   snap.docs.forEach(d => {
     const p = d.data();
     if (!p.scored) return;
     const tid = p.tournament_id;
-    if (!byTournament[tid]) byTournament[tid] = { points: 0, correct: 0, perfect: 0 };
+    if (!byTournament[tid]) byTournament[tid] = { points: 0, correct: 0, perfect: 0, wrong: 0 };
     byTournament[tid].points += p.points || 0;
-    if ((p.points || 0) >= 3) byTournament[tid].correct++;
-    if ((p.points || 0) >= 5) byTournament[tid].perfect++;
+    if ((p.points || 0) >= 5)      byTournament[tid].perfect++;
+    else if ((p.points || 0) >= 3) byTournament[tid].correct++;
+    else                           byTournament[tid].wrong++;
   });
   return byTournament;
 }
@@ -322,7 +324,10 @@ export async function getLeaderboard(tournamentId) {
 
   const snap = await getDocs(query(collection(db, 'prono_picks'), ...constraints));
 
-  const pts = {}, correct = {}, perfect = {}, delta24 = {};
+  // Catégories DISJOINTES (mêmes couleurs que le bracket) :
+  // perfect = score exact (5 pts, vert) · correct = bon gagnant sans le
+  // score (3 pts, bleu) · wrong = mauvais gagnant (0 pt, rouge).
+  const pts = {}, correct = {}, perfect = {}, wrong = {}, delta24 = {};
   const todayParis = new Date().toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' });
   const cutoff = new Date(todayParis + 'T00:00:00+02:00').getTime();
   snap.docs.forEach(d => {
@@ -330,8 +335,9 @@ export async function getLeaderboard(tournamentId) {
     if (!p.scored) return;
     const pid = p.profile_id;
     pts[pid]     = (pts[pid] || 0) + (p.points || 0);
-    if ((p.points || 0) >= 3) correct[pid] = (correct[pid] || 0) + 1;
-    if ((p.points || 0) >= 5) perfect[pid] = (perfect[pid] || 0) + 1;
+    if ((p.points || 0) >= 5)      perfect[pid] = (perfect[pid] || 0) + 1;
+    else if ((p.points || 0) >= 3) correct[pid] = (correct[pid] || 0) + 1;
+    else                           wrong[pid]   = (wrong[pid]   || 0) + 1;
     const scoredAt = p.scored_at?.toMillis?.() || 0;
     if (scoredAt > cutoff) delta24[pid] = (delta24[pid] || 0) + (p.points || 0);
   });
@@ -344,7 +350,14 @@ export async function getLeaderboard(tournamentId) {
       points: pts[p.id] || 0,
       correct: correct[p.id] || 0,
       perfect: perfect[p.id] || 0,
+      wrong: wrong[p.id] || 0,
       delta24: delta24[p.id] || 0
     }))
-    .sort((a, b) => b.points - a.points || b.correct - a.correct || b.perfect - a.perfect);
+    .sort((a, b) =>
+      b.points - a.points
+      // Même départage qu'avant le passage en catégories disjointes :
+      // total de bons gagnants (score exact compris), puis scores exacts
+      || (b.correct + b.perfect) - (a.correct + a.perfect)
+      || b.perfect - a.perfect
+    );
 }

@@ -1370,3 +1370,40 @@ body {
   .evo-canvas-wrap { height: 280px; }
   .evo-card { padding: .9rem .8rem 1rem; }
 }
+
+/* ── Colonnes de stats du classement (bons / exacts / mauvais) ───── */
+.c-blue  { color: #5b9cf6; }
+.c-green { color: var(--win); }
+.c-red   { color: var(--loss); }
+.lb-stats {
+  display: flex;
+  gap: 1.1rem;
+  flex-shrink: 0;
+}
+.lb-stat { text-align: center; min-width: 3rem; }
+.lb-stat-val {
+  font: 800 .95rem 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+.lb-stat-label { font: 600 .62rem 'Rajdhani', sans-serif; color: var(--muted2); }
+@media (max-width: 640px) {
+  .lb-row { padding: 10px 10px; gap: .5rem; }
+  .lb-stats { gap: .5rem; }
+  .lb-stat { min-width: 2.1rem; }
+  .lb-stat-val { font-size: .82rem; }
+  .lb-stat-label { font-size: .55rem; }
+  .lb-delta { min-width: 2rem; margin-left: .2rem; }
+}
+.lb-stat-pts { font: 600 .54rem 'Rajdhani', sans-serif; color: var(--muted3); letter-spacing: .03em; }
+@media (max-width: 640px) {
+  .lb-stat-pts { font-size: .5rem; }
+}
+/* Séparation nette entre les 3 colonnes de stats et le total */
+.lb-row .lb-pts-wrap {
+  border-left: 1px solid var(--border3);
+  padding-left: 1.3rem;
+  margin-left: .5rem;
+}
+@media (max-width: 640px) {
+  .lb-row .lb-pts-wrap { padding-left: .6rem; margin-left: .15rem; }
+}

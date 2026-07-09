@@ -865,6 +865,7 @@ Pronostics e-sport **League of Legends** entre amis (MSI, Worlds, grands tournoi
 - **`tournoi.html?id=…`** (`tournoi.js`) — page d'un tournoi : **calendrier** (cartes matchs, voyant rouge clignotant sur les matchs sans pronostic), **bracket** (double score : résultat officiel en gris + pronostic coloré), **classement du tournoi**, **évolution** (voir ci-dessous). Clic sur un match terminé/live → **drawer** des picks de tous les joueurs (+ section admin en bas si `?admin`). Horaires affichés en **heure de Paris** (helpers `parisToUtc` / `utcToParisLocal`, DST-correct).
   - **Onglet Évolution** (`renderEvolution()`) : graphique en courbes des **points cumulés par joueur au fil des jours de match** (Chart.js 4.4.3 chargé en lazy au premier clic sur l'onglet). Les points sont datés au **jour du match** (heure de Paris, `matchDayKey`), pas à la date du scoring. Une courbe par joueur ayant ≥ 1 pick scoré, couleur = `avatarColor(nom)` (cohérente avec l'avatar), joueur courant en trait épais, légende et tooltip triés par total décroissant, point de départ commun « Début » à 0. Données : `getAllPicksByTournament()` (db.js) + les `matches` déjà chargés.
 - **`classement.html`** (`classement.js`) — classement général tous tournois. Barème : **5 pts** score exact · **3 pts** bon gagnant · **0 pt** mauvais gagnant. Delta affiché = points gagnés **aujourd'hui** (depuis minuit Paris). Clic sur un joueur → détail des points par tournoi.
+- **Colonnes des classements** (général **et** onglet tournoi) : chaque ligne affiche 3 colonnes chiffrées **disjointes** — **bons** (bon gagnant sans le score, bleu `#5b9cf6`, 3 pts), **exacts** (score exact, vert `--win`, 5 pts), **mauvais** (rouge `--loss`, 0 pt) — avec le barème rappelé en tout petit sous chaque colonne, puis le **total** séparé par un filet vertical. La somme des 3 = nombre de pronostics scorés. Départage du classement inchangé : points, puis total de bons gagnants (`correct + perfect`), puis scores exacts.
 - **`seed.html`** / **`seed-matches.html`** — outils ponctuels d'initialisation des tournois/matchs (admin, lien direct uniquement).
 
 ### Données / API
@@ -1286,6 +1287,13 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 ## Historique des modifications
 
 > **📜 L'historique complet des sessions antérieures au 2026-07-09 est dans [`HISTORIQUE.md`](HISTORIQUE.md)** (déplacé pour alléger ce fichier). Continuer à documenter chaque session ici ; quand cette section devient longue, déplacer les entrées les plus anciennes vers `HISTORIQUE.md`.
+
+### 2026-07-09 (suite 3)
+**Pronostics — Colonnes bons / exacts / mauvais dans les deux classements**
+
+- `pronostics/js/db.js` : `getLeaderboard` et `getPlayerBreakdown` passent en catégories **disjointes** — `perfect` (5 pts), `correct` (3 pts, bon gagnant sans le score exact), nouveau champ `wrong` (0 pt). ⚠️ Le **départage** du classement reste identique à avant (points, puis `correct + perfect` = total de bons gagnants, puis `perfect`) — un premier essai avec `perfect` en premier critère inversait Tom/Zozo à égalité de points, corrigé.
+- `pronostics/js/classement.js` + `tournoi.js` : le petit texte "N bons · N parfaits" sous les noms est remplacé par **3 colonnes chiffrées** — bons (bleu `#5b9cf6`), exacts (vert), mauvais (rouge), mêmes couleurs que la légende du bracket — avec le barème (3/5/0 pts) rappelé en tout petit sous chaque colonne. Colonne "total" (ex-"pts") séparée par un filet vertical. Modal détail joueur (classement général) alignée sur les mêmes catégories colorées.
+- `pronostics/css/style.css` : `.lb-stats`/`.lb-stat*`, `.c-blue`/`.c-green`/`.c-red`, filet `border-left` sur `.lb-pts-wrap`, ajustements mobile ≤ 640 px (vérifié en local desktop + 375 px, données réelles).
 
 ### 2026-07-09 (suite 2)
 **Pronostics — Couleurs de joueurs vraiment distinctes (avatars + graphique)**

@@ -76,17 +76,19 @@ async function showLeaderboard(tournamentId, profile, tournaments) {
           ${rankIcon(i)}
           <div style="display:flex;align-items:center;gap:.55rem;flex:1">
             ${avatarHtml({ name: e.name, avatar_url: e.avatar_url }, 'avatar-sm')}
-            <div>
-              <div class="lb-name-row">
-                <span class="lb-name">${esc(e.name)}</span>
-                ${e.id === profile.id ? '<span class="lb-you">Toi</span>' : ''}
-              </div>
-              <div class="lb-detail">${e.correct} bon${e.correct !== 1 ? 's' : ''} · ${e.perfect} parfait${e.perfect !== 1 ? 's' : ''}</div>
+            <div class="lb-name-row">
+              <span class="lb-name">${esc(e.name)}</span>
+              ${e.id === profile.id ? '<span class="lb-you">Toi</span>' : ''}
             </div>
+          </div>
+          <div class="lb-stats">
+            <div class="lb-stat"><div class="lb-stat-val c-blue">${e.correct}</div><div class="lb-stat-label">bons</div><div class="lb-stat-pts">3 pts</div></div>
+            <div class="lb-stat"><div class="lb-stat-val c-green">${e.perfect}</div><div class="lb-stat-label">exacts</div><div class="lb-stat-pts">5 pts</div></div>
+            <div class="lb-stat"><div class="lb-stat-val c-red">${e.wrong}</div><div class="lb-stat-label">mauvais</div><div class="lb-stat-pts">0 pt</div></div>
           </div>
           <div class="lb-pts-wrap">
             <div class="lb-pts">${e.points}</div>
-            <div class="lb-pts-label">pts</div>
+            <div class="lb-pts-label">total</div>
           </div>
           <div class="lb-delta ${e.delta24 > 0 ? 'pos' : e.delta24 < 0 ? 'neg' : 'zero'}">
             ${e.delta24 > 0 ? '+' : ''}${e.delta24 > 0 || e.delta24 < 0 ? e.delta24 : '—'}
@@ -126,11 +128,11 @@ async function showPlayerBreakdown(playerId, playerName, tournaments) {
   const rows = tournaments
     .filter(t => t.status !== 'upcoming')
     .map(t => {
-      const d = breakdown[t.id] || { points: 0, correct: 0, perfect: 0 };
+      const d = breakdown[t.id] || { points: 0, correct: 0, perfect: 0, wrong: 0 };
       return `
         <div class="player-bd-row">
           <span class="player-bd-tour">${esc(t.short_name || t.name)}</span>
-          <span class="player-bd-detail">${d.correct} bon${d.correct !== 1 ? 's' : ''} · ${d.perfect} parfait${d.perfect !== 1 ? 's' : ''}</span>
+          <span class="player-bd-detail"><span class="c-blue">${d.correct} bon${d.correct !== 1 ? 's' : ''}</span> · <span class="c-green">${d.perfect} exact${d.perfect !== 1 ? 's' : ''}</span> · <span class="c-red">${d.wrong || 0} mauvais</span></span>
           <span class="player-bd-pts">${d.points} pts</span>
         </div>
       `;
