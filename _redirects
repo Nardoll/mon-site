@@ -1,4 +1,4 @@
-# Cloudflare Pages — redirections
+# Redirections — servies par les assets statiques du Cloudflare Worker
 # Ancienne URL du club de lecture → nouvelle version
 # Règle spécifique en premier (stats.html → statistiques.html)
 /club-lecture/stats.html  /lis-tes-ratures/statistiques.html  301

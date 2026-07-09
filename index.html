@@ -378,10 +378,6 @@
     }
 
     /* ── Carte Pronostics — DA Hextech ─────────────────────────── */
-    @keyframes livep {
-      0%, 100% { box-shadow: 0 0 4px currentColor; }
-      50%      { box-shadow: 0 0 10px currentColor, 0 0 18px currentColor; }
-    }
     .prono-card {
       background: linear-gradient(150deg, #0e1626 0%, #0a0f1a 72%);
       border: 1px solid rgba(216,169,85,.38);
@@ -459,14 +455,6 @@
       color: #d8a955;
       border: 1px solid rgba(216,169,85,.32);
     }
-    .prono-live {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: #ef4444;
-      color: #ef4444;
-      animation: livep 1.5s ease-in-out infinite;
-      flex-shrink: 0;
-    }
     .prono-bracket {
       display: grid;
       grid-template-columns: 1fr 6px 1fr;
@@ -518,8 +506,8 @@
     <div class="hero-eyebrow">🔒 Accès privé</div>
     <h1>Site personnel</h1>
     <p class="hero-sub">
-      Ce site est à usage personnel et privé. Chaque section est indépendante
-      et protégée par un mot de passe distinct — si vous êtes ici, vous savez
+      Ce site est à usage personnel et privé. Chaque section est indépendante —
+      certaines sont protégées par un mot de passe. Si vous êtes ici, vous savez
       laquelle vous concerne.
     </p>
   </div>
@@ -601,7 +589,7 @@
         <div class="prono-desc">Paris entre amis sur MSI, Worlds et les grands tournois LoL.</div>
       </div>
       <div class="prono-foot">
-        <span class="prono-badge"><span class="prono-live"></span>MSI 2026 · Live</span>
+        <span class="prono-badge">✨ Accès libre</span>
         <div class="prono-bracket" aria-hidden="true">
           <div class="prono-bracket-team"></div>
           <div class="prono-bracket-line t"></div>
