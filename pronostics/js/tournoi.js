@@ -2,7 +2,7 @@ import { requireProfile }                           from './auth.js';
 import { injectTopBar, injectSidebar, showToast, avatarHtml, avatarColor } from './nav.js';
 import {
   getTournament, getMatchesByTournament, getPicksByTournament,
-  getAllPicksByMatch, getProfiles, savePick,
+  getAllPicksByMatch, getAllPicksByTournament, getProfiles, savePick,
   syncTournament, getLongTermPicks, saveLongTermPick,
   getLeaderboard, updateMatch, updateTournament, scorePicksForMatch
 } from './db.js';
@@ -121,6 +121,7 @@ function renderPage(main) {
       <button class="tour-tab" data-tab="bracket">Bracket</button>
       <button class="tour-tab" data-tab="equipes">Équipes</button>
       <button class="tour-tab" data-tab="classement">Classement</button>
+      <button class="tour-tab" data-tab="evolution">Évolution</button>
       ${IS_ADMIN ? '<button class="tour-tab" data-tab="admin">Admin</button>' : ''}
     </div>
 
@@ -128,6 +129,7 @@ function renderPage(main) {
     <div id="tab-bracket"    class="tab-pane"></div>
     <div id="tab-equipes"    class="tab-pane"></div>
     <div id="tab-classement" class="tab-pane"></div>
+    <div id="tab-evolution"  class="tab-pane"></div>
     ${IS_ADMIN ? '<div id="tab-admin" class="tab-pane"></div>' : ''}
   `;
 
@@ -231,6 +233,7 @@ function renderTab(key) {
   if (key === 'bracket')    renderBracket();
   if (key === 'equipes')    renderEquipes();
   if (key === 'classement') renderClassement();
+  if (key === 'evolution')  renderEvolution();
   if (key === 'admin')      renderAdmin();
 }
 
@@ -853,6 +856,147 @@ async function renderClassement() {
     row.addEventListener('click', () => {
       showPlayerBracket(row.dataset.playerId, row.dataset.playerName);
     });
+  });
+}
+
+// ── Onglet Évolution ──────────────────────────────────────────────
+// Courbe des points cumulés par joueur, datée au JOUR DU MATCH (heure de
+// Paris) — pas à la date du scoring, qui peut arriver bien après via sync.
+let evoChart = null;
+let chartJsPromise = null;
+
+function loadChartJs() {
+  if (window.Chart) return Promise.resolve();
+  if (!chartJsPromise) {
+    chartJsPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js';
+      s.onload = resolve;
+      s.onerror = () => { chartJsPromise = null; reject(new Error('Impossible de charger la librairie de graphique')); };
+      document.head.appendChild(s);
+    });
+  }
+  return chartJsPromise;
+}
+
+async function renderEvolution() {
+  const container = document.getElementById('tab-evolution');
+  container.innerHTML = '<div class="empty-state">Chargement…</div>';
+
+  let allPicks;
+  try {
+    [allPicks] = await Promise.all([getAllPicksByTournament(TOURNAMENT_ID), loadChartJs()]);
+  } catch (e) {
+    container.innerHTML = `<div class="empty-state" style="color:#ef4444">Erreur : ${e.message}</div>`;
+    console.error(e);
+    return;
+  }
+
+  // Jours (Paris) où au moins un match du tournoi est terminé, ordre chrono
+  const matchById = new Map(matches.map(m => [m.id, m]));
+  const finishedDays = [...new Set(
+    matches.filter(m => m.status === 'finished').map(m => matchDayKey(m.date_utc))
+  )].sort();
+
+  // Points gagnés par joueur et par jour de match
+  const byPlayerDay = {};
+  let hasScored = false;
+  for (const p of allPicks) {
+    if (!p.scored) continue;
+    const m = matchById.get(p.match_id);
+    if (!m || m.status !== 'finished') continue;
+    hasScored = true;
+    const day = matchDayKey(m.date_utc);
+    if (!byPlayerDay[p.profile_id]) byPlayerDay[p.profile_id] = {};
+    byPlayerDay[p.profile_id][day] = (byPlayerDay[p.profile_id][day] || 0) + (p.points || 0);
+  }
+
+  if (!hasScored || finishedDays.length === 0) {
+    container.innerHTML = '<div class="empty-state">Aucun match scoré pour l\'instant — le graphique apparaîtra après les premiers résultats.</div>';
+    return;
+  }
+
+  const nameById = {};
+  allProfiles.forEach(p => { nameById[p.id] = p.name || p.pseudo || '?'; });
+
+  // Une courbe cumulée par joueur ayant au moins un pronostic scoré,
+  // triées par total décroissant (la légende reflète le classement)
+  const datasets = Object.entries(byPlayerDay).map(([pid, perDay]) => {
+    let cumul = 0;
+    const data = [0, ...finishedDays.map(day => (cumul += perDay[day] || 0))];
+    const name = nameById[pid] || '?';
+    const color = avatarColor(name);
+    const isMe = pid === profile.id;
+    return {
+      label: isMe ? `${name} (toi)` : name,
+      data,
+      borderColor: color,
+      backgroundColor: color,
+      borderWidth: isMe ? 3.5 : 2,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      tension: 0.25,
+      _total: cumul,
+    };
+  }).sort((a, b) => b._total - a._total);
+
+  const labels = ['Début', ...finishedDays.map(d => {
+    const dt = new Date(d + 'T12:00:00');
+    return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  })];
+
+  container.innerHTML = `
+    <div class="evo-card">
+      <div class="evo-title">Évolution des points</div>
+      <div class="evo-sub">Points cumulés par joueur, jour de match après jour de match.</div>
+      <div class="evo-canvas-wrap"><canvas id="evo-chart"></canvas></div>
+    </div>
+  `;
+
+  if (evoChart) { evoChart.destroy(); evoChart = null; }
+  const ctx = document.getElementById('evo-chart').getContext('2d');
+  evoChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          labels: {
+            color: '#9aa4ba',
+            usePointStyle: true,
+            pointStyle: 'circle',
+            boxWidth: 8,
+            boxHeight: 8,
+            padding: 14,
+            font: { family: "'Rajdhani', system-ui, sans-serif", size: 13, weight: 600 }
+          }
+        },
+        tooltip: {
+          backgroundColor: '#0e1626',
+          borderColor: 'rgba(216,169,85,.35)',
+          borderWidth: 1,
+          titleColor: '#d8a955',
+          bodyColor: '#f1f5fc',
+          padding: 10,
+          itemSort: (a, b) => b.parsed.y - a.parsed.y,
+          callbacks: { label: (item) => ` ${item.dataset.label} : ${item.parsed.y} pts` }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#9aa4ba', font: { family: "'Rajdhani', system-ui, sans-serif" } },
+          grid: { color: 'rgba(154,164,186,.07)' }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { color: '#9aa4ba', precision: 0, font: { family: "'Rajdhani', system-ui, sans-serif" } },
+          grid: { color: 'rgba(154,164,186,.12)' }
+        }
+      }
+    }
   });
 }
 

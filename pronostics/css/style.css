@@ -1343,3 +1343,30 @@ body {
   .tournoi-stats { grid-template-columns: repeat(3,1fr); gap: 6px; }
   .stat-value { font-size: 18px; }
 }
+
+/* ── Onglet Évolution (graphique des points cumulés) ─────────────── */
+.evo-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  clip-path: var(--clip-card);
+  padding: 1.1rem 1.2rem 1.3rem;
+}
+.evo-title {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-h);
+}
+.evo-sub {
+  font-size: .75rem;
+  color: var(--muted);
+  margin: .2rem 0 .9rem;
+}
+.evo-canvas-wrap {
+  position: relative;
+  height: 340px;
+}
+@media (max-width: 640px) {
+  .evo-canvas-wrap { height: 280px; }
+  .evo-card { padding: .9rem .8rem 1rem; }
+}

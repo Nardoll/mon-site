@@ -91,6 +91,14 @@ export async function getAllPicksByMatch(matchId) {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
+export async function getAllPicksByTournament(tournamentId) {
+  const snap = await getDocs(query(
+    collection(db, 'prono_picks'),
+    where('tournament_id', '==', tournamentId)
+  ));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
 export async function savePick(profileId, matchId, tournamentId, pickWinner, pickScore1, pickScore2) {
   await fsSet('prono_picks', `${profileId}_${matchId}`, {
     profile_id: profileId,

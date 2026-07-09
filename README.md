@@ -861,7 +861,8 @@ Pronostics e-sport **League of Legends** entre amis (MSI, Worlds, grands tournoi
 ### Pages
 
 - **`index.html`** (`accueil.js`) — liste des tournois.
-- **`tournoi.html?id=…`** (`tournoi.js`) — page d'un tournoi : **calendrier** (cartes matchs, voyant rouge clignotant sur les matchs sans pronostic), **bracket** (double score : résultat officiel en gris + pronostic coloré), **classement du tournoi**. Clic sur un match terminé/live → **drawer** des picks de tous les joueurs (+ section admin en bas si `?admin`). Horaires affichés en **heure de Paris** (helpers `parisToUtc` / `utcToParisLocal`, DST-correct).
+- **`tournoi.html?id=…`** (`tournoi.js`) — page d'un tournoi : **calendrier** (cartes matchs, voyant rouge clignotant sur les matchs sans pronostic), **bracket** (double score : résultat officiel en gris + pronostic coloré), **classement du tournoi**, **évolution** (voir ci-dessous). Clic sur un match terminé/live → **drawer** des picks de tous les joueurs (+ section admin en bas si `?admin`). Horaires affichés en **heure de Paris** (helpers `parisToUtc` / `utcToParisLocal`, DST-correct).
+  - **Onglet Évolution** (`renderEvolution()`) : graphique en courbes des **points cumulés par joueur au fil des jours de match** (Chart.js 4.4.3 chargé en lazy au premier clic sur l'onglet). Les points sont datés au **jour du match** (heure de Paris, `matchDayKey`), pas à la date du scoring. Une courbe par joueur ayant ≥ 1 pick scoré, couleur = `avatarColor(nom)` (cohérente avec l'avatar), joueur courant en trait épais, légende et tooltip triés par total décroissant, point de départ commun « Début » à 0. Données : `getAllPicksByTournament()` (db.js) + les `matches` déjà chargés.
 - **`classement.html`** (`classement.js`) — classement général tous tournois. Barème : **5 pts** score exact · **3 pts** bon gagnant · **0 pt** mauvais gagnant. Delta affiché = points gagnés **aujourd'hui** (depuis minuit Paris). Clic sur un joueur → détail des points par tournoi.
 - **`seed.html`** / **`seed-matches.html`** — outils ponctuels d'initialisation des tournois/matchs (admin, lien direct uniquement).
 
@@ -1284,6 +1285,15 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 ## Historique des modifications
 
 > **📜 L'historique complet des sessions antérieures au 2026-07-09 est dans [`HISTORIQUE.md`](HISTORIQUE.md)** (déplacé pour alléger ce fichier). Continuer à documenter chaque session ici ; quand cette section devient longue, déplacer les entrées les plus anciennes vers `HISTORIQUE.md`.
+
+### 2026-07-09 (suite)
+**Pronostics — Onglet « Évolution » : graphique des points cumulés par joueur**
+
+- `pronostics/js/db.js` : nouvelle fonction `getAllPicksByTournament(tournamentId)` (requête simple sur `tournament_id`, pas d'index composite).
+- `pronostics/js/tournoi.js` : nouvel onglet **Évolution** dans la page tournoi (entre Classement et Admin). `renderEvolution()` : points datés au **jour du match** (heure de Paris via `matchDayKey`, pas à la date du scoring — le sync peut scorer en retard), cumul par joueur, une courbe par joueur ayant au moins un pick scoré. Chart.js 4.4.3 chargé en **lazy** au premier clic (`loadChartJs()`), couleurs = `avatarColor(nom)` (mêmes couleurs que les avatars), joueur courant en trait épais « (toi) », légende/tooltip triés par total décroissant, point de départ commun « Début » à 0, jours sans match ignorés (seuls les jours avec matchs terminés apparaissent). État vide propre tant qu'aucun match n'est scoré.
+- `pronostics/css/style.css` : styles `.evo-card` / `.evo-title` / `.evo-sub` / `.evo-canvas-wrap` (hauteur 340 px, 280 px en mobile), DA Hextech (clip-path, surface).
+- Testé en local (serveur statique + vraies données Firestore) : totaux du graphe identiques au classement (Tom 52 · Zozo 52 · Thibaud 45 · Front 19 · M1K 6), rendu desktop + mobile OK.
+- `.gitignore` : ajout de `.claude/` (fichiers locaux de session, dont `launch.json` de prévisualisation).
 
 ### 2026-07-09
 **Audit complet README ↔ site + remise en cohérence de la documentation**

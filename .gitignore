@@ -2,3 +2,4 @@ desktop.ini
 discord-bot/.env
 discord-bot/node_modules/
 discord-bot/checkpoint.json
+.claude/
