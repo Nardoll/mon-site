@@ -1,11 +1,13 @@
 // ─────────────────────────────────────────────────────────────────────
 //  covers.js — Couvertures réelles des livres
 //
-//  Récupère la couverture d'un livre à partir de son titre + auteur via
-//  des bases publiques gratuites (Open Library, puis Google Books en repli).
-//  Aucune image n'est stockée : seule l'URL trouvée est mémorisée dans le
-//  document Firestore du livre (champ `couverture_url`) pour ne pas refaire
-//  la requête à chaque chargement et permettre une correction manuelle.
+//  Récupère la couverture d'un livre à partir de son ISBN (fourni par l'IA)
+//  puis, en repli, de son titre + auteur via des bases publiques gratuites
+//  (Open Library, puis Google Books). Aucune image n'est stockée : l'URL
+//  auto trouvée est mise en cache dans le champ Firestore `couv_cache`
+//  (versionné par `couv_v`), tandis que `couverture_url` est réservé à
+//  l'override MANUEL (posé avec `couv_manuelle: true` par le formulaire
+//  d'édition) — voir resolveCover() plus bas.
 //
 //  Le basculement « illustrations génériques ↔ vraies couvertures » est
 //  piloté par un toggle dans la sidebar (clé sessionStorage `ltr_covers`).

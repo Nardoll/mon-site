@@ -1,4 +1,5 @@
-# Cloudflare Pages — cache headers
+# Cache headers — servis par les assets statiques du Cloudflare Worker
+# (complété par worker.js qui force no-cache sur tous les HTML/JS/CSS)
 # Les fichiers JS sont revalidés à chaque visite
 # (évite que le navigateur serve d'anciennes versions depuis son cache)
 

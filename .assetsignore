@@ -4,6 +4,6 @@ api/
 wrangler.toml
 .assetsignore
 README.md
-netlify.toml
+HISTORIQUE.md
 .git
 node_modules
