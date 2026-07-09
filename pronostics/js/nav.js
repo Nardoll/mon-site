@@ -1,15 +1,53 @@
-import { updateProfile, getTournaments } from './db.js';
+import { updateProfile, getTournaments, getProfiles } from './db.js';
 
 // ── Avatar helpers ─────────────────────────────────────────────────
+// Palette ordonnée par TEINTE (cercle chromatique) — l'attribution ci-dessous
+// pioche des index régulièrement espacés pour un contraste maximal.
 const AVATAR_COLORS = [
-  '#e74c3c','#e67e22','#f1c40f','#2ecc71','#1abc9c',
-  '#3498db','#9b59b6','#e91e63','#ff5722','#00bcd4'
+  '#ef4444', // rouge
+  '#f97316', // orange
+  '#eab308', // jaune
+  '#84cc16', // lime
+  '#22c55e', // vert
+  '#06b6d4', // cyan
+  '#3b82f6', // bleu
+  '#8b5cf6', // violet
+  '#d946ef', // fuchsia
+  '#ec4899', // rose
 ];
 
-export function avatarColor(name) {
+function hashName(name) {
   let h = 0;
   for (const c of String(name)) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+  return h;
+}
+
+// Couleurs attribuées aux joueurs connus avec un ESPACEMENT PARFAIT sur le
+// cercle chromatique : les n noms triés reçoivent des teintes espacées de
+// 360°/n (6 joueurs → 60° d'écart garanti entre chaque couleur, jamais deux
+// couleurs proches). Déterministe pour un même effectif → identique sur
+// toutes les pages et tous les appareils. Rempli par registerAvatarColors()
+// (appelé avec la liste des profils) ; les noms non enregistrés (ex : les
+// équipes) gardent le hash simple historique sur la palette fixe.
+const AVATAR_ASSIGNED = new Map();
+
+export function registerAvatarColors(list) {
+  const names = [...new Set(
+    (list || []).map(p => (typeof p === 'string' ? p : p.name || p.pseudo || '?'))
+  )].sort((a, b) => a.localeCompare(b, 'fr'));
+  AVATAR_ASSIGNED.clear();
+  const n = names.length;
+  names.forEach((name, i) => {
+    const hue = Math.round(i * 360 / n);
+    // Le jaune pur (~60°) manque de contraste sur fond sombre → un peu plus
+    // saturé et moins clair que les autres teintes.
+    const isYellow = hue > 40 && hue < 90;
+    AVATAR_ASSIGNED.set(name, `hsl(${hue}, ${isYellow ? 80 : 72}%, ${isYellow ? 50 : 56}%)`);
+  });
+}
+
+export function avatarColor(name) {
+  return AVATAR_ASSIGNED.get(name) || AVATAR_COLORS[hashName(name) % AVATAR_COLORS.length];
 }
 
 export function avatarHtml(profile, sizeClass = '') {
@@ -59,6 +97,14 @@ function _buildNav(profile, active) {
     </div>
   `;
   document.body.prepend(nav);
+
+  // Couleurs d'avatar sans collision : on enregistre tout l'effectif dès que
+  // possible, puis on rafraîchit l'avatar du haut si sa couleur a changé.
+  getProfiles().then(profiles => {
+    registerAvatarColors(profiles);
+    const topAv = document.getElementById('top-avatar');
+    if (topAv) topAv.innerHTML = avatarHtml(profile, '');
+  }).catch(() => {});
 
   // Tournois live dans la nav
   getTournaments().then(tournaments => {

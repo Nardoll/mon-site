@@ -857,6 +857,7 @@ Pronostics e-sport **League of Legends** entre amis (MSI, Worlds, grands tournoi
 
 - **Pas de mot de passe.** Chaque joueur choisit ou crée un **profil** (nom + avatar) au premier accès (`requireProfile()` dans `js/auth.js`) — mémorisé en `localStorage` (`prono_profile_id`, `prono_profile_name`, `prono_profile_avatar`). Les profils sont stockés dans la collection `prono_profiles`.
 - **Mode admin** : ajouter `?admin` à l'URL de `tournoi.html` → onglet Admin + tous les matchs éditables (équipes, scores, horaires). Pas de mot de passe, juste une URL non mise en avant.
+- **Couleurs des joueurs** (`registerAvatarColors()` dans `nav.js`) : les n joueurs (triés par nom) reçoivent des teintes HSL **espacées de 360°/n** sur le cercle chromatique → jamais deux couleurs proches. Utilisées partout : avatars sans image (hexagone + initiale) et courbes de l'onglet Évolution. Enregistré automatiquement par la nav (via `getProfiles()`) + de façon synchrone dans `tournoi.js`/`classement.js` avant le rendu. Les noms hors effectif (ex : équipes dans `renderTeamCard`) gardent le hash historique sur la palette fixe.
 
 ### Pages
 
@@ -1285,6 +1286,12 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 ## Historique des modifications
 
 > **📜 L'historique complet des sessions antérieures au 2026-07-09 est dans [`HISTORIQUE.md`](HISTORIQUE.md)** (déplacé pour alléger ce fichier). Continuer à documenter chaque session ici ; quand cette section devient longue, déplacer les entrées les plus anciennes vers `HISTORIQUE.md`.
+
+### 2026-07-09 (suite 2)
+**Pronostics — Couleurs de joueurs vraiment distinctes (avatars + graphique)**
+
+- `pronostics/js/nav.js` : nouvelle fonction `registerAvatarColors(profils)` — les n joueurs triés par nom reçoivent des teintes HSL **espacées de 360°/n** sur le cercle chromatique (6 joueurs → 60° d'écart garanti). Remplace le hash simple sur palette qui pouvait donner deux couleurs quasi identiques (Thibaud et M1K étaient tous deux bleus). `avatarColor(nom)` consulte ce registre d'abord, hash historique en repli (conservé pour les équipes). Le jaune (~60°) est légèrement assombri/saturé pour rester lisible sur fond sombre. Enregistrement automatique dans la nav (`getProfiles()` + rafraîchissement de l'avatar du haut) et synchrone dans `tournoi.js` (après chargement de `allProfiles`) et `classement.js` (après `getLeaderboard`) pour éviter toute course avec le rendu.
+- Effet : avatars sans image ET courbes du graphe Évolution utilisent les mêmes couleurs, désormais toutes bien différenciées (vérifié en local sur les 6 profils réels : bleu, magenta, cyan, rouge, jaune, vert).
 
 ### 2026-07-09 (suite)
 **Pronostics — Onglet « Évolution » : graphique des points cumulés par joueur**
