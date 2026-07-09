@@ -1,5 +1,5 @@
 import { requireProfile }                           from './auth.js';
-import { injectTopBar, injectSidebar, showToast, avatarHtml, avatarColor } from './nav.js';
+import { injectTopBar, injectSidebar, showToast, avatarHtml, avatarColor, registerAvatarColors } from './nav.js';
 import {
   getTournament, getMatchesByTournament, getPicksByTournament,
   getAllPicksByMatch, getAllPicksByTournament, getProfiles, savePick,
@@ -80,6 +80,9 @@ async function loadPage() {
     main.innerHTML = '<div class="empty-state">Tournoi introuvable.</div>';
     return;
   }
+
+  // Couleurs d'avatar/courbes sans collision, avant tout rendu
+  registerAvatarColors(allProfiles);
 
   renderPage(main);
 }

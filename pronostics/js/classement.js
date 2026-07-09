@@ -1,5 +1,5 @@
 import { requireProfile }                              from './auth.js';
-import { injectTopBar, injectSidebar, setSidebarLive, avatarHtml } from './nav.js';
+import { injectTopBar, injectSidebar, setSidebarLive, avatarHtml, registerAvatarColors } from './nav.js';
 import { getTournaments, getLeaderboard, getPlayerBreakdown } from './db.js';
 
 requireProfile(async (profile) => {
@@ -57,6 +57,9 @@ async function showLeaderboard(tournamentId, profile, tournaments) {
   wrap.innerHTML = '<div class="empty-state">Chargement…</div>';
 
   const entries = await getLeaderboard(tournamentId);
+
+  // Couleurs d'avatar sans collision, avant le rendu des lignes
+  registerAvatarColors(entries);
 
   const rankIcon = i => {
     if (i === 0) return `<span class="lb-rank gold">1</span>`;
