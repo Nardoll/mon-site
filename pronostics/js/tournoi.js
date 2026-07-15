@@ -35,6 +35,51 @@ const BRACKET_ROUNDS = [
   { label: 'Grand Final', upper: ['msi2026_bracket_gf'],                                     lower: [] },
 ];
 
+// Tournois avec un bracket dessiné à la main (structure figée ci-dessus).
+// Tout tournoi absent de cette table retombe sur une structure générique
+// (buildGenericBracketStages) déduite des champs `tab`/`round`/`bracket_side`
+// des matchs — c'est ce qui permet à un nouveau tournoi d'avoir un onglet
+// Bracket fonctionnel sans code dédié.
+const BRACKET_STRUCTURES = {
+  'jXIP8tk3D62pud8fpl20': [ // MSI 2026
+    { title: 'Stage 1 — Play-In', rounds: PLAY_IN_ROUNDS },
+    { title: 'Stage 2 — Bracket', rounds: BRACKET_ROUNDS },
+  ],
+};
+
+function getBracketStages() {
+  const known = BRACKET_STRUCTURES[TOURNAMENT_ID];
+  if (known) return known;
+  return buildGenericBracketStages(matches);
+}
+
+function buildGenericBracketStages(allMatches) {
+  const byTab = {};
+  const tabOrder = [];
+  allMatches.forEach(m => {
+    const tab = m.tab || 'Bracket';
+    if (!byTab[tab]) { byTab[tab] = []; tabOrder.push(tab); }
+    byTab[tab].push(m);
+  });
+
+  return tabOrder.map(tab => {
+    const roundOrder = [];
+    const byRound = {};
+    byTab[tab]
+      .slice()
+      .sort((a, b) => (a.date_utc || '').localeCompare(b.date_utc || ''))
+      .forEach(m => {
+        const r = m.round || tab;
+        if (!byRound[r]) { byRound[r] = { upper: [], lower: [] }; roundOrder.push(r); }
+        byRound[r][m.bracket_side === 'lower' ? 'lower' : 'upper'].push(m.id);
+      });
+    return {
+      title: tab,
+      rounds: roundOrder.map(r => ({ label: r, upper: byRound[r].upper, lower: byRound[r].lower }))
+    };
+  });
+}
+
 const params        = new URLSearchParams(location.search);
 const TOURNAMENT_ID = params.get('id');
 const IS_ADMIN      = params.has('admin');
@@ -1042,8 +1087,7 @@ async function showPlayerBracket(playerId, playerName) {
       <span class="bk-legend-item pick-correct">Bon gagnant +3</span>
       <span class="bk-legend-item pick-wrong">Mauvais 0pt</span>
     </div>
-    ${renderBracketStageWithPicks('Stage 1 — Play-In', PLAY_IN_ROUNDS, byId, playerPicks)}
-    ${renderBracketStageWithPicks('Stage 2 — Bracket', BRACKET_ROUNDS, byId, playerPicks)}
+    ${getBracketStages().map(s => renderBracketStageWithPicks(s.title, s.rounds, byId, playerPicks)).join('')}
   `;
 }
 
@@ -1113,8 +1157,7 @@ function renderBracket() {
       <span class="bk-legend-item pick-correct">Bon gagnant +3</span>
       <span class="bk-legend-item pick-wrong">Mauvais 0pt</span>
     </div>
-    ${renderBracketStage('Stage 1 — Play-In', PLAY_IN_ROUNDS, byId)}
-    ${renderBracketStage('Stage 2 — Bracket', BRACKET_ROUNDS, byId)}
+    ${getBracketStages().map(s => renderBracketStage(s.title, s.rounds, byId)).join('')}
   `;
 
   setupBracketHandlers();

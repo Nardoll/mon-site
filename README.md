@@ -1288,6 +1288,14 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 
 > **📜 L'historique complet des sessions antérieures au 2026-07-09 est dans [`HISTORIQUE.md`](HISTORIQUE.md)** (déplacé pour alléger ce fichier). Continuer à documenter chaque session ici ; quand cette section devient longue, déplacer les entrées les plus anciennes vers `HISTORIQUE.md`.
 
+### 2026-07-15
+**Pronostics — Ajout du tournoi Esports World Cup (EWC) 2026 + bracket générique**
+
+- **Tournoi `EWC 2026`** (doc `k5uQjWRvCNWW64VK4dyU`, déjà ébauché par Tom via `seed.html`) complété directement en base : 16 équipes (4 groupes GSL A/B/C/D), statut passé à `live` (le tournoi démarre le 15/07). Infos réelles (groupes, équipes, horaires du Round 1) trouvées par recherche web — dates/heures confirmées : 15–19 juillet 2026, Paris.
+- **27 matchs insérés** dans `prono_matches` : les **8 matchs du Round 1** (un par paire de chaque groupe) ont les **vraies équipes et horaires confirmés** (best-of-1). Les tours suivants (Round 2, Round 3, Quarts/Demi/Finale) sont en **`TBD` vs `TBD`** avec horaires provisoires — à corriger en mode admin (`?admin`) au fil des résultats, comme cela avait été fait pour le bracket MSI 2026.
+- ⚠️ **`lol_league_id` non renseigné** — l'ID de ligue LoL Esports pour l'EWC n'a pas pu être récupéré (API `esports-api.lolesports.com` bloquée par la politique réseau de cet environnement, et les pages Leaguepedia/Liquipedia renvoient 403 au scraping). Le bouton **Sync** ne remontera donc aucun résultat tant que ce champ n'est pas renseigné — en attendant, saisie des scores **à la main** via le panneau Admin. Si Tom retrouve l'ID (ouvrir lolesports.com, onglet réseau du navigateur, chercher `leagueId` dans une requête `getLeagues`/`getSchedule`), il suffit de l'ajouter au doc du tournoi (`lol_league_id`) pour activer le sync auto.
+- **`pronostics/js/tournoi.js` — Bracket généralisé** : l'onglet Bracket (et la modale "Bracket de {joueur}") était **codé en dur pour la structure du MSI 2026** (`PLAY_IN_ROUNDS`/`BRACKET_ROUNDS` référençant des IDs de matchs précis) — tout autre tournoi affichait un onglet Bracket vide. Ajout de `BRACKET_STRUCTURES` (table par `tournament_id`, ne contient que le MSI 2026 en dur) + `buildGenericBracketStages()` qui reconstruit les colonnes/étages **à partir des champs `tab`/`round`/`bracket_side` des matchs** pour tout tournoi absent de la table. Les matchs EWC 2026 utilisent ce mécanisme générique (`tab: "Groupe A"…"Playoffs"`, `bracket_side: "lower"` sur les matchs de bracket perdants).
+
 ### 2026-07-09 (suite 3)
 **Pronostics — Colonnes bons / exacts / mauvais dans les deux classements**
 
