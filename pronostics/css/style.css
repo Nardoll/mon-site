@@ -1407,3 +1407,53 @@ body {
 @media (max-width: 640px) {
   .lb-row .lb-pts-wrap { padding-left: .6rem; margin-left: .15rem; }
 }
+
+/* ── Onglet Ligue (classement des équipes, format 'league') ─────── */
+.lg-note {
+  font: 500 .72rem 'Rajdhani', sans-serif; color: var(--muted);
+  margin-bottom: .8rem; letter-spacing: .02em;
+}
+.lg-table {
+  display: flex; flex-direction: column;
+  border: 1px solid var(--border); background: var(--surface);
+}
+.lg-row {
+  display: flex; align-items: center; gap: .6rem;
+  padding: 10px 14px; border-bottom: 1px solid var(--border2);
+}
+.lg-row:last-child { border-bottom: none; }
+.lg-head {
+  background: var(--surface2);
+  font: 700 .62rem 'Chakra Petch', sans-serif; color: var(--muted2);
+  text-transform: uppercase; letter-spacing: .08em;
+}
+.lg-qualif { border-left: 2px solid var(--accent); }
+.lg-row:not(.lg-head):not(.lg-qualif) { border-left: 2px solid transparent; }
+.lg-rank { width: 1.6rem; text-align: center; font: 700 .8rem 'Chakra Petch', sans-serif; color: var(--muted); flex-shrink: 0; }
+.lg-qualif .lg-rank { color: var(--accent); }
+.lg-team { flex: 1; display: flex; align-items: center; gap: .55rem; min-width: 0; }
+.lg-team-name { font: 600 .84rem 'Rajdhani', sans-serif; color: var(--text-h); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg-num { width: 2.2rem; text-align: center; font: 600 .82rem 'Chakra Petch', sans-serif; color: var(--text); flex-shrink: 0; }
+.lg-wide { width: 3.4rem; }
+.lg-w { color: var(--win); }
+.lg-l { color: var(--loss); }
+.lg-games { color: var(--muted); font-size: .74rem; }
+.lg-diff { color: var(--muted); }
+.lg-diff.pos { color: var(--win); }
+.lg-diff.neg { color: var(--loss); }
+@media (max-width: 640px) {
+  .lg-row { padding: 8px 8px; gap: .4rem; }
+  .lg-wide { display: none; }
+  .lg-num { width: 1.8rem; font-size: .76rem; }
+  .lg-team-name { font-size: .78rem; }
+}
+
+/* Bouton supprimer (admin) */
+.admin-del-btn {
+  align-self: flex-end; padding: .4rem 1rem;
+  background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3);
+  color: var(--loss); font: 700 .78rem 'Rajdhani', sans-serif;
+  cursor: pointer; font-family: inherit;
+}
+.admin-del-btn:hover { background: rgba(239,68,68,.22); }
+.admin-del-btn:disabled { opacity: .5; cursor: not-allowed; }
