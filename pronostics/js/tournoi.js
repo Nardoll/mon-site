@@ -4,7 +4,8 @@ import {
   getTournament, getMatchesByTournament, getPicksByTournament,
   getAllPicksByMatch, getAllPicksByTournament, getProfiles, savePick,
   syncTournament, getLongTermPicks, saveLongTermPick,
-  getLeaderboard, updateMatch, updateTournament, scorePicksForMatch
+  getLeaderboard, updateMatch, updateTournament, scorePicksForMatch,
+  createMatch, deleteMatch
 } from './db.js';
 
 function teamLogo(name, size = 22) {
@@ -34,6 +35,51 @@ const BRACKET_ROUNDS = [
   { label: 'LB Final',upper: [],                                                              lower: ['msi2026_bracket_lbf'] },
   { label: 'Grand Final', upper: ['msi2026_bracket_gf'],                                     lower: [] },
 ];
+
+// Tournois avec un bracket dessiné à la main (structure figée ci-dessus).
+// Tout tournoi absent de cette table retombe sur une structure générique
+// (buildGenericBracketStages) déduite des champs `tab`/`round`/`bracket_side`
+// des matchs — c'est ce qui permet à un nouveau tournoi d'avoir un onglet
+// Bracket fonctionnel sans code dédié.
+const BRACKET_STRUCTURES = {
+  'jXIP8tk3D62pud8fpl20': [ // MSI 2026
+    { title: 'Stage 1 — Play-In', rounds: PLAY_IN_ROUNDS },
+    { title: 'Stage 2 — Bracket', rounds: BRACKET_ROUNDS },
+  ],
+};
+
+function getBracketStages() {
+  const known = BRACKET_STRUCTURES[TOURNAMENT_ID];
+  if (known) return known;
+  return buildGenericBracketStages(matches);
+}
+
+function buildGenericBracketStages(allMatches) {
+  const byTab = {};
+  const tabOrder = [];
+  allMatches.forEach(m => {
+    const tab = m.tab || 'Bracket';
+    if (!byTab[tab]) { byTab[tab] = []; tabOrder.push(tab); }
+    byTab[tab].push(m);
+  });
+
+  return tabOrder.map(tab => {
+    const roundOrder = [];
+    const byRound = {};
+    byTab[tab]
+      .slice()
+      .sort((a, b) => (a.date_utc || '').localeCompare(b.date_utc || ''))
+      .forEach(m => {
+        const r = m.round || tab;
+        if (!byRound[r]) { byRound[r] = { upper: [], lower: [] }; roundOrder.push(r); }
+        byRound[r][m.bracket_side === 'lower' ? 'lower' : 'upper'].push(m.id);
+      });
+    return {
+      title: tab,
+      rounds: roundOrder.map(r => ({ label: r, upper: byRound[r].upper, lower: byRound[r].lower }))
+    };
+  });
+}
 
 const params        = new URLSearchParams(location.search);
 const TOURNAMENT_ID = params.get('id');
@@ -121,7 +167,7 @@ function renderPage(main) {
 
     <div class="tour-tabs">
       <button class="tour-tab active" data-tab="calendrier">Calendrier</button>
-      <button class="tour-tab" data-tab="bracket">Bracket</button>
+      <button class="tour-tab" data-tab="bracket">${isLeague() ? 'Ligue' : 'Bracket'}</button>
       <button class="tour-tab" data-tab="equipes">Équipes</button>
       <button class="tour-tab" data-tab="classement">Classement</button>
       <button class="tour-tab" data-tab="evolution">Évolution</button>
@@ -154,7 +200,9 @@ function renderPage(main) {
 
   // Charger l'onglet par défaut
   renderTab('calendrier');
-  if (isLive) setupSyncTopBar();
+  // Sync API réservé aux tournois avec un lol_league_id explicite —
+  // l'API lolesports n'a jamais fonctionné (abandonnée, workflow manuel).
+  if (isLive && tournament.lol_league_id) setupSyncTopBar();
 }
 
 function setupSyncTopBar() {
@@ -231,9 +279,15 @@ function startCountdownTopBar(secs) {
   setTimeout(tick, 1000);
 }
 
+// Format "ligue" (ex : LEC) — saison régulière avec classement d'équipes,
+// pas de bracket. L'onglet "Bracket" devient "Ligue" (standings).
+function isLeague() {
+  return tournament?.format === 'league';
+}
+
 function renderTab(key) {
   if (key === 'calendrier') renderCalendrier();
-  if (key === 'bracket')    renderBracket();
+  if (key === 'bracket')    isLeague() ? renderLigue() : renderBracket();
   if (key === 'equipes')    renderEquipes();
   if (key === 'classement') renderClassement();
   if (key === 'evolution')  renderEvolution();
@@ -1012,7 +1066,7 @@ async function showPlayerBracket(playerId, playerName) {
   overlay.innerHTML = `
     <div class="player-bracket-modal">
       <div class="pbm-header">
-        <div class="pbm-title">🏆 Bracket de ${esc(playerName)}</div>
+        <div class="pbm-title">🏆 ${isLeague() ? 'Picks' : 'Bracket'} de ${esc(playerName)}</div>
         <button class="pbm-close" id="pbm-close">Fermer</button>
       </div>
       <div class="pbm-legend">
@@ -1042,8 +1096,7 @@ async function showPlayerBracket(playerId, playerName) {
       <span class="bk-legend-item pick-correct">Bon gagnant +3</span>
       <span class="bk-legend-item pick-wrong">Mauvais 0pt</span>
     </div>
-    ${renderBracketStageWithPicks('Stage 1 — Play-In', PLAY_IN_ROUNDS, byId, playerPicks)}
-    ${renderBracketStageWithPicks('Stage 2 — Bracket', BRACKET_ROUNDS, byId, playerPicks)}
+    ${getBracketStages().map(s => renderBracketStageWithPicks(s.title, s.rounds, byId, playerPicks)).join('')}
   `;
 }
 
@@ -1100,6 +1153,71 @@ function renderBkMatchWithPicks(m, playerPicks) {
   `;
 }
 
+// ── Onglet Ligue (classement des équipes, format 'league') ────────
+function renderLigue() {
+  const container = document.getElementById('tab-bracket');
+
+  const teams = [...new Set([
+    ...(tournament.teams || []),
+    ...matches.flatMap(m => [m.team1, m.team2]).filter(t => t && t !== 'TBD')
+  ])];
+
+  if (teams.length === 0) {
+    container.innerHTML = '<div class="empty-state">Aucune équipe pour l\'instant.</div>';
+    return;
+  }
+
+  const rows = {};
+  teams.forEach(t => { rows[t] = { team: t, wins: 0, losses: 0, gw: 0, gl: 0 }; });
+
+  for (const m of matches) {
+    if (m.status !== 'finished' || !m.winner) continue;
+    const r1 = rows[m.team1], r2 = rows[m.team2];
+    if (!r1 || !r2) continue;
+    const s1 = parseInt(m.score1) || 0;
+    const s2 = parseInt(m.score2) || 0;
+    r1.gw += s1; r1.gl += s2;
+    r2.gw += s2; r2.gl += s1;
+    if (m.winner === m.team1) { r1.wins++; r2.losses++; }
+    else                      { r2.wins++; r1.losses++; }
+  }
+
+  const sorted = Object.values(rows).sort((a, b) =>
+    b.wins - a.wins
+    || (b.gw - b.gl) - (a.gw - a.gl)
+    || b.gw - a.gw
+    || a.team.localeCompare(b.team)
+  );
+
+  const playoffCut = 6; // LEC : top 6 en playoffs
+
+  container.innerHTML = `
+    <div class="lg-note">Classement de la saison régulière — victoires en séries, départage à la différence de manches. Top ${playoffCut} qualifié pour les playoffs.</div>
+    <div class="lg-table">
+      <div class="lg-row lg-head">
+        <span class="lg-rank">#</span>
+        <span class="lg-team">Équipe</span>
+        <span class="lg-num">V</span>
+        <span class="lg-num">D</span>
+        <span class="lg-num lg-wide">Manches</span>
+        <span class="lg-num">+/−</span>
+      </div>
+      ${sorted.map((r, i) => {
+        const diff = r.gw - r.gl;
+        return `
+        <div class="lg-row${i < playoffCut ? ' lg-qualif' : ''}">
+          <span class="lg-rank">${i + 1}</span>
+          <span class="lg-team">${teamLogo(r.team, 22)}<span class="lg-team-name">${esc(r.team)}</span></span>
+          <span class="lg-num lg-w">${r.wins}</span>
+          <span class="lg-num lg-l">${r.losses}</span>
+          <span class="lg-num lg-wide lg-games">${r.gw}–${r.gl}</span>
+          <span class="lg-num lg-diff${diff > 0 ? ' pos' : diff < 0 ? ' neg' : ''}">${diff > 0 ? '+' : ''}${diff}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
 // ── Onglet Bracket ────────────────────────────────────────────────
 function renderBracket() {
   const container = document.getElementById('tab-bracket');
@@ -1113,8 +1231,7 @@ function renderBracket() {
       <span class="bk-legend-item pick-correct">Bon gagnant +3</span>
       <span class="bk-legend-item pick-wrong">Mauvais 0pt</span>
     </div>
-    ${renderBracketStage('Stage 1 — Play-In', PLAY_IN_ROUNDS, byId)}
-    ${renderBracketStage('Stage 2 — Bracket', BRACKET_ROUNDS, byId)}
+    ${getBracketStages().map(s => renderBracketStage(s.title, s.rounds, byId)).join('')}
   `;
 
   setupBracketHandlers();
@@ -1302,6 +1419,7 @@ function renderAdmin() {
   if (!container) return;
 
   const teams = [...new Set([
+    ...(tournament.teams || []),
     ...matches.flatMap(m => [m.team1, m.team2]).filter(t => t && t !== 'TBD'),
     ...Object.keys(tournament.team_logos || {})
   ])].sort();
@@ -1344,12 +1462,104 @@ function renderAdmin() {
     </div>
 
     <div class="admin-section" style="margin-top:1.5rem">
+      <div class="admin-title">➕ Ajouter un match</div>
+      <form class="admin-match-form" id="adm-add-match">
+        <div class="admin-row-form">
+          <label>Équipe 1</label>
+          <select name="team1">
+            <option value="">— TBD —</option>
+            ${teams.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="admin-row-form">
+          <label>Équipe 2</label>
+          <select name="team2">
+            <option value="">— TBD —</option>
+            ${teams.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="admin-row-form">
+          <label>Format</label>
+          <select name="best_of">
+            <option value="1">BO1</option>
+            <option value="3" selected>BO3</option>
+            <option value="5">BO5</option>
+          </select>
+        </div>
+        <div class="admin-row-form">
+          <label>Libellé</label>
+          <input type="text" name="round" placeholder="${isLeague() ? 'Semaine 1' : 'Round 1'}" style="flex:1" />
+        </div>
+        <div class="admin-row-form" style="flex-wrap:wrap;gap:.3rem">
+          <label style="width:100%">Heure (Paris)</label>
+          <input type="datetime-local" name="date" class="adm-dt" style="flex:1;min-width:0;font-size:.7rem" required />
+        </div>
+        <button type="submit" class="admin-save-btn">Créer le match</button>
+      </form>
+    </div>
+
+    <div class="admin-section" style="margin-top:1.5rem">
       <div class="admin-title">⚙️ Gestion des matchs</div>
       <div class="admin-list">
         ${matches.map(m => renderAdminMatch(m, teams)).join('')}
       </div>
     </div>
   `;
+
+  // Créer un match
+  document.getElementById('adm-add-match')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const form  = e.target;
+    const dtRaw = form.querySelector('[name=date]').value;
+    if (!dtRaw) { showToast('Choisis une date et une heure'); return; }
+    const round = form.querySelector('[name=round]').value.trim();
+    const data = {
+      tournament_id: TOURNAMENT_ID,
+      team1: form.querySelector('[name=team1]').value || 'TBD',
+      team2: form.querySelector('[name=team2]').value || 'TBD',
+      best_of: parseInt(form.querySelector('[name=best_of]').value),
+      date_utc: parisToUtc(dtRaw),
+      status: 'scheduled',
+      round: round || null,
+      tab: round || null,
+      winner: null, score1: null, score2: null
+    };
+    const btn = form.querySelector('.admin-save-btn');
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      const id = await createMatch(data);
+      matches.push({ id, ...data });
+      matches.sort((a, b) => (a.date_utc || '').localeCompare(b.date_utc || ''));
+      showToast('✓ Match créé');
+      renderAdmin();
+      renderCalendrier();
+    } catch (err) {
+      showToast('Erreur : ' + err.message);
+      btn.disabled = false; btn.textContent = 'Créer le match';
+    }
+  });
+
+  // Supprimer un match
+  container.querySelectorAll('[data-del-match]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.delMatch;
+      const m  = matches.find(x => x.id === id);
+      if (!m) return;
+      if (!confirm(`Supprimer ${m.team1} vs ${m.team2} (${m.round || 'sans libellé'}) ?\nLes pronostics posés sur ce match seront aussi supprimés.`)) return;
+      btn.disabled = true; btn.textContent = '…';
+      try {
+        await deleteMatch(id);
+        matches = matches.filter(x => x.id !== id);
+        delete myPicks[id];
+        showToast('✓ Match supprimé');
+        renderAdmin();
+        renderCalendrier();
+      } catch (err) {
+        showToast('Erreur : ' + err.message);
+        btn.disabled = false; btn.textContent = 'Supprimer';
+      }
+    });
+  });
 
   // Sauvegarder l'URL wiki
   document.getElementById('btn-save-wiki')?.addEventListener('click', async () => {
@@ -1497,7 +1707,7 @@ function renderAdmin() {
         btn.textContent = '✓ Sauvé';
         setTimeout(() => { btn.disabled = false; btn.textContent = 'Sauvegarder'; }, 1500);
         renderCalendrier();
-        renderBracket();
+        isLeague() ? renderLigue() : renderBracket();
         renderClassement();
       } catch (err) {
         showToast('Erreur : ' + err.message);
@@ -1574,7 +1784,10 @@ function renderAdminMatch(m, teams) {
           <input type="datetime-local" name="date_utc" class="adm-dt" value="${existingDt}" style="flex:1;min-width:0;font-size:.7rem" />
           <select class="adm-cal-slot" data-match-id="${m.id}" style="width:100%;font-size:.68rem">${slotOpts}</select>
         </div>
-        <button type="submit" class="admin-save-btn">Sauvegarder</button>
+        <div style="display:flex;gap:.5rem;justify-content:flex-end">
+          <button type="button" class="admin-del-btn" data-del-match="${m.id}">Supprimer</button>
+          <button type="submit" class="admin-save-btn">Sauvegarder</button>
+        </div>
       </form>
     </details>
   `;

@@ -311,6 +311,27 @@ export async function updateMatch(matchId, data) {
   await fsSet('prono_matches', matchId, data);
 }
 
+export async function createMatch(data) {
+  const ref = await addDoc(collection(db, 'prono_matches'), {
+    ...data,
+    created_at: serverTimestamp()
+  });
+  return ref.id;
+}
+
+export async function deleteMatch(matchId) {
+  // Supprime le match ET les picks qui pointent dessus (sinon ils
+  // resteraient comptés dans les classements comme picks orphelins).
+  const snap = await getDocs(query(
+    collection(db, 'prono_picks'),
+    where('match_id', '==', matchId)
+  ));
+  const batch = writeBatch(db);
+  snap.docs.forEach(d => batch.delete(doc(db, 'prono_picks', d.id)));
+  batch.delete(doc(db, 'prono_matches', matchId));
+  await batch.commit();
+}
+
 export async function updateTournament(id, data) {
   await fsSet('prono_tournaments', id, data);
 }
