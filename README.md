@@ -1288,6 +1288,14 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 
 > **📜 L'historique complet des sessions antérieures au 2026-07-09 est dans [`HISTORIQUE.md`](HISTORIQUE.md)** (déplacé pour alléger ce fichier). Continuer à documenter chaque session ici ; quand cette section devient longue, déplacer les entrées les plus anciennes vers `HISTORIQUE.md`.
 
+### 2026-07-19 (suite 2)
+**Pronostics — Rosters des équipes éditables en admin (onglet Équipes)**
+
+- **Nouveau champ tournoi `team_rosters`** : `{ "Nom d'équipe": [{role, name}, …] }`. Rôles standard LoL (`LOL_ROLES` = Top/Jungle/Mid/Bot/Support). `renderTeamCard` affiche le roster depuis ce champ pour les tournois hors MSI (le MSI garde ses fiches codées en dur `MSI_2026_TEAMS`). Les rôles non renseignés s'affichent « — ».
+- **Édition directe sur la carte (mode `?admin`)** : chaque carte de l'onglet Équipes a un bouton ✏️ qui ouvre une modale (`showRosterEditor`) — 5 champs (un par rôle), pré-remplis, enregistrés dans `team_rosters` via `updateTournament`. Pas besoin de passer par une page seed.
+- **LEC Summer 2026 — 4 rosters pré-remplis** (confirmés par recherche web) : G2 (BrokenBlade/SkewMond/Caps/Hans Sama/Labrov), Karmine Corp (Canna/Yike/kyeahoo/Caliste/Busio), Fnatic (Empyros/Razork/Vladi/Upset/Lospa), GIANTX (Oscarinin/Isma/Jackies/Flakked/Jun). Les 6 autres (Vitality, Heretics, SK Gaming, Movistar KOI, Natus Vincere, Shifters) sont à compléter par Tom via l'éditeur — rosters Summer incertains/partiels au moment du dev, lien Leaguepedia dispo en haut de l'onglet.
+- CSS : `.team-roster-edit`, `.roster-overlay`/`.roster-modal`/`.roster-*`, `.roster-hint`, `.player-name.empty`.
+
 ### 2026-07-19 (suite)
 **Pronostics — Fix onglet Équipes : doublons et sections MSI sur les autres tournois**
 
