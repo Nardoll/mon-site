@@ -814,12 +814,16 @@ function renderEquipes() {
 
   // Les fiches enrichies (seed, roster, stages Play-In/Bracket) sont des
   // données MSI 2026 codées en dur — elles ne valent QUE pour ce tournoi.
-  // Tout autre tournoi (ex : LEC) affiche une grille simple sans sections.
+  // Tout autre tournoi (ex : LEC) affiche une grille simple sans sections,
+  // avec les rosters stockés en base (tournament.team_rosters) et éditables
+  // en mode admin directement sur chaque carte.
   if (TOURNAMENT_ID !== MSI_TOURNAMENT_ID) {
     container.innerHTML = `
       ${lpLinkHtml}
-      <div class="teams-grid">${teams.map(t => renderTeamCard(t, false)).join('')}</div>
+      ${IS_ADMIN ? '<div class="roster-hint">✏️ Mode admin : clique sur le crayon d\'une équipe pour ajouter ou modifier ses joueurs.</div>' : ''}
+      <div class="teams-grid">${teams.map(t => renderTeamCard(t, false, IS_ADMIN)).join('')}</div>
     `;
+    setupRosterEditors(container);
     return;
   }
 
@@ -845,7 +849,17 @@ function extractTeamsFromMatches() {
   return Array.from(set).sort();
 }
 
-function renderTeamCard(teamName, withMsiInfo = true) {
+// Rôles LoL dans l'ordre d'affichage (mêmes libellés que les fiches MSI).
+const LOL_ROLES = ['Top', 'Jungle', 'Mid', 'Bot', 'Support'];
+
+function rosterSlots(players) {
+  return LOL_ROLES.map(role => {
+    const p = players.find(x => x.role === role);
+    return { role, name: p?.name || '' };
+  });
+}
+
+function renderTeamCard(teamName, withMsiInfo = true, editable = false) {
   const color   = avatarColor(teamName);
   const initial = teamName[0]?.toUpperCase() || '?';
   const logos   = tournament?.team_logos || {};
@@ -856,11 +870,19 @@ function renderTeamCard(teamName, withMsiInfo = true) {
     ? `<img src="${logo}" alt="${esc(teamName)}" class="team-logo-card" onerror="this.style.display='none'">`
     : `<div class="team-initial" style="background:${color}">${initial}</div>`;
 
-  const playersHtml = info?.players
-    ? `<div class="team-players">${info.players.map(p =>
-        `<div class="team-player"><span class="player-role">${esc(p.role)}</span><span class="player-name">${esc(p.name)}</span></div>`
-      ).join('')}</div>`
-    : '';
+  // Roster : fiches MSI codées en dur, sinon depuis la base (team_rosters).
+  const rosterRaw = info?.players || (tournament.team_rosters || {})[teamName] || null;
+  const slots     = rosterRaw ? rosterSlots(rosterRaw) : null;
+  const hasNames  = slots && slots.some(s => s.name);
+
+  let playersHtml = '';
+  if (hasNames) {
+    playersHtml = `<div class="team-players">${slots.map(s =>
+      `<div class="team-player"><span class="player-role">${esc(s.role)}</span><span class="player-name${s.name ? '' : ' empty'}">${s.name ? esc(s.name) : '—'}</span></div>`
+    ).join('')}</div>`;
+  } else if (editable) {
+    playersHtml = '<div class="team-roster-empty">Aucun joueur renseigné</div>';
+  }
 
   return `
     <div class="team-card">
@@ -871,9 +893,77 @@ function renderTeamCard(teamName, withMsiInfo = true) {
           ${info ? `<div class="team-league">${esc(info.league)} · ${esc(info.region)}</div>` : ''}
           ${info?.seed ? `<div class="team-seed">${esc(info.seed)}</div>` : ''}
         </div>
+        ${editable ? `<button class="team-roster-edit" data-edit-roster="${escAttr(teamName)}" title="Éditer le roster">✏️</button>` : ''}
       </div>
       ${playersHtml}
     </div>`;
+}
+
+function setupRosterEditors(container) {
+  container.querySelectorAll('[data-edit-roster]').forEach(btn => {
+    btn.addEventListener('click', () => showRosterEditor(btn.dataset.editRoster));
+  });
+}
+
+// ── Éditeur de roster (admin, onglet Équipes) ─────────────────────
+function showRosterEditor(teamName) {
+  const current = (tournament.team_rosters || {})[teamName] || [];
+  const slots   = rosterSlots(current);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'roster-overlay';
+  overlay.innerHTML = `
+    <div class="roster-modal">
+      <div class="roster-modal-header">
+        <div class="roster-modal-title">Roster — ${esc(teamName)}</div>
+        <button class="roster-modal-close" id="rm-close">✕</button>
+      </div>
+      <form id="rm-form" class="roster-form">
+        ${slots.map((s, i) => `
+          <div class="roster-row">
+            <label class="roster-role">${esc(s.role)}</label>
+            <input type="text" class="roster-input" data-role="${esc(s.role)}"
+              value="${escAttr(s.name)}" placeholder="Pseudo du joueur" autocomplete="off"
+              ${i === 0 ? 'autofocus' : ''} />
+          </div>
+        `).join('')}
+        <div class="roster-actions">
+          <button type="button" class="admin-del-btn" id="rm-cancel">Annuler</button>
+          <button type="submit" class="admin-save-btn" id="rm-save">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.getElementById('rm-close').addEventListener('click', close);
+  document.getElementById('rm-cancel').addEventListener('click', close);
+
+  document.getElementById('rm-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const players = [...overlay.querySelectorAll('.roster-input')]
+      .map(inp => ({ role: inp.dataset.role, name: inp.value.trim() }))
+      .filter(p => p.name);
+
+    const rosters = { ...(tournament.team_rosters || {}) };
+    if (players.length) rosters[teamName] = players;
+    else                delete rosters[teamName];
+
+    const save = document.getElementById('rm-save');
+    save.disabled = true; save.textContent = '…';
+    try {
+      await updateTournament(TOURNAMENT_ID, { team_rosters: rosters });
+      tournament.team_rosters = rosters;
+      showToast('✓ Roster enregistré');
+      close();
+      renderEquipes();
+    } catch (err) {
+      showToast('Erreur : ' + err.message);
+      save.disabled = false; save.textContent = 'Enregistrer';
+    }
+  });
 }
 
 // ── Onglet Classement ──────────────────────────────────────────────

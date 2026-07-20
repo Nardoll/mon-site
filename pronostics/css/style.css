@@ -1457,3 +1457,60 @@ body {
 }
 .admin-del-btn:hover { background: rgba(239,68,68,.22); }
 .admin-del-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ── Roster : édition admin (onglet Équipes) ──────────────────── */
+.roster-hint {
+  font: 500 .72rem 'Rajdhani', sans-serif; color: var(--muted);
+  margin-bottom: .8rem; padding: .5rem .7rem;
+  background: var(--accent-bg); border: 1px solid rgba(216,169,85,.25);
+}
+.team-card-header { position: relative; }
+.team-roster-edit {
+  background: rgba(56,189,248,.1); border: 1px solid rgba(56,189,248,.3);
+  color: var(--cyan); cursor: pointer; font-size: .8rem; line-height: 1;
+  padding: .3rem .45rem; border-radius: 4px; align-self: flex-start;
+  flex-shrink: 0; transition: background .15s;
+}
+.team-roster-edit:hover { background: rgba(56,189,248,.22); }
+.team-roster-empty {
+  font: 500 .7rem 'Rajdhani', sans-serif; color: var(--muted2);
+  border-top: 1px solid var(--border2); padding-top: .55rem; font-style: italic;
+}
+.player-name.empty { color: var(--muted3); }
+
+.roster-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(4,8,16,.75); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+.roster-modal {
+  background: var(--surface); border: 1px solid var(--border);
+  clip-path: var(--clip-card-sm); width: 100%; max-width: 380px;
+  padding: 1.2rem 1.3rem;
+}
+.roster-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1rem;
+}
+.roster-modal-title { font: 700 .95rem 'Chakra Petch', sans-serif; color: var(--text-h); }
+.roster-modal-close {
+  background: none; border: none; color: var(--muted); cursor: pointer;
+  font-size: 1rem; padding: .2rem .4rem;
+}
+.roster-modal-close:hover { color: var(--text); }
+.roster-form { display: flex; flex-direction: column; gap: .5rem; }
+.roster-row { display: flex; align-items: center; gap: .7rem; }
+.roster-role {
+  font: 600 .68rem 'Rajdhani', sans-serif; color: var(--muted2);
+  text-transform: uppercase; letter-spacing: .05em;
+  width: 4.2rem; flex-shrink: 0;
+}
+.roster-input {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); font: 600 .82rem 'Rajdhani', sans-serif;
+  padding: .45rem .6rem; outline: none;
+}
+.roster-input:focus { border-color: rgba(56,189,248,.5); }
+.roster-actions {
+  display: flex; justify-content: flex-end; gap: .5rem; margin-top: .8rem;
+}
