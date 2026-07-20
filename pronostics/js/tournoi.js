@@ -41,8 +41,10 @@ const BRACKET_ROUNDS = [
 // (buildGenericBracketStages) déduite des champs `tab`/`round`/`bracket_side`
 // des matchs — c'est ce qui permet à un nouveau tournoi d'avoir un onglet
 // Bracket fonctionnel sans code dédié.
+const MSI_TOURNAMENT_ID = 'jXIP8tk3D62pud8fpl20';
+
 const BRACKET_STRUCTURES = {
-  'jXIP8tk3D62pud8fpl20': [ // MSI 2026
+  [MSI_TOURNAMENT_ID]: [ // MSI 2026
     { title: 'Stage 1 — Play-In', rounds: PLAY_IN_ROUNDS },
     { title: 'Stage 2 — Bracket', rounds: BRACKET_ROUNDS },
   ],
@@ -800,24 +802,37 @@ function renderEquipes() {
     || KNOWN_WIKI_URLS[tournament.leaguepedia_key]
     || (tournament.leaguepedia_key ? `https://lol.fandom.com/wiki/${tournament.leaguepedia_key.replace(/\s/g, '_')}` : null);
 
-  // Séparer Bracket et Play-In
-  const bracketTeams = teams.filter(t => (MSI_2026_TEAMS[t]?.stage || 'Bracket') === 'Bracket');
+  const lpLinkHtml = lpUrl ? `<a href="${lpUrl}" target="_blank" rel="noopener" class="lp-link">
+      <svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+      Leaguepedia
+    </a>` : '';
+
+  if (teams.length === 0) {
+    container.innerHTML = `${lpLinkHtml}<div class="empty-state">Aucune équipe pour l'instant.</div>`;
+    return;
+  }
+
+  // Les fiches enrichies (seed, roster, stages Play-In/Bracket) sont des
+  // données MSI 2026 codées en dur — elles ne valent QUE pour ce tournoi.
+  // Tout autre tournoi (ex : LEC) affiche une grille simple sans sections.
+  if (TOURNAMENT_ID !== MSI_TOURNAMENT_ID) {
+    container.innerHTML = `
+      ${lpLinkHtml}
+      <div class="teams-grid">${teams.map(t => renderTeamCard(t, false)).join('')}</div>
+    `;
+    return;
+  }
+
+  // MSI 2026 — séparer Bracket et Play-In (équipes inconnues → "Autres" uniquement)
+  const bracketTeams = teams.filter(t => MSI_2026_TEAMS[t] && (MSI_2026_TEAMS[t].stage || 'Bracket') === 'Bracket');
   const playInTeams  = teams.filter(t => MSI_2026_TEAMS[t]?.stage === 'Play-In');
   const otherTeams   = teams.filter(t => !MSI_2026_TEAMS[t]);
 
   container.innerHTML = `
-    ${lpUrl ? `<a href="${lpUrl}" target="_blank" rel="noopener" class="lp-link">
-      <svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
-      Leaguepedia
-    </a>` : ''}
-    ${teams.length === 0
-      ? '<div class="empty-state">Les équipes apparaîtront après la première synchronisation.</div>'
-      : `
-        ${bracketTeams.length ? `<div class="section-label">🏆 Bracket Stage</div><div class="teams-grid">${bracketTeams.map(t => renderTeamCard(t)).join('')}</div>` : ''}
-        ${playInTeams.length  ? `<div class="section-label">🎟️ Play-In</div><div class="teams-grid">${playInTeams.map(t => renderTeamCard(t)).join('')}</div>` : ''}
-        ${otherTeams.length   ? `<div class="section-label">Autres</div><div class="teams-grid">${otherTeams.map(t => renderTeamCard(t)).join('')}</div>` : ''}
-      `
-    }
+    ${lpLinkHtml}
+    ${bracketTeams.length ? `<div class="section-label">🏆 Bracket Stage</div><div class="teams-grid">${bracketTeams.map(t => renderTeamCard(t)).join('')}</div>` : ''}
+    ${playInTeams.length  ? `<div class="section-label">🎟️ Play-In</div><div class="teams-grid">${playInTeams.map(t => renderTeamCard(t)).join('')}</div>` : ''}
+    ${otherTeams.length   ? `<div class="section-label">Autres</div><div class="teams-grid">${otherTeams.map(t => renderTeamCard(t)).join('')}</div>` : ''}
   `;
 }
 
@@ -830,12 +845,12 @@ function extractTeamsFromMatches() {
   return Array.from(set).sort();
 }
 
-function renderTeamCard(teamName) {
+function renderTeamCard(teamName, withMsiInfo = true) {
   const color   = avatarColor(teamName);
   const initial = teamName[0]?.toUpperCase() || '?';
   const logos   = tournament?.team_logos || {};
   const logo    = logos[teamName];
-  const info    = MSI_2026_TEAMS[teamName];
+  const info    = withMsiInfo ? MSI_2026_TEAMS[teamName] : null;
 
   const logoHtml = logo
     ? `<img src="${logo}" alt="${esc(teamName)}" class="team-logo-card" onerror="this.style.display='none'">`

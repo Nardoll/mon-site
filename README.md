@@ -1288,6 +1288,12 @@ Le site est statique : **impossible de mettre la clé API Claude dans le JS du n
 
 > **📜 L'historique complet des sessions antérieures au 2026-07-09 est dans [`HISTORIQUE.md`](HISTORIQUE.md)** (déplacé pour alléger ce fichier). Continuer à documenter chaque session ici ; quand cette section devient longue, déplacer les entrées les plus anciennes vers `HISTORIQUE.md`.
 
+### 2026-07-19 (suite)
+**Pronostics — Fix onglet Équipes : doublons et sections MSI sur les autres tournois**
+
+- L'onglet Équipes classait toute équipe **inconnue de la table MSI** à la fois dans "🏆 Bracket Stage" (à cause du défaut `?.stage || 'Bracket'`) **et** dans "Autres" → équipes en double et sections Play-In/Bracket sans queue ni tête sur le LEC. De plus, G2 et Karmine Corp (présents dans la table MSI) héritaient de leur fiche MSI (seed, roster) hors MSI.
+- Fix (`tournoi.js`) : les données `MSI_2026_TEAMS` (fiches enrichies + sections) ne s'appliquent **que** si `TOURNAMENT_ID === MSI_TOURNAMENT_ID`. Tout autre tournoi → grille simple des équipes du tournoi, sans section ni doublon. Le filtre Bracket exclut désormais les équipes inconnues (plus de double comptage), et le message vide ne parle plus de "synchronisation".
+
 ### 2026-07-19
 **Pronostics — Annulation EWC, MSI clôturé, LEC Summer 2026 en mode « ligue », abandon de l'API**
 
